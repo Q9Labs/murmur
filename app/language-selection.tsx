@@ -1,11 +1,9 @@
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useState } from 'react';
 import { SUPPORTED_LANGUAGES, Language } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { Feather } from '@expo/vector-icons';
 
 export default function LanguageSelection() {
   const router = useRouter();
@@ -21,22 +19,26 @@ export default function LanguageSelection() {
   };
 
   return (
-    <View className="flex-1 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <LinearGradient
-        colors={['#faf5ff', '#fce7f3', '#eff6ff']}
-        className="flex-1"
-      >
-        <Animated.View
-          entering={FadeIn.duration(400)}
-          className="flex-1 pt-16 pb-8 px-6"
-        >
+    <LinearGradient
+      colors={['#DCD6F7', '#D0F4DE', '#A9DEF9']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+        <View className="flex-1 pt-16 pb-8 px-6">
           {/* Header */}
           <View className="mb-8">
-            <Text className="text-4xl font-bold text-gray-900 mb-2">
-              Choose Language
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="w-10 h-10 rounded-full bg-white/50 items-center justify-center mb-6"
+            >
+              <Feather name="arrow-left" size={24} color="#4A4E69" />
+            </TouchableOpacity>
+            <Text className="text-3xl font-bold text-pastel-text mb-2">
+              Select Language
             </Text>
-            <Text className="text-base text-gray-600">
-              Select the language you want translations in
+            <Text className="text-base text-pastel-text-light">
+              Which language would you like to translate to?
             </Text>
           </View>
 
@@ -47,56 +49,86 @@ export default function LanguageSelection() {
             contentContainerStyle={{ paddingBottom: 20 }}
           >
             <View className="gap-3">
-              {SUPPORTED_LANGUAGES.map((language, index) => (
-                <AnimatedPressable
-                  key={language.code}
-                  entering={FadeInDown.delay(index * 50).duration(400).springify()}
-                  onPress={() => setSelectedLanguage(language)}
-                  className={`flex-row items-center justify-between p-5 rounded-2xl shadow-sm active:scale-98 ${
-                    selectedLanguage?.code === language.code
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500'
-                      : 'bg-white/70 backdrop-blur-sm'
-                  }`}
-                >
-                  <View className="flex-row items-center flex-1">
-                    <Text className="text-4xl mr-4">{language.flag}</Text>
-                    <View>
-                      <Text className={`text-lg font-semibold ${
-                        selectedLanguage?.code === language.code ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {language.name}
-                      </Text>
-                      <Text className={`text-sm ${
-                        selectedLanguage?.code === language.code ? 'text-white/80' : 'text-gray-500'
-                      }`}>
-                        {language.nativeName}
-                      </Text>
+              {SUPPORTED_LANGUAGES.map((language) => {
+                const isSelected = selectedLanguage?.code === language.code;
+                return (
+                  <TouchableOpacity
+                    key={language.code}
+                    onPress={() => setSelectedLanguage(language)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 16,
+                      borderRadius: 24,
+                      borderWidth: 1,
+                      backgroundColor: isSelected ? '#fff' : 'rgba(255,255,255,0.4)',
+                      borderColor: isSelected ? '#DCD6F7' : 'rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <View style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 16,
+                        backgroundColor: isSelected ? '#D0F4DE' : 'rgba(255,255,255,0.6)',
+                      }}>
+                        <Text style={{ fontSize: 24 }}>{language.flag}</Text>
+                      </View>
+                      <View>
+                        <Text style={{
+                          fontSize: 18,
+                          fontWeight: 'bold',
+                          color: isSelected ? '#4A4E69' : 'rgba(74,78,105,0.8)',
+                        }}>
+                          {language.name}
+                        </Text>
+                        <Text style={{
+                          fontSize: 14,
+                          color: isSelected ? '#9A8C98' : 'rgba(154,140,152,0.8)',
+                        }}>
+                          {language.nativeName}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {selectedLanguage?.code === language.code && (
-                    <View className="w-6 h-6 bg-white rounded-full items-center justify-center">
-                      <Text className="text-purple-500">✓</Text>
-                    </View>
-                  )}
-                </AnimatedPressable>
-              ))}
+                    {isSelected && (
+                      <View style={{
+                        backgroundColor: '#DCD6F7',
+                        borderRadius: 12,
+                        padding: 4,
+                        marginRight: 8,
+                      }}>
+                        <Feather name="check" size={16} color="white" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </ScrollView>
 
           {/* Continue Button */}
           {selectedLanguage && (
-            <AnimatedPressable
-              entering={FadeInDown.duration(400).springify()}
+            <TouchableOpacity
               onPress={handleContinue}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl py-5 shadow-lg active:scale-95"
+              style={{ width: '100%', borderRadius: 24, overflow: 'hidden' }}
             >
-              <Text className="text-white text-center text-lg font-semibold">
-                Continue with {selectedLanguage.name}
-              </Text>
-            </AnimatedPressable>
+              <LinearGradient
+                colors={['#4A4E69', '#2D2F40']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 20 }}
+              >
+                <Text style={{ color: 'white', textAlign: 'center', fontSize: 18, fontWeight: 'bold' }}>
+                  Continue
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
           )}
-        </Animated.View>
-      </LinearGradient>
-    </View>
+        </View>
+    </LinearGradient>
   );
 }

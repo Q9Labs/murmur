@@ -1,13 +1,10 @@
-import { streamText } from 'ai';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+// Using native fetch instead of ai SDK to avoid Node.js dependencies
 
 export class TranslationService {
-  private provider: ReturnType<typeof createOpenRouter>;
+  private apiKey: string;
 
   constructor(apiKey: string) {
-    this.provider = createOpenRouter({
-      apiKey,
-    });
+    this.apiKey = apiKey;
   }
 
   async translateStream(
@@ -18,17 +15,62 @@ export class TranslationService {
     onError: (error: Error) => void
   ) {
     try {
-      const result = await streamText({
-        model: this.provider.chat('anthropic/claude-3.5-haiku'),
-        prompt: `Translate the following text to ${targetLanguage}. Only provide the translation, no explanations or additional text:\n\n${text}`,
-        temperature: 0.3,
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://murmur.app',
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-haiku',
+          messages: [
+            {
+              role: 'user',
+              content: `Translate the following text to ${targetLanguage}. Only provide the translation, no explanations or additional text:\n\n${text}`,
+            },
+          ],
+          temperature: 0.3,
+          stream: true,
+        }),
       });
 
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const decoder = new TextDecoder();
       let fullTranslation = '';
 
-      for await (const chunk of result.textStream) {
-        fullTranslation += chunk;
-        onChunk(chunk);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullTranslation += content;
+                onChunk(content);
+              }
+            } catch {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
       }
 
       onComplete(fullTranslation);

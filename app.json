@@ -39,7 +39,7 @@
     "plugins": [
       "expo-router",
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Murmur needs access to your microphone to transcribe your speech for real-time translation."
         }

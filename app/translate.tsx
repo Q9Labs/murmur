@@ -41,7 +41,7 @@ export default function TranslateScreen() {
   const deepgramRef = useRef<DeepgramService | null>(null);
   const translationRef = useRef<TranslationService | null>(null);
   const transcriptionBufferRef = useRef('');
-  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const translationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animation values
   const micScale = useSharedValue(1);
@@ -190,11 +190,10 @@ export default function TranslateScreen() {
   };
 
   return (
-    <View className="flex-1">
-      <LinearGradient
-        colors={['#faf5ff', '#fce7f3', '#eff6ff']}
-        className="flex-1"
-      >
+    <LinearGradient
+      colors={['#faf5ff', '#fce7f3', '#eff6ff']}
+      style={{ flex: 1 }}
+    >
         {/* Header */}
         <Animated.View
           entering={FadeIn.duration(400)}
@@ -275,7 +274,6 @@ export default function TranslateScreen() {
             {isListening ? 'Listening... Tap to stop' : 'Tap to start speaking'}
           </Text>
         </View>
-      </LinearGradient>
-    </View>
+    </LinearGradient>
   );
 }

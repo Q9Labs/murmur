@@ -1,110 +1,118 @@
-import { useState, useEffect, useRef } from 'react';
-import { Audio } from 'expo-av';
-import { PermissionStatus } from 'expo-modules-core';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  useAudioRecorder,
+  requestRecordingPermissionsAsync,
+  getRecordingPermissionsAsync,
+  setAudioModeAsync,
+  IOSOutputFormat,
+  AudioQuality,
+} from 'expo-audio';
+import type { RecordingOptions, AudioRecorder } from 'expo-audio';
+
+// Custom recording preset for PCM audio suitable for Deepgram streaming
+const DEEPGRAM_RECORDING_OPTIONS: RecordingOptions = {
+  isMeteringEnabled: true,
+  extension: '.wav',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 128000,
+  android: {
+    extension: '.wav',
+    outputFormat: 'default',
+    audioEncoder: 'default',
+    sampleRate: 16000,
+  },
+  ios: {
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.HIGH,
+    sampleRate: 16000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/wav',
+    bitsPerSecond: 128000,
+  },
+};
 
 export function useAudioRecording() {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [permissionResponse, requestPermission] = Audio.usePermissions();
+  const [hasPermission, setHasPermission] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recorder = useAudioRecorder(DEEPGRAM_RECORDING_OPTIONS, (status) => {
+    if (status.isFinished) {
+      setIsRecording(false);
+    }
+  });
 
-  const startRecording = async (onAudioData: (data: ArrayBuffer) => void) => {
+  // Check permissions on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      const { granted } = await getRecordingPermissionsAsync();
+      setHasPermission(granted);
+    };
+    checkPermission();
+  }, []);
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    const { granted } = await requestRecordingPermissionsAsync();
+    setHasPermission(granted);
+    return granted;
+  }, []);
+
+  const startRecording = useCallback(async (onAudioData: (data: ArrayBuffer) => void) => {
     try {
-      if (permissionResponse?.status !== PermissionStatus.GRANTED) {
-        const permission = await requestPermission();
-        if (permission.status !== PermissionStatus.GRANTED) {
+      if (!hasPermission) {
+        const granted = await requestPermission();
+        if (!granted) {
           throw new Error('Microphone permission denied');
         }
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        {
-          isMeteringEnabled: true,
-          android: {
-            extension: '.wav',
-            outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-            audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-            sampleRate: 16000,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          ios: {
-            extension: '.wav',
-            outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-            audioQuality: Audio.IOSAudioQuality.HIGH,
-            sampleRate: 16000,
-            numberOfChannels: 1,
-            bitRate: 128000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-          web: {
-            mimeType: 'audio/wav',
-            bitsPerSecond: 128000,
-          },
-        },
-        // Status update callback for streaming
-        async (status) => {
-          if (status.isRecording && status.metering !== undefined) {
-            // Stream audio chunks
-            // Note: For production, you'd need a proper audio streaming mechanism
-            // This is a simplified version
-          }
-        },
-        100 // Update interval in milliseconds
-      );
-
-      recordingRef.current = recording;
-      setRecording(recording);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setIsRecording(true);
 
-      // Start monitoring for audio data
       // Note: React Native doesn't provide direct chunk access like Web API
-      // In production, you'd use a native module or different approach
-
+      // The onAudioData callback is provided for API compatibility, but real-time
+      // streaming requires a native module. For now, recording saves to a file
+      // which can be read after stopping.
     } catch (err) {
       console.error('Failed to start recording', err);
       throw err;
     }
-  };
+  }, [hasPermission, requestPermission, recorder]);
 
-  const stopRecording = async () => {
-    if (!recordingRef.current) return;
-
+  const stopRecording = useCallback(async () => {
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
+      await recorder.stop();
+
+      await setAudioModeAsync({
+        allowsRecording: false,
       });
 
-      setRecording(null);
-      recordingRef.current = null;
       setIsRecording(false);
+
+      // Return the URI of the recorded file
+      return recorder.uri;
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync();
-      }
-    };
-  }, []);
+  }, [recorder]);
 
   return {
     startRecording,
     stopRecording,
     isRecording,
-    hasPermission: permissionResponse?.status === PermissionStatus.GRANTED,
+    hasPermission,
     requestPermission,
+    recordingUri: recorder.uri,
   };
 }

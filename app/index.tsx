@@ -1,9 +1,8 @@
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn, useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useAnimatedStyle, withSpring, useSharedValue, withRepeat, withSequence } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { Feather } from '@expo/vector-icons';
 
 export default function Onboarding() {
   const router = useRouter();
@@ -22,93 +21,103 @@ export default function Onboarding() {
   };
 
   return (
-    <View className="flex-1 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <LinearGradient
-        colors={['#faf5ff', '#fce7f3', '#eff6ff']}
-        className="flex-1 justify-center items-center px-8"
-      >
+    <LinearGradient
+      colors={['#DCD6F7', '#D0F4DE', '#A9DEF9']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}
+    >
         <Animated.View
           entering={FadeIn.duration(800)}
           className="items-center"
         >
           {/* Logo/Icon */}
-          <View className="w-24 h-24 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mb-8 items-center justify-center shadow-lg">
-            <Text className="text-5xl">🎙️</Text>
+          <View className="w-32 h-32 bg-white/40 rounded-full mb-8 items-center justify-center shadow-sm backdrop-blur-md border border-white/50">
+            <Feather name="mic" size={48} color="#4A4E69" />
           </View>
 
           {/* Title */}
-          <Text className="text-5xl font-bold text-gray-900 mb-4 text-center">
+          <Text className="text-5xl font-bold text-pastel-text mb-2 text-center tracking-tight">
             Murmur
           </Text>
 
           {/* Subtitle */}
-          <Text className="text-lg text-gray-600 text-center mb-16 px-4 leading-relaxed">
-            Real-time translation powered by AI
+          <Text className="text-lg text-pastel-text-light text-center mb-16 px-4 leading-relaxed font-medium">
+            Seamless AI Translation
           </Text>
         </Animated.View>
 
         {/* Features */}
         <Animated.View
           entering={FadeInDown.delay(200).duration(600)}
-          className="w-full mb-12 gap-4"
+          className="w-full mb-16 gap-4"
         >
           <FeatureItem
-            icon="🌍"
-            text="Speak in any language"
+            icon="globe"
+            text="Universal Language Support"
             delay={300}
+            color="#A9DEF9"
           />
           <FeatureItem
-            icon="⚡"
-            text="Instant AI translation"
+            icon="zap"
+            text="Instant Real-time Translation"
             delay={400}
+            color="#FFC4D6"
           />
           <FeatureItem
-            icon="✨"
-            text="Beautiful, simple interface"
+            icon="smile"
+            text="Simple & Beautiful Design"
             delay={500}
+            color="#FCF6BD"
           />
         </Animated.View>
 
         {/* CTA Button */}
-        <AnimatedPressable
+        <Animated.View
           entering={FadeInDown.delay(600).duration(600).springify()}
-          style={buttonAnimatedStyle}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          onPress={() => router.push('/language-selection')}
-          className="w-full rounded-2xl overflow-hidden shadow-lg"
+          className="w-full"
         >
-          <LinearGradient
-            colors={['#a855f7', '#ec4899']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="py-5"
-          >
-            <Text className="text-white text-center text-lg font-semibold">
-              Get Started
-            </Text>
-          </LinearGradient>
-        </AnimatedPressable>
+          <Animated.View style={buttonAnimatedStyle}>
+            <Pressable
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              onPress={() => router.push('/language-selection')}
+              className="w-full rounded-3xl overflow-hidden shadow-lg shadow-pastel-purple/50"
+            >
+              <LinearGradient
+                colors={['#4A4E69', '#2D2F40']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className="py-5"
+              >
+                <Text className="text-white text-center text-lg font-bold tracking-wide">
+                  Get Started
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
 
         <Animated.Text
           entering={FadeInDown.delay(700).duration(600)}
-          className="text-gray-400 text-sm mt-6"
+          className="text-pastel-text-light/60 text-xs mt-8 font-medium"
         >
-          by Q9Labs
+          Designed for connection
         </Animated.Text>
-      </LinearGradient>
-    </View>
+    </LinearGradient>
   );
 }
 
-function FeatureItem({ icon, text, delay }: { icon: string; text: string; delay: number }) {
+function FeatureItem({ icon, text, delay, color }: { icon: keyof typeof Feather.glyphMap; text: string; delay: number; color: string }) {
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).duration(600)}
-      className="flex-row items-center bg-white/60 backdrop-blur-sm rounded-xl px-6 py-4 shadow-sm"
+      className="flex-row items-center bg-white/70 backdrop-blur-md rounded-2xl px-5 py-4 shadow-sm border border-white/40"
     >
-      <Text className="text-3xl mr-4">{icon}</Text>
-      <Text className="text-gray-700 text-base flex-1">{text}</Text>
+      <View className="w-10 h-10 rounded-full items-center justify-center mr-4" style={{ backgroundColor: color }}>
+        <Feather name={icon} size={20} color="#4A4E69" />
+      </View>
+      <Text className="text-pastel-text text-base font-medium flex-1">{text}</Text>
     </Animated.View>
   );
 }
