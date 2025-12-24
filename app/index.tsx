@@ -1,123 +1,100 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn, useAnimatedStyle, withSpring, useSharedValue, withRepeat, withSequence } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { AnimatedLogo, GradientButton } from '@/components/ui';
 
 export default function Onboarding() {
   const router = useRouter();
-  const buttonScale = useSharedValue(1);
-
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
-
-  const handlePressIn = () => {
-    buttonScale.value = withSpring(0.95);
-  };
-
-  const handlePressOut = () => {
-    buttonScale.value = withSpring(1);
-  };
 
   return (
     <LinearGradient
-      colors={['#DCD6F7', '#D0F4DE', '#A9DEF9']}
+      colors={['#FFFBF7', '#FFE19C', '#EDFFD9']}
+      locations={[0, 0.5, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}
+      style={{ flex: 1 }}
     >
+      <View className="flex-1 px-8 pt-20 pb-12">
+        {/* Spacer */}
+        <View className="flex-[0.1]" />
+
+        {/* Logo Section */}
         <Animated.View
-          entering={FadeIn.duration(800)}
+          entering={FadeIn.duration(600)}
           className="items-center"
         >
-          {/* Logo/Icon */}
-          <View className="w-32 h-32 bg-white/40 rounded-full mb-8 items-center justify-center shadow-sm backdrop-blur-md border border-white/50">
-            <Feather name="mic" size={48} color="#4A4E69" />
-          </View>
+          <AnimatedLogo size="md" />
 
           {/* Title */}
-          <Text className="text-5xl font-bold text-pastel-text mb-2 text-center tracking-tight">
+          <Text className="text-5xl font-bold text-ink mt-8 text-center tracking-tight">
             Murmur
           </Text>
 
           {/* Subtitle */}
-          <Text className="text-lg text-pastel-text-light text-center mb-16 px-4 leading-relaxed font-medium">
+          <Text className="text-lg text-ink-secondary text-center mt-2 font-medium">
             Seamless AI Translation
           </Text>
         </Animated.View>
 
-        {/* Features */}
+        {/* Spacer */}
+        <View className="flex-[0.1]" />
+
+        {/* Feature Pills */}
         <Animated.View
-          entering={FadeInDown.delay(200).duration(600)}
-          className="w-full mb-16 gap-4"
+          entering={FadeInDown.delay(400).duration(500)}
+          className="flex-row flex-wrap justify-center gap-3 mb-8"
         >
-          <FeatureItem
-            icon="globe"
-            text="Universal Language Support"
-            delay={300}
-            color="#A9DEF9"
-          />
-          <FeatureItem
-            icon="zap"
-            text="Instant Real-time Translation"
-            delay={400}
-            color="#FFC4D6"
-          />
-          <FeatureItem
-            icon="smile"
-            text="Simple & Beautiful Design"
-            delay={500}
-            color="#FCF6BD"
-          />
+          <FeaturePill icon="globe" text="12+ Languages" delay={400} />
+          <FeaturePill icon="zap" text="Real-time" delay={500} />
+          <FeaturePill icon="cpu" text="AI Powered" delay={600} />
         </Animated.View>
+
+        {/* Spacer to push button down */}
+        <View className="flex-1" />
 
         {/* CTA Button */}
-        <Animated.View
-          entering={FadeInDown.delay(600).duration(600).springify()}
-          className="w-full"
-        >
-          <Animated.View style={buttonAnimatedStyle}>
-            <Pressable
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              onPress={() => router.push('/language-selection')}
-              className="w-full rounded-3xl overflow-hidden shadow-lg shadow-pastel-purple/50"
-            >
-              <LinearGradient
-                colors={['#4A4E69', '#2D2F40']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="py-5"
-              >
-                <Text className="text-white text-center text-lg font-bold tracking-wide">
-                  Get Started
-                </Text>
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
-        </Animated.View>
+        <View className="w-full mb-4">
+          <GradientButton
+            title="Get Started"
+            icon="arrow-right"
+            onPress={() => router.push('/language-selection')}
+            animated
+            delay={700}
+          />
+        </View>
 
+        {/* Footer */}
         <Animated.Text
-          entering={FadeInDown.delay(700).duration(600)}
-          className="text-pastel-text-light/60 text-xs mt-8 font-medium"
+          entering={FadeInDown.delay(800).duration(400)}
+          className="text-ink-muted text-xs text-center font-medium"
         >
           Designed for connection
         </Animated.Text>
+      </View>
     </LinearGradient>
   );
 }
 
-function FeatureItem({ icon, text, delay, color }: { icon: keyof typeof Feather.glyphMap; text: string; delay: number; color: string }) {
+function FeaturePill({
+  icon,
+  text,
+  delay,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  text: string;
+  delay: number;
+}) {
   return (
     <Animated.View
-      entering={FadeInDown.delay(delay).duration(600)}
-      className="flex-row items-center bg-white/70 backdrop-blur-md rounded-2xl px-5 py-4 shadow-sm border border-white/40"
+      entering={FadeInDown.delay(delay).duration(400)}
+      className="flex-row items-center bg-white/60 backdrop-blur-sm rounded-full px-4 py-2.5 border border-white/40 shadow-soft"
     >
-      <View className="w-10 h-10 rounded-full items-center justify-center mr-4" style={{ backgroundColor: color }}>
-        <Feather name={icon} size={20} color="#4A4E69" />
+      <View className="w-7 h-7 rounded-full bg-coral/15 items-center justify-center mr-2">
+        <Feather name={icon} size={14} color="#FF784F" />
       </View>
-      <Text className="text-pastel-text text-base font-medium flex-1">{text}</Text>
+      <Text className="text-sm font-semibold text-ink-secondary">{text}</Text>
     </Animated.View>
   );
 }

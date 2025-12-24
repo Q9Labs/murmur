@@ -1,28 +1,45 @@
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withRepeat,
-  withSequence,
-} from 'react-native-reanimated';
-import { useState, useEffect, useRef } from 'react';
+import Animated, { FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
 import { DeepgramService } from '@/services/deepgram';
 import { TranslationService } from '@/services/translation';
+import { IconButton, AnimatedMicButton, GlassCard } from '@/components/ui';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// API Keys - In production, these should be in environment variables
 const DEEPGRAM_API_KEY = process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY || '';
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
-
-// Demo mode when API keys are not configured
 const DEMO_MODE = !DEEPGRAM_API_KEY || !OPENROUTER_API_KEY;
+
+// Typing indicator component
+function TypingIndicator() {
+  const dot1 = useSharedValue(0);
+  const dot2 = useSharedValue(0);
+  const dot3 = useSharedValue(0);
+
+  useEffect(() => {
+    dot1.value = withRepeat(withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }), -1, true);
+    setTimeout(() => {
+      dot2.value = withRepeat(withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }), -1, true);
+    }, 150);
+    setTimeout(() => {
+      dot3.value = withRepeat(withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }), -1, true);
+    }, 300);
+  }, []);
+
+  const dotStyle1 = useAnimatedStyle(() => ({ opacity: 0.3 + dot1.value * 0.7 }));
+  const dotStyle2 = useAnimatedStyle(() => ({ opacity: 0.3 + dot2.value * 0.7 }));
+  const dotStyle3 = useAnimatedStyle(() => ({ opacity: 0.3 + dot3.value * 0.7 }));
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF784F' }, dotStyle1]} />
+      <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF784F' }, dotStyle2]} />
+      <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF784F' }, dotStyle3]} />
+    </View>
+  );
+}
 
 export default function TranslateScreen() {
   const { languageCode, languageName } = useLocalSearchParams<{
@@ -34,246 +51,292 @@ export default function TranslateScreen() {
   const [transcription, setTranscription] = useState('');
   const [translation, setTranslation] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { startRecording, stopRecording, isRecording, hasPermission, requestPermission } = useAudioRecording();
+  const { startRecording, stopRecording, hasPermission, requestPermission } = useAudioRecording();
 
   const deepgramRef = useRef<DeepgramService | null>(null);
   const translationRef = useRef<TranslationService | null>(null);
-  const transcriptionBufferRef = useRef('');
-  const translationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Animation values
-  const micScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   useEffect(() => {
-    // Initialize services
     if (DEEPGRAM_API_KEY) {
       deepgramRef.current = new DeepgramService(DEEPGRAM_API_KEY);
     }
     if (OPENROUTER_API_KEY) {
       translationRef.current = new TranslationService(OPENROUTER_API_KEY);
     }
-
     return () => {
       deepgramRef.current?.stop();
     };
   }, []);
 
-  const micAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: micScale.value }],
-  }));
+  const handleTranslate = useCallback(async (text: string) => {
+    if (!text?.trim() || !translationRef.current || !languageName) return;
 
-  const pulseAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-  }));
+    setIsTranslating(true);
+    setTranslation('');
+
+    try {
+      let result = '';
+      await translationRef.current.translateStream(
+        text.trim(),
+        languageName,
+        (chunk) => {
+          result += chunk;
+          setTranslation(result);
+        },
+        (fullText) => {
+          setTranslation(fullText);
+          setIsTranslating(false);
+        },
+        (err) => {
+          console.error('Translation error:', err);
+          setError('Translation failed. Please try again.');
+          setIsTranslating(false);
+        }
+      );
+    } catch (err) {
+      console.error('Translation exception:', err);
+      setError('Translation failed. Please try again.');
+      setIsTranslating(false);
+    }
+  }, [languageName]);
+
+  const startListening = useCallback(async () => {
+    if (!deepgramRef.current) {
+      setError('Service not initialized');
+      return;
+    }
+
+    setIsConnecting(true);
+    setError(null);
+    setTranscription('');
+    setTranslation('');
+
+    try {
+      await deepgramRef.current.startStreaming({
+        onTranscript: (text: string, isFinal: boolean) => {
+          if (isFinal) {
+            setTranscription(prev => prev ? prev + ' ' + text : text);
+          }
+        },
+        onSpeechFinal: (fullTranscript: string) => {
+          setTranscription(fullTranscript);
+          handleTranslate(fullTranscript);
+        },
+        onUtteranceEnd: () => {
+          const accumulated = deepgramRef.current?.getAccumulatedTranscript();
+          if (accumulated?.trim()) {
+            handleTranslate(accumulated);
+          }
+        },
+        onSpeakingChange: (speaking: boolean) => {
+          setIsSpeaking(speaking);
+        },
+        onError: (err: Error) => {
+          console.error('Deepgram error:', err);
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++;
+            console.log(`Retrying... (${retryCountRef.current}/${maxRetries})`);
+            setTimeout(() => startListening(), 1000);
+          } else {
+            setError('Connection failed. Please try again.');
+            setIsListening(false);
+            setIsConnecting(false);
+            retryCountRef.current = 0;
+          }
+        },
+      });
+
+      setIsConnecting(false);
+      setIsListening(true);
+      retryCountRef.current = 0;
+
+      await startRecording((audioData) => {
+        deepgramRef.current?.sendAudio(audioData);
+      });
+    } catch (err) {
+      console.error('Start error:', err);
+      setError('Failed to start. Please try again.');
+      setIsListening(false);
+      setIsConnecting(false);
+    }
+  }, [handleTranslate, startRecording]);
+
+  const stopListening = useCallback(async () => {
+    setIsListening(false);
+    setIsSpeaking(false);
+    deepgramRef.current?.stop();
+    await stopRecording();
+  }, [stopRecording]);
 
   const handleToggleListen = async () => {
     if (DEMO_MODE) {
-      Alert.alert(
-        'Demo Mode',
-        'API keys are not configured. Please set EXPO_PUBLIC_DEEPGRAM_API_KEY and EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file.\n\nCheck README.md for setup instructions.',
-        [{ text: 'OK' }]
-      );
-      // For demo purposes, show sample data
-      setTranscription('Hello, how are you today? This is a demo transcription.');
+      Alert.alert('Demo Mode', 'API keys not configured.');
+      setTranscription('Hello, how are you?');
+      setIsTranslating(true);
       setTimeout(() => {
-        setTranslation(`Hola, ¿cómo estás hoy? Esta es una traducción de demostración.`);
-      }, 1000);
+        setTranslation('Hola, ¿cómo estás?');
+        setIsTranslating(false);
+      }, 1500);
       return;
     }
 
     if (!hasPermission) {
       const granted = await requestPermission();
       if (!granted) {
-        Alert.alert('Permission Denied', 'Microphone permission is required to use Murmur.');
+        Alert.alert('Permission Denied', 'Microphone permission is required.');
         return;
       }
     }
 
     if (isListening) {
-      // Stop listening
-      setIsListening(false);
-      deepgramRef.current?.stop();
-      await stopRecording();
-
-      micScale.value = withSpring(1);
-      pulseOpacity.value = withSpring(0);
+      await stopListening();
     } else {
-      // Start listening
-      setIsListening(true);
-      setError(null);
-      setTranscription('');
-      setTranslation('');
-      transcriptionBufferRef.current = '';
-
-      // Animate microphone
-      micScale.value = withRepeat(
-        withSequence(
-          withSpring(1.1),
-          withSpring(0.95)
-        ),
-        -1,
-        true
-      );
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withSpring(0.5),
-          withSpring(0)
-        ),
-        -1,
-        false
-      );
-
-      try {
-        // Start Deepgram streaming
-        await deepgramRef.current?.startStreaming(
-          (transcript) => {
-            // Update transcription
-            setTranscription(prev => {
-              const newText = prev + ' ' + transcript;
-              transcriptionBufferRef.current = newText;
-
-              // Debounce translation
-              if (translationTimeoutRef.current) {
-                clearTimeout(translationTimeoutRef.current);
-              }
-
-              translationTimeoutRef.current = setTimeout(() => {
-                handleTranslate(newText.trim());
-              }, 1000);
-
-              return newText;
-            });
-          },
-          (error) => {
-            console.error('Deepgram error:', error);
-            setError(error.message);
-            setIsListening(false);
-          }
-        );
-
-        // Start audio recording
-        await startRecording((audioData) => {
-          deepgramRef.current?.sendAudio(audioData);
-        });
-      } catch (err) {
-        console.error('Error starting recording:', err);
-        setError((err as Error).message);
-        setIsListening(false);
-      }
+      await startListening();
     }
   };
 
-  const handleTranslate = async (text: string) => {
-    if (!text || !translationRef.current || !languageName) return;
-
-    let currentTranslation = '';
-    setTranslation('');
-
-    await translationRef.current.translateStream(
-      text,
-      languageName,
-      (chunk) => {
-        currentTranslation += chunk;
-        setTranslation(currentTranslation);
-      },
-      (fullText) => {
-        setTranslation(fullText);
-      },
-      (error) => {
-        console.error('Translation error:', error);
-        setError(error.message);
-      }
-    );
+  const getStatusText = () => {
+    if (isConnecting) return 'Connecting...';
+    if (!isListening) return 'Tap to start speaking';
+    if (isSpeaking) return 'Listening...';
+    return 'Speak now...';
   };
 
   return (
     <LinearGradient
-      colors={['#faf5ff', '#fce7f3', '#eff6ff']}
+      colors={['#FFFBF7', '#FFE19C', '#EDFFD9']}
+      locations={[0, 0.5, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
     >
-        {/* Header */}
-        <Animated.View
-          entering={FadeIn.duration(400)}
-          className="pt-16 px-6 pb-4 border-b border-gray-200/50"
-        >
-          <View className="flex-row items-center justify-between mb-2">
-            <Pressable onPress={() => router.back()} className="active:opacity-50">
-              <Text className="text-2xl">←</Text>
-            </Pressable>
-            <View className="flex-row items-center">
-              <Text className="text-sm text-gray-500 mr-2">Translating to</Text>
-              <Text className="text-base font-semibold text-gray-900">{languageName}</Text>
-            </View>
+      {/* Header */}
+      <Animated.View entering={FadeIn.duration(400)} className="pt-14 px-6 pb-4">
+        <View className="flex-row items-center justify-between">
+          <IconButton
+            icon="chevron-left"
+            onPress={() => router.back()}
+            size="md"
+            variant="glass"
+          />
+          <View className="flex-row items-center bg-coral/15 px-4 py-2 rounded-full">
+            <Text className="text-sm text-ink-secondary mr-1">Translating to</Text>
+            <Text className="text-sm font-bold text-coral">{languageName}</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Content */}
+      <ScrollView
+        className="flex-1 px-6"
+        contentContainerStyle={{ paddingBottom: 200 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Transcription Card */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mb-5">
+          <View className="flex-row items-center mb-2 ml-1">
+            <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider">
+              Original
+            </Text>
+            {isSpeaking && (
+              <View className="ml-2 flex-row items-center">
+                <View className="w-2 h-2 rounded-full bg-coral mr-1" />
+                <Text className="text-xs text-coral">Listening</Text>
+              </View>
+            )}
+          </View>
+          <GlassCard className="p-5 min-h-[120px]">
+            {transcription ? (
+              <Text className="text-base leading-relaxed text-ink">{transcription}</Text>
+            ) : isListening ? (
+              <View className="flex-row items-center">
+                <Text className="text-base text-ink-muted italic mr-2">Waiting for speech</Text>
+                <TypingIndicator />
+              </View>
+            ) : (
+              <Text className="text-base text-ink-muted italic">
+                Tap the microphone to start speaking...
+              </Text>
+            )}
+          </GlassCard>
+        </Animated.View>
+
+        {/* Translation Card */}
+        <Animated.View entering={FadeInDown.delay(300).duration(400)} className="mb-5">
+          <View className="flex-row items-center mb-2 ml-1">
+            <Text className="text-xs font-bold text-coral uppercase tracking-wider">
+              Translation
+            </Text>
+            {isTranslating && (
+              <View className="ml-2">
+                <ActivityIndicator size="small" color="#FF784F" />
+              </View>
+            )}
+          </View>
+          <View className="rounded-3xl overflow-hidden border border-coral/20 shadow-soft">
+            <LinearGradient
+              colors={['rgba(255, 120, 79, 0.08)', 'rgba(219, 157, 71, 0.08)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 20, minHeight: 120 }}
+            >
+              {translation ? (
+                <Text className="text-base leading-relaxed text-ink">{translation}</Text>
+              ) : isTranslating ? (
+                <View className="flex-row items-center">
+                  <Text className="text-base text-ink-muted italic mr-2">Translating</Text>
+                  <TypingIndicator />
+                </View>
+              ) : (
+                <Text className="text-base text-ink-muted italic">
+                  Translation will appear here...
+                </Text>
+              )}
+            </LinearGradient>
           </View>
         </Animated.View>
 
-        {/* Content */}
-        <ScrollView
-          className="flex-1 px-6 pt-6"
-          contentContainerStyle={{ paddingBottom: 200 }}
-        >
-          {/* Transcription */}
+        {/* Error */}
+        {error && (
           <Animated.View
-            entering={FadeInDown.delay(200).duration(400)}
-            className="mb-6"
+            entering={FadeInDown.duration(300)}
+            className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4"
           >
-            <Text className="text-sm font-semibold text-gray-500 mb-3">Original</Text>
-            <View className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 min-h-[120px] shadow-sm">
-              <Text className="text-base text-gray-900 leading-relaxed">
-                {transcription || 'Tap the microphone to start speaking...'}
-              </Text>
-            </View>
+            <Text className="text-red-700 text-sm font-medium">{error}</Text>
           </Animated.View>
+        )}
+      </ScrollView>
 
-          {/* Translation */}
-          <Animated.View
-            entering={FadeInDown.delay(300).duration(400)}
-            className="mb-6"
-          >
-            <Text className="text-sm font-semibold text-gray-500 mb-3">Translation</Text>
-            <View className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl p-5 min-h-[120px] shadow-sm">
-              <Text className="text-base text-gray-900 leading-relaxed">
-                {translation || 'Translation will appear here...'}
-              </Text>
-            </View>
-          </Animated.View>
+      {/* Microphone Button Area */}
+      <View className="absolute bottom-0 left-0 right-0 items-center pb-10 pt-6">
+        <LinearGradient
+          colors={['transparent', 'rgba(255, 251, 247, 0.9)', '#FFFBF7']}
+          locations={[0, 0.4, 1]}
+          className="absolute inset-0"
+        />
 
-          {/* Error */}
-          {error && (
-            <Animated.View
-              entering={FadeInDown.duration(300)}
-              className="bg-red-100 border border-red-300 rounded-xl p-4 mb-4"
-            >
-              <Text className="text-red-800 text-sm">{error}</Text>
-            </Animated.View>
-          )}
-        </ScrollView>
-
-        {/* Microphone Button */}
-        <View className="absolute bottom-0 left-0 right-0 pb-12 pt-6 px-6 bg-gradient-to-t from-purple-50 to-transparent">
-          <Animated.View style={pulseAnimatedStyle} className="absolute inset-0 items-center justify-center">
-            <View className="w-32 h-32 bg-purple-300 rounded-full opacity-30" />
-          </Animated.View>
-
-          <AnimatedPressable
-            style={micAnimatedStyle}
+        {isConnecting ? (
+          <View className="w-20 h-20 rounded-full bg-white/80 items-center justify-center shadow-elevated">
+            <ActivityIndicator size="large" color="#FF784F" />
+          </View>
+        ) : (
+          <AnimatedMicButton
+            isListening={isListening}
             onPress={handleToggleListen}
-            className={`w-24 h-24 rounded-full items-center justify-center self-center shadow-xl active:scale-95 ${
-              isListening
-                ? 'bg-gradient-to-br from-red-400 to-pink-500'
-                : 'bg-gradient-to-br from-purple-500 to-pink-500'
-            }`}
-          >
-            <Text className="text-5xl">{isListening ? '⏸' : '🎙️'}</Text>
-          </AnimatedPressable>
+          />
+        )}
 
-          <Text className="text-center text-gray-600 mt-4 text-sm">
-            {isListening ? 'Listening... Tap to stop' : 'Tap to start speaking'}
-          </Text>
-        </View>
+        <Text className="text-sm font-medium text-ink-secondary mt-4">
+          {getStatusText()}
+        </Text>
+      </View>
     </LinearGradient>
   );
 }
