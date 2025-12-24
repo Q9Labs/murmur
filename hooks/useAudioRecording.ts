@@ -1,32 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  useAudioRecorder,
-  requestRecordingPermissionsAsync,
-  getRecordingPermissionsAsync,
-  setAudioModeAsync,
-  IOSOutputFormat,
-  AudioQuality,
-} from 'expo-audio';
-import type { RecordingOptions, AudioRecorder } from 'expo-audio';
+import { Audio } from 'expo-av';
+import { readAsStringAsync, deleteAsync } from 'expo-file-system/legacy';
 
-// Custom recording preset for PCM audio suitable for Deepgram streaming
-const DEEPGRAM_RECORDING_OPTIONS: RecordingOptions = {
+// Recording options for PCM audio suitable for Deepgram streaming
+const RECORDING_OPTIONS: Audio.RecordingOptions = {
   isMeteringEnabled: true,
-  extension: '.wav',
-  sampleRate: 16000,
-  numberOfChannels: 1,
-  bitRate: 128000,
   android: {
     extension: '.wav',
-    outputFormat: 'default',
-    audioEncoder: 'default',
+    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
     sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 128000,
   },
   ios: {
     extension: '.wav',
-    outputFormat: IOSOutputFormat.LINEARPCM,
-    audioQuality: AudioQuality.HIGH,
+    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+    audioQuality: Audio.IOSAudioQuality.HIGH,
     sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 128000,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
@@ -37,29 +30,97 @@ const DEEPGRAM_RECORDING_OPTIONS: RecordingOptions = {
   },
 };
 
+// Chunk duration in ms - shorter = more responsive but more overhead
+const CHUNK_DURATION_MS = 250;
+
 export function useAudioRecording() {
   const [hasPermission, setHasPermission] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const recorder = useAudioRecorder(DEEPGRAM_RECORDING_OPTIONS, (status) => {
-    if (status.isFinished) {
-      setIsRecording(false);
-    }
-  });
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const onAudioDataRef = useRef<((data: ArrayBuffer) => void) | null>(null);
+  const isStreamingRef = useRef(false);
+  const isProcessingRef = useRef(false); // Mutex to prevent race conditions
 
   // Check permissions on mount
   useEffect(() => {
     const checkPermission = async () => {
-      const { granted } = await getRecordingPermissionsAsync();
+      const { granted } = await Audio.getPermissionsAsync();
       setHasPermission(granted);
     };
     checkPermission();
   }, []);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
-    const { granted } = await requestRecordingPermissionsAsync();
+    const { granted } = await Audio.requestPermissionsAsync();
     setHasPermission(granted);
     return granted;
+  }, []);
+
+  // Function to read and send audio chunk - runs in a loop
+  const streamAudioLoop = useCallback(async () => {
+    while (isStreamingRef.current) {
+      if (isProcessingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        continue;
+      }
+
+      isProcessingRef.current = true;
+
+      try {
+        if (!recordingRef.current || !onAudioDataRef.current || !isStreamingRef.current) {
+          isProcessingRef.current = false;
+          break;
+        }
+
+        // Stop current recording to get the file
+        const currentRecording = recordingRef.current;
+        recordingRef.current = null;
+
+        await currentRecording.stopAndUnloadAsync();
+        const uri = currentRecording.getURI();
+
+        // Start a new recording immediately if still streaming
+        if (isStreamingRef.current) {
+          const newRecording = new Audio.Recording();
+          await newRecording.prepareToRecordAsync(RECORDING_OPTIONS);
+          await newRecording.startAsync();
+          recordingRef.current = newRecording;
+        }
+
+        // Process the previous recording's audio
+        if (uri && onAudioDataRef.current) {
+          const base64 = await readAsStringAsync(uri, {
+            encoding: 'base64',
+          });
+
+          // Convert base64 to ArrayBuffer
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          // Skip WAV header (44 bytes) to get raw PCM data
+          const pcmData = bytes.slice(44);
+
+          // Send to callback
+          if (pcmData.length > 0 && onAudioDataRef.current) {
+            onAudioDataRef.current(pcmData.buffer);
+          }
+
+          // Delete the temp file
+          await deleteAsync(uri, { idempotent: true });
+        }
+      } catch (err) {
+        console.error('Error in audio stream loop:', err);
+      }
+
+      isProcessingRef.current = false;
+
+      // Small delay between chunks
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DURATION_MS));
+    }
   }, []);
 
   const startRecording = useCallback(async (onAudioData: (data: ArrayBuffer) => void) => {
@@ -71,41 +132,69 @@ export function useAudioRecording() {
         }
       }
 
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
       });
 
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setIsRecording(true);
+      onAudioDataRef.current = onAudioData;
+      isStreamingRef.current = true;
+      isProcessingRef.current = false;
 
-      // Note: React Native doesn't provide direct chunk access like Web API
-      // The onAudioData callback is provided for API compatibility, but real-time
-      // streaming requires a native module. For now, recording saves to a file
-      // which can be read after stopping.
+      // Start initial recording
+      recordingRef.current = new Audio.Recording();
+      await recordingRef.current.prepareToRecordAsync(RECORDING_OPTIONS);
+      await recordingRef.current.startAsync();
+
+      setIsRecording(true);
+      console.log('Recording started - streaming audio chunks');
+
+      // Start the streaming loop (runs in background)
+      streamAudioLoop();
     } catch (err) {
       console.error('Failed to start recording', err);
+      isStreamingRef.current = false;
       throw err;
     }
-  }, [hasPermission, requestPermission, recorder]);
+  }, [hasPermission, requestPermission, streamAudioLoop]);
 
   const stopRecording = useCallback(async () => {
     try {
-      await recorder.stop();
+      isStreamingRef.current = false;
 
-      await setAudioModeAsync({
-        allowsRecording: false,
+      // Wait for any in-progress processing to complete
+      while (isProcessingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Stop and unload the recording
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (e) {
+          // Ignore errors if already stopped
+        }
+        recordingRef.current = null;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
       });
 
       setIsRecording(false);
-
-      // Return the URI of the recorded file
-      return recorder.uri;
+      onAudioDataRef.current = null;
+      console.log('Recording stopped');
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
-  }, [recorder]);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isStreamingRef.current = false;
+    };
+  }, []);
 
   return {
     startRecording,
@@ -113,6 +202,5 @@ export function useAudioRecording() {
     isRecording,
     hasPermission,
     requestPermission,
-    recordingUri: recorder.uri,
   };
 }

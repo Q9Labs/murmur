@@ -17,8 +17,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Murmur needs access to your microphone to transcribe your speech for real-time translation.",
-        "NSSpeechRecognitionUsageDescription": "Murmur uses speech recognition to provide accurate transcriptions."
-      }
+        "NSSpeechRecognitionUsageDescription": "Murmur uses speech recognition to provide accurate transcriptions.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.hhushhas14.murmur"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,8 +30,11 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "RECORD_AUDIO"
-      ]
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "com.hhushhas14.murmur"
     },
     "web": {
       "bundler": "metro",

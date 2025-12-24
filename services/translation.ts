@@ -7,6 +7,40 @@ export class TranslationService {
     this.apiKey = apiKey;
   }
 
+  private async translateOnce(text: string, targetLanguage: string) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://murmur.app',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3.5-haiku',
+        messages: [
+          {
+            role: 'user',
+            content: `Translate the following text to ${targetLanguage}. Only provide the translation, no explanations or additional text:\n\n${text}`,
+          },
+        ],
+        temperature: 0.3,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('OpenRouter API returned empty translation');
+    }
+
+    return content as string;
+  }
+
   async translateStream(
     text: string,
     targetLanguage: string,
@@ -41,7 +75,10 @@ export class TranslationService {
 
       const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error('No response body');
+        const fullText = await this.translateOnce(text, targetLanguage);
+        onChunk(fullText);
+        onComplete(fullText);
+        return;
       }
 
       const decoder = new TextDecoder();

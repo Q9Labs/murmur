@@ -21,16 +21,16 @@ export class DeepgramService {
           smart_format: 'true',
           punctuate: 'true',
           interim_results: 'true',
-          endpointing: '100',
+          endpointing: '300',
           encoding: 'linear16',
           sample_rate: '16000',
         });
 
-        // Include auth token as query parameter since React Native WebSocket doesn't support headers
-        const url = `wss://api.deepgram.com/v1/listen?${params.toString()}&token=${this.apiKey}`;
+        const url = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
 
-        // Create WebSocket connection
-        this.ws = new WebSocket(url);
+        // For React Native client-side apps, use Sec-WebSocket-Protocol for authentication
+        // Format: ['token', 'YOUR_API_KEY']
+        this.ws = new WebSocket(url, ['token', this.apiKey]);
 
         this.ws.onopen = () => {
           console.log('Deepgram connection opened');
@@ -49,14 +49,19 @@ export class DeepgramService {
           }
         };
 
-        this.ws.onerror = (event) => {
-          const error = new Error('Deepgram WebSocket error');
+        this.ws.onerror = (event: Event) => {
+          console.error('Deepgram WebSocket error event:', event);
+          const error = new Error('Deepgram WebSocket connection failed. Check your API key and network connection.');
           onError(error);
           reject(error);
         };
 
-        this.ws.onclose = () => {
-          console.log('Deepgram connection closed');
+        this.ws.onclose = (event: CloseEvent) => {
+          console.log('Deepgram connection closed:', event.code, event.reason);
+          if (event.code !== 1000 && event.code !== 1005) {
+            // Abnormal closure
+            onError(new Error(`Deepgram connection closed unexpectedly: ${event.code} ${event.reason || 'Unknown reason'}`));
+          }
         };
       } catch (error) {
         onError(error as Error);
