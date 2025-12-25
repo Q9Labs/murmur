@@ -8,7 +8,15 @@ import {
   useState,
 } from "react";
 import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnimatedMicButton, GlassCard, IconButton } from "@/components/ui";
@@ -20,6 +28,82 @@ import { TranslationService } from "@/services/translation";
 const DEEPGRAM_API_KEY = process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY || "";
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
 const DEMO_MODE = !DEEPGRAM_API_KEY || !OPENROUTER_API_KEY;
+
+function TypingIndicator(): ReactNode {
+  const dot1 = useSharedValue(0);
+  const dot2 = useSharedValue(0);
+  const dot3 = useSharedValue(0);
+
+  useEffect(() => {
+    dot1.value = withRepeat(
+      withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+    setTimeout(() => {
+      dot2.value = withRepeat(
+        withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      );
+    }, 150);
+    setTimeout(() => {
+      dot3.value = withRepeat(
+        withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      );
+    }, 300);
+  }, []);
+
+  const dotStyle1 = useAnimatedStyle(() => ({
+    opacity: 0.3 + dot1.value * 0.7,
+  }));
+  const dotStyle2 = useAnimatedStyle(() => ({
+    opacity: 0.3 + dot2.value * 0.7,
+  }));
+  const dotStyle3 = useAnimatedStyle(() => ({
+    opacity: 0.3 + dot3.value * 0.7,
+  }));
+
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <Animated.View
+        style={[
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
+          dotStyle1,
+        ]}
+      />
+      <Animated.View
+        style={[
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
+          dotStyle2,
+        ]}
+      />
+      <Animated.View
+        style={[
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
+          dotStyle3,
+        ]}
+      />
+    </View>
+  );
+}
 
 function TranslateScreenContent(): ReactNode {
   const { languageName } = useLocalSearchParams<{
@@ -391,27 +475,39 @@ function TranslateScreenContent(): ReactNode {
         {/* Translation Card */}
         <Animated.View
           entering={FadeInDown.delay(300).duration(400)}
-          className="mb-4"
+          className="mb-5"
         >
           <View className="flex-row items-center mb-2 ml-1">
             <Text className="text-xs font-bold text-coral uppercase tracking-wider">
               Translation
             </Text>
+            {isTranslating && (
+              <View className="ml-2">
+                <ActivityIndicator size="small" color={theme.colors.coral} />
+              </View>
+            )}
           </View>
-          <View className="rounded-2xl overflow-hidden border border-coral/20">
+          <View className="rounded-3xl overflow-hidden border border-coral/20 shadow-soft">
             <LinearGradient
               colors={["rgba(255, 120, 79, 0.08)", "rgba(219, 157, 71, 0.08)"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ padding: 16 }}
+              style={{ padding: 20, minHeight: 120 }}
             >
               {translation ? (
                 <Text className="text-base leading-relaxed text-ink">
                   {translation}
                 </Text>
+              ) : isTranslating ? (
+                <View className="flex-row items-center">
+                  <Text className="text-base text-ink-muted italic mr-2">
+                    Translating
+                  </Text>
+                  <TypingIndicator />
+                </View>
               ) : (
                 <Text className="text-base text-ink-muted italic">
-                  Translation appears here
+                  Translation will appear here...
                 </Text>
               )}
             </LinearGradient>
@@ -429,7 +525,7 @@ function TranslateScreenContent(): ReactNode {
         )}
       </ScrollView>
 
-      {/* Microphone Button Area */}
+      {/* Microphone Button Area - Positioned at bottom with solid background and top border */}
       <View
         onLayout={(event) => {
           const { height } = event.nativeEvent.layout;
@@ -437,14 +533,16 @@ function TranslateScreenContent(): ReactNode {
         }}
         style={{
           backgroundColor: theme.colors.pastel.cream,
-          paddingTop: 16,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.glass.defaultBorder,
+          paddingTop: 24,
           paddingHorizontal: 24,
-          paddingBottom: insets.bottom + 16,
+          paddingBottom: insets.bottom + 24,
           alignItems: "center",
         }}
       >
         {isConnecting ? (
-          <View className="w-16 h-16 rounded-full bg-white/80 items-center justify-center">
+          <View className="w-20 h-20 rounded-full bg-white/80 items-center justify-center shadow-elevated">
             <ActivityIndicator size="large" color={theme.colors.coral} />
           </View>
         ) : (
@@ -454,7 +552,7 @@ function TranslateScreenContent(): ReactNode {
           />
         )}
 
-        <Text className="text-xs font-medium text-ink-muted mt-2">
+        <Text className="text-sm font-medium text-ink-secondary mt-4">
           {getStatusText()}
         </Text>
       </View>

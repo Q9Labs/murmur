@@ -1,4 +1,3 @@
-
 # Murmur Audio Translation Flow
 
 ## High-Level Architecture
@@ -200,6 +199,7 @@
 ## Key Technical Details
 
 ### Audio Format
+
 - **Sample Rate**: 16kHz
 - **Encoding**: 16-bit Linear PCM
 - **Channels**: Mono (1)
@@ -207,6 +207,7 @@
 - **Header**: Skip first 44 bytes (WAV header)
 
 ### WebSocket (Deepgram)
+
 - **URL**: `wss://api.deepgram.com/v1/listen`
 - **Auth**: Sec-WebSocket-Protocol header `['token', apiKey]`
 - **Model**: nova-2
@@ -214,6 +215,7 @@
 - **Interim Results**: Enabled
 
 ### HTTP Streaming (OpenRouter)
+
 - **URL**: `https://openrouter.ai/api/v1/chat/completions`
 - **Auth**: Bearer token
 - **Model**: anthropic/claude-3.5-haiku
@@ -221,12 +223,14 @@
 - **Parsing**: Split by `\n`, extract `data: ` prefix
 
 ### Timing
+
 - **Audio Chunks**: Every 250ms
 - **Translation Debounce**: 1000ms (1 second)
 - **Deepgram**: Real-time (< 100ms latency)
 - **OpenRouter**: Streaming (chunks arrive progressively)
 
 ### State Management
+
 - **transcription**: React state (immediate UI update)
 - **translation**: React state (streaming chunks)
 - **transcriptionBufferRef**: useRef (debounce coordination)
@@ -234,12 +238,14 @@
 - **Services**: useRef (persist across renders)
 
 ### UI Updates
+
 - **Transcription**: Immediate append on each Deepgram message
 - **Translation**: Incremental update as OpenRouter chunks arrive
 - **Animations**: Reanimated shared values (mic pulse, scale)
 - **Error**: Displayed in red alert box below translation
 
 ### Cleanup
+
 - **WebSocket**: Closed on stop or unmount
 - **Recording**: Unloaded and audio mode reset
 - **Timeouts**: Cleared on component unmount

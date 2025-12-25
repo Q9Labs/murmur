@@ -1,16 +1,17 @@
-import { View, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
-import { AnimatedLogo, GradientButton } from '@/components/ui';
+import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import type { ReactNode } from "react";
+import { Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { AnimatedLogo, GradientButton } from "@/components/ui";
 
-export default function Onboarding() {
+export default function Onboarding(): ReactNode {
   const router = useRouter();
 
   return (
     <LinearGradient
-      colors={['#FFFBF7', '#FFE19C', '#EDFFD9']}
+      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
       locations={[0, 0.5, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -21,10 +22,7 @@ export default function Onboarding() {
         <View className="flex-[0.1]" />
 
         {/* Logo Section */}
-        <Animated.View
-          entering={FadeIn.duration(600)}
-          className="items-center"
-        >
+        <Animated.View entering={FadeIn.duration(600)} className="items-center">
           <AnimatedLogo size="md" />
 
           {/* Title */}
@@ -59,7 +57,7 @@ export default function Onboarding() {
           <GradientButton
             title="Get Started"
             icon="arrow-right"
-            onPress={() => router.push('/language-selection')}
+            onPress={() => router.push("/language-selection")}
             animated
             delay={700}
           />
@@ -77,15 +75,13 @@ export default function Onboarding() {
   );
 }
 
-function FeaturePill({
-  icon,
-  text,
-  delay,
-}: {
+interface FeaturePillProps {
   icon: keyof typeof Feather.glyphMap;
   text: string;
   delay: number;
-}) {
+}
+
+function FeaturePill({ icon, text, delay }: FeaturePillProps): ReactNode {
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).duration(400)}

@@ -1,40 +1,89 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { View, Text, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { type ReactNode, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GradientButton, IconButton, LanguageCard } from "@/components/ui";
-import { theme } from "@/lib/theme";
-import { type Language, SUPPORTED_LANGUAGES } from "@/types";
+import { useState, useEffect, useRef } from "react";
+import { SUPPORTED_LANGUAGES, Language } from "@/types";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+} from "react-native-reanimated";
+import { IconButton, LanguageCard, GradientButton } from "@/components/ui";
+import { onboardingStorage } from "@/lib/onboarding";
 
-function LanguageSelectionContent() {
+export default function LanguageSelection() {
   const router = useRouter();
+  const routerRef = useRef(router);
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(
     null,
   );
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  // Update router ref when it changes
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleContinue = () => {
-    if (!selectedLanguage) return;
-    router.push({
-      pathname: "/translate",
-      params: {
-        languageCode: selectedLanguage.code,
-        languageName: selectedLanguage.name,
-      },
-    });
+    // Prevent multiple navigation attempts
+    if (isNavigating || !selectedLanguage || !routerRef.current) {
+      return;
+    }
+
+    try {
+      setIsNavigating(true);
+
+      // Debounce navigation to prevent multiple rapid pushes
+      navigationTimeoutRef.current = setTimeout(() => {
+        try {
+          routerRef.current.push({
+            pathname: "/translate",
+            params: {
+              languageCode: selectedLanguage.code,
+              languageName: selectedLanguage.name,
+            },
+          });
+        } catch (error) {
+          console.warn("[LanguageSelection] Navigation error:", error);
+          setIsNavigating(false);
+        }
+      }, 100);
+    } catch (error) {
+      console.warn("[LanguageSelection] Continue handler error:", error);
+      setIsNavigating(false);
+    }
   };
 
-  const handleBackPress = () => {
-    router.back();
+  const handleBackPress = async () => {
+    if (isNavigating || !routerRef.current) {
+      return;
+    }
+    try {
+      // Reset onboarding so user can view it again
+      await onboardingStorage.reset();
+      routerRef.current.replace("/onboarding");
+    } catch (error) {
+      console.warn("[LanguageSelection] Back navigation error:", error);
+    }
   };
 
   return (
     <LinearGradient
-      colors={theme.gradients.background.colors as [string, string, string]}
-      locations={theme.gradients.background.locations}
-      start={theme.gradients.background.start}
-      end={theme.gradients.background.end}
+      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
+      locations={[0, 0.5, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
     >
       <View className="flex-1 pt-14 pb-6">
@@ -75,7 +124,16 @@ function LanguageSelectionContent() {
                       key={`language-${language.code}`}
                       language={language}
                       isSelected={selectedLanguage?.code === language.code}
-                      onPress={() => setSelectedLanguage(language)}
+                      onPress={() => {
+                        try {
+                          setSelectedLanguage(language);
+                        } catch (error) {
+                          console.warn(
+                            "[LanguageSelection] Selection error:",
+                            error,
+                          );
+                        }
+                      }}
                       index={index}
                     />
                   );
@@ -91,10 +149,8 @@ function LanguageSelectionContent() {
             className="absolute bottom-0 left-0 right-0 px-6 pb-10 pt-4"
           >
             <LinearGradient
-              colors={theme.gradients.overlay.buttonFade.colors}
-              locations={theme.gradients.overlay.buttonFade.locations}
-              start={theme.gradients.overlay.buttonFade.start}
-              end={theme.gradients.overlay.buttonFade.end}
+              colors={["transparent", "#FFFBF7"]}
+              locations={[0, 0.3]}
               className="absolute inset-0"
             />
             <GradientButton
@@ -106,18 +162,5 @@ function LanguageSelectionContent() {
         ) : null}
       </View>
     </LinearGradient>
-  );
-}
-
-export default function LanguageSelection(): ReactNode {
-  return (
-    <ErrorBoundary
-      allowNavigateHome={true}
-      onError={(error) => {
-        console.error("[LanguageSelection] ErrorBoundary caught error:", error);
-      }}
-    >
-      <LanguageSelectionContent />
-    </ErrorBoundary>
   );
 }

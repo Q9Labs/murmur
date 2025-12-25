@@ -22,6 +22,7 @@ AI-Powered Real-Time Translation App
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    bun install
    # or

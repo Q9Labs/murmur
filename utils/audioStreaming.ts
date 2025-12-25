@@ -12,27 +12,27 @@
  */
 
 export interface AudioStreamConfig {
-  sampleRate: number;
-  channels: number;
-  encoding: string;
+	sampleRate: number;
+	channels: number;
+	encoding: string;
 }
 
 export const DEFAULT_AUDIO_CONFIG: AudioStreamConfig = {
-  sampleRate: 16000,
-  channels: 1,
-  encoding: 'linear16',
+	sampleRate: 16000,
+	channels: 1,
+	encoding: "linear16",
 };
 
 /**
  * Converts base64 audio data to ArrayBuffer
  */
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
+	const binaryString = atob(base64);
+	const bytes = new Uint8Array(binaryString.length);
+	for (let i = 0; i < binaryString.length; i++) {
+		bytes[i] = binaryString.charCodeAt(i);
+	}
+	return bytes.buffer;
 }
 
 /**
@@ -57,20 +57,20 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
  * ```
  */
 export class AudioStreamManager {
-  private isStreaming = false;
+	private isStreaming = false;
 
-  async start(onData: (data: ArrayBuffer) => void): Promise<void> {
-    this.isStreaming = true;
-    // Placeholder - in production, this would initialize native audio capture
-    console.log('AudioStreamManager: Started');
-  }
+	async start(onData: (data: ArrayBuffer) => void): Promise<void> {
+		this.isStreaming = true;
+		// Placeholder - in production, this would initialize native audio capture
+		console.log("AudioStreamManager: Started");
+	}
 
-  stop(): void {
-    this.isStreaming = false;
-    console.log('AudioStreamManager: Stopped');
-  }
+	stop(): void {
+		this.isStreaming = false;
+		console.log("AudioStreamManager: Stopped");
+	}
 
-  isActive(): boolean {
-    return this.isStreaming;
-  }
+	isActive(): boolean {
+		return this.isStreaming;
+	}
 }
