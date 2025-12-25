@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Audio } from 'expo-av';
-import { readAsStringAsync, deleteAsync } from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode as base64Decode } from 'base-64';
 
 // Recording options for PCM audio suitable for Deepgram streaming
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
@@ -90,12 +91,12 @@ export function useAudioRecording() {
 
         // Process the previous recording's audio
         if (uri && onAudioDataRef.current) {
-          const base64 = await readAsStringAsync(uri, {
-            encoding: 'base64',
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
           });
 
-          // Convert base64 to ArrayBuffer
-          const binaryString = atob(base64);
+          // Convert base64 to ArrayBuffer using polyfill (atob is not available in React Native)
+          const binaryString = base64Decode(base64);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
@@ -110,7 +111,7 @@ export function useAudioRecording() {
           }
 
           // Delete the temp file
-          await deleteAsync(uri, { idempotent: true });
+          await FileSystem.deleteAsync(uri, { idempotent: true });
         }
       } catch (err) {
         console.error('Error in audio stream loop:', err);

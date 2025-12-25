@@ -4,3 +4,4 @@ export { IconButton } from './IconButton';
 export { AnimatedLogo } from './AnimatedLogo';
 export { LanguageCard } from './LanguageCard';
 export { AnimatedMicButton } from './AnimatedMicButton';
+export { OnboardingSlide } from './OnboardingSlide';

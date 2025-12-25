@@ -28,7 +28,7 @@ interface DeepgramChannel {
 
 /** Deepgram transcript result message */
 interface DeepgramTranscriptMessage {
-  readonly type: 'Results';
+  readonly type: "Results";
   readonly channel_index: readonly [number, number];
   readonly duration: number;
   readonly start: number;
@@ -39,14 +39,14 @@ interface DeepgramTranscriptMessage {
 
 /** Deepgram utterance end message - sent when word-timing gap exceeds threshold */
 interface DeepgramUtteranceEndMessage {
-  readonly type: 'UtteranceEnd';
+  readonly type: "UtteranceEnd";
   readonly channel: readonly [number, number];
   readonly last_word_end: number;
 }
 
 /** Deepgram metadata message - sent on connection */
 interface DeepgramMetadataMessage {
-  readonly type: 'Metadata';
+  readonly type: "Metadata";
   readonly transaction_key: string;
   readonly request_id: string;
   readonly sha256: string;
@@ -123,14 +123,14 @@ interface DeepgramConfig {
 
 /** Default configuration values */
 const DEFAULT_CONFIG: DeepgramConfig = {
-  model: 'nova-2',
-  language: 'multi',
+  model: "nova-2",
+  language: "multi",
   smartFormat: true,
   punctuate: true,
   interimResults: true,
   endpointing: 800,
   utteranceEndMs: 1500,
-  encoding: 'linear16',
+  encoding: "linear16",
   sampleRate: 16000,
 } as const;
 
@@ -142,15 +142,16 @@ export class DeepgramService {
   private ws: WebSocket | null = null;
   private readonly apiKey: string;
   private readonly config: DeepgramConfig;
+  private destroyed: boolean = false;
 
   // State tracking for transcript accumulation
-  private accumulatedTranscript: string = '';
+  private accumulatedTranscript: string = "";
   private lastSpeechFinalHandled: boolean = false;
   private isSpeaking: boolean = false;
 
   constructor(apiKey: string, config: Partial<DeepgramConfig> = {}) {
-    if (!apiKey || apiKey.trim() === '') {
-      throw new Error('DeepgramService: API key is required');
+    if (!apiKey || apiKey.trim() === "") {
+      throw new Error("DeepgramService: API key is required");
     }
 
     this.apiKey = apiKey;
@@ -170,10 +171,10 @@ export class DeepgramService {
     return new Promise((resolve, reject) => {
       try {
         const url = this.buildWebSocketUrl();
-        this.ws = new WebSocket(url, ['token', this.apiKey]);
+        this.ws = new WebSocket(url, ["token", this.apiKey]);
 
         this.ws.onopen = (): void => {
-          console.log('[Deepgram] Connection opened');
+          console.log("[Deepgram] Connection opened");
           resolve(this.ws!);
         };
 
@@ -182,9 +183,9 @@ export class DeepgramService {
         };
 
         this.ws.onerror = (event: Event): void => {
-          console.error('[Deepgram] WebSocket error:', event);
+          console.error("[Deepgram] WebSocket error:", event);
           const error = new Error(
-            'Deepgram WebSocket connection failed. Check your API key and network connection.'
+            "Deepgram WebSocket connection failed. Check your API key and network connection.",
           );
           callbacks.onError(error);
           reject(error);
@@ -208,35 +209,42 @@ export class DeepgramService {
    * @param audioData - Raw PCM audio data as ArrayBuffer
    */
   sendAudio(audioData: ArrayBuffer): void {
-    if (!this.ws) {
-      console.warn('[Deepgram] Cannot send audio: WebSocket not initialized');
+    if (this.destroyed || !this.ws) {
+      console.warn(
+        "[Deepgram] Cannot send audio: WebSocket not initialized or service destroyed",
+      );
       return;
     }
 
     if (this.ws.readyState !== WebSocket.OPEN) {
       console.warn(
-        '[Deepgram] Cannot send audio: WebSocket not open (state: %d)',
-        this.ws.readyState
+        "[Deepgram] Cannot send audio: WebSocket not open (state: %d)",
+        this.ws.readyState,
       );
       return;
     }
 
-    this.ws.send(audioData);
+    try {
+      this.ws.send(audioData);
+    } catch (error) {
+      console.error("[Deepgram] Error sending audio:", error);
+    }
   }
 
   /**
    * Stops the Deepgram streaming session and closes the WebSocket.
    */
   stop(): void {
+    this.destroyed = true;
     if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN) {
         // Send close frame for graceful shutdown
-        this.ws.close(1000, 'Client requested close');
+        this.ws.close(1000, "Client requested close");
       }
       this.ws = null;
     }
     this.resetState();
-    console.log('[Deepgram] Connection stopped');
+    console.log("[Deepgram] Connection stopped");
   }
 
   /**
@@ -251,8 +259,20 @@ export class DeepgramService {
    * Call this after translation is triggered to start fresh.
    */
   clearAccumulatedTranscript(): void {
-    this.accumulatedTranscript = '';
+    this.accumulatedTranscript = "";
     this.lastSpeechFinalHandled = false;
+  }
+
+  /**
+   * Checks if the service is destroyed or if connection is not open.
+   * @returns true if the service is still active and can send audio, false otherwise
+   */
+  isAlive(): boolean {
+    return (
+      !this.destroyed &&
+      this.ws !== null &&
+      this.ws.readyState === WebSocket.OPEN
+    );
   }
 
   // ===========================================================================
@@ -276,116 +296,206 @@ export class DeepgramService {
   }
 
   private resetState(): void {
-    this.accumulatedTranscript = '';
+    this.accumulatedTranscript = "";
     this.lastSpeechFinalHandled = false;
     this.isSpeaking = false;
   }
 
-  private handleMessage(event: MessageEvent, callbacks: DeepgramCallbacks): void {
+  private handleMessage(
+    event: MessageEvent,
+    callbacks: DeepgramCallbacks,
+  ): void {
     try {
       const data = JSON.parse(event.data as string) as DeepgramMessage;
 
       switch (data.type) {
-        case 'Results':
+        case "Results":
           this.handleTranscriptMessage(data, callbacks);
           break;
 
-        case 'UtteranceEnd':
+        case "UtteranceEnd":
           this.handleUtteranceEnd(data, callbacks);
           break;
 
-        case 'Metadata':
-          console.log('[Deepgram] Session metadata received:', data.request_id);
+        case "Metadata":
+          console.log("[Deepgram] Session metadata received:", data.request_id);
           break;
 
         default:
           // Unknown message type - log for debugging
-          console.log('[Deepgram] Unknown message type:', (data as { type?: string }).type);
+          console.log(
+            "[Deepgram] Unknown message type:",
+            (data as { type?: string }).type,
+          );
       }
-    } catch {
+    } catch (error) {
       // Non-JSON messages (keepalives, etc.) - silently ignore
+      if (error instanceof SyntaxError) {
+        // Expected for keepalive messages
+        return;
+      }
+      // Log unexpected errors
+      console.warn("[Deepgram] Unexpected error processing message:", error);
     }
   }
 
   private handleTranscriptMessage(
     data: DeepgramTranscriptMessage,
-    callbacks: DeepgramCallbacks
+    callbacks: DeepgramCallbacks,
   ): void {
-    const alternative = data.channel?.alternatives?.[0];
-    if (!alternative) return;
+    if (this.destroyed) return;
 
-    const transcript = alternative.transcript;
-    const isEmpty = !transcript || transcript.trim() === '';
+    try {
+      const alternative = data.channel?.alternatives?.[0];
+      if (!alternative) return;
 
-    // Update speaking state based on receiving non-empty transcripts
-    if (!isEmpty && !this.isSpeaking) {
-      this.isSpeaking = true;
-      callbacks.onSpeakingChange?.(true);
-    }
+      const transcript = alternative.transcript;
+      const isEmpty = !transcript || transcript.trim() === "";
 
-    // Always emit transcript (even interim) for real-time display
-    if (!isEmpty) {
-      callbacks.onTranscript(transcript, data.is_final);
-    }
-
-    // Accumulate finalized transcripts only (not interim results)
-    if (data.is_final && !isEmpty) {
-      // Add space between segments if needed
-      if (this.accumulatedTranscript && !this.accumulatedTranscript.endsWith(' ')) {
-        this.accumulatedTranscript += ' ';
+      // Update speaking state based on receiving non-empty transcripts
+      if (!isEmpty && !this.isSpeaking) {
+        this.isSpeaking = true;
+        try {
+          callbacks.onSpeakingChange?.(true);
+        } catch (error) {
+          console.error(
+            "[Deepgram] Error in onSpeakingChange callback:",
+            error,
+          );
+        }
       }
-      this.accumulatedTranscript += transcript;
-    }
 
-    // Handle speech_final - user has finished speaking
-    if (data.speech_final) {
-      this.isSpeaking = false;
-      callbacks.onSpeakingChange?.(false);
-
-      const fullTranscript = this.accumulatedTranscript.trim();
-      if (fullTranscript && !this.lastSpeechFinalHandled) {
-        this.lastSpeechFinalHandled = true;
-        callbacks.onSpeechFinal(fullTranscript);
+      // Always emit transcript (even interim) for real-time display
+      if (!isEmpty) {
+        try {
+          callbacks.onTranscript(transcript, data.is_final);
+        } catch (error) {
+          console.error("[Deepgram] Error in onTranscript callback:", error);
+        }
       }
+
+      // Accumulate finalized transcripts only (not interim results)
+      if (data.is_final && !isEmpty) {
+        // Add space between segments if needed
+        if (
+          this.accumulatedTranscript &&
+          !this.accumulatedTranscript.endsWith(" ")
+        ) {
+          this.accumulatedTranscript += " ";
+        }
+        this.accumulatedTranscript += transcript;
+      }
+
+      // Handle speech_final - user has finished speaking
+      if (data.speech_final) {
+        this.isSpeaking = false;
+        try {
+          callbacks.onSpeakingChange?.(false);
+        } catch (error) {
+          console.error(
+            "[Deepgram] Error in onSpeakingChange callback:",
+            error,
+          );
+        }
+
+        const fullTranscript = this.accumulatedTranscript.trim();
+        if (fullTranscript && !this.lastSpeechFinalHandled) {
+          this.lastSpeechFinalHandled = true;
+          try {
+            callbacks.onSpeechFinal(fullTranscript);
+          } catch (error) {
+            console.error("[Deepgram] Error in onSpeechFinal callback:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[Deepgram] Unexpected error in handleTranscriptMessage:",
+        error,
+      );
     }
   }
 
   private handleUtteranceEnd(
     _data: DeepgramUtteranceEndMessage,
-    callbacks: DeepgramCallbacks
+    callbacks: DeepgramCallbacks,
   ): void {
-    console.log('[Deepgram] UtteranceEnd received');
+    if (this.destroyed) return;
 
-    // Update speaking state
-    if (this.isSpeaking) {
-      this.isSpeaking = false;
-      callbacks.onSpeakingChange?.(false);
-    }
+    try {
+      console.log("[Deepgram] UtteranceEnd received");
 
-    // Only trigger if we haven't already handled via speech_final
-    // This is a fallback for noisy environments
-    if (!this.lastSpeechFinalHandled && this.accumulatedTranscript.trim()) {
-      callbacks.onUtteranceEnd();
+      // Update speaking state
+      if (this.isSpeaking) {
+        this.isSpeaking = false;
+        try {
+          callbacks.onSpeakingChange?.(false);
+        } catch (error) {
+          console.error(
+            "[Deepgram] Error in onSpeakingChange callback:",
+            error,
+          );
+        }
+      }
+
+      // Only trigger if we haven't already handled via speech_final
+      // This is a fallback for noisy environments
+      if (!this.lastSpeechFinalHandled && this.accumulatedTranscript.trim()) {
+        try {
+          callbacks.onUtteranceEnd();
+        } catch (error) {
+          console.error("[Deepgram] Error in onUtteranceEnd callback:", error);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[Deepgram] Unexpected error in handleUtteranceEnd:",
+        error,
+      );
     }
   }
 
   private handleClose(event: CloseEvent, callbacks: DeepgramCallbacks): void {
-    console.log('[Deepgram] Connection closed:', event.code, event.reason || '(no reason)');
+    console.log(
+      "[Deepgram] Connection closed:",
+      event.code,
+      event.reason || "(no reason)",
+    );
 
-    // Update speaking state on close
-    if (this.isSpeaking) {
-      this.isSpeaking = false;
-      callbacks.onSpeakingChange?.(false);
+    if (this.destroyed) {
+      // Expected closure from stop() call, no error
+      return;
     }
 
-    // Only report abnormal closures as errors
-    // 1000 = normal closure, 1005 = no status received (also normal in some cases)
-    if (event.code !== 1000 && event.code !== 1005) {
-      callbacks.onError(
-        new Error(
-          `Deepgram connection closed unexpectedly: ${event.code} ${event.reason || 'Unknown reason'}`
-        )
-      );
+    try {
+      // Update speaking state on close
+      if (this.isSpeaking) {
+        this.isSpeaking = false;
+        try {
+          callbacks.onSpeakingChange?.(false);
+        } catch (error) {
+          console.error(
+            "[Deepgram] Error in onSpeakingChange callback:",
+            error,
+          );
+        }
+      }
+
+      // Only report abnormal closures as errors
+      // 1000 = normal closure, 1005 = no status received (also normal in some cases)
+      if (event.code !== 1000 && event.code !== 1005) {
+        try {
+          callbacks.onError(
+            new Error(
+              `Deepgram connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`,
+            ),
+          );
+        } catch (error) {
+          console.error("[Deepgram] Error in onError callback:", error);
+        }
+      }
+    } catch (error) {
+      console.error("[Deepgram] Unexpected error in handleClose:", error);
     }
   }
 }
