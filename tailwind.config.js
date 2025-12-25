@@ -1,39 +1,12 @@
+const colors = require( "./constants/theme-colors" );
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-	content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
-	presets: [require("nativewind/preset")],
+	content: [ "./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}" ],
+	presets: [ require( "nativewind/preset" ) ],
 	theme: {
 		extend: {
-			colors: {
-				// Core Sunset Warmth palette
-				midnight: "#3A3042",
-				clay: "#DB9D47",
-				coral: "#FF784F",
-				peach: "#FFE19C",
-				mint: "#EDFFD9",
-
-				// Semantic background colors
-				bg: {
-					primary: "#FFFBF7",
-					secondary: "#FFF8F0",
-					mint: "#EDFFD9",
-					peach: "#FFE19C",
-				},
-
-				// Accent colors
-				accent: {
-					DEFAULT: "#FF784F",
-					secondary: "#DB9D47",
-					dark: "#3A3042",
-				},
-
-				// Ink (text) colors
-				ink: {
-					DEFAULT: "#3A3042",
-					secondary: "#5A4A62",
-					muted: "#8A7A92",
-				},
-			},
+			colors: colors,
 			borderRadius: {
 				"4xl": "2rem",
 				"5xl": "2.5rem",

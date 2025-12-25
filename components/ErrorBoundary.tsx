@@ -1,10 +1,10 @@
+import { theme } from "@/lib/theme";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { type ReactElement, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { theme } from "@/lib/theme";
 
 interface Props {
   children: ReactNode;
@@ -270,6 +270,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                   </Pressable>
 
                   {this.props.allowNavigateHome && <HomeNavigationButton />}
+                  <ResetAppButton />
                 </>
               ) : (
                 <>
@@ -292,12 +293,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
                         textAlign: "center",
                       }}
                     >
-                      Max retries reached. Please restart the app or navigate
-                      home.
+                      Max retries reached. Please restart the app or reset all
+                      data.
                     </Text>
                   </View>
 
                   {this.props.allowNavigateHome && <HomeNavigationButton />}
+                  <ResetAppButton />
                 </>
               )}
             </Animated.View>
@@ -344,6 +346,44 @@ function HomeNavigationButton(): ReactElement {
         }}
       >
         Go to Home
+      </Text>
+    </Pressable>
+  );
+}
+
+// Helper component for resetting app data
+function ResetAppButton(): ReactElement {
+  const router = useRouter();
+
+  const handleReset = async (): Promise<void> => {
+    try {
+      const { onboardingStorage } = await import("@/lib/onboarding");
+      await onboardingStorage.reset();
+      router.replace("/onboarding");
+    } catch (error) {
+      console.error("[ErrorBoundary] Reset error:", error);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={handleReset}
+      style={{
+        marginTop: 8,
+        paddingVertical: theme.spacing.sm,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 14,
+          fontWeight: "500",
+          color: theme.colors.text.secondary,
+          textDecorationLine: "underline",
+        }}
+      >
+        Reset App & Clear Data
       </Text>
     </Pressable>
   );

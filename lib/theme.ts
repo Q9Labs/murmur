@@ -1,66 +1,50 @@
-/**
- * Centralized theme configuration for Murmur
- * Single source of truth for all theme values: colors, gradients, typography, spacing
- */
+import colors from "../constants/theme-colors";
 
 export const theme = {
-  // Color Palette
+  // Color Palette - Simplified and synced with theme-colors.js
   colors: {
     // Primary colors
-    coral: "#FF784F",
-    coralLight: "#FF9A5A",
-    coralMuted: "rgba(255, 120, 79, 0.15)",
-    coralAccent: "rgba(255, 120, 79, 0.08)",
-    coralBorder: "rgba(255, 120, 79, 0.2)",
+    coral: colors.coral,
+    coralLight: colors.primary.coralLight,
+    coralMuted: colors.primary.coralMuted,
+    coralAccent: colors.primary.coralAccent,
+    coralBorder: colors.primary.coralBorder,
 
     // Gold/Orange
-    gold: "#DB9D47",
-    goldMuted: "rgba(219, 157, 71, 0.08)",
+    gold: colors.gold,
+    goldMuted: colors.glass.gold,
 
     // Red
-    red: "#FF5733",
-    redLight: "#FF6B5A",
+    red: colors.status.error,
+    redLight: colors.status.errorLight,
 
     // Text colors
     text: {
-      primary: "#3A3042", // ink
-      secondary: "#5A4A62", // ink-secondary
-      muted: "#8A7A92", // ink-muted
-      light: "#FFFFFF",
+      primary: colors.ink.DEFAULT,
+      secondary: colors.ink.secondary,
+      muted: colors.ink.muted,
+      light: colors.ink.light,
     },
 
     // Background & Surface
-    white: "#FFFFFF",
-    whiteTransparent: {
-      full: "rgba(255, 255, 255, 1)",
-      intense: "rgba(255, 255, 255, 0.8)",
-      high: "rgba(255, 255, 255, 0.7)",
-      medium: "rgba(255, 255, 255, 0.6)",
-      light: "rgba(255, 255, 255, 0.5)",
-      subtle: "rgba(255, 255, 255, 0.4)",
-      veryLight: "rgba(255, 255, 255, 0.3)",
-    },
+    white: colors.white.full,
+    whiteTransparent: colors.white,
 
     // Glass backgrounds
-    glass: {
-      default: "rgba(255, 255, 255, 0.7)",
-      defaultBorder: "rgba(255, 255, 255, 0.4)",
-      medium: "rgba(255, 255, 255, 0.6)",
-      mediumBorder: "rgba(255, 255, 255, 0.4)",
-    },
+    glass: colors.glass,
 
     // Pastels
     pastel: {
-      cream: "#FFFBF7",
-      butter: "#FFE19C",
-      mint: "#EDFFD9",
+      cream: colors.bg.cream,
+      butter: colors.peach,
+      mint: colors.bg.mint,
     },
 
     // Status/Error
-    error: "#FF6B6B",
-    errorBackground: "#FF5050",
-    errorLight: "#FF6B6B",
-    errorBorder: "#FF6B6B",
+    error: colors.status.error,
+    errorBackground: colors.status.errorBackground,
+    errorLight: colors.status.errorLight,
+    errorBorder: colors.status.errorBorder,
   },
 
   // Gradient Configurations

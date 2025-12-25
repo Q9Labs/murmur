@@ -1,8 +1,8 @@
+import { theme } from "@/lib/theme";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { theme } from "@/lib/theme";
 
 interface OnboardingSlideProps {
   title: string;
@@ -74,7 +74,7 @@ export function OnboardingSlide({
             fontSize: theme.onboarding.descriptionFontSize,
             color: theme.colors.text.secondary,
             textAlign: "center",
-            lineHeight: theme.typography.lineHeight.relaxed,
+            lineHeight: theme.onboarding.descriptionFontSize * theme.typography.lineHeight.relaxed,
           }}
         >
           {description}

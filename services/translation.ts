@@ -35,7 +35,7 @@ export class TranslationService {
             "HTTP-Referer": "https://murmur.app",
           },
           body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct",
+            model: "anthropic/claude-3.5-haiku",
             messages: [
               {
                 role: "user",
@@ -109,10 +109,10 @@ export class TranslationService {
   ): string {
     // Combine buffer with new chunk
     const combined = buffer + chunk;
-    let processed = "";
-
+    
     // Split by newlines but preserve incomplete lines in buffer
-    const lines = combined.split("\n");
+    // Support both \n and \r\n
+    const lines = combined.split(/\r?\n/);
 
     // Last line might be incomplete - keep it in buffer
     const lastLine = lines[lines.length - 1];
@@ -120,9 +120,10 @@ export class TranslationService {
 
     // Process complete lines
     for (const line of completeLines) {
+      if (!line.trim()) continue;
+      
       const content = this.parseSSELine(line);
       if (content) {
-        processed += content;
         onChunk(content);
       }
     }

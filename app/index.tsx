@@ -1,20 +1,21 @@
+import { AnimatedLogo, GradientButton } from "@/components/ui";
+import { theme } from "@/lib/theme";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { AnimatedLogo, GradientButton } from "@/components/ui";
 
 export default function Onboarding(): ReactNode {
   const router = useRouter();
 
   return (
     <LinearGradient
-      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
-      locations={[0, 0.5, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={theme.gradients.background.colors as [string, string, string]}
+      locations={theme.gradients.background.locations}
+      start={theme.gradients.background.start}
+      end={theme.gradients.background.end}
       style={{ flex: 1 }}
     >
       <View className="flex-1 px-8 pt-20 pb-12">

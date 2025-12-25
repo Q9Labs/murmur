@@ -1,14 +1,15 @@
-import { View, Text, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
-import { useState, useEffect, useRef } from "react";
-import { SUPPORTED_LANGUAGES, Language } from "@/types";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-} from "react-native-reanimated";
-import { IconButton, LanguageCard, GradientButton } from "@/components/ui";
+import { GradientButton, IconButton, LanguageCard } from "@/components/ui";
 import { onboardingStorage } from "@/lib/onboarding";
+import { theme } from "@/lib/theme";
+import { Language, SUPPORTED_LANGUAGES } from "@/types";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import Animated, {
+    FadeIn,
+    FadeInDown,
+} from "react-native-reanimated";
 
 export default function LanguageSelection() {
   const router = useRouter();
@@ -47,15 +48,18 @@ export default function LanguageSelection() {
       // Debounce navigation to prevent multiple rapid pushes
       navigationTimeoutRef.current = setTimeout(() => {
         try {
-          routerRef.current.push({
-            pathname: "/translate",
-            params: {
-              languageCode: selectedLanguage.code,
-              languageName: selectedLanguage.name,
-            },
-          });
+          if (routerRef.current) {
+            routerRef.current.push({
+              pathname: "/translate",
+              params: {
+                languageCode: selectedLanguage.code,
+                languageName: selectedLanguage.name,
+              },
+            });
+          }
         } catch (error) {
           console.warn("[LanguageSelection] Navigation error:", error);
+        } finally {
           setIsNavigating(false);
         }
       }, 100);
@@ -80,10 +84,10 @@ export default function LanguageSelection() {
 
   return (
     <LinearGradient
-      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
-      locations={[0, 0.5, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={theme.gradients.background.colors as [string, string, string]}
+      locations={theme.gradients.background.locations}
+      start={theme.gradients.background.start}
+      end={theme.gradients.background.end}
       style={{ flex: 1 }}
     >
       <View className="flex-1 pt-14 pb-6">

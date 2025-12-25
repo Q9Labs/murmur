@@ -137,12 +137,12 @@ interface DeepgramConfig {
 /** Default configuration values */
 const DEFAULT_CONFIG: DeepgramConfig = {
   model: "nova-2",
-  language: "multi",
+  language: "en-US",
   smartFormat: true,
   punctuate: true,
   interimResults: true,
-  endpointing: 800,
-  utteranceEndMs: 1500,
+  endpointing: 2000,
+  utteranceEndMs: 3000,
   encoding: "linear16",
   sampleRate: 16000,
 } as const;
@@ -164,7 +164,9 @@ export class DeepgramService {
 
   // Keep-alive mechanism
   private keepAliveInterval: NodeJS.Timeout | null = null;
+  private watchdogInterval: NodeJS.Timeout | null = null;
   private lastPingTime: number = 0;
+  private lastMessageTime: number = 0;
   private reconnectAttempts: number = 0;
   private readonly maxReconnectAttempts: number = 3;
   private readonly reconnectDelays: readonly number[] = [1000, 2000, 4000];
@@ -199,11 +201,12 @@ export class DeepgramService {
         this.ws = new WebSocket(url, ["token", this.apiKey]);
 
         this.ws.onopen = (): void => {
-          console.log("[Deepgram] Connection opened");
-          this.startKeepAlive();
-          // Reset reconnect attempts on successful connection
-          this.reconnectAttempts = 0;
-          this.isReconnecting = false;
+            this.startKeepAlive();
+            this.startWatchdog();
+            // Reset reconnect attempts on successful connection
+            this.reconnectAttempts = 0;
+            this.isReconnecting = false;
+            this.lastMessageTime = Date.now();
           try {
             this.callbacks?.onReconnecting?.(
               false,
@@ -267,6 +270,7 @@ export class DeepgramService {
 
     try {
       this.ws.send(audioData);
+      this.lastMessageTime = Date.now();
     } catch (error) {
       console.error("[Deepgram] Error sending audio:", error);
     }
@@ -280,6 +284,7 @@ export class DeepgramService {
 
     // Clear all timers and intervals
     this.stopKeepAlive();
+    this.stopWatchdog();
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
@@ -380,7 +385,7 @@ export class DeepgramService {
       clearInterval(this.keepAliveInterval);
     }
 
-    console.log("[Deepgram] Starting keep-alive pings (20s interval)");
+    console.log("[Deepgram] Starting keep-alive pings (10s interval)");
 
     this.keepAliveInterval = setInterval(() => {
       if (!this.isAlive()) {
@@ -392,17 +397,22 @@ export class DeepgramService {
       }
 
       try {
+        // Deepgram expects a JSON message for keep-alive
+        // We can use { type: "KeepAlive" } or just      try {
         const pingMessage = JSON.stringify({ type: "KeepAlive" });
         this.ws!.send(pingMessage);
         this.lastPingTime = Date.now();
-        console.log(
-          `[Deepgram] Keep-alive ping sent (${new Date(this.lastPingTime).toISOString()})`,
-        );
+        
+        // Log every 6th ping (approx every 30s)
+        if (Math.floor(this.lastPingTime / 5000) % 6 === 0) {
+          console.log(
+            `[Deepgram] Keep-alive ping sent (${new Date(this.lastPingTime).toISOString()})`,
+          );
+        }
       } catch (error) {
         console.warn("[Deepgram] Failed to send keep-alive ping:", error);
-        // Don't crash on failed ping; connection may self-recover
       }
-    }, 20000) as unknown as NodeJS.Timeout; // 20 seconds
+    }, 5000) as unknown as NodeJS.Timeout; // 5 seconds
   }
 
   /**
@@ -413,6 +423,46 @@ export class DeepgramService {
       clearInterval(this.keepAliveInterval);
       this.keepAliveInterval = null;
       console.log("[Deepgram] Keep-alive pings stopped");
+    }
+  }
+
+  /**
+   * Starts a watchdog that monitors the connection for silence.
+   * If no messages are received for 15 seconds, it attempts to reconnect.
+   */
+  private startWatchdog(): void {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+    }
+
+    this.watchdogInterval = setInterval(() => {
+      if (!this.isAlive()) return;
+
+      const now = Date.now();
+      const idleTime = now - this.lastMessageTime;
+
+      // If we haven't heard from Deepgram in 60 seconds
+      // something might be wrong with the connection even if WS says OPEN
+      if (idleTime > 60000) {
+        console.warn(
+          `[Deepgram] Watchdog: No messages for ${Math.round(idleTime / 1000)}s, forcing reconnect`,
+        );
+        this.stopKeepAlive();
+        this.stopWatchdog();
+        
+        if (this.ws) {
+          this.ws.close(4000, "Watchdog timeout");
+        }
+        
+        // Reconnection logic will be triggered by handleClose
+      }
+    }, 10000) as unknown as NodeJS.Timeout;
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+      this.watchdogInterval = null;
     }
   }
 
@@ -498,6 +548,7 @@ export class DeepgramService {
     callbacks: DeepgramCallbacks,
   ): void {
     try {
+      this.lastMessageTime = Date.now();
       const data = JSON.parse(event.data as string) as DeepgramMessage;
 
       switch (data.type) {
@@ -657,10 +708,6 @@ export class DeepgramService {
     // Stop keep-alive pings when connection closes
     this.stopKeepAlive();
 
-    if (this.destroyed) {
-      // Expected closure from stop() call, no error
-      return;
-    }
 
     try {
       // Update speaking state on close
