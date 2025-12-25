@@ -93,6 +93,19 @@ export interface DeepgramCallbacks {
   readonly onSpeakingChange?: (isSpeaking: boolean) => void;
 
   /**
+   * Optional callback for reconnection state changes.
+   * Useful for showing connection status to the user.
+   * @param isReconnecting - Whether the service is attempting to reconnect
+   * @param attemptNumber - Current reconnection attempt number (0 if not reconnecting)
+   * @param maxAttempts - Maximum number of reconnection attempts
+   */
+  readonly onReconnecting?: (
+    isReconnecting: boolean,
+    attemptNumber: number,
+    maxAttempts: number,
+  ) => void;
+
+  /**
    * Called when an error occurs.
    * @param error - The error that occurred
    */
@@ -149,6 +162,16 @@ export class DeepgramService {
   private lastSpeechFinalHandled: boolean = false;
   private isSpeaking: boolean = false;
 
+  // Keep-alive mechanism
+  private keepAliveInterval: NodeJS.Timeout | null = null;
+  private lastPingTime: number = 0;
+  private reconnectAttempts: number = 0;
+  private readonly maxReconnectAttempts: number = 3;
+  private readonly reconnectDelays: readonly number[] = [1000, 2000, 4000];
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private isReconnecting: boolean = false;
+  private callbacks: DeepgramCallbacks | null = null;
+
   constructor(apiKey: string, config: Partial<DeepgramConfig> = {}) {
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("DeepgramService: API key is required");
@@ -167,6 +190,8 @@ export class DeepgramService {
   async startStreaming(callbacks: DeepgramCallbacks): Promise<WebSocket> {
     // Reset state for new session
     this.resetState();
+    this.callbacks = callbacks;
+    this.isReconnecting = false;
 
     return new Promise((resolve, reject) => {
       try {
@@ -175,6 +200,22 @@ export class DeepgramService {
 
         this.ws.onopen = (): void => {
           console.log("[Deepgram] Connection opened");
+          this.startKeepAlive();
+          // Reset reconnect attempts on successful connection
+          this.reconnectAttempts = 0;
+          this.isReconnecting = false;
+          try {
+            this.callbacks?.onReconnecting?.(
+              false,
+              0,
+              this.maxReconnectAttempts,
+            );
+          } catch (error) {
+            console.error(
+              "[Deepgram] Error in onReconnecting callback:",
+              error,
+            );
+          }
           resolve(this.ws!);
         };
 
@@ -236,6 +277,15 @@ export class DeepgramService {
    */
   stop(): void {
     this.destroyed = true;
+
+    // Clear all timers and intervals
+    this.stopKeepAlive();
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Close WebSocket connection
     if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN) {
         // Send close frame for graceful shutdown
@@ -243,7 +293,12 @@ export class DeepgramService {
       }
       this.ws = null;
     }
+
     this.resetState();
+    this.callbacks = null;
+    this.isReconnecting = false;
+    this.reconnectAttempts = 0;
+
     console.log("[Deepgram] Connection stopped");
   }
 
@@ -275,9 +330,146 @@ export class DeepgramService {
     );
   }
 
+  /**
+   * Gets the current connection health status.
+   * @returns Connection health info with status, last ping time, and connection state
+   */
+  getConnectionHealth(): {
+    readonly status: "healthy" | "degraded" | "dead";
+    readonly lastPingTime: number;
+    readonly isConnected: boolean;
+  } {
+    const isConnected = this.isAlive();
+    const now = Date.now();
+    const timeSinceLastPing = now - this.lastPingTime;
+
+    // Healthy: connected and pinged within 30 seconds
+    // Degraded: connected but no recent ping, or disconnected
+    // Dead: destroyed or permanently disconnected
+    let status: "healthy" | "degraded" | "dead" = "dead";
+
+    if (this.destroyed) {
+      status = "dead";
+    } else if (isConnected && timeSinceLastPing < 30000) {
+      status = "healthy";
+    } else if (
+      isConnected ||
+      (this.ws && this.ws.readyState === WebSocket.CONNECTING)
+    ) {
+      status = "degraded";
+    }
+
+    return {
+      status,
+      lastPingTime: this.lastPingTime,
+      isConnected,
+    };
+  }
+
   // ===========================================================================
   // Private Methods
   // ===========================================================================
+
+  /**
+   * Starts the keep-alive ping interval (20 seconds).
+   * Sends {type: 'KeepAlive'} to maintain the connection.
+   */
+  private startKeepAlive(): void {
+    // Clear any existing interval
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+    }
+
+    console.log("[Deepgram] Starting keep-alive pings (20s interval)");
+
+    this.keepAliveInterval = setInterval(() => {
+      if (!this.isAlive()) {
+        console.warn(
+          "[Deepgram] Keep-alive: connection no longer alive, stopping pings",
+        );
+        this.stopKeepAlive();
+        return;
+      }
+
+      try {
+        const pingMessage = JSON.stringify({ type: "KeepAlive" });
+        this.ws!.send(pingMessage);
+        this.lastPingTime = Date.now();
+        console.log(
+          `[Deepgram] Keep-alive ping sent (${new Date(this.lastPingTime).toISOString()})`,
+        );
+      } catch (error) {
+        console.warn("[Deepgram] Failed to send keep-alive ping:", error);
+        // Don't crash on failed ping; connection may self-recover
+      }
+    }, 20000) as unknown as NodeJS.Timeout; // 20 seconds
+  }
+
+  /**
+   * Stops the keep-alive ping interval.
+   */
+  private stopKeepAlive(): void {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+      console.log("[Deepgram] Keep-alive pings stopped");
+    }
+  }
+
+  /**
+   * Attempts to reconnect with exponential backoff.
+   * Max 3 attempts with 1s, 2s, 4s delays.
+   */
+  private async attemptReconnect(callbacks: DeepgramCallbacks): Promise<void> {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error("[Deepgram] Max reconnection attempts reached, giving up");
+      this.isReconnecting = false;
+      try {
+        this.callbacks?.onReconnecting?.(false, 0, this.maxReconnectAttempts);
+      } catch (error) {
+        console.error("[Deepgram] Error in onReconnecting callback:", error);
+      }
+      return;
+    }
+
+    const delay = this.reconnectDelays[this.reconnectAttempts];
+    this.reconnectAttempts++;
+
+    console.log(
+      `[Deepgram] Reconnecting (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`,
+    );
+
+    // Notify UI about reconnection attempt
+    this.isReconnecting = true;
+    try {
+      this.callbacks?.onReconnecting?.(
+        true,
+        this.reconnectAttempts,
+        this.maxReconnectAttempts,
+      );
+    } catch (error) {
+      console.error("[Deepgram] Error in onReconnecting callback:", error);
+    }
+
+    await new Promise((resolve) => {
+      this.reconnectTimeout = setTimeout(resolve, delay) as NodeJS.Timeout;
+    });
+
+    if (this.destroyed) {
+      console.log("[Deepgram] Service destroyed, skipping reconnection");
+      this.isReconnecting = false;
+      return;
+    }
+
+    try {
+      console.log("[Deepgram] Attempting reconnection...");
+      await this.startStreaming(callbacks);
+      console.log("[Deepgram] Reconnection successful");
+    } catch (error) {
+      console.error("[Deepgram] Reconnection failed:", error);
+      // Will be retried by handleClose if we haven't exhausted attempts
+    }
+  }
 
   private buildWebSocketUrl(): string {
     const params = new URLSearchParams({
@@ -462,6 +654,9 @@ export class DeepgramService {
       event.reason || "(no reason)",
     );
 
+    // Stop keep-alive pings when connection closes
+    this.stopKeepAlive();
+
     if (this.destroyed) {
       // Expected closure from stop() call, no error
       return;
@@ -484,15 +679,18 @@ export class DeepgramService {
       // Only report abnormal closures as errors
       // 1000 = normal closure, 1005 = no status received (also normal in some cases)
       if (event.code !== 1000 && event.code !== 1005) {
+        const errorMsg = `Deepgram connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`;
         try {
-          callbacks.onError(
-            new Error(
-              `Deepgram connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`,
-            ),
-          );
+          callbacks.onError(new Error(errorMsg));
         } catch (error) {
           console.error("[Deepgram] Error in onError callback:", error);
         }
+
+        // Attempt reconnection on unexpected closure
+        console.log("[Deepgram] Initiating reconnection sequence...");
+        this.attemptReconnect(callbacks).catch((error) => {
+          console.error("[Deepgram] Reconnection sequence failed:", error);
+        });
       }
     } catch (error) {
       console.error("[Deepgram] Unexpected error in handleClose:", error);

@@ -15,6 +15,8 @@ import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { DeepgramService } from "@/services/deepgram";
 import { TranslationService } from "@/services/translation";
 import { IconButton, AnimatedMicButton, GlassCard } from "@/components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { theme } from "@/lib/theme";
 
 const DEEPGRAM_API_KEY = process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY || "";
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
@@ -62,23 +64,69 @@ function TypingIndicator() {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
       <Animated.View
         style={[
-          { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF784F" },
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
           dotStyle1,
         ]}
       />
       <Animated.View
         style={[
-          { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF784F" },
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
           dotStyle2,
         ]}
       />
       <Animated.View
         style={[
-          { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF784F" },
+          {
+            width: theme.dot.small,
+            height: theme.dot.small,
+            borderRadius: theme.dot.small / 2,
+            backgroundColor: theme.colors.coral,
+          },
           dotStyle3,
         ]}
       />
     </View>
+  );
+}
+
+// Streaming cursor indicator - subtle blinking cursor
+function StreamingCursor() {
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(0, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, []);
+
+  const cursorStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: 2,
+          height: 20,
+          backgroundColor: theme.colors.coral,
+          marginLeft: 2,
+        },
+        cursorStyle,
+      ]}
+    />
   );
 }
 
@@ -88,6 +136,7 @@ export default function TranslateScreen() {
     languageName: string;
   }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [transcription, setTranscription] = useState("");
   const [translation, setTranslation] = useState("");
@@ -96,6 +145,9 @@ export default function TranslateScreen() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [maxReconnectAttempts, setMaxReconnectAttempts] = useState(3);
 
   const { startRecording, stopRecording, hasPermission, requestPermission } =
     useAudioRecording();
@@ -105,6 +157,9 @@ export default function TranslateScreen() {
   const retryCountRef = useRef(0);
   const maxRetries = 3;
   const isMountedRef = useRef(true);
+  const transcriptionScrollRef = useRef<ScrollView>(null);
+  const translationScrollRef = useRef<ScrollView>(null);
+  const activeTranslationRef = useRef(false);
 
   useEffect(() => {
     if (DEEPGRAM_API_KEY) {
@@ -121,6 +176,24 @@ export default function TranslateScreen() {
     };
   }, []);
 
+  // Auto-scroll transcription to bottom when new content arrives
+  useEffect(() => {
+    if (transcription && transcriptionScrollRef.current) {
+      setTimeout(() => {
+        transcriptionScrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [transcription]);
+
+  // Auto-scroll translation to bottom when new chunks arrive
+  useEffect(() => {
+    if (translation && translationScrollRef.current) {
+      setTimeout(() => {
+        translationScrollRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    }
+  }, [translation]);
+
   const handleTranslate = useCallback(
     async (text: string) => {
       if (
@@ -133,8 +206,12 @@ export default function TranslateScreen() {
 
       try {
         if (!isMountedRef.current) return;
+
+        // Mark translation as active and clear previous result
+        activeTranslationRef.current = true;
         setIsTranslating(true);
         setTranslation("");
+        setError(null);
 
         let result = "";
         await translationRef.current.translateStream(
@@ -142,7 +219,8 @@ export default function TranslateScreen() {
           languageName,
           (chunk) => {
             try {
-              if (isMountedRef.current) {
+              // Only update if this translation is still active
+              if (isMountedRef.current && activeTranslationRef.current) {
                 result += chunk;
                 setTranslation(result);
               }
@@ -152,9 +230,10 @@ export default function TranslateScreen() {
           },
           (fullText) => {
             try {
-              if (isMountedRef.current) {
+              if (isMountedRef.current && activeTranslationRef.current) {
                 setTranslation(fullText);
                 setIsTranslating(false);
+                activeTranslationRef.current = false;
               }
             } catch (error) {
               console.error("Error updating final translation:", error);
@@ -166,6 +245,7 @@ export default function TranslateScreen() {
                 console.error("Translation error:", err);
                 setError("Translation failed. Please try again.");
                 setIsTranslating(false);
+                activeTranslationRef.current = false;
               }
             } catch (error) {
               console.error("Error handling translation error:", error);
@@ -177,6 +257,7 @@ export default function TranslateScreen() {
         if (isMountedRef.current) {
           setError("Translation failed. Please try again.");
           setIsTranslating(false);
+          activeTranslationRef.current = false;
         }
       }
     },
@@ -195,10 +276,13 @@ export default function TranslateScreen() {
 
     try {
       if (isMountedRef.current) {
+        // Mark any active translation as inactive
+        activeTranslationRef.current = false;
         setIsConnecting(true);
         setError(null);
         setTranscription("");
         setTranslation("");
+        setIsTranslating(false);
       }
 
       await deepgramRef.current.startStreaming({
@@ -241,6 +325,28 @@ export default function TranslateScreen() {
             }
           } catch (error) {
             console.error("Error updating speaking state:", error);
+          }
+        },
+        onReconnecting: (
+          isReconnecting: boolean,
+          attemptNumber: number,
+          maxAttempts: number,
+        ) => {
+          try {
+            if (isMountedRef.current) {
+              setIsReconnecting(isReconnecting);
+              setReconnectAttempt(attemptNumber);
+              setMaxReconnectAttempts(maxAttempts);
+              if (isReconnecting) {
+                console.log(
+                  `[UI] Reconnecting to Deepgram (attempt ${attemptNumber}/${maxAttempts})`,
+                );
+              } else {
+                console.log("[UI] Reconnection successful");
+              }
+            }
+          } catch (error) {
+            console.error("Error handling reconnecting state:", error);
           }
         },
         onError: (err: Error) => {
@@ -354,6 +460,8 @@ export default function TranslateScreen() {
   };
 
   const getStatusText = () => {
+    if (isReconnecting)
+      return `Reconnecting... (${reconnectAttempt}/${maxReconnectAttempts})`;
     if (isConnecting) return "Connecting...";
     if (!isListening) return "Tap to start speaking";
     if (isSpeaking) return "Listening...";
@@ -362,10 +470,10 @@ export default function TranslateScreen() {
 
   return (
     <LinearGradient
-      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
-      locations={[0, 0.5, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={theme.gradients.background.colors}
+      locations={theme.gradients.background.locations}
+      start={theme.gradients.background.start}
+      end={theme.gradients.background.end}
       style={{ flex: 1 }}
     >
       {/* Header */}
@@ -380,17 +488,29 @@ export default function TranslateScreen() {
             size="md"
             variant="glass"
           />
-          <View className="flex-row items-center bg-coral/15 px-4 py-2 rounded-full">
-            <Text className="text-sm text-ink-secondary mr-1">
-              Translating to
-            </Text>
-            <Text className="text-sm font-bold text-coral">{languageName}</Text>
-          </View>
+          {isReconnecting ? (
+            <View className="flex-row items-center bg-yellow-50 border border-yellow-200 px-4 py-2 rounded-full gap-2">
+              <ActivityIndicator size="small" color="#EA9D47" />
+              <Text className="text-sm text-yellow-700 font-medium">
+                Reconnecting ({reconnectAttempt}/{maxReconnectAttempts})
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row items-center bg-coral/15 px-4 py-2 rounded-full">
+              <Text className="text-sm text-ink-secondary mr-1">
+                Translating to
+              </Text>
+              <Text className="text-sm font-bold text-coral">
+                {languageName}
+              </Text>
+            </View>
+          )}
         </View>
       </Animated.View>
 
-      {/* Content */}
+      {/* Content - Scrollable with sufficient bottom padding */}
       <ScrollView
+        ref={translationScrollRef}
         className="flex-1 px-6"
         contentContainerStyle={{ paddingBottom: 200 }}
         showsVerticalScrollIndicator={false}
@@ -442,21 +562,24 @@ export default function TranslateScreen() {
             </Text>
             {isTranslating && (
               <View className="ml-2">
-                <ActivityIndicator size="small" color="#FF784F" />
+                <ActivityIndicator size="small" color={theme.colors.coral} />
               </View>
             )}
           </View>
           <View className="rounded-3xl overflow-hidden border border-coral/20 shadow-soft">
             <LinearGradient
-              colors={["rgba(255, 120, 79, 0.08)", "rgba(219, 157, 71, 0.08)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+              colors={theme.gradients.overlay.translationCard.colors}
+              start={theme.gradients.overlay.translationCard.start}
+              end={theme.gradients.overlay.translationCard.end}
               style={{ padding: 20, minHeight: 120 }}
             >
               {translation ? (
-                <Text className="text-base leading-relaxed text-ink">
-                  {translation}
-                </Text>
+                <View className="flex-row flex-wrap items-center">
+                  <Text className="text-base leading-relaxed text-ink">
+                    {translation}
+                  </Text>
+                  {isTranslating && <StreamingCursor />}
+                </View>
               ) : isTranslating ? (
                 <View className="flex-row items-center">
                   <Text className="text-base text-ink-muted italic mr-2">
@@ -484,17 +607,20 @@ export default function TranslateScreen() {
         )}
       </ScrollView>
 
-      {/* Microphone Button Area */}
-      <View className="absolute bottom-0 left-0 right-0 items-center pb-10 pt-6">
+      {/* Microphone Button Area - Positioned at bottom without overlapping content */}
+      <View
+        className="items-center pt-6 px-6"
+        style={{ paddingBottom: insets.bottom + 24 }}
+      >
         <LinearGradient
-          colors={["transparent", "rgba(255, 251, 247, 0.9)", "#FFFBF7"]}
-          locations={[0, 0.4, 1]}
+          colors={theme.gradients.overlay.bottomFade.colors}
+          locations={theme.gradients.overlay.bottomFade.locations}
           className="absolute inset-0"
         />
 
         {isConnecting ? (
           <View className="w-20 h-20 rounded-full bg-white/80 items-center justify-center shadow-elevated">
-            <ActivityIndicator size="large" color="#FF784F" />
+            <ActivityIndicator size="large" color={theme.colors.coral} />
           </View>
         ) : (
           <AnimatedMicButton
