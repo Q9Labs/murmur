@@ -1,13 +1,14 @@
-import React, { useCallback, useMemo } from "react";
-import { Text, Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import React, { useCallback, useMemo } from "react";
+import { Pressable, Text, View } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from "react-native-reanimated";
-import { Language } from "@/types";
+import { theme } from "@/lib/theme";
+import type { Language } from "@/types";
 
 interface LanguageCardProps {
   language: Language;
@@ -88,13 +89,15 @@ export function LanguageCard({
         disabled={false}
         style={{
           position: "relative",
-          padding: 16,
-          borderRadius: 16,
+          padding: theme.languageCard.padding,
+          borderRadius: theme.languageCard.borderRadius,
           backgroundColor: isSelected
-            ? "rgba(255,255,255,0.8)"
-            : "rgba(255,255,255,0.5)",
+            ? theme.colors.whiteTransparent.intense
+            : theme.colors.whiteTransparent.light,
           borderWidth: isSelected ? 2 : 1,
-          borderColor: isSelected ? "#FF784F" : "rgba(255,255,255,0.4)",
+          borderColor: isSelected
+            ? theme.colors.coral
+            : theme.colors.whiteTransparent.subtle,
         }}
       >
         {/* Selected checkmark badge */}
@@ -107,31 +110,31 @@ export function LanguageCard({
               width: 24,
               height: 24,
               borderRadius: 12,
-              backgroundColor: "#FF784F",
+              backgroundColor: theme.colors.coral,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Feather name="check" size={14} color="#FFFFFF" />
+            <Feather name="check" size={14} color={theme.colors.text.light} />
           </View>
         ) : null}
 
         {/* Flag container with emoji fallback */}
         <View
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
+            width: theme.languageCard.flagContainer.size,
+            height: theme.languageCard.flagContainer.size,
+            borderRadius: theme.languageCard.flagContainer.borderRadius,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 12,
             backgroundColor: isSelected
-              ? "rgba(255,120,79,0.15)"
-              : "rgba(255,225,156,0.3)",
+              ? theme.colors.coralMuted
+              : theme.colors.goldMuted,
           }}
         >
           <Text
-            style={{ fontSize: 24 }}
+            style={{ fontSize: theme.languageCard.flagContainer.fontSize }}
             allowFontScaling={false}
             maxFontSizeMultiplier={1}
           >
@@ -142,9 +145,11 @@ export function LanguageCard({
         {/* Language name */}
         <Text
           style={{
-            fontSize: 16,
+            fontSize: theme.languageCard.nameTextSize,
             fontWeight: "600",
-            color: isSelected ? "#3A3042" : "#5A4A62",
+            color: isSelected
+              ? theme.colors.text.primary
+              : theme.colors.text.secondary,
           }}
           allowFontScaling={true}
           maxFontSizeMultiplier={1.3}
@@ -157,9 +162,11 @@ export function LanguageCard({
         {/* Native name */}
         <Text
           style={{
-            fontSize: 14,
+            fontSize: theme.languageCard.nativeNameTextSize,
             marginTop: 2,
-            color: isSelected ? "#5A4A62" : "#8A7A92",
+            color: isSelected
+              ? theme.colors.text.secondary
+              : theme.colors.text.muted,
           }}
           allowFontScaling={true}
           maxFontSizeMultiplier={1.3}

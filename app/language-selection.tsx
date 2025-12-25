@@ -1,16 +1,14 @@
-import { View, Text, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
-import { useState, useEffect, useRef } from "react";
-import { SUPPORTED_LANGUAGES, Language } from "@/types";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  SlideInDown,
-} from "react-native-reanimated";
-import { IconButton, LanguageCard, GradientButton } from "@/components/ui";
+import { useRouter } from "expo-router";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GradientButton, IconButton, LanguageCard } from "@/components/ui";
+import { theme } from "@/lib/theme";
+import { type Language, SUPPORTED_LANGUAGES } from "@/types";
 
-export default function LanguageSelection() {
+function LanguageSelectionContent() {
   const router = useRouter();
   const routerRef = useRef(router);
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(
@@ -66,22 +64,24 @@ export default function LanguageSelection() {
   };
 
   const handleBackPress = () => {
-    if (isNavigating || !routerRef.current) {
+    if (isNavigating) {
       return;
     }
     try {
-      routerRef.current.back();
+      setIsNavigating(true);
+      router.back();
     } catch (error) {
       console.warn("[LanguageSelection] Back navigation error:", error);
+      setIsNavigating(false);
     }
   };
 
   return (
     <LinearGradient
-      colors={["#FFFBF7", "#FFE19C", "#EDFFD9"]}
-      locations={[0, 0.5, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={theme.gradients.background.colors as [string, string, string]}
+      locations={theme.gradients.background.locations}
+      start={theme.gradients.background.start}
+      end={theme.gradients.background.end}
       style={{ flex: 1 }}
     >
       <View className="flex-1 pt-14 pb-6">
@@ -147,8 +147,10 @@ export default function LanguageSelection() {
             className="absolute bottom-0 left-0 right-0 px-6 pb-10 pt-4"
           >
             <LinearGradient
-              colors={["transparent", "#FFFBF7"]}
-              locations={[0, 0.3]}
+              colors={theme.gradients.overlay.buttonFade.colors}
+              locations={theme.gradients.overlay.buttonFade.locations}
+              start={theme.gradients.overlay.buttonFade.start}
+              end={theme.gradients.overlay.buttonFade.end}
               className="absolute inset-0"
             />
             <GradientButton
@@ -160,5 +162,18 @@ export default function LanguageSelection() {
         ) : null}
       </View>
     </LinearGradient>
+  );
+}
+
+export default function LanguageSelection(): ReactNode {
+  return (
+    <ErrorBoundary
+      allowNavigateHome={true}
+      onError={(error) => {
+        console.error("[LanguageSelection] ErrorBoundary caught error:", error);
+      }}
+    >
+      <LanguageSelectionContent />
+    </ErrorBoundary>
   );
 }

@@ -1,165 +1,53 @@
-import { View, Text, ScrollView, Alert, ActivityIndicator } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
-import { useState, useEffect, useRef, useCallback } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AnimatedMicButton, GlassCard, IconButton } from "@/components/ui";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
+import { theme } from "@/lib/theme";
 import { DeepgramService } from "@/services/deepgram";
 import { TranslationService } from "@/services/translation";
-import { IconButton, AnimatedMicButton, GlassCard } from "@/components/ui";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { theme } from "@/lib/theme";
 
 const DEEPGRAM_API_KEY = process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY || "";
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
 const DEMO_MODE = !DEEPGRAM_API_KEY || !OPENROUTER_API_KEY;
 
-// Typing indicator component
-function TypingIndicator() {
-  const dot1 = useSharedValue(0);
-  const dot2 = useSharedValue(0);
-  const dot3 = useSharedValue(0);
-
-  useEffect(() => {
-    dot1.value = withRepeat(
-      withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-    setTimeout(() => {
-      dot2.value = withRepeat(
-        withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true,
-      );
-    }, 150);
-    setTimeout(() => {
-      dot3.value = withRepeat(
-        withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true,
-      );
-    }, 300);
-  }, []);
-
-  const dotStyle1 = useAnimatedStyle(() => ({
-    opacity: 0.3 + dot1.value * 0.7,
-  }));
-  const dotStyle2 = useAnimatedStyle(() => ({
-    opacity: 0.3 + dot2.value * 0.7,
-  }));
-  const dotStyle3 = useAnimatedStyle(() => ({
-    opacity: 0.3 + dot3.value * 0.7,
-  }));
-
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-      <Animated.View
-        style={[
-          {
-            width: theme.dot.small,
-            height: theme.dot.small,
-            borderRadius: theme.dot.small / 2,
-            backgroundColor: theme.colors.coral,
-          },
-          dotStyle1,
-        ]}
-      />
-      <Animated.View
-        style={[
-          {
-            width: theme.dot.small,
-            height: theme.dot.small,
-            borderRadius: theme.dot.small / 2,
-            backgroundColor: theme.colors.coral,
-          },
-          dotStyle2,
-        ]}
-      />
-      <Animated.View
-        style={[
-          {
-            width: theme.dot.small,
-            height: theme.dot.small,
-            borderRadius: theme.dot.small / 2,
-            backgroundColor: theme.colors.coral,
-          },
-          dotStyle3,
-        ]}
-      />
-    </View>
-  );
-}
-
-// Streaming cursor indicator - subtle blinking cursor
-function StreamingCursor() {
-  const opacity = useSharedValue(1);
-
-  useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(0, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, []);
-
-  const cursorStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: 2,
-          height: 20,
-          backgroundColor: theme.colors.coral,
-          marginLeft: 2,
-        },
-        cursorStyle,
-      ]}
-    />
-  );
-}
-
-export default function TranslateScreen() {
-  const { languageCode, languageName } = useLocalSearchParams<{
+function TranslateScreenContent(): ReactNode {
+  const { languageName } = useLocalSearchParams<{
     languageCode: string;
     languageName: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [transcription, setTranscription] = useState("");
-  const [translation, setTranslation] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcription, setTranscription] = useState<string>("");
+  const [translation, setTranslation] = useState<string>("");
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [isReconnecting, setIsReconnecting] = useState(false);
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const [maxReconnectAttempts, setMaxReconnectAttempts] = useState(3);
+  const [micContainerHeight, setMicContainerHeight] = useState<number>(0);
 
   const { startRecording, stopRecording, hasPermission, requestPermission } =
     useAudioRecording();
 
   const deepgramRef = useRef<DeepgramService | null>(null);
   const translationRef = useRef<TranslationService | null>(null);
-  const retryCountRef = useRef(0);
+  const retryCountRef = useRef<number>(0);
   const maxRetries = 3;
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef<boolean>(true);
   const transcriptionScrollRef = useRef<ScrollView>(null);
   const translationScrollRef = useRef<ScrollView>(null);
-  const activeTranslationRef = useRef(false);
 
   useEffect(() => {
     if (DEEPGRAM_API_KEY) {
@@ -195,7 +83,7 @@ export default function TranslateScreen() {
   }, [translation]);
 
   const handleTranslate = useCallback(
-    async (text: string) => {
+    async (text: string): Promise<void> => {
       if (
         !text?.trim() ||
         !translationRef.current ||
@@ -206,21 +94,16 @@ export default function TranslateScreen() {
 
       try {
         if (!isMountedRef.current) return;
-
-        // Mark translation as active and clear previous result
-        activeTranslationRef.current = true;
         setIsTranslating(true);
         setTranslation("");
-        setError(null);
 
         let result = "";
         await translationRef.current.translateStream(
           text.trim(),
           languageName,
-          (chunk) => {
+          (chunk: string) => {
             try {
-              // Only update if this translation is still active
-              if (isMountedRef.current && activeTranslationRef.current) {
+              if (isMountedRef.current) {
                 result += chunk;
                 setTranslation(result);
               }
@@ -228,24 +111,22 @@ export default function TranslateScreen() {
               console.error("Error updating translation chunk:", error);
             }
           },
-          (fullText) => {
+          (fullText: string) => {
             try {
-              if (isMountedRef.current && activeTranslationRef.current) {
+              if (isMountedRef.current) {
                 setTranslation(fullText);
                 setIsTranslating(false);
-                activeTranslationRef.current = false;
               }
             } catch (error) {
               console.error("Error updating final translation:", error);
             }
           },
-          (err) => {
+          (err: Error) => {
             try {
               if (isMountedRef.current) {
                 console.error("Translation error:", err);
                 setError("Translation failed. Please try again.");
                 setIsTranslating(false);
-                activeTranslationRef.current = false;
               }
             } catch (error) {
               console.error("Error handling translation error:", error);
@@ -257,14 +138,13 @@ export default function TranslateScreen() {
         if (isMountedRef.current) {
           setError("Translation failed. Please try again.");
           setIsTranslating(false);
-          activeTranslationRef.current = false;
         }
       }
     },
     [languageName],
   );
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(async (): Promise<void> => {
     if (!deepgramRef.current) {
       if (isMountedRef.current) {
         setError("Service not initialized");
@@ -276,13 +156,10 @@ export default function TranslateScreen() {
 
     try {
       if (isMountedRef.current) {
-        // Mark any active translation as inactive
-        activeTranslationRef.current = false;
         setIsConnecting(true);
         setError(null);
         setTranscription("");
         setTranslation("");
-        setIsTranslating(false);
       }
 
       await deepgramRef.current.startStreaming({
@@ -327,28 +204,6 @@ export default function TranslateScreen() {
             console.error("Error updating speaking state:", error);
           }
         },
-        onReconnecting: (
-          isReconnecting: boolean,
-          attemptNumber: number,
-          maxAttempts: number,
-        ) => {
-          try {
-            if (isMountedRef.current) {
-              setIsReconnecting(isReconnecting);
-              setReconnectAttempt(attemptNumber);
-              setMaxReconnectAttempts(maxAttempts);
-              if (isReconnecting) {
-                console.log(
-                  `[UI] Reconnecting to Deepgram (attempt ${attemptNumber}/${maxAttempts})`,
-                );
-              } else {
-                console.log("[UI] Reconnection successful");
-              }
-            }
-          } catch (error) {
-            console.error("Error handling reconnecting state:", error);
-          }
-        },
         onError: (err: Error) => {
           try {
             if (!isMountedRef.current) return;
@@ -381,7 +236,7 @@ export default function TranslateScreen() {
         retryCountRef.current = 0;
       }
 
-      await startRecording((audioData) => {
+      await startRecording((audioData: ArrayBuffer) => {
         try {
           if (isMountedRef.current && deepgramRef.current?.isAlive()) {
             deepgramRef.current.sendAudio(audioData);
@@ -400,7 +255,7 @@ export default function TranslateScreen() {
     }
   }, [handleTranslate, startRecording]);
 
-  const stopListening = useCallback(async () => {
+  const stopListening = useCallback(async (): Promise<void> => {
     try {
       if (isMountedRef.current) {
         setIsListening(false);
@@ -416,7 +271,7 @@ export default function TranslateScreen() {
     }
   }, [stopRecording]);
 
-  const handleToggleListen = async () => {
+  const handleToggleListen = async (): Promise<void> => {
     if (!isMountedRef.current) return;
 
     try {
@@ -459,9 +314,7 @@ export default function TranslateScreen() {
     }
   };
 
-  const getStatusText = () => {
-    if (isReconnecting)
-      return `Reconnecting... (${reconnectAttempt}/${maxReconnectAttempts})`;
+  const getStatusText = (): string => {
     if (isConnecting) return "Connecting...";
     if (!isListening) return "Tap to start speaking";
     if (isSpeaking) return "Listening...";
@@ -470,7 +323,7 @@ export default function TranslateScreen() {
 
   return (
     <LinearGradient
-      colors={theme.gradients.background.colors}
+      colors={theme.gradients.background.colors as [string, string, string]}
       locations={theme.gradients.background.locations}
       start={theme.gradients.background.start}
       end={theme.gradients.background.end}
@@ -488,31 +341,22 @@ export default function TranslateScreen() {
             size="md"
             variant="glass"
           />
-          {isReconnecting ? (
-            <View className="flex-row items-center bg-yellow-50 border border-yellow-200 px-4 py-2 rounded-full gap-2">
-              <ActivityIndicator size="small" color="#EA9D47" />
-              <Text className="text-sm text-yellow-700 font-medium">
-                Reconnecting ({reconnectAttempt}/{maxReconnectAttempts})
-              </Text>
-            </View>
-          ) : (
-            <View className="flex-row items-center bg-coral/15 px-4 py-2 rounded-full">
-              <Text className="text-sm text-ink-secondary mr-1">
-                Translating to
-              </Text>
-              <Text className="text-sm font-bold text-coral">
-                {languageName}
-              </Text>
-            </View>
-          )}
+          <View className="flex-row items-center bg-coral/15 px-4 py-2 rounded-full">
+            <Text className="text-sm text-ink-secondary mr-1">
+              Translating to
+            </Text>
+            <Text className="text-sm font-bold text-coral">{languageName}</Text>
+          </View>
         </View>
       </Animated.View>
 
-      {/* Content - Scrollable with sufficient bottom padding */}
+      {/* Content - Scrollable with dynamic bottom padding based on mic container height */}
       <ScrollView
         ref={translationScrollRef}
         className="flex-1 px-6"
-        contentContainerStyle={{ paddingBottom: 200 }}
+        contentContainerStyle={{
+          paddingBottom: Math.max(micContainerHeight + 16, 100),
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* Transcription Card */}
@@ -531,21 +375,14 @@ export default function TranslateScreen() {
               </View>
             )}
           </View>
-          <GlassCard className="p-5 min-h-[120px]">
+          <GlassCard className="p-4">
             {transcription ? (
               <Text className="text-base leading-relaxed text-ink">
                 {transcription}
               </Text>
-            ) : isListening ? (
-              <View className="flex-row items-center">
-                <Text className="text-base text-ink-muted italic mr-2">
-                  Waiting for speech
-                </Text>
-                <TypingIndicator />
-              </View>
             ) : (
               <Text className="text-base text-ink-muted italic">
-                Tap the microphone to start speaking...
+                {isListening ? "Listening..." : "Tap mic to speak"}
               </Text>
             )}
           </GlassCard>
@@ -554,42 +391,27 @@ export default function TranslateScreen() {
         {/* Translation Card */}
         <Animated.View
           entering={FadeInDown.delay(300).duration(400)}
-          className="mb-5"
+          className="mb-4"
         >
           <View className="flex-row items-center mb-2 ml-1">
             <Text className="text-xs font-bold text-coral uppercase tracking-wider">
               Translation
             </Text>
-            {isTranslating && (
-              <View className="ml-2">
-                <ActivityIndicator size="small" color={theme.colors.coral} />
-              </View>
-            )}
           </View>
-          <View className="rounded-3xl overflow-hidden border border-coral/20 shadow-soft">
+          <View className="rounded-2xl overflow-hidden border border-coral/20">
             <LinearGradient
-              colors={theme.gradients.overlay.translationCard.colors}
-              start={theme.gradients.overlay.translationCard.start}
-              end={theme.gradients.overlay.translationCard.end}
-              style={{ padding: 20, minHeight: 120 }}
+              colors={["rgba(255, 120, 79, 0.08)", "rgba(219, 157, 71, 0.08)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 16 }}
             >
               {translation ? (
-                <View className="flex-row flex-wrap items-center">
-                  <Text className="text-base leading-relaxed text-ink">
-                    {translation}
-                  </Text>
-                  {isTranslating && <StreamingCursor />}
-                </View>
-              ) : isTranslating ? (
-                <View className="flex-row items-center">
-                  <Text className="text-base text-ink-muted italic mr-2">
-                    Translating
-                  </Text>
-                  <TypingIndicator />
-                </View>
+                <Text className="text-base leading-relaxed text-ink">
+                  {translation}
+                </Text>
               ) : (
                 <Text className="text-base text-ink-muted italic">
-                  Translation will appear here...
+                  Translation appears here
                 </Text>
               )}
             </LinearGradient>
@@ -607,19 +429,22 @@ export default function TranslateScreen() {
         )}
       </ScrollView>
 
-      {/* Microphone Button Area - Positioned at bottom without overlapping content */}
+      {/* Microphone Button Area */}
       <View
-        className="items-center pt-6 px-6"
-        style={{ paddingBottom: insets.bottom + 24 }}
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+          setMicContainerHeight(height);
+        }}
+        style={{
+          backgroundColor: theme.colors.pastel.cream,
+          paddingTop: 16,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 16,
+          alignItems: "center",
+        }}
       >
-        <LinearGradient
-          colors={theme.gradients.overlay.bottomFade.colors}
-          locations={theme.gradients.overlay.bottomFade.locations}
-          className="absolute inset-0"
-        />
-
         {isConnecting ? (
-          <View className="w-20 h-20 rounded-full bg-white/80 items-center justify-center shadow-elevated">
+          <View className="w-16 h-16 rounded-full bg-white/80 items-center justify-center">
             <ActivityIndicator size="large" color={theme.colors.coral} />
           </View>
         ) : (
@@ -629,10 +454,22 @@ export default function TranslateScreen() {
           />
         )}
 
-        <Text className="text-sm font-medium text-ink-secondary mt-4">
+        <Text className="text-xs font-medium text-ink-muted mt-2">
           {getStatusText()}
         </Text>
       </View>
     </LinearGradient>
+  );
+}
+
+export default function TranslateScreen(): ReactNode {
+  return (
+    <ErrorBoundary
+      onError={(error: Error) => {
+        console.error("[TranslateScreen] ErrorBoundary caught error:", error);
+      }}
+    >
+      <TranslateScreenContent />
+    </ErrorBoundary>
   );
 }

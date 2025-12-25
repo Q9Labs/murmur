@@ -1,36 +1,49 @@
-import React from 'react';
-import { View, ViewProps } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import type { ReactNode } from "react";
+import { View, type ViewProps } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface GlassCardProps extends ViewProps {
-  children: React.ReactNode;
-  variant?: 'default' | 'accent';
+  children: ReactNode;
+  variant?: "default" | "accent";
   animated?: boolean;
   delay?: number;
 }
 
 export function GlassCard({
   children,
-  variant = 'default',
+  variant = "default",
   animated = false,
   delay = 0,
-  className = '',
+  className = "",
+  style,
   ...props
-}: GlassCardProps) {
-  const baseClasses = 'rounded-3xl backdrop-blur-md border';
+}: GlassCardProps): ReactNode {
+  const baseClasses = "rounded-3xl backdrop-blur-md border";
 
-  const variantClasses = {
-    default: 'bg-white/70 border-white/40',
-    accent: 'bg-coral/5 border-coral/10',
+  const variantStyles = {
+    default: {
+      backgroundColor: theme.colors.glass.default,
+      borderColor: theme.colors.glass.defaultBorder,
+    },
+    accent: {
+      backgroundColor: theme.colors.coralAccent,
+      borderColor: theme.colors.coralBorder,
+    },
   };
 
-  const combinedClassName = `${baseClasses} ${variantClasses[variant]} ${className}`;
+  const combinedStyle = {
+    borderWidth: 1,
+    ...variantStyles[variant],
+    ...(style as object),
+  };
 
   if (animated) {
     return (
       <Animated.View
         entering={FadeInDown.duration(400).delay(delay)}
-        className={combinedClassName}
+        className={baseClasses + (className ? ` ${className}` : "")}
+        style={combinedStyle}
         {...props}
       >
         {children}
@@ -39,7 +52,11 @@ export function GlassCard({
   }
 
   return (
-    <View className={combinedClassName} {...props}>
+    <View
+      className={baseClasses + (className ? ` ${className}` : "")}
+      style={combinedStyle}
+      {...props}
+    >
       {children}
     </View>
   );

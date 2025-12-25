@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from "@expo/vector-icons";
+import React, { useEffect } from "react";
+import { View } from "react-native";
 import Animated, {
-  useSharedValue,
+  Easing,
+  FadeIn,
   useAnimatedStyle,
+  useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
-  withDelay,
-  Easing,
-  FadeIn,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface AnimatedLogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
 const sizeConfig = {
@@ -22,7 +23,7 @@ const sizeConfig = {
   lg: { outer: 180, middle: 140, inner: 100, icon: 40 },
 };
 
-export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
+export function AnimatedLogo({ size = "md" }: AnimatedLogoProps) {
   const { outer, middle, inner, icon } = sizeConfig[size];
 
   const outerScale = useSharedValue(1);
@@ -36,20 +37,20 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
       withSequence(
         withTiming(1, { duration: 0 }),
         withTiming(1.08, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
-      false
+      false,
     );
 
     outerOpacity.value = withRepeat(
       withSequence(
         withTiming(0.15, { duration: 0 }),
         withTiming(0.25, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.15, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+        withTiming(0.15, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
-      false
+      false,
     );
 
     // Middle ring pulse (delayed)
@@ -58,12 +59,15 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
       withRepeat(
         withSequence(
           withTiming(1, { duration: 0 }),
-          withTiming(1.06, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+          withTiming(1.06, {
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
-        false
-      )
+        false,
+      ),
     );
 
     middleOpacity.value = withDelay(
@@ -71,12 +75,18 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
       withRepeat(
         withSequence(
           withTiming(0.25, { duration: 0 }),
-          withTiming(0.35, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.25, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+          withTiming(0.35, {
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0.25, {
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+          }),
         ),
         -1,
-        false
-      )
+        false,
+      ),
     );
   }, []);
 
@@ -100,12 +110,12 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
       <Animated.View
         style={[
           {
-            position: 'absolute',
+            position: "absolute",
             width: outer,
             height: outer,
             borderRadius: outer / 2,
             borderWidth: 2,
-            borderColor: '#FF784F',
+            borderColor: theme.colors.coral,
           },
           outerRingStyle,
         ]}
@@ -115,12 +125,12 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
       <Animated.View
         style={[
           {
-            position: 'absolute',
+            position: "absolute",
             width: middle,
             height: middle,
             borderRadius: middle / 2,
             borderWidth: 2,
-            borderColor: '#DB9D47',
+            borderColor: theme.colors.gold,
           },
           middleRingStyle,
         ]}
@@ -135,7 +145,7 @@ export function AnimatedLogo({ size = 'md' }: AnimatedLogoProps) {
         }}
         className="bg-white/80 backdrop-blur-xl items-center justify-center shadow-soft border border-white/50"
       >
-        <Feather name="mic" size={icon} color="#3A3042" />
+        <Feather name="mic" size={icon} color={theme.colors.text.primary} />
       </View>
     </Animated.View>
   );

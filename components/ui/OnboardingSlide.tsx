@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from "@expo/vector-icons";
+import React from "react";
+import { Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface OnboardingSlideProps {
   title: string;
@@ -16,7 +17,7 @@ export function OnboardingSlide({
   title,
   description,
   icon,
-  iconColor = '#FF784F',
+  iconColor = theme.colors.coral,
   highlighted,
   delay = 0,
 }: OnboardingSlideProps) {
@@ -25,9 +26,24 @@ export function OnboardingSlide({
       {/* Icon Circle */}
       <Animated.View
         entering={FadeIn.duration(500).delay(delay)}
-        className="w-24 h-24 rounded-full bg-white/40 items-center justify-center mb-12 border border-white/60 backdrop-blur-sm"
+        style={{
+          width: theme.onboarding.iconCircle.size,
+          height: theme.onboarding.iconCircle.size,
+          borderRadius: theme.onboarding.iconCircle.borderRadius,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: theme.spacing["3xl"],
+          backgroundColor: theme.colors.whiteTransparent.subtle,
+          borderWidth: 1,
+          borderColor: theme.colors.whiteTransparent.light,
+        }}
+        className="backdrop-blur-sm"
       >
-        <Feather name={icon} size={48} color={iconColor} />
+        <Feather
+          name={icon}
+          size={theme.onboarding.iconSize}
+          color={iconColor}
+        />
       </Animated.View>
 
       {/* Title */}
@@ -35,7 +51,15 @@ export function OnboardingSlide({
         entering={FadeInDown.duration(500).delay(delay + 100)}
         className="w-full mb-4"
       >
-        <Text className="text-4xl font-bold text-ink text-center tracking-tight">
+        <Text
+          style={{
+            fontSize: theme.onboarding.titleFontSize,
+            fontWeight: "700",
+            color: theme.colors.text.primary,
+            textAlign: "center",
+            letterSpacing: -0.5,
+          }}
+        >
           {title}
         </Text>
       </Animated.View>
@@ -45,10 +69,24 @@ export function OnboardingSlide({
         entering={FadeInDown.duration(500).delay(delay + 200)}
         className="w-full"
       >
-        <Text className="text-base text-ink-secondary text-center leading-6">
+        <Text
+          style={{
+            fontSize: theme.onboarding.descriptionFontSize,
+            color: theme.colors.text.secondary,
+            textAlign: "center",
+            lineHeight: theme.typography.lineHeight.relaxed,
+          }}
+        >
           {description}
           {highlighted && (
-            <Text className="font-semibold text-ink">{highlighted}</Text>
+            <Text
+              style={{
+                fontWeight: "600",
+                color: theme.colors.text.primary,
+              }}
+            >
+              {highlighted}
+            </Text>
           )}
         </Text>
       </Animated.View>

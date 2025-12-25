@@ -1,64 +1,62 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from "@expo/vector-icons";
+import type { ReactNode } from "react";
+import { Pressable } from "react-native";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface IconButtonProps {
   icon: keyof typeof Feather.glyphMap;
   onPress: () => void;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'glass' | 'solid' | 'ghost';
+  size?: "sm" | "md" | "lg";
+  variant?: "glass" | "solid" | "ghost";
   disabled?: boolean;
 }
-
-const sizeConfig = {
-  sm: { container: 36, icon: 18 },
-  md: { container: 44, icon: 22 },
-  lg: { container: 56, icon: 26 },
-};
 
 export function IconButton({
   icon,
   onPress,
-  size = 'md',
-  variant = 'glass',
+  size = "md",
+  variant = "glass",
   disabled = false,
-}: IconButtonProps) {
+}: IconButtonProps): ReactNode {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const handlePressIn = () => {
-    scale.value = withSpring(0.9, { damping: 15, stiffness: 200 });
+  const handlePressIn = (): void => {
+    scale.value = withSpring(0.9, theme.spring.default);
   };
 
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 180 });
+  const handlePressOut = (): void => {
+    scale.value = withSpring(1, theme.spring.default);
   };
 
-  const iconColor = variant === 'solid' ? '#FFFFFF' : '#3A3042';
+  const iconColor =
+    variant === "solid" ? theme.colors.text.light : theme.colors.text.primary;
 
-  const getBackgroundStyle = () => {
+  const getBackgroundStyle = ():
+    | Record<string, string | number>
+    | undefined => {
     switch (variant) {
-      case 'glass':
+      case "glass":
         return {
-          backgroundColor: 'rgba(255,255,255,0.6)',
+          backgroundColor: theme.colors.glass.medium,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.4)',
+          borderColor: theme.colors.glass.mediumBorder,
         };
-      case 'solid':
+      case "solid":
         return {
-          backgroundColor: '#3A3042',
+          backgroundColor: theme.colors.text.primary,
         };
-      case 'ghost':
+      case "ghost":
         return {
-          backgroundColor: 'transparent',
+          backgroundColor: "transparent",
         };
     }
   };
@@ -72,16 +70,20 @@ export function IconButton({
         disabled={disabled}
         style={[
           {
-            width: sizeConfig[size].container,
-            height: sizeConfig[size].container,
-            borderRadius: 12,
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: theme.iconButton.sizes[size].container,
+            height: theme.iconButton.sizes[size].container,
+            borderRadius: theme.iconButton.borderRadius,
+            alignItems: "center",
+            justifyContent: "center",
           },
           getBackgroundStyle(),
         ]}
       >
-        <Feather name={icon} size={sizeConfig[size].icon} color={iconColor} />
+        <Feather
+          name={icon}
+          size={theme.iconButton.sizes[size].icon}
+          color={iconColor}
+        />
       </Pressable>
     </Animated.View>
   );

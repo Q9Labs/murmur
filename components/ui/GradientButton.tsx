@@ -1,13 +1,14 @@
-import React from 'react';
-import { Pressable, Text, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import type { ReactNode } from "react";
+import { ActivityIndicator, Pressable, Text } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   FadeInDown,
-} from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface GradientButtonProps {
   title: string;
@@ -15,7 +16,7 @@ interface GradientButtonProps {
   icon?: keyof typeof Feather.glyphMap;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary";
   animated?: boolean;
   delay?: number;
 }
@@ -23,13 +24,13 @@ interface GradientButtonProps {
 export function GradientButton({
   title,
   onPress,
-  icon = 'arrow-right',
+  icon = "arrow-right",
   loading = false,
   disabled = false,
-  variant = 'primary',
+  variant = "primary",
   animated = false,
   delay = 0,
-}: GradientButtonProps) {
+}: GradientButtonProps): ReactNode {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -37,47 +38,49 @@ export function GradientButton({
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 200 });
+    scale.value = withSpring(0.96, theme.spring.default);
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 180 });
+    scale.value = withSpring(1, theme.spring.default);
   };
 
   const gradientColors =
-    variant === 'primary'
-      ? ['#FF784F', '#DB9D47'] as const
-      : ['#FFFFFF', '#FFF8F0'] as const;
+    variant === "primary"
+      ? theme.gradients.button.primary.colors
+      : theme.gradients.button.secondary.colors;
 
-  const textColor = variant === 'primary' ? '#FFFFFF' : '#3A3042';
-  const iconColor = variant === 'primary' ? '#FFFFFF' : '#3A3042';
+  const textColor =
+    variant === "primary" ? theme.colors.text.light : theme.colors.text.primary;
+  const iconColor =
+    variant === "primary" ? theme.colors.text.light : theme.colors.text.primary;
 
   const content = (
-    <Animated.View style={[animatedStyle, { width: '100%' }]}>
+    <Animated.View style={[animatedStyle, { width: "100%" }]}>
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         style={{
-          width: '100%',
-          borderRadius: 16,
-          overflow: 'hidden',
-          shadowColor: '#FF784F',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-          elevation: 8,
+          width: "100%",
+          borderRadius: theme.borderRadius.lg,
+          overflow: "hidden",
+          shadowColor: theme.colors.coral,
+          shadowOffset: theme.shadow.default.shadowOffset,
+          shadowOpacity: theme.shadow.default.shadowOpacity,
+          shadowRadius: theme.shadow.default.shadowRadius,
+          elevation: theme.shadow.default.elevation,
         }}
       >
         <LinearGradient
           colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          start={theme.gradients.button.primary.start}
+          end={theme.gradients.button.primary.end}
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
             paddingVertical: 18,
             paddingHorizontal: 24,
           }}
@@ -86,7 +89,14 @@ export function GradientButton({
             <ActivityIndicator color={iconColor} />
           ) : (
             <>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: textColor, marginRight: 8 }}>
+              <Text
+                style={{
+                  fontSize: theme.typography.fontSize.lg,
+                  fontWeight: "600",
+                  color: textColor,
+                  marginRight: 8,
+                }}
+              >
                 {title}
               </Text>
               <Feather name={icon} size={20} color={iconColor} />

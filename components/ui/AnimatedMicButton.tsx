@@ -1,18 +1,19 @@
-import React, { useEffect } from 'react';
-import { Pressable, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect } from "react";
+import { Pressable, View } from "react-native";
 import Animated, {
-  useSharedValue,
+  cancelAnimation,
+  Easing,
   useAnimatedStyle,
-  withSpring,
+  useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
-  withDelay,
-  Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
+import { theme } from "@/lib/theme";
 
 interface AnimatedMicButtonProps {
   isListening: boolean;
@@ -38,18 +39,18 @@ export function AnimatedMicButton({
       ring1Scale.value = withRepeat(
         withSequence(
           withTiming(1, { duration: 0 }),
-          withTiming(1.5, { duration: 1200, easing: Easing.out(Easing.ease) })
+          withTiming(1.5, { duration: 1200, easing: Easing.out(Easing.ease) }),
         ),
         -1,
-        false
+        false,
       );
       ring1Opacity.value = withRepeat(
         withSequence(
           withTiming(0.5, { duration: 0 }),
-          withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) })
+          withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) }),
         ),
         -1,
-        false
+        false,
       );
 
       // Ring 2 - delayed secondary pulse
@@ -58,22 +59,25 @@ export function AnimatedMicButton({
         withRepeat(
           withSequence(
             withTiming(1, { duration: 0 }),
-            withTiming(1.5, { duration: 1200, easing: Easing.out(Easing.ease) })
+            withTiming(1.5, {
+              duration: 1200,
+              easing: Easing.out(Easing.ease),
+            }),
           ),
           -1,
-          false
-        )
+          false,
+        ),
       );
       ring2Opacity.value = withDelay(
         400,
         withRepeat(
           withSequence(
             withTiming(0.4, { duration: 0 }),
-            withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) })
+            withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) }),
           ),
           -1,
-          false
-        )
+          false,
+        ),
       );
     } else {
       // Stop animations
@@ -104,24 +108,31 @@ export function AnimatedMicButton({
   }));
 
   const handlePressIn = () => {
-    buttonScale.value = withSpring(0.92, { damping: 15, stiffness: 150 });
+    buttonScale.value = withSpring(0.92, theme.spring.default);
   };
 
   const handlePressOut = () => {
-    buttonScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    buttonScale.value = withSpring(1, theme.spring.default);
   };
 
   return (
-    <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        width: theme.micButton.container.width * 1.5,
+        height: theme.micButton.container.height * 1.5,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       {/* Pulse Ring 1 */}
       <Animated.View
         style={[
           {
-            position: 'absolute',
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: '#FF784F',
+            position: "absolute",
+            width: theme.micButton.ring.size,
+            height: theme.micButton.ring.size,
+            borderRadius: theme.micButton.ring.borderRadius,
+            backgroundColor: theme.colors.coral,
           },
           ring1Style,
         ]}
@@ -131,11 +142,11 @@ export function AnimatedMicButton({
       <Animated.View
         style={[
           {
-            position: 'absolute',
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: '#DB9D47',
+            position: "absolute",
+            width: theme.micButton.ring.size,
+            height: theme.micButton.ring.size,
+            borderRadius: theme.micButton.ring.borderRadius,
+            backgroundColor: theme.colors.gold,
           },
           ring2Style,
         ]}
@@ -149,31 +160,41 @@ export function AnimatedMicButton({
           onPressOut={handlePressOut}
           disabled={disabled}
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            overflow: 'hidden',
-            shadowColor: '#FF784F',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: isListening ? 0.5 : 0.3,
-            shadowRadius: isListening ? 16 : 12,
-            elevation: 8,
+            width: theme.micButton.container.width,
+            height: theme.micButton.container.height,
+            borderRadius: theme.micButton.container.borderRadius,
+            overflow: "hidden",
+            shadowColor: theme.colors.coral,
+            shadowOffset: isListening
+              ? theme.shadow.microphone.active.shadowOffset
+              : theme.shadow.microphone.idle.shadowOffset,
+            shadowOpacity: isListening
+              ? theme.shadow.microphone.active.shadowOpacity
+              : theme.shadow.microphone.idle.shadowOpacity,
+            shadowRadius: isListening
+              ? theme.shadow.microphone.active.shadowRadius
+              : theme.shadow.microphone.idle.shadowRadius,
+            elevation: theme.shadow.microphone.idle.elevation,
           }}
         >
           <LinearGradient
-            colors={isListening ? ['#FF784F', '#FF5733'] : ['#FF784F', '#DB9D47']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={
+              isListening
+                ? theme.gradients.button.microphone.active
+                : theme.gradients.button.microphone.idle
+            }
+            start={theme.gradients.button.microphone.start}
+            end={theme.gradients.button.microphone.end}
             style={{
               flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <Feather
-              name={isListening ? 'pause' : 'mic'}
-              size={32}
-              color="#FFFFFF"
+              name={isListening ? "pause" : "mic"}
+              size={theme.micButton.icon}
+              color={theme.colors.text.light}
             />
           </LinearGradient>
         </Pressable>
