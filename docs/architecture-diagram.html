@@ -9,7 +9,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #FFFBF7 0%, #FFE19C 50%, #EDFFD9 100%);
             min-height: 100vh;
             padding: 40px 20px;
         }
@@ -18,32 +18,37 @@
             margin: 0 auto;
         }
         h1 {
-            color: white;
+            color: #3A3042;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-size: 2.5rem;
+            font-weight: 700;
         }
         .subtitle {
-            color: rgba(255,255,255,0.8);
+            color: #5A4A62;
             text-align: center;
             margin-bottom: 40px;
             font-size: 1.1rem;
         }
         .card {
-            background: white;
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
             padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(255, 120, 79, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
         .card h2 {
-            color: #4a5568;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e2e8f0;
+            color: #3A3042;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 120, 79, 0.2);
+            font-weight: 600;
         }
         .card p {
-            color: #718096;
+            color: #5A4A62;
             margin-bottom: 20px;
             line-height: 1.6;
         }
@@ -58,25 +63,28 @@
             margin-top: 10px;
         }
         th, td {
-            padding: 12px 16px;
+            padding: 14px 18px;
             text-align: left;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid rgba(255, 120, 79, 0.15);
         }
         th {
-            background: #f7fafc;
+            background: rgba(255, 120, 79, 0.08);
             font-weight: 600;
-            color: #4a5568;
+            color: #3A3042;
         }
-        tr:hover { background: #f7fafc; }
+        tr:hover { background: rgba(255, 120, 79, 0.04); }
         .flag { font-size: 1.5rem; }
         .note {
-            background: #f0f9ff;
-            border-left: 4px solid #3b82f6;
-            padding: 12px 16px;
+            background: rgba(255, 120, 79, 0.08);
+            border-left: 4px solid #FF784F;
+            padding: 14px 18px;
             margin-top: 20px;
-            border-radius: 0 8px 8px 0;
-            color: #1e40af;
+            border-radius: 0 12px 12px 0;
+            color: #3A3042;
             font-size: 0.9rem;
+        }
+        .note strong {
+            color: #FF784F;
         }
     </style>
 </head>
@@ -121,10 +129,10 @@ flowchart TB
     Step2 --> Step3
     Step3 --> Step4
 
-    style Step1 fill:#e8f4f8,stroke:#4a9eba,stroke-width:2px
-    style Step2 fill:#f0e8f8,stroke:#9a4aba,stroke-width:2px
-    style Step3 fill:#e8f8e8,stroke:#4aba4a,stroke-width:2px
-    style Step4 fill:#f8f0e8,stroke:#ba8a4a,stroke-width:2px
+    style Step1 fill:#FFFBF7,stroke:#DB9D47,stroke-width:2px
+    style Step2 fill:#FFE19C,stroke:#DB9D47,stroke-width:2px
+    style Step3 fill:#EDFFD9,stroke:#DB9D47,stroke-width:2px
+    style Step4 fill:#FFFBF7,stroke:#FF784F,stroke-width:2px
             </div>
         </div>
 
@@ -134,9 +142,9 @@ flowchart TB
             <div class="mermaid">
 flowchart LR
     subgraph Sources["Audio Sources"]
-        Mic["📱 Device Microphone"]
-        Wireless["📡 Wireless Audio Receiver"]
-        Bluetooth["🎧 Bluetooth Audio Bridge"]
+        Mic["Device Microphone"]
+        Wireless["Wireless Audio Receiver"]
+        Bluetooth["Bluetooth Audio Bridge"]
     end
 
     subgraph App["Murmur App"]
@@ -147,8 +155,8 @@ flowchart LR
     Wireless -->|"Wi-Fi Stream"| Capture
     Bluetooth -->|"Bluetooth"| Capture
 
-    style Sources fill:#f5f5ff,stroke:#6366f1,stroke-width:2px
-    style App fill:#e8f8e8,stroke:#4aba4a,stroke-width:2px
+    style Sources fill:#FFE19C,stroke:#DB9D47,stroke-width:2px
+    style App fill:#EDFFD9,stroke:#FF784F,stroke-width:2px
             </div>
             <div class="note">
                 <strong>Recommended for events:</strong> Wireless audio receiver connects to venue mixer output - no cables to speakers, instant setup.
@@ -179,9 +187,9 @@ graph LR
     Translate --> Display
     Translate --> Labels
 
-    style Client fill:#f5f5ff,stroke:#6366f1,stroke-width:2px
-    style Engine fill:#fff5f5,stroke:#f43f5e,stroke-width:2px
-    style Output fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+    style Client fill:#FFFBF7,stroke:#DB9D47,stroke-width:2px
+    style Engine fill:#FFE19C,stroke:#FF784F,stroke-width:2px
+    style Output fill:#EDFFD9,stroke:#DB9D47,stroke-width:2px
             </div>
         </div>
 
@@ -216,7 +224,16 @@ graph LR
     <script>
         mermaid.initialize({
             startOnLoad: true,
-            theme: 'default',
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#FFFBF7',
+                primaryTextColor: '#3A3042',
+                primaryBorderColor: '#DB9D47',
+                lineColor: '#DB9D47',
+                secondaryColor: '#FFE19C',
+                tertiaryColor: '#EDFFD9',
+                fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+            },
             flowchart: { curve: 'basis' }
         });
     </script>
