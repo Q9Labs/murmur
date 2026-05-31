@@ -5,9 +5,17 @@ export type LatencySample = {
 
 export type DebugLogLevel = "debug" | "error" | "info" | "warn";
 
+export type DiagnosticJsonValue =
+  | DiagnosticJsonValue[]
+  | boolean
+  | null
+  | number
+  | string
+  | { [key: string]: DiagnosticJsonValue };
+
 export type DebugLogEntry = {
   at_ms: number;
-  data?: Record<string, string | number | boolean | null>;
+  data?: Record<string, DiagnosticJsonValue>;
   level: DebugLogLevel;
   message: string;
   name: string;
@@ -35,6 +43,7 @@ export type LatencyEvidenceMetadata = {
 
 export type LatencyEvidenceReport = {
   debug_log?: DebugLogEntry[];
+  diagnostics?: Record<string, DiagnosticJsonValue>;
   metadata: LatencyEvidenceMetadata;
   samples: LatencySample[];
   summary: LatencyReport;
@@ -87,6 +96,7 @@ export function formatLatencyPercentiles(
 
 export function buildLatencyEvidenceReport(params: {
   debugLog?: DebugLogEntry[];
+  diagnostics?: Record<string, DiagnosticJsonValue>;
   metadata: Omit<LatencyEvidenceMetadata, "generated_at_ms"> & {
     generated_at_ms?: number;
   };
@@ -94,6 +104,7 @@ export function buildLatencyEvidenceReport(params: {
 }): LatencyEvidenceReport {
   return {
     debug_log: params.debugLog,
+    diagnostics: params.diagnostics,
     metadata: {
       ...params.metadata,
       generated_at_ms: params.metadata.generated_at_ms ?? Date.now(),
@@ -124,6 +135,16 @@ export function formatLatencyEvidenceReport(report: LatencyEvidenceReport): stri
   }
 
   lines.push("", `sample_count: ${report.samples.length}`);
+  if (report.samples.length > 0) {
+    lines.push("", "samples:");
+    for (const sample of report.samples) {
+      lines.push(`- ${sample.name}: ${Math.round(sample.value_ms)}ms`);
+    }
+  }
+
+  if (report.diagnostics) {
+    lines.push("", "diagnostics_json:", JSON.stringify(report.diagnostics, null, 2));
+  }
 
   const debugLog = report.debug_log ?? [];
   lines.push("", `debug_log_count: ${debugLog.length}`);

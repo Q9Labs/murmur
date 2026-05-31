@@ -72,6 +72,7 @@ export type TranslationSpan = {
   committed_translated_caption: string | null;
   partial_translated_caption: string | null;
   source_caption: string;
+  source_status: "final" | "stable" | null;
   span_id: string;
   speech_attempt: number;
   speech_request_id: string | null;
@@ -80,6 +81,7 @@ export type TranslationSpan = {
   supersedes_span_ids: string[];
   translated_caption: string;
   translation_attempt: number;
+  translation_client_request_id: string | null;
   translation_request_id: string | null;
   updated_at_ms: number;
 };
@@ -118,6 +120,7 @@ export function createSpan(sourceCaption: string): TranslationSpan {
     committed_translated_caption: null,
     partial_translated_caption: null,
     source_caption: sourceCaption,
+    source_status: null,
     span_id: createId("span"),
     speech_attempt: 0,
     speech_request_id: null,
@@ -126,6 +129,7 @@ export function createSpan(sourceCaption: string): TranslationSpan {
     supersedes_span_ids: [],
     translated_caption: "",
     translation_attempt: 0,
+    translation_client_request_id: null,
     translation_request_id: null,
     updated_at_ms: now,
   };

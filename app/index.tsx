@@ -28,6 +28,7 @@ import {
 import {
   buildLatencyEvidenceReport,
   type DebugLogEntry,
+  type DiagnosticJsonValue,
   formatLatencyEvidenceReport,
   formatLatencyPercentiles,
 } from "../lib/latency";
@@ -45,7 +46,7 @@ import {
   devTranslationModelRouteOptions,
   getTranslationModelRouteLabel,
 } from "../lib/translationModelRoutes";
-import { useLiveTranslation } from "../lib/useLiveTranslation";
+import { useLiveTranslation, type LiveTranslationDiagnosticsSnapshot } from "../lib/useLiveTranslation";
 import type { ReportTranslationCategory } from "../lib/transport/types";
 import type { TranslationMode, TranslationModelRoute } from "../lib/transport/types";
 
@@ -53,11 +54,17 @@ type OnboardingStep = "welcome" | "privacy" | "languages" | "done";
 type PickerMode = "source" | "target" | null;
 type DiagnosticsReportParams = {
   appSessionId: string;
+  audioState: AudioStateEvent | null;
   debugLog: DebugLogEntry[];
+  diagnosticsSnapshot: LiveTranslationDiagnosticsSnapshot;
+  error: string | null;
   networkType: string;
   providerRoute: string;
   samples: LatencySample[];
+  session: ReturnType<typeof useLiveTranslation>["session"];
+  spans: TranslationSpan[];
   sourceLanguage: SourceLanguageCode;
+  status: string;
   targetLanguage: LanguageCode;
 };
 const brandLogo = require("../assets/images/icon.png");
@@ -1190,14 +1197,20 @@ function DiagnosticsModal({
   const [diagnosticsMessage, setDiagnosticsMessage] = useState<string | null>(null);
   const reportParams = {
     appSessionId: live.session.identity.app_session_id,
+    audioState,
+    debugLog: live.debug_log,
+    diagnosticsSnapshot: live.diagnostics_snapshot,
+    error: live.error,
     networkType,
     providerRoute: latestProviderRoute,
-    debugLog: live.debug_log,
     samples: live.latency_samples,
+    session: live.session,
+    spans: live.spans,
     sourceLanguage: sourceLanguageCode,
+    status: live.status,
     targetLanguage: targetLanguageCode,
   };
-  const hasReport = live.latency_samples.length > 0;
+  const hasReport = live.latency_samples.length > 0 || live.debug_log.length > 0 || live.spans.length > 0;
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible={open}>
@@ -1306,6 +1319,14 @@ function DiagnosticsModal({
 }
 
 function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
+  const spansByStatus = params.spans.reduce<Record<string, number>>((counts, span) => {
+    counts[span.status] = (counts[span.status] ?? 0) + 1;
+    return counts;
+  }, {});
+  const oldestInFlightMs = Math.max(
+    0,
+    ...params.diagnosticsSnapshot.translation_scheduler.in_flight.map((item) => item.active_ms ?? 0),
+  );
   const report = buildLatencyEvidenceReport({
     metadata: {
       app_session_id: params.appSessionId || undefined,
@@ -1318,8 +1339,35 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
     },
     samples: params.samples,
     debugLog: params.debugLog,
+    diagnostics: {
+      summary: {
+        audio_capture_active: params.audioState?.capture_active ?? null,
+        audio_playback_active: params.audioState?.playback_active ?? null,
+        debug_log_count: params.debugLog.length,
+        error: params.error,
+        oldest_in_flight_translation_ms: oldestInFlightMs,
+        queued_translation_count: params.diagnosticsSnapshot.translation_scheduler.counts.queued,
+        in_flight_translation_count: params.diagnosticsSnapshot.translation_scheduler.counts.in_flight,
+        span_count: params.spans.length,
+        spans_by_status: spansByStatus,
+        status: params.status,
+        translation_mode: params.session.translation_mode,
+        translation_route: params.session.translation_model_route ?? "worker_default",
+      },
+      audio_state: toDiagnosticJson(params.audioState),
+      runtime: toDiagnosticJson(params.diagnosticsSnapshot),
+      session: toDiagnosticJson(params.session),
+      spans: params.spans.map((span) => toDiagnosticJson(span)),
+    },
   });
   return formatLatencyEvidenceReport(report);
+}
+
+function toDiagnosticJson(value: unknown): DiagnosticJsonValue {
+  if (typeof value === "undefined") {
+    return null;
+  }
+  return JSON.parse(JSON.stringify(value)) as DiagnosticJsonValue;
 }
 
 async function copyDiagnosticsReport(params: DiagnosticsReportParams): Promise<void> {
@@ -1485,6 +1533,9 @@ function formatLiveError(error: string): string {
   }
   if (error === "translation_transport_reconnecting") {
     return `Translation connection is reconnecting. Captions will continue shortly. (${error})`;
+  }
+  if (error === "translation_timeout") {
+    return `A translation span timed out. Later captions will keep moving. (${error})`;
   }
   if (error.startsWith("provider_token_refresh_retrying")) {
     return `Provider session is refreshing. Captions will continue shortly. (${error})`;

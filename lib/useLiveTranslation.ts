@@ -18,7 +18,10 @@ import {
   trimRollingMemoryForPrompt,
   type ContinuousMemoryState,
 } from "./continuousMemory";
-import { ContinuousTranslationScheduler } from "./continuousTranslationScheduler";
+import {
+  ContinuousTranslationScheduler,
+  type ContinuousTranslationSchedulerSnapshot,
+} from "./continuousTranslationScheduler";
 import { ContinuousSpanStabilizer } from "./continuousStabilizer";
 import { getOrCreateInstallId } from "./installIdentity";
 import { summarizeLatency, type DebugLogEntry, type LatencyReport, type LatencySample } from "./latency";
@@ -58,12 +61,32 @@ import type {
 
 const continuousContextSpanLimit = 10;
 const continuousTranslationInFlightLimit = 1;
+const continuousTranslationStallTimeoutMs = 12_000;
+
+export type LiveTranslationDiagnosticsSnapshot = {
+  continuous_memory: {
+    memory_version: number;
+    rolling_source_char_count: number;
+    rolling_span_count: number;
+    summary_job_running: boolean;
+    summary_length: number;
+    summary_updated_through_span_id: string | null;
+  };
+  runtime: {
+    last_committed_source_caption: string | null;
+    pending_wait_prefix: string | null;
+    tentative_source_caption: string;
+    translation_socket_open: boolean;
+  };
+  translation_scheduler: ContinuousTranslationSchedulerSnapshot;
+};
 
 export type LiveTranslationState = {
   error: string | null;
   debug_log: DebugLogEntry[];
   latency_report: LatencyReport;
   latency_samples: LatencySample[];
+  diagnostics_snapshot: LiveTranslationDiagnosticsSnapshot;
   report_error: string | null;
   report_receipt_id: string | null;
   session: TranslationSession;
@@ -149,7 +172,7 @@ export function useLiveTranslation(params: {
             message,
             name,
           },
-        ].slice(-300),
+        ],
       );
     },
     [],
@@ -318,7 +341,7 @@ export function useLiveTranslation(params: {
   }, [updateSession]);
 
   const recordLatency = useCallback((name: string, value_ms: number) => {
-    setLatencySamples((current) => [...current, { name, value_ms }].slice(-500));
+    setLatencySamples((current) => [...current, { name, value_ms }]);
   }, []);
   const recordLatencyRef = useRef(recordLatency);
   const recordDebugRef = useRef(recordDebug);
@@ -366,6 +389,7 @@ export function useLiveTranslation(params: {
                 ...span,
                 status: "translating" as const,
                 translation_attempt: item.request.translation_attempt,
+                translation_client_request_id: item.request.client_request_id ?? null,
                 updated_at_ms: Date.now(),
               }
             : span,
@@ -377,11 +401,17 @@ export function useLiveTranslation(params: {
       const counts = continuousTranslationSchedulerRef.current.counts();
       recordLatency("translation_queue_wait", item.queue_wait_ms);
       recordDebug("translation.queue_sent", "Queued continuous span sent for translation", "debug", {
+        client_request_id: item.request.client_request_id ?? null,
+        context_span_count: item.request.context_spans.length,
+        context_summary_length: item.request.context_summary?.length ?? 0,
         in_flight: counts.in_flight,
         queue_wait_ms: item.queue_wait_ms,
         queued: counts.queued,
+        source_caption: item.request.source_caption,
+        source_status: item.request.source_status ?? null,
         span_id: item.request.span_id,
         translation_attempt: item.request.translation_attempt,
+        translation_route: item.request.translation_model_route ?? "worker_default",
       });
     }
 
@@ -420,16 +450,26 @@ export function useLiveTranslation(params: {
       translationStartedAtRef.current.delete(item.span_key);
       firstTranslatedTokenSeenRef.current.delete(item.span_key);
       translationEventSeqRef.current.delete(item.span_key);
+      item.request = {
+        ...item.request,
+        client_request_id: createTranslationClientRequestId(
+          item.request.span_id,
+          item.request.revision,
+          item.request.translation_attempt,
+        ),
+      };
     }
     setSpans((current) => {
-      const requeuedKeys = new Set(requeued.map((item) => item.span_key));
+      const requeuedByKey = new Map(requeued.map((item) => [item.span_key, item]));
       const nextSpans = current.map((span) =>
-        requeuedKeys.has(spanKey(span.span_id, span.revision))
+        requeuedByKey.has(spanKey(span.span_id, span.revision))
           ? {
               ...span,
               partial_translated_caption: null,
               status: "translating" as const,
-              translation_attempt: span.translation_attempt + 1,
+              translation_attempt: requeuedByKey.get(spanKey(span.span_id, span.revision))?.request.translation_attempt ?? span.translation_attempt + 1,
+              translation_client_request_id:
+                requeuedByKey.get(spanKey(span.span_id, span.revision))?.request.client_request_id ?? null,
               translated_caption: span.committed_translated_caption ?? "",
               translation_request_id: null,
               updated_at_ms: Date.now(),
@@ -444,6 +484,97 @@ export function useLiveTranslation(params: {
       requeued_count: requeued.length,
     });
   }, [recordDebug]);
+
+  const handleContinuousTranslationTimeouts = useCallback(() => {
+    const currentSession = sessionRef.current;
+    if (
+      currentSession.translation_mode !== "continuous" ||
+      !isActiveOrRecoveringSession(currentSession.state)
+    ) {
+      return;
+    }
+
+    const staleItems = continuousTranslationSchedulerRef.current.staleInFlight(
+      continuousTranslationStallTimeoutMs,
+    );
+    for (const staleItem of staleItems) {
+      translationStartedAtRef.current.delete(staleItem.span_key);
+      firstTranslatedTokenSeenRef.current.delete(staleItem.span_key);
+      translationEventSeqRef.current.delete(staleItem.span_key);
+      recordLatency("translation_timeout", staleItem.active_ms);
+
+      const retry = continuousTranslationSchedulerRef.current.fail(staleItem.span_key, true);
+      if (!retry.exhausted) {
+        retry.item.request = {
+          ...retry.item.request,
+          client_request_id: createTranslationClientRequestId(
+            retry.item.request.span_id,
+            retry.item.request.revision,
+            retry.item.request.translation_attempt,
+          ),
+        };
+        setSpans((current) => {
+          const nextSpans = current.map((span) =>
+            spanKey(span.span_id, span.revision) === staleItem.span_key
+              ? {
+                  ...span,
+                  partial_translated_caption: null,
+                  status: "translating" as const,
+                  translated_caption: span.committed_translated_caption ?? "",
+                  translation_attempt: retry.item.request.translation_attempt,
+                  translation_client_request_id: retry.item.request.client_request_id ?? null,
+                  translation_request_id: null,
+                  updated_at_ms: Date.now(),
+                }
+              : span,
+          );
+          spansRef.current = nextSpans;
+          return nextSpans;
+        });
+        recordDebug("translation.timeout_retry_scheduled", "Continuous translation timed out; retry scheduled", "warn", {
+          active_ms: staleItem.active_ms,
+          retry_delay_ms: retry.retry_delay_ms,
+          span_id: retry.item.request.span_id,
+          source_caption: retry.item.request.source_caption,
+          translation_client_request_id: retry.item.request.client_request_id ?? null,
+          translation_attempt: retry.item.request.translation_attempt,
+        });
+        scheduleContinuousTranslationFlush(retry.retry_delay_ms);
+        continue;
+      }
+
+      setError("translation_timeout");
+      setSpans((current) => {
+        const nextSpans = current.map((span) =>
+          spanKey(span.span_id, span.revision) === staleItem.span_key
+            ? {
+                ...span,
+                partial_translated_caption: null,
+                status: "failed" as const,
+                translated_caption: span.committed_translated_caption ?? "",
+                translation_request_id: null,
+                updated_at_ms: Date.now(),
+              }
+            : span,
+        );
+        spansRef.current = nextSpans;
+        return nextSpans;
+      });
+      recordDebug("translation.timeout_exhausted", "Continuous translation timed out after retry budget", "error", {
+        active_ms: staleItem.active_ms,
+        span_id: staleItem.request.span_id,
+        source_caption: staleItem.request.source_caption,
+        translation_attempt: staleItem.request.translation_attempt,
+        translation_client_request_id: staleItem.request.client_request_id ?? null,
+      });
+      flushContinuousTranslationQueueRef.current();
+    }
+  }, [recordDebug, recordLatency, scheduleContinuousTranslationFlush]);
+
+  useEffect(() => {
+    const interval = setInterval(handleContinuousTranslationTimeouts, 1000);
+    return () => clearInterval(interval);
+  }, [handleContinuousTranslationTimeouts]);
 
   const commitStableSourceCaption = useCallback((sourceCaption: string, options?: {
     latencyEvent?: string;
@@ -470,16 +601,30 @@ export function useLiveTranslation(params: {
     }
     lastCommittedSourceCaptionRef.current = normalizedCaption;
     const span = createSpan(sourceCaptionForSpan);
+    const translationAttempt = span.translation_attempt + 1;
+    const clientRequestId = createTranslationClientRequestId(span.span_id, span.revision, translationAttempt);
     recordDebug("span.committed", "Stable source caption committed for translation", "info", {
       revision: span.revision,
+      source_caption: sourceCaptionForSpan,
       source_length: sourceCaptionForSpan.length,
       source_status: sourceStatus,
       span_id: span.span_id,
+      translation_attempt: translationAttempt,
+      translation_client_request_id: clientRequestId,
     });
     recordElapsedLatency(options?.latencyEvent, options?.latencyStartedAtMs ?? undefined, recordLatency);
     recordElapsedLatency("stable_span_emitted", options?.stableStartedAtMs ?? undefined, recordLatency);
     setSpans((current) => {
-      const nextSpans = [...current, { ...span, status: "translating" as const }];
+      const nextSpans = [
+        ...current,
+        {
+          ...span,
+          source_status: sourceStatus,
+          status: "translating" as const,
+          translation_attempt: translationAttempt,
+          translation_client_request_id: clientRequestId,
+        },
+      ];
       spansRef.current = nextSpans;
       return nextSpans;
     });
@@ -499,6 +644,7 @@ export function useLiveTranslation(params: {
         : selectContextSpans(spansRef.current);
     const request: TranslationRequest = {
       app_session_id: nextSession.identity.app_session_id,
+      client_request_id: clientRequestId,
       connection_id: nextSession.identity.connection_id,
       context_spans: rollingContext,
       context_summary: nextSession.translation_mode === "continuous" ? memory.summary.text || null : null,
@@ -512,8 +658,19 @@ export function useLiveTranslation(params: {
       target_language: nextSession.target_language,
       translation_mode: nextSession.translation_mode,
       translation_model_route: nextSession.translation_model_route,
-      translation_attempt: span.translation_attempt + 1,
+      translation_attempt: translationAttempt,
     };
+    recordDebug("translation.request_prepared", "Translation request prepared", "debug", {
+      client_request_id: clientRequestId,
+      context_span_count: rollingContext.length,
+      context_summary_length: request.context_summary?.length ?? 0,
+      source_caption: request.source_caption,
+      source_status: request.source_status ?? null,
+      span_id: request.span_id,
+      translation_attempt: request.translation_attempt,
+      translation_mode: request.translation_mode ?? "phrase",
+      translation_route: request.translation_model_route ?? "worker_default",
+    });
 
     if (nextSession.translation_mode === "continuous") {
       const key = spanKey(span.span_id, span.revision);
@@ -530,6 +687,13 @@ export function useLiveTranslation(params: {
     }
 
     translationStartedAtRef.current.set(spanKey(span.span_id, span.revision), Date.now());
+    recordDebug("translation.sent", "Phrase span sent for translation", "debug", {
+      client_request_id: request.client_request_id ?? null,
+      context_span_count: request.context_spans.length,
+      span_id: request.span_id,
+      translation_attempt: request.translation_attempt,
+      translation_route: request.translation_model_route ?? "worker_default",
+    });
     translationRef.current?.translate(request);
   }, [recordDebug, recordLatency, updateTentativeSourceCaption]);
 
@@ -750,6 +914,17 @@ export function useLiveTranslation(params: {
       });
       return;
     }
+    if (
+      event.client_request_id &&
+      currentSpan.translation_client_request_id !== event.client_request_id
+    ) {
+      recordDebug("translation.event_ignored", "Translation event ignored because client request id changed", "warn", {
+        event_client_request_id: event.client_request_id,
+        span_client_request_id: currentSpan.translation_client_request_id,
+        span_id: event.span_id,
+      });
+      return;
+    }
     if (typeof event.server_event_seq === "number") {
       const previousSeq = translationEventSeqRef.current.get(key) ?? 0;
       if (event.server_event_seq <= previousSeq) {
@@ -768,6 +943,7 @@ export function useLiveTranslation(params: {
       error_code: event.kind === "translation_error" ? event.error_code : null,
       reason: event.kind === "translation_wait" ? event.reason : null,
       span_id: "span_id" in event ? event.span_id : null,
+      translation_client_request_id: event.client_request_id ?? null,
       translation_request_id: "translation_request_id" in event ? event.translation_request_id : null,
     });
 
@@ -795,6 +971,7 @@ export function useLiveTranslation(params: {
                 partial_translated_caption: null,
                 status: "superseded" as const,
                 translated_caption: "",
+                translation_client_request_id: event.client_request_id ?? span.translation_client_request_id,
                 translation_request_id: event.translation_request_id,
                 updated_at_ms: Date.now(),
               }
@@ -814,6 +991,7 @@ export function useLiveTranslation(params: {
         pending_source_length: (continuousWaitPrefixRef.current ?? mergedQueuedItem?.request.source_caption ?? "").length,
         reason: event.reason,
         span_id: event.span_id,
+        translation_client_request_id: event.client_request_id ?? null,
       });
       flushContinuousTranslationQueueRef.current();
       return;
@@ -824,23 +1002,33 @@ export function useLiveTranslation(params: {
         firstTranslatedTokenSeenRef.current.add(key);
         recordElapsedLatency("first_translated_token_returned", translationStartedAtRef.current.get(key), recordLatency);
       }
-      setSpans((current) =>
-        current.map((span) =>
+      setSpans((current) => {
+        const nextSpans = current.map((span) =>
           span.span_id === event.span_id && span.revision === event.revision
             ? {
                 ...span,
                 partial_translated_caption: event.draft_text ?? `${span.partial_translated_caption ?? ""}${event.delta}`,
                 translated_caption: event.draft_text ?? `${span.translated_caption}${event.delta}`,
+                translation_client_request_id: event.client_request_id ?? span.translation_client_request_id,
                 translation_request_id: event.translation_request_id,
                 updated_at_ms: Date.now(),
               }
             : span,
-        ),
-      );
+        );
+        spansRef.current = nextSpans;
+        return nextSpans;
+      });
       return;
     }
 
     if (event.kind === "translation_done") {
+      setError((current) =>
+        current === "translation_timeout" ||
+        current === "translation_transport_error" ||
+        current === "translation_transport_reconnecting"
+          ? null
+          : current,
+      );
       recordElapsedLatency("translation_done", translationStartedAtRef.current.get(key), recordLatency);
       translationStartedAtRef.current.delete(key);
       firstTranslatedTokenSeenRef.current.delete(key);
@@ -858,6 +1046,7 @@ export function useLiveTranslation(params: {
                 partial_translated_caption: null,
                 provider_metadata: event.provider_metadata,
                 translated_caption: event.translated_caption,
+                translation_client_request_id: event.client_request_id ?? item.translation_client_request_id,
                 translation_request_id: event.translation_request_id,
                 updated_at_ms: Date.now(),
               }
@@ -892,6 +1081,14 @@ export function useLiveTranslation(params: {
       if (sessionRef.current.translation_mode === "continuous") {
         const retry = continuousTranslationSchedulerRef.current.fail(key, event.retryable);
         if (!retry.exhausted) {
+          retry.item.request = {
+            ...retry.item.request,
+            client_request_id: createTranslationClientRequestId(
+              retry.item.request.span_id,
+              retry.item.request.revision,
+              retry.item.request.translation_attempt,
+            ),
+          };
           setSpans((current) => {
             const nextSpans = current.map((span) =>
               span.span_id === event.span_id && span.revision === event.revision
@@ -901,6 +1098,7 @@ export function useLiveTranslation(params: {
                     status: "translating" as const,
                     translated_caption: span.committed_translated_caption ?? "",
                     translation_attempt: retry.item.request.translation_attempt,
+                    translation_client_request_id: retry.item.request.client_request_id ?? null,
                     translation_request_id: null,
                     updated_at_ms: Date.now(),
                   }
@@ -913,6 +1111,7 @@ export function useLiveTranslation(params: {
             error_code: event.error_code,
             retry_delay_ms: retry.retry_delay_ms,
             span_id: event.span_id,
+            translation_client_request_id: retry.item.request.client_request_id ?? null,
             translation_attempt: retry.item.request.translation_attempt,
           });
           scheduleContinuousTranslationFlush(retry.retry_delay_ms);
@@ -921,13 +1120,21 @@ export function useLiveTranslation(params: {
         flushContinuousTranslationQueueRef.current();
       }
       setError(event.error_code);
-      setSpans((current) =>
-        current.map((span) =>
+      setSpans((current) => {
+        const nextSpans = current.map((span) =>
           span.span_id === event.span_id && span.revision === event.revision
-            ? { ...span, status: "failed", updated_at_ms: Date.now() }
+            ? {
+                ...span,
+                status: "failed" as const,
+                translation_client_request_id: event.client_request_id ?? span.translation_client_request_id,
+                translation_request_id: event.translation_request_id,
+                updated_at_ms: Date.now(),
+              }
             : span,
-        ),
-      );
+        );
+        spansRef.current = nextSpans;
+        return nextSpans;
+      });
     }
   }, [recordDebug, recordLatency, scheduleContinuousSummary, scheduleContinuousTranslationFlush]);
 
@@ -1432,9 +1639,19 @@ export function useLiveTranslation(params: {
     [recordDebug],
   );
 
+  const diagnosticsSnapshot = buildLiveTranslationDiagnosticsSnapshot({
+    continuousMemory: continuousMemoryRef.current,
+    lastCommittedSourceCaption: lastCommittedSourceCaptionRef.current,
+    pendingWaitPrefix: continuousWaitPrefixRef.current,
+    scheduler: continuousTranslationSchedulerRef.current.snapshot(),
+    tentativeSourceCaption,
+    translationSocketOpen: translationSocketOpenRef.current,
+  });
+
   return {
     cancel,
     debug_log: debugLog,
+    diagnostics_snapshot: diagnosticsSnapshot,
     error,
     latency_report: summarizeLatency(latencySamples),
     latency_samples: latencySamples,
@@ -1639,6 +1856,44 @@ function isErrorPayload(payload: unknown): payload is {
 
 function spanKey(spanId: string, revision: number): string {
   return `${spanId}:${revision}`;
+}
+
+function createTranslationClientRequestId(
+  spanId: string,
+  revision: number,
+  attempt: number,
+): string {
+  return `ctr_${spanId}_${revision}_${attempt}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function buildLiveTranslationDiagnosticsSnapshot(params: {
+  continuousMemory: ContinuousMemoryState;
+  lastCommittedSourceCaption: string | null;
+  pendingWaitPrefix: string | null;
+  scheduler: ContinuousTranslationSchedulerSnapshot;
+  tentativeSourceCaption: string;
+  translationSocketOpen: boolean;
+}): LiveTranslationDiagnosticsSnapshot {
+  return {
+    continuous_memory: {
+      memory_version: params.continuousMemory.memory_version,
+      rolling_source_char_count: params.continuousMemory.rolling_memory.reduce(
+        (total, span) => total + span.source_char_count,
+        0,
+      ),
+      rolling_span_count: params.continuousMemory.rolling_memory.length,
+      summary_job_running: params.continuousMemory.summary_job_running,
+      summary_length: params.continuousMemory.summary.text.length,
+      summary_updated_through_span_id: params.continuousMemory.summary.updated_through_span_id,
+    },
+    runtime: {
+      last_committed_source_caption: params.lastCommittedSourceCaption,
+      pending_wait_prefix: params.pendingWaitPrefix,
+      tentative_source_caption: params.tentativeSourceCaption,
+      translation_socket_open: params.translationSocketOpen,
+    },
+    translation_scheduler: params.scheduler,
+  };
 }
 
 function createSummaryJobId(): string {

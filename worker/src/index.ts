@@ -891,6 +891,7 @@ export async function handleSocketMessage(
   if (validationError) {
     send(socket, {
       app_session_id: message.app_session_id,
+      client_request_id: getClientRequestId(message),
       kind: "translation_error",
       session_epoch: message.session_epoch,
       span_id: message.span_id,
@@ -905,6 +906,7 @@ export async function handleSocketMessage(
   if (routeError) {
     send(socket, {
       app_session_id: message.app_session_id,
+      client_request_id: message.client_request_id,
       connection_id: message.connection_id,
       kind: "translation_error",
       session_epoch: message.session_epoch,
@@ -924,6 +926,7 @@ export async function handleSocketMessage(
     event: "translation_started",
     app_session_id: message.app_session_id,
     attempt: message.translation_attempt,
+    client_request_id: message.client_request_id ?? null,
     source_chars: message.source_caption.length,
     span_id: message.span_id,
     translation_route: message.translation_model_route ?? defaultTranslationModelRoute,
@@ -939,6 +942,7 @@ export async function handleSocketMessage(
   if (!limitResult.ok) {
     send(socket, {
       app_session_id: message.app_session_id,
+      client_request_id: message.client_request_id,
       connection_id: message.connection_id,
       kind: "translation_error",
       session_epoch: message.session_epoch,
@@ -962,6 +966,7 @@ export async function handleSocketMessage(
       logWorkerEvent({
         event: "translation_failed",
         app_session_id: message.app_session_id,
+        client_request_id: message.client_request_id ?? null,
         error_code: errorCode,
         retryable: true,
         span_id: message.span_id,
@@ -971,6 +976,7 @@ export async function handleSocketMessage(
       });
       send(socket, {
         app_session_id: message.app_session_id,
+        client_request_id: message.client_request_id,
         connection_id: message.connection_id,
         kind: "translation_error",
         session_epoch: message.session_epoch,
@@ -1069,6 +1075,7 @@ async function streamProviderTranslation(
       }
       send(socket, {
         app_session_id: request.app_session_id,
+        client_request_id: request.client_request_id,
         connection_id: request.connection_id,
         kind: "translation_delta",
         session_epoch: request.session_epoch,
@@ -1482,6 +1489,12 @@ export function validateTranslationRequest(request: TranslationRequest): string 
   if (typeof request.app_session_id !== "string" || request.app_session_id.length < 8) {
     return "invalid_session_id";
   }
+  if (
+    typeof request.client_request_id !== "undefined" &&
+    (typeof request.client_request_id !== "string" || request.client_request_id.length < 4)
+  ) {
+    return "invalid_client_request_id";
+  }
   if (typeof request.connection_id !== "string" || request.connection_id.length < 8) {
     return "invalid_connection_id";
   }
@@ -1572,6 +1585,10 @@ export function validateTranslationRequest(request: TranslationRequest): string 
     }
   }
   return null;
+}
+
+function getClientRequestId(message: Partial<TranslationRequest>): string | undefined {
+  return typeof message.client_request_id === "string" ? message.client_request_id : undefined;
 }
 
 function validateTranslationModelRouteForEnv(
@@ -1879,6 +1896,7 @@ function sendDone(
 ): void {
   send(socket, {
     app_session_id: request.app_session_id,
+    client_request_id: request.client_request_id,
     connection_id: request.connection_id,
     kind: "translation_done",
     session_epoch: request.session_epoch,
@@ -1900,6 +1918,7 @@ function sendWait(
 ): void {
   send(socket, {
     app_session_id: request.app_session_id,
+    client_request_id: request.client_request_id,
     connection_id: request.connection_id,
     kind: "translation_wait",
     session_epoch: request.session_epoch,

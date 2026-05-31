@@ -85,6 +85,7 @@ export type RefreshSessionTokenResponse = {
 
 export type TranslationRequest = {
   app_session_id: string;
+  client_request_id?: string;
   connection_id: string;
   context_spans: StableSpanContext[];
   context_summary?: string | null;
@@ -103,6 +104,7 @@ export type TranslationRequest = {
 
 export type TranslationDelta = {
   app_session_id: string;
+  client_request_id?: string;
   kind: "translation_delta";
   session_epoch: number;
   connection_id?: string;
@@ -117,6 +119,7 @@ export type TranslationDelta = {
 
 export type TranslationDone = {
   app_session_id: string;
+  client_request_id?: string;
   kind: "translation_done";
   session_epoch: number;
   connection_id?: string;
@@ -130,6 +133,7 @@ export type TranslationDone = {
 
 export type TranslationWait = {
   app_session_id: string;
+  client_request_id?: string;
   kind: "translation_wait";
   session_epoch: number;
   connection_id?: string;
@@ -142,6 +146,7 @@ export type TranslationWait = {
 
 export type TranslationError = {
   app_session_id: string;
+  client_request_id?: string;
   kind: "translation_error";
   session_epoch: number;
   connection_id?: string;

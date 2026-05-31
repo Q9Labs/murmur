@@ -947,6 +947,7 @@ describe("worker routes", () => {
       await handleSocketMessage(
         JSON.stringify({
           app_session_id: appSessionId,
+          client_request_id: "client_translate_1",
           connection_id: "connection_translate",
           context_spans: [],
           event_seq: 1,
@@ -969,6 +970,7 @@ describe("worker routes", () => {
 
       expect(sent).toHaveLength(3);
       expect(sent[0]).toMatchObject({
+        client_request_id: "client_translate_1",
         delta: "مرحبا",
         kind: "translation_delta",
         span_id: "span_translate",
@@ -979,6 +981,7 @@ describe("worker routes", () => {
         span_id: "span_translate",
       });
       expect(sent[2]).toMatchObject({
+        client_request_id: "client_translate_1",
         kind: "translation_done",
         provider_metadata: {
           upstream_id: "gen_1",
@@ -1033,6 +1036,7 @@ describe("worker routes", () => {
       await handleSocketMessage(
         JSON.stringify({
           app_session_id: appSessionId,
+          client_request_id: "client_interpreter_commit_1",
           connection_id: "connection_translate",
           context_spans: [],
           event_seq: 1,
@@ -1064,6 +1068,7 @@ describe("worker routes", () => {
         kind: "translation_delta",
       });
       expect(sent[2]).toMatchObject({
+        client_request_id: "client_interpreter_commit_1",
         kind: "translation_done",
         provider_metadata: {
           action_protocol: "interpreter_v1",
@@ -1115,6 +1120,7 @@ describe("worker routes", () => {
       await handleSocketMessage(
         JSON.stringify({
           app_session_id: appSessionId,
+          client_request_id: "client_interpreter_wait_1",
           connection_id: "connection_translate",
           context_spans: [],
           event_seq: 1,
@@ -1136,6 +1142,7 @@ describe("worker routes", () => {
 
       expect(sent).toHaveLength(1);
       expect(sent[0]).toMatchObject({
+        client_request_id: "client_interpreter_wait_1",
         kind: "translation_wait",
         reason: "needs object",
         span_id: "span_interpreter_wait",

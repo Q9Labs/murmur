@@ -87,4 +87,47 @@ describe("ContinuousTranslationScheduler", () => {
     scheduler.complete("span_1:1");
     expect(scheduler.nextReady(1000)?.request.source_caption).toBe("I need to book source span_2");
   });
+
+  it("reports stale in-flight items and diagnostic snapshots", () => {
+    const scheduler = new ContinuousTranslationScheduler({ max_in_flight: 1 });
+
+    scheduler.enqueue(
+      { ...makeRequest("span_1"), client_request_id: "client_1", source_status: "stable" },
+      "span_1:1",
+      1000,
+    );
+    scheduler.enqueue(makeRequest("span_2"), "span_2:1", 1100);
+
+    expect(scheduler.nextReady(1200)?.request.span_id).toBe("span_1");
+    expect(scheduler.staleInFlight(1000, 1800)).toEqual([]);
+    expect(scheduler.staleInFlight(1000, 2300)).toMatchObject([
+      {
+        active_ms: 1100,
+        request: {
+          client_request_id: "client_1",
+          span_id: "span_1",
+        },
+      },
+    ]);
+    expect(scheduler.snapshot(2300)).toMatchObject({
+      counts: {
+        in_flight: 1,
+        queued: 1,
+      },
+      in_flight: [
+        {
+          active_ms: 1100,
+          client_request_id: "client_1",
+          source_status: "stable",
+          span_id: "span_1",
+        },
+      ],
+      queued: [
+        {
+          active_ms: null,
+          span_id: "span_2",
+        },
+      ],
+    });
+  });
 });
