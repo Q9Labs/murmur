@@ -874,6 +874,15 @@ export async function handleSocketMessage(
   const translationRequestId = crypto.randomUUID();
   const controller = new AbortController();
   let serverEventSeq = 0;
+  logWorkerEvent({
+    event: "translation_started",
+    app_session_id: message.app_session_id,
+    attempt: message.translation_attempt,
+    source_chars: message.source_caption.length,
+    span_id: message.span_id,
+    translation_mode: message.translation_mode ?? "phrase",
+    at_ms: Date.now(),
+  });
   const limitResult = await beginTranslationDurable({
     app_session_id: message.app_session_id,
     namespace: env.RATE_LIMITER,
@@ -902,6 +911,16 @@ export async function handleSocketMessage(
     await streamOpenRouterTranslation(message, translationRequestId, socket, env, controller.signal, () => ++serverEventSeq);
   } catch (error) {
     if (!controller.signal.aborted) {
+      const errorCode = getTranslationErrorCode(error);
+      logWorkerEvent({
+        event: "translation_failed",
+        app_session_id: message.app_session_id,
+        error_code: errorCode,
+        retryable: true,
+        span_id: message.span_id,
+        translation_request_id: translationRequestId,
+        at_ms: Date.now(),
+      });
       send(socket, {
         app_session_id: message.app_session_id,
         connection_id: message.connection_id,
@@ -911,7 +930,7 @@ export async function handleSocketMessage(
         revision: message.revision,
         server_event_seq: ++serverEventSeq,
         translation_request_id: translationRequestId,
-        error_code: getTranslationErrorCode(error),
+        error_code: errorCode,
         retryable: true,
       });
     }
@@ -962,11 +981,68 @@ async function streamOpenRouterTranslation(
     const reader = openRouterResponse.body.getReader();
     const decoder = new TextDecoder();
     let translatedCaption = "";
+    let firstDeltaLogged = false;
     let partialSeq = 0;
     let buffer = "";
     const providerMetadata: OpenRouterProviderMetadata = {
       model: env.OPENROUTER_MODEL ?? "google/gemma-4-26b-a4b-it",
       provider: "openrouter",
+    };
+    const processLine = (line: string): boolean => {
+      const data = line.trim();
+      if (!data.startsWith("data:")) {
+        return false;
+      }
+      const payload = data.slice(5).trim();
+      if (payload === "[DONE]") {
+        const finalCaption = validateTranslatedCaption(request, translatedCaption);
+        logWorkerEvent({
+          event: "translation_done",
+          app_session_id: request.app_session_id,
+          output_chars: finalCaption.length,
+          span_id: request.span_id,
+          translation_request_id: translationRequestId,
+          upstream_model: providerMetadata.upstream_model,
+          upstream_provider: providerMetadata.upstream_provider,
+          at_ms: Date.now(),
+        });
+        sendDone(socket, request, translationRequestId, finalCaption, providerMetadata, nextServerEventSeq());
+        return true;
+      }
+
+      const chunk = parseOpenRouterChunk(payload);
+      mergeProviderMetadata(providerMetadata, chunk.provider_metadata);
+      if (!chunk.delta) {
+        return false;
+      }
+      translatedCaption += chunk.delta;
+      if (!firstDeltaLogged) {
+        firstDeltaLogged = true;
+        logWorkerEvent({
+          event: "translation_first_delta",
+          app_session_id: request.app_session_id,
+          delta_chars: chunk.delta.length,
+          span_id: request.span_id,
+          translation_request_id: translationRequestId,
+          upstream_model: providerMetadata.upstream_model,
+          upstream_provider: providerMetadata.upstream_provider,
+          at_ms: Date.now(),
+        });
+      }
+      send(socket, {
+        app_session_id: request.app_session_id,
+        connection_id: request.connection_id,
+        kind: "translation_delta",
+        session_epoch: request.session_epoch,
+        span_id: request.span_id,
+        revision: request.revision,
+        server_event_seq: nextServerEventSeq(),
+        partial_seq: ++partialSeq,
+        translation_request_id: translationRequestId,
+        draft_text: translatedCaption,
+        delta: chunk.delta,
+      });
+      return false;
     };
 
     while (true) {
@@ -977,6 +1053,10 @@ async function streamOpenRouterTranslation(
         throw new Error("openrouter_timeout");
       }
       if (done) {
+        buffer += decoder.decode();
+        if (buffer.trim() && processLine(buffer)) {
+          return;
+        }
         break;
       }
       buffer += decoder.decode(value, { stream: true });
@@ -984,39 +1064,13 @@ async function streamOpenRouterTranslation(
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        const data = line.trim();
-        if (!data.startsWith("data:")) {
-          continue;
-        }
-        const payload = data.slice(5).trim();
-        if (payload === "[DONE]") {
-          sendDone(socket, request, translationRequestId, translatedCaption, providerMetadata, nextServerEventSeq());
+        if (processLine(line)) {
           return;
         }
-
-        const chunk = parseOpenRouterChunk(payload);
-        mergeProviderMetadata(providerMetadata, chunk.provider_metadata);
-        if (!chunk.delta) {
-          continue;
-        }
-        translatedCaption += chunk.delta;
-        send(socket, {
-          app_session_id: request.app_session_id,
-          connection_id: request.connection_id,
-          kind: "translation_delta",
-          session_epoch: request.session_epoch,
-          span_id: request.span_id,
-          revision: request.revision,
-          server_event_seq: nextServerEventSeq(),
-          partial_seq: ++partialSeq,
-          translation_request_id: translationRequestId,
-          draft_text: translatedCaption,
-          delta: chunk.delta,
-        });
       }
     }
 
-    sendDone(socket, request, translationRequestId, translatedCaption, providerMetadata, nextServerEventSeq());
+    throw new Error("openrouter_stream_incomplete");
   } finally {
     clearTimeout(timeoutId);
   }
@@ -1391,8 +1445,11 @@ export function getTranslationErrorCode(error: unknown): string {
   if (
     [
       "openrouter_network_error",
+      "openrouter_empty_translation",
+      "openrouter_stream_incomplete",
       "openrouter_stream_error",
       "openrouter_stream_read_failed",
+      "openrouter_suspiciously_short_translation",
       "openrouter_timeout",
       "missing_openrouter_api_key",
     ].includes(error.message)
@@ -1420,6 +1477,17 @@ function combineAbortSignals(first: AbortSignal, second: AbortSignal): AbortSign
 
 function isTimeoutAbort(error: unknown, timeoutSignal: AbortSignal): boolean {
   return timeoutSignal.aborted || (error instanceof Error && error.message === "openrouter_timeout");
+}
+
+function validateTranslatedCaption(request: TranslationRequest, translatedCaption: string): string {
+  const trimmedCaption = translatedCaption.trim();
+  if (!trimmedCaption) {
+    throw new Error("openrouter_empty_translation");
+  }
+  if (request.source_caption.trim().length >= 80 && trimmedCaption.length < 4) {
+    throw new Error("openrouter_suspiciously_short_translation");
+  }
+  return translatedCaption;
 }
 
 function sendDone(

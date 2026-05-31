@@ -259,6 +259,8 @@ describe("worker routes", () => {
   it("sanitizes translation provider error codes", () => {
     expect(getTranslationErrorCode(new Error("openrouter_http_429"))).toBe("openrouter_http_429");
     expect(getTranslationErrorCode(new Error("openrouter_timeout"))).toBe("openrouter_timeout");
+    expect(getTranslationErrorCode(new Error("openrouter_stream_incomplete"))).toBe("openrouter_stream_incomplete");
+    expect(getTranslationErrorCode(new Error("openrouter_empty_translation"))).toBe("openrouter_empty_translation");
     expect(getTranslationErrorCode(new Error("provider leaked prompt text"))).toBe("translation_failed");
   });
 
@@ -859,6 +861,133 @@ describe("worker routes", () => {
           upstream_provider: "DeepInfra",
         },
         translated_caption: "مرحبا!",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects OpenRouter streams that end before DONE", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = `session_incomplete_stream_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_incomplete_stream_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    const encoder = new TextEncoder();
+    globalThis.fetch = async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'),
+            );
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+
+    try {
+      const sent: unknown[] = [];
+      const socket = {
+        close: vi.fn(),
+        readyState: WEBSOCKET_OPEN,
+        send: (payload: string) => sent.push(JSON.parse(payload)),
+      } as unknown as Parameters<typeof handleSocketMessage>[1];
+      await handleSocketMessage(
+        JSON.stringify({
+          app_session_id: appSessionId,
+          connection_id: "connection_translate",
+          context_spans: [],
+          event_seq: 1,
+          kind: "translate",
+          revision: 1,
+          session_epoch: 1,
+          source_caption: "Hello",
+          source_language: "en",
+          span_id: "span_incomplete_stream",
+          target_language: "ar",
+          translation_attempt: 1,
+        }),
+        socket,
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+        new Map(),
+      );
+
+      expect(sent).toHaveLength(2);
+      expect(sent[0]).toMatchObject({
+        delta: "partial",
+        kind: "translation_delta",
+      });
+      expect(sent[1]).toMatchObject({
+        error_code: "openrouter_stream_incomplete",
+        kind: "translation_error",
+        retryable: true,
+      });
+      expect(sent).not.toContainEqual(expect.objectContaining({ kind: "translation_done" }));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects empty OpenRouter translations at DONE", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = `session_empty_stream_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_empty_stream_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    const encoder = new TextEncoder();
+    globalThis.fetch = async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+
+    try {
+      const sent: unknown[] = [];
+      const socket = {
+        close: vi.fn(),
+        readyState: WEBSOCKET_OPEN,
+        send: (payload: string) => sent.push(JSON.parse(payload)),
+      } as unknown as Parameters<typeof handleSocketMessage>[1];
+      await handleSocketMessage(
+        JSON.stringify({
+          app_session_id: appSessionId,
+          connection_id: "connection_translate",
+          context_spans: [],
+          event_seq: 1,
+          kind: "translate",
+          revision: 1,
+          session_epoch: 1,
+          source_caption: "Hello",
+          source_language: "en",
+          span_id: "span_empty_stream",
+          target_language: "ar",
+          translation_attempt: 1,
+        }),
+        socket,
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+        new Map(),
+      );
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({
+        error_code: "openrouter_empty_translation",
+        kind: "translation_error",
+        retryable: true,
       });
     } finally {
       globalThis.fetch = originalFetch;

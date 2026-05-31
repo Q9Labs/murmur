@@ -54,6 +54,7 @@ export type TranslationSession = {
 
 export type SessionScopedEvent = {
   app_session_id?: string;
+  connection_id?: string | null;
   session_epoch?: number;
 };
 
@@ -165,6 +166,7 @@ export function shouldAcceptTranslationEvent(
   }
   return (
     event.app_session_id === session.identity.app_session_id &&
+    (!event.connection_id || event.connection_id === session.identity.connection_id) &&
     event.session_epoch === session.identity.session_epoch
   );
 }

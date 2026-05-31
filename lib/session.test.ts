@@ -78,6 +78,7 @@ describe("session lifecycle guards", () => {
       identity: {
         ...session.identity,
         app_session_id: "session_current",
+        connection_id: "connection_current",
         session_epoch: 3,
       },
       state: "live" as const,
@@ -86,9 +87,17 @@ describe("session lifecycle guards", () => {
     expect(
       shouldAcceptTranslationEvent(liveSession, {
         app_session_id: "session_current",
+        connection_id: "connection_current",
         session_epoch: 3,
       }),
     ).toBe(true);
+    expect(
+      shouldAcceptTranslationEvent(liveSession, {
+        app_session_id: "session_current",
+        connection_id: "connection_previous",
+        session_epoch: 3,
+      }),
+    ).toBe(false);
     expect(
       shouldAcceptTranslationEvent(liveSession, {
         app_session_id: "session_previous",

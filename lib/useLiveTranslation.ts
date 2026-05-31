@@ -18,6 +18,7 @@ import {
   trimRollingMemoryForPrompt,
   type ContinuousMemoryState,
 } from "./continuousMemory";
+import { ContinuousTranslationScheduler } from "./continuousTranslationScheduler";
 import { ContinuousSpanStabilizer } from "./continuousStabilizer";
 import { getOrCreateInstallId } from "./installIdentity";
 import { summarizeLatency, type DebugLogEntry, type LatencyReport, type LatencySample } from "./latency";
@@ -50,9 +51,11 @@ import type {
   SummaryResponse,
   TranslationServerEvent,
   TranslationMode,
+  TranslationRequest,
 } from "./transport/types";
 
 const continuousContextSpanLimit = 10;
+const continuousTranslationInFlightLimit = 2;
 
 export type LiveTranslationState = {
   error: string | null;
@@ -102,7 +105,13 @@ export function useLiveTranslation(params: {
   const deepgramSilenceFinalizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const continuousMemoryRef = useRef<ContinuousMemoryState>(createContinuousMemoryState());
   const continuousStabilizerRef = useRef(new ContinuousSpanStabilizer());
+  const continuousTranslationSchedulerRef = useRef(
+    new ContinuousTranslationScheduler({ max_in_flight: continuousTranslationInFlightLimit }),
+  );
   const echoGateUntilMsRef = useRef(0);
+  const echoGateDroppedFrameCountRef = useRef(0);
+  const echoGateWindowStartedAtMsRef = useRef<number | null>(null);
+  const flushTranslationQueueTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenRefreshRetryCountRef = useRef(0);
   const echoGateLoggedRef = useRef(false);
@@ -114,7 +123,10 @@ export function useLiveTranslation(params: {
   const sessionRef = useRef(session);
   const speechStartedAtRef = useRef<number | null>(null);
   const tentativeSourceCaptionRef = useRef("");
+  const translationEventSeqRef = useRef<Map<string, number>>(new Map());
+  const translationSocketOpenRef = useRef(false);
   const translationStartedAtRef = useRef<Map<string, number>>(new Map());
+  const flushContinuousTranslationQueueRef = useRef<() => void>(() => undefined);
 
   const recordDebug = useCallback(
     (
@@ -180,13 +192,27 @@ export function useLiveTranslation(params: {
     setDebugLog([]);
     continuousMemoryRef.current = createContinuousMemoryState();
     continuousStabilizerRef.current.reset();
+    continuousTranslationSchedulerRef.current.clear();
+    firstTranslatedTokenSeenRef.current.clear();
+    translationEventSeqRef.current.clear();
+    translationSocketOpenRef.current = false;
+    translationStartedAtRef.current.clear();
+    if (flushTranslationQueueTimeoutRef.current) {
+      clearTimeout(flushTranslationQueueTimeoutRef.current);
+      flushTranslationQueueTimeoutRef.current = null;
+    }
   }, [params.source_language, params.target_language, normalizedParams.translation_mode, resetSession, updateTentativeSourceCaption]);
 
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
       "onAudioFrame",
       (frame: AudioFrameEvent) => {
-        if (shouldGateMicFrameForEcho(echoGateUntilMsRef.current)) {
+        const shouldGateForEcho =
+          sessionRef.current.translation_mode !== "continuous" &&
+          shouldGateMicFrameForEcho(echoGateUntilMsRef.current);
+        if (shouldGateForEcho) {
+          echoGateDroppedFrameCountRef.current += 1;
+          echoGateWindowStartedAtMsRef.current ??= Date.now();
           if (!echoGateLoggedRef.current) {
             echoGateLoggedRef.current = true;
             recordLatencyRef.current("mic_frame_echo_gated", 0);
@@ -196,6 +222,17 @@ export function useLiveTranslation(params: {
             });
           }
           return;
+        }
+        if (echoGateDroppedFrameCountRef.current > 0) {
+          recordDebugRef.current("audio.echo_gate_finished", "Microphone echo gate finished", "debug", {
+            dropped_frame_count: echoGateDroppedFrameCountRef.current,
+            gated_duration_ms:
+              echoGateWindowStartedAtMsRef.current === null
+                ? null
+                : Date.now() - echoGateWindowStartedAtMsRef.current,
+          });
+          echoGateDroppedFrameCountRef.current = 0;
+          echoGateWindowStartedAtMsRef.current = null;
         }
         echoGateLoggedRef.current = false;
         if (firstPcmFrameSentAtRef.current === null) {
@@ -215,6 +252,12 @@ export function useLiveTranslation(params: {
       clearDeepgramKeepAlive(deepgramKeepAliveRef);
       clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
       clearTokenRefresh(tokenRefreshTimeoutRef);
+      if (flushTranslationQueueTimeoutRef.current) {
+        clearTimeout(flushTranslationQueueTimeoutRef.current);
+        flushTranslationQueueTimeoutRef.current = null;
+      }
+      continuousTranslationSchedulerRef.current.clear();
+      translationSocketOpenRef.current = false;
       deepgramRef.current?.close();
       speechRef.current?.close();
       translationRef.current?.close();
@@ -228,12 +271,22 @@ export function useLiveTranslation(params: {
       "onAudioState",
       (audioState: AudioStateEvent) => {
         if (audioState.playback_active) {
+          if (sessionRef.current.translation_mode === "continuous") {
+            recordDebugRef.current("audio.playback_observed_continuous", "Speech playback observed during Continuous Mode without mic gating", "debug", {
+              playback_queued_ms: audioState.playback_queued_ms,
+              reason: audioState.reason,
+            });
+            return;
+          }
           echoGateUntilMsRef.current = nextEchoGateUntilMs(audioState.playback_queued_ms);
           recordDebugRef.current("audio.playback_active", "Native speech playback became active", "info", {
             echo_gate_until_ms: echoGateUntilMsRef.current,
             playback_queued_ms: audioState.playback_queued_ms,
             reason: audioState.reason,
           });
+          return;
+        }
+        if (sessionRef.current.translation_mode === "continuous") {
           return;
         }
         if (echoGateUntilMsRef.current > Date.now()) {
@@ -266,6 +319,119 @@ export function useLiveTranslation(params: {
     recordDebugRef.current = recordDebug;
   }, [recordDebug]);
 
+  const scheduleContinuousTranslationFlush = useCallback((delayMs = 0) => {
+    if (flushTranslationQueueTimeoutRef.current) {
+      clearTimeout(flushTranslationQueueTimeoutRef.current);
+      flushTranslationQueueTimeoutRef.current = null;
+    }
+    flushTranslationQueueTimeoutRef.current = setTimeout(() => {
+      flushTranslationQueueTimeoutRef.current = null;
+      flushContinuousTranslationQueueRef.current();
+    }, Math.max(0, delayMs));
+  }, []);
+
+  const flushContinuousTranslationQueue = useCallback(() => {
+    if (sessionRef.current.translation_mode !== "continuous") {
+      return;
+    }
+    const translation = translationRef.current;
+    if (!translation || !translationSocketOpenRef.current) {
+      return;
+    }
+
+    let sentCount = 0;
+    while (true) {
+      const item = continuousTranslationSchedulerRef.current.nextReady();
+      if (!item) {
+        break;
+      }
+      sentCount += 1;
+      translationStartedAtRef.current.set(item.span_key, Date.now());
+      setSpans((current) => {
+        const nextSpans = current.map((span) =>
+          spanKey(span.span_id, span.revision) === item.span_key
+            ? {
+                ...span,
+                status: "translating" as const,
+                translation_attempt: item.request.translation_attempt,
+                updated_at_ms: Date.now(),
+              }
+            : span,
+        );
+        spansRef.current = nextSpans;
+        return nextSpans;
+      });
+      translation.translate(item.request);
+      const counts = continuousTranslationSchedulerRef.current.counts();
+      recordLatency("translation_queue_wait", item.queue_wait_ms);
+      recordDebug("translation.queue_sent", "Queued continuous span sent for translation", "debug", {
+        in_flight: counts.in_flight,
+        queue_wait_ms: item.queue_wait_ms,
+        queued: counts.queued,
+        span_id: item.request.span_id,
+        translation_attempt: item.request.translation_attempt,
+      });
+    }
+
+    const nextDelayMs = continuousTranslationSchedulerRef.current.nextDelayMs();
+    if (sentCount === 0 && nextDelayMs !== null) {
+      scheduleContinuousTranslationFlush(nextDelayMs);
+    }
+  }, [recordDebug, recordLatency, scheduleContinuousTranslationFlush]);
+
+  useEffect(() => {
+    flushContinuousTranslationQueueRef.current = flushContinuousTranslationQueue;
+  }, [flushContinuousTranslationQueue]);
+
+  const clearContinuousTranslationRuntime = useCallback(() => {
+    continuousTranslationSchedulerRef.current.clear();
+    firstTranslatedTokenSeenRef.current.clear();
+    translationEventSeqRef.current.clear();
+    translationSocketOpenRef.current = false;
+    translationStartedAtRef.current.clear();
+    if (flushTranslationQueueTimeoutRef.current) {
+      clearTimeout(flushTranslationQueueTimeoutRef.current);
+      flushTranslationQueueTimeoutRef.current = null;
+    }
+  }, []);
+
+  const requeueActiveContinuousTranslations = useCallback((reason: string) => {
+    if (sessionRef.current.translation_mode !== "continuous") {
+      return;
+    }
+    const requeued = continuousTranslationSchedulerRef.current.requeueInFlight();
+    if (requeued.length === 0) {
+      return;
+    }
+    for (const item of requeued) {
+      translationStartedAtRef.current.delete(item.span_key);
+      firstTranslatedTokenSeenRef.current.delete(item.span_key);
+      translationEventSeqRef.current.delete(item.span_key);
+    }
+    setSpans((current) => {
+      const requeuedKeys = new Set(requeued.map((item) => item.span_key));
+      const nextSpans = current.map((span) =>
+        requeuedKeys.has(spanKey(span.span_id, span.revision))
+          ? {
+              ...span,
+              partial_translated_caption: null,
+              status: "translating" as const,
+              translation_attempt: span.translation_attempt + 1,
+              translated_caption: span.committed_translated_caption ?? "",
+              translation_request_id: null,
+              updated_at_ms: Date.now(),
+            }
+          : span,
+      );
+      spansRef.current = nextSpans;
+      return nextSpans;
+    });
+    recordDebug("translation.queue_requeued", "Active continuous translations requeued after transport change", "warn", {
+      reason,
+      requeued_count: requeued.length,
+    });
+  }, [recordDebug]);
+
   const commitStableSourceCaption = useCallback((sourceCaption: string, options?: {
     latencyEvent?: string;
     latencyStartedAtMs?: number | null;
@@ -295,7 +461,6 @@ export function useLiveTranslation(params: {
       spansRef.current = nextSpans;
       return nextSpans;
     });
-    translationStartedAtRef.current.set(spanKey(span.span_id, span.revision), Date.now());
     const nextSession = nextEventSeq(sessionRef.current);
     sessionRef.current = nextSession;
     setSession(nextSession);
@@ -310,7 +475,7 @@ export function useLiveTranslation(params: {
             }),
           ).slice(-continuousContextSpanLimit)
         : selectContextSpans(spansRef.current);
-    translationRef.current?.translate({
+    const request: TranslationRequest = {
       app_session_id: nextSession.identity.app_session_id,
       connection_id: nextSession.identity.connection_id,
       context_spans: rollingContext,
@@ -324,7 +489,24 @@ export function useLiveTranslation(params: {
       target_language: nextSession.target_language,
       translation_mode: nextSession.translation_mode,
       translation_attempt: span.translation_attempt + 1,
-    });
+    };
+
+    if (nextSession.translation_mode === "continuous") {
+      const key = spanKey(span.span_id, span.revision);
+      const item = continuousTranslationSchedulerRef.current.enqueue(request, key);
+      const counts = continuousTranslationSchedulerRef.current.counts();
+      recordDebug("translation.queue_enqueued", "Continuous span queued for ordered translation", "debug", {
+        in_flight: counts.in_flight,
+        queued: counts.queued,
+        queued_at_ms: item.queued_at_ms,
+        span_id: span.span_id,
+      });
+      flushContinuousTranslationQueueRef.current();
+      return;
+    }
+
+    translationStartedAtRef.current.set(spanKey(span.span_id, span.revision), Date.now());
+    translationRef.current?.translate(request);
   }, [recordDebug, recordLatency, updateTentativeSourceCaption]);
 
   const scheduleContinuousSummary = useCallback(() => {
@@ -501,11 +683,56 @@ export function useLiveTranslation(params: {
   const handleTranslationEvent = useCallback((event: TranslationServerEvent) => {
     if (!shouldAcceptTranslationEvent(sessionRef.current, event)) {
       recordDebug("translation.event_ignored", "Translation event ignored because it is stale for this session", "debug", {
+        connection_id: "connection_id" in event ? event.connection_id ?? null : null,
         kind: event.kind,
         session_epoch: "session_epoch" in event ? event.session_epoch : null,
         span_id: "span_id" in event ? event.span_id : null,
       });
       return;
+    }
+
+    const key = spanKey(event.span_id, event.revision);
+    const currentSpan = spansRef.current.find(
+      (span) => span.span_id === event.span_id && span.revision === event.revision,
+    );
+    if (!currentSpan) {
+      recordDebug("translation.event_ignored", "Translation event ignored because its span is no longer present", "debug", {
+        kind: event.kind,
+        span_id: event.span_id,
+      });
+      return;
+    }
+    if (currentSpan.status !== "translating") {
+      recordDebug("translation.event_ignored", "Translation event ignored because the span is not awaiting translation", "debug", {
+        kind: event.kind,
+        span_id: event.span_id,
+        span_status: currentSpan.status,
+      });
+      return;
+    }
+    if (
+      event.translation_request_id &&
+      currentSpan.translation_request_id &&
+      event.translation_request_id !== currentSpan.translation_request_id
+    ) {
+      recordDebug("translation.event_ignored", "Translation event ignored because request id changed", "warn", {
+        event_translation_request_id: event.translation_request_id,
+        span_id: event.span_id,
+        span_translation_request_id: currentSpan.translation_request_id,
+      });
+      return;
+    }
+    if (typeof event.server_event_seq === "number") {
+      const previousSeq = translationEventSeqRef.current.get(key) ?? 0;
+      if (event.server_event_seq <= previousSeq) {
+        recordDebug("translation.event_ignored", "Translation event ignored because server sequence regressed", "warn", {
+          previous_server_event_seq: previousSeq,
+          server_event_seq: event.server_event_seq,
+          span_id: event.span_id,
+        });
+        return;
+      }
+      translationEventSeqRef.current.set(key, event.server_event_seq);
     }
 
     recordDebug("translation.event", `Translation ${event.kind} event received`, event.kind === "translation_error" ? "error" : "debug", {
@@ -516,7 +743,6 @@ export function useLiveTranslation(params: {
     });
 
     if (event.kind === "translation_delta") {
-      const key = spanKey(event.span_id, event.revision);
       if (!firstTranslatedTokenSeenRef.current.has(key)) {
         firstTranslatedTokenSeenRef.current.add(key);
         recordElapsedLatency("first_translated_token_returned", translationStartedAtRef.current.get(key), recordLatency);
@@ -538,13 +764,13 @@ export function useLiveTranslation(params: {
     }
 
     if (event.kind === "translation_done") {
-      const key = spanKey(event.span_id, event.revision);
       recordElapsedLatency("translation_done", translationStartedAtRef.current.get(key), recordLatency);
       translationStartedAtRef.current.delete(key);
       firstTranslatedTokenSeenRef.current.delete(key);
-      const span = spansRef.current.find(
-        (item) => item.span_id === event.span_id && item.revision === event.revision,
-      );
+      translationEventSeqRef.current.delete(key);
+      continuousTranslationSchedulerRef.current.complete(key);
+      flushContinuousTranslationQueueRef.current();
+      const span = currentSpan;
       setSpans((current) => {
         const nextSpans = current.map((item) =>
           item.span_id === event.span_id && item.revision === event.revision
@@ -573,16 +799,50 @@ export function useLiveTranslation(params: {
         });
         recordLatency("rolling_memory_appended", 0);
         scheduleContinuousSummary();
-      }
-      if (span) {
+        recordDebug("speech.deferred_continuous", "Speech playback skipped in Continuous Mode to keep text translation on the critical path", "debug", {
+          span_id: span.span_id,
+        });
+      } else if (span) {
         void speakSpan(span, event.translated_caption);
       }
       return;
     }
 
     if (event.kind === "translation_error") {
-      translationStartedAtRef.current.delete(spanKey(event.span_id, event.revision));
-      firstTranslatedTokenSeenRef.current.delete(spanKey(event.span_id, event.revision));
+      translationStartedAtRef.current.delete(key);
+      firstTranslatedTokenSeenRef.current.delete(key);
+      translationEventSeqRef.current.delete(key);
+      if (sessionRef.current.translation_mode === "continuous") {
+        const retry = continuousTranslationSchedulerRef.current.fail(key, event.retryable);
+        if (!retry.exhausted) {
+          setSpans((current) => {
+            const nextSpans = current.map((span) =>
+              span.span_id === event.span_id && span.revision === event.revision
+                ? {
+                    ...span,
+                    partial_translated_caption: null,
+                    status: "translating" as const,
+                    translated_caption: span.committed_translated_caption ?? "",
+                    translation_attempt: retry.item.request.translation_attempt,
+                    translation_request_id: null,
+                    updated_at_ms: Date.now(),
+                  }
+                : span,
+            );
+            spansRef.current = nextSpans;
+            return nextSpans;
+          });
+          recordDebug("translation.retry_scheduled", "Continuous translation retry scheduled", "warn", {
+            error_code: event.error_code,
+            retry_delay_ms: retry.retry_delay_ms,
+            span_id: event.span_id,
+            translation_attempt: retry.item.request.translation_attempt,
+          });
+          scheduleContinuousTranslationFlush(retry.retry_delay_ms);
+          return;
+        }
+        flushContinuousTranslationQueueRef.current();
+      }
       setError(event.error_code);
       setSpans((current) =>
         current.map((span) =>
@@ -592,7 +852,7 @@ export function useLiveTranslation(params: {
         ),
       );
     }
-  }, [recordDebug, recordLatency, scheduleContinuousSummary]);
+  }, [recordDebug, recordLatency, scheduleContinuousSummary, scheduleContinuousTranslationFlush]);
 
   const speakSpan = useCallback(
     async (span: TranslationSpan, translatedCaption: string) => {
@@ -694,7 +954,10 @@ export function useLiveTranslation(params: {
       });
       setError(`provider_token_refresh_failed:${refreshed.error}`);
       echoGateUntilMsRef.current = 0;
+      echoGateDroppedFrameCountRef.current = 0;
+      echoGateWindowStartedAtMsRef.current = null;
       echoGateLoggedRef.current = false;
+      clearContinuousTranslationRuntime();
       clearDeepgramKeepAlive(deepgramKeepAliveRef);
       clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
       clearTokenRefresh(tokenRefreshTimeoutRef);
@@ -759,7 +1022,7 @@ export function useLiveTranslation(params: {
       refresh: refreshProviderTokens,
       timeoutRef: tokenRefreshTimeoutRef,
     });
-  }, [handleDeepgramEvent, recordDebug, setStatus, updateSession]);
+  }, [clearContinuousTranslationRuntime, handleDeepgramEvent, recordDebug, setStatus, updateSession]);
 
   const start = useCallback(async () => {
     if (!canStartSession(sessionRef.current.state)) {
@@ -778,16 +1041,17 @@ export function useLiveTranslation(params: {
       target_language: params.target_language,
     });
     echoGateUntilMsRef.current = 0;
+    echoGateDroppedFrameCountRef.current = 0;
+    echoGateWindowStartedAtMsRef.current = null;
     echoGateLoggedRef.current = false;
     tokenRefreshRetryCountRef.current = 0;
-    firstTranslatedTokenSeenRef.current.clear();
+    clearContinuousTranslationRuntime();
     continuousMemoryRef.current = createContinuousMemoryState();
     continuousStabilizerRef.current.reset();
     firstPcmFrameSentAtRef.current = null;
     hasSpeechSinceFinalizeRef.current = false;
     lastCommittedSourceCaptionRef.current = null;
     speechStartedAtRef.current = null;
-    translationStartedAtRef.current.clear();
     updateTentativeSourceCaption("");
     setSpans([]);
     setStatus("requesting_mic_permission");
@@ -847,16 +1111,24 @@ export function useLiveTranslation(params: {
       onStatus: (status) => {
         recordDebug("translation.socket", `Translation socket ${status}`, status === "error" ? "error" : "debug");
         if (status === "error") {
+          translationSocketOpenRef.current = false;
           setError("translation_transport_error");
           setStatus("network_degraded");
           return;
         }
+        if (status === "close") {
+          translationSocketOpenRef.current = false;
+          requeueActiveContinuousTranslations("socket_close");
+        }
         if (status === "reconnecting") {
+          translationSocketOpenRef.current = false;
+          requeueActiveContinuousTranslations("socket_reconnecting");
           setError("translation_transport_reconnecting");
           setStatus("recovering");
           return;
         }
         if (status === "open") {
+          translationSocketOpenRef.current = true;
           setError((current) => current?.startsWith("translation_transport") ? null : current);
           if (
             sessionRef.current.state === "network_degraded" ||
@@ -865,6 +1137,7 @@ export function useLiveTranslation(params: {
           ) {
             setStatus("live");
           }
+          flushContinuousTranslationQueueRef.current();
         }
       },
       url: workerSession.translate_ws_url,
@@ -922,6 +1195,7 @@ export function useLiveTranslation(params: {
       timeoutRef: tokenRefreshTimeoutRef,
     });
   }, [
+    clearContinuousTranslationRuntime,
     handleDeepgramEvent,
     handleTranslationEvent,
     normalizedParams.translation_mode,
@@ -929,6 +1203,7 @@ export function useLiveTranslation(params: {
     params.target_language,
     recordDebug,
     recordLatency,
+    requeueActiveContinuousTranslations,
     resetSession,
     refreshProviderTokens,
     setStatus,
@@ -949,7 +1224,10 @@ export function useLiveTranslation(params: {
     clearTokenRefresh(tokenRefreshTimeoutRef);
     tokenRefreshRetryCountRef.current = 0;
     echoGateUntilMsRef.current = 0;
+    echoGateDroppedFrameCountRef.current = 0;
+    echoGateWindowStartedAtMsRef.current = null;
     echoGateLoggedRef.current = false;
+    clearContinuousTranslationRuntime();
     hasSpeechSinceFinalizeRef.current = false;
     firstPcmFrameSentAtRef.current = null;
     speechStartedAtRef.current = null;
@@ -961,14 +1239,17 @@ export function useLiveTranslation(params: {
     await closeWorkerSession(sessionRef.current.identity.app_session_id, "user_stop");
     setStatus("ended");
     recordDebug("session.ended", "Live translation session ended", "info");
-  }, [recordDebug, setStatus]);
+  }, [clearContinuousTranslationRuntime, recordDebug, setStatus]);
 
   const cancel = useCallback(async () => {
     if (sessionRef.current.state === "idle") {
       recordDebug("session.cancel_idle", "Cancel requested while session was idle", "debug");
       lastCommittedSourceCaptionRef.current = null;
       echoGateUntilMsRef.current = 0;
+      echoGateDroppedFrameCountRef.current = 0;
+      echoGateWindowStartedAtMsRef.current = null;
       echoGateLoggedRef.current = false;
+      clearContinuousTranslationRuntime();
       updateTentativeSourceCaption("");
       setSpans([]);
       return;
@@ -983,7 +1264,10 @@ export function useLiveTranslation(params: {
     clearTokenRefresh(tokenRefreshTimeoutRef);
     tokenRefreshRetryCountRef.current = 0;
     echoGateUntilMsRef.current = 0;
+    echoGateDroppedFrameCountRef.current = 0;
+    echoGateWindowStartedAtMsRef.current = null;
     echoGateLoggedRef.current = false;
+    clearContinuousTranslationRuntime();
     hasSpeechSinceFinalizeRef.current = false;
     firstPcmFrameSentAtRef.current = null;
     speechStartedAtRef.current = null;
@@ -993,11 +1277,9 @@ export function useLiveTranslation(params: {
     await MurmurAudioModule.stopCapture("user_cancel");
     await MurmurAudioModule.clearPlayback("user_cancel");
     await closeWorkerSession(sessionRef.current.identity.app_session_id, "user_cancel");
-    firstTranslatedTokenSeenRef.current.clear();
     continuousMemoryRef.current = createContinuousMemoryState();
     continuousStabilizerRef.current.reset();
     firstPcmFrameSentAtRef.current = null;
-    translationStartedAtRef.current.clear();
     hasSpeechSinceFinalizeRef.current = false;
     lastCommittedSourceCaptionRef.current = null;
     speechStartedAtRef.current = null;
@@ -1005,7 +1287,7 @@ export function useLiveTranslation(params: {
     setSpans([]);
     setStatus("idle");
     recordDebug("session.cancelled", "Live translation session cancelled", "info");
-  }, [recordDebug, setStatus, updateTentativeSourceCaption]);
+  }, [clearContinuousTranslationRuntime, recordDebug, setStatus, updateTentativeSourceCaption]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
