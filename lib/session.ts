@@ -1,5 +1,5 @@
 import type { LanguageCode, SourceLanguageCode } from "./languages";
-import type { TranslationMode } from "./transport/types";
+import type { TranslationMode, TranslationModelRoute } from "./transport/types";
 
 export type SessionState =
   | "idle"
@@ -49,6 +49,7 @@ export type TranslationSession = {
   source_language: SourceLanguageCode;
   state: SessionState;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode: TranslationMode;
 };
 
@@ -86,6 +87,7 @@ export type TranslationSpan = {
 export function createSession(params: {
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
 }): TranslationSession {
   const createdAt = Date.now();
@@ -102,6 +104,7 @@ export function createSession(params: {
     source_language: params.source_language,
     state: "idle",
     target_language: params.target_language,
+    translation_model_route: params.translation_model_route,
     translation_mode: params.translation_mode ?? "phrase",
   };
 }

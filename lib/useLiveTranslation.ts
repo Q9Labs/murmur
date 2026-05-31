@@ -52,6 +52,7 @@ import type {
   SummaryResponse,
   TranslationServerEvent,
   TranslationMode,
+  TranslationModelRoute,
   TranslationRequest,
 } from "./transport/types";
 
@@ -85,6 +86,7 @@ export type LiveTranslationController = LiveTranslationState & {
 export function useLiveTranslation(params: {
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
 }): LiveTranslationController {
   const normalizedParams = {
@@ -204,7 +206,14 @@ export function useLiveTranslation(params: {
       clearTimeout(flushTranslationQueueTimeoutRef.current);
       flushTranslationQueueTimeoutRef.current = null;
     }
-  }, [params.source_language, params.target_language, normalizedParams.translation_mode, resetSession, updateTentativeSourceCaption]);
+  }, [
+    params.source_language,
+    params.target_language,
+    normalizedParams.translation_mode,
+    normalizedParams.translation_model_route,
+    resetSession,
+    updateTentativeSourceCaption,
+  ]);
 
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
@@ -502,6 +511,7 @@ export function useLiveTranslation(params: {
       span_id: span.span_id,
       target_language: nextSession.target_language,
       translation_mode: nextSession.translation_mode,
+      translation_model_route: nextSession.translation_model_route,
       translation_attempt: span.translation_attempt + 1,
     };
 
@@ -1106,6 +1116,7 @@ export function useLiveTranslation(params: {
     recordDebug("session.starting", "Live translation session state reset", "info", {
       source_language: params.source_language,
       target_language: params.target_language,
+      translation_model_route: normalizedParams.translation_model_route ?? "worker_default",
     });
     echoGateUntilMsRef.current = 0;
     echoGateDroppedFrameCountRef.current = 0;
@@ -1143,6 +1154,7 @@ export function useLiveTranslation(params: {
       device_integrity: deviceIntegrity,
       source_language: params.source_language,
       target_language: params.target_language,
+      translation_model_route: normalizedParams.translation_model_route,
       translation_mode: normalizedParams.translation_mode,
     }).catch(() => ({ error: "worker_session_network_error" }));
 
@@ -1159,11 +1171,13 @@ export function useLiveTranslation(params: {
       app_session_id: workerSession.app_session_id,
       cartesia_enabled: Boolean(workerSession.tokens.cartesia_access_token && workerSession.speech?.default_voice_id),
       session_epoch: workerSession.session_epoch,
+      translation_model_route: workerSession.translation_model_route ?? "worker_default",
       token_bundle_id: workerSession.tokens.token_bundle_id,
     });
 
     updateSession((current) => ({
       ...current,
+      translation_model_route: workerSession.translation_model_route,
       identity: {
         ...current.identity,
         app_session_id: workerSession.app_session_id,
@@ -1266,6 +1280,7 @@ export function useLiveTranslation(params: {
     handleDeepgramEvent,
     handleTranslationEvent,
     normalizedParams.translation_mode,
+    normalizedParams.translation_model_route,
     params.source_language,
     params.target_language,
     recordDebug,
@@ -1455,6 +1470,7 @@ async function createWorkerSession(body: {
   device_integrity: DeviceIntegrityPayload;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode: TranslationMode;
 }): Promise<CreateSessionResponse | { error: string }> {
   const response = await fetch(`${getWorkerBaseUrl()}/v1/session`, {
