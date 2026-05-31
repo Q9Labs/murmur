@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Murmur is an AI-powered real-time translation app built with React Native (Expo). It captures speech via Deepgram's streaming speech-to-text API, automatically detects and translates it using Claude Haiku via OpenRouter, and displays both the transcription and translation in real-time with smooth animations.
+Murmur is an AI-powered real-time translation app built with React Native (Expo). It captures speech via Deepgram's streaming speech-to-text API, requests scoped Deepgram auth through the Murmur backend, translates through the Murmur backend's OpenRouter integration, and displays both the transcription and translation in real-time with smooth animations.
 
 **Key Architecture**: Flow is linear and event-driven:
 
 1. User presses microphone button → triggers audio recording
 2. Audio stream → sent to Deepgram WebSocket for real-time transcription
 3. Transcription buffer → debounced (1000ms) before triggering translation
-4. Translation request → OpenRouter API with streaming response
+4. Translation request → Murmur backend with streaming response
 5. Both transcription and translation update UI reactively
 
 ## Development Commands
@@ -39,10 +39,11 @@ No test runner is currently configured. TypeScript checking via `expo` build pro
 
 Create `.env` file (template in `.env.example`):
 
-- `EXPO_PUBLIC_DEEPGRAM_API_KEY`: Get from https://console.deepgram.com/
-- `EXPO_PUBLIC_OPENROUTER_API_KEY`: Get from https://openrouter.ai/keys
+- `EXPO_PUBLIC_MURMUR_API_BASE_URL`: Public base URL for the Murmur backend
 
-These are public environment variables (prefixed with `EXPO_PUBLIC_`) exposed to the client.
+Provider credentials for Deepgram and OpenRouter must stay on the backend.
+Expo inlines `EXPO_PUBLIC_` values into the client bundle, so never put provider
+secrets in those variables.
 
 ## Codebase Structure
 
@@ -58,6 +59,7 @@ These are public environment variables (prefixed with `EXPO_PUBLIC_`) exposed to
 **`services/deepgram.ts`**: DeepgramService class
 
 - Uses native WebSocket (not the @deepgram/sdk to avoid Node.js dependencies)
+- Requires a scoped, short-lived auth token from the Murmur backend
 - `startStreaming()`: Opens WebSocket with auth header, fires onTranscript callback for each transcription chunk
 - `sendAudio()`: Sends raw PCM audio (16-bit, 16kHz) to WebSocket
 - `stop()`: Closes WebSocket connection
@@ -65,7 +67,7 @@ These are public environment variables (prefixed with `EXPO_PUBLIC_`) exposed to
 
 **`services/translation.ts`**: TranslationService class
 
-- Uses OpenRouter API (not Vercel AI SDK directly) via native fetch
+- Uses the Murmur backend via native fetch; the backend owns OpenRouter calls
 - `translateStream()`: Streams Claude Haiku responses with on-demand chunk parsing
 - Parses Server-Sent Events (SSE) format: `data: {...JSON...}`
 - Accumulates chunks in callback while parsing
@@ -109,8 +111,8 @@ These are public environment variables (prefixed with `EXPO_PUBLIC_`) exposed to
 
 ### Demo Mode
 
-- If API keys are missing, app enters DEMO_MODE (shows sample English/Spanish text)
-- Useful for testing UI without API credentials
+- If the Murmur backend URL is missing, the app enters DEMO_MODE (shows sample English/Spanish text)
+- Useful for testing UI without backend credentials
 
 ### Animation
 
@@ -133,8 +135,8 @@ These are public environment variables (prefixed with `EXPO_PUBLIC_`) exposed to
 ## Common Pitfalls to Avoid
 
 1. **Audio Format**: Deepgram expects 16-bit PCM, 16kHz sample rate. The `useAudioRecording` hook should enforce this.
-2. **WebSocket Headers**: Deepgram auth requires `Authorization: Token {apiKey}` header (not Bearer).
-3. **SSE Parsing**: OpenRouter responses are Server-Sent Events (`data: {...}`), not plain JSON. Must split by `\n` and parse `data:` prefix.
+2. **WebSocket Auth**: Deepgram auth tokens must be short-lived values issued by the Murmur backend, never provider keys in the app bundle.
+3. **SSE Parsing**: Backend translation responses are Server-Sent Events (`data: {...}`), not plain JSON. Must split by `\n` and parse `data:` prefix.
 4. **Permission Handling**: iOS and Android have different permission flows. Always request before starting recording.
 5. **Cleanup**: Services (Deepgram WebSocket, translation timeouts) must be cleaned up on unmount or when stopping.
 6. **Debouncing**: Translation requests are debounced to avoid overwhelming the API with intermediate transcription states.

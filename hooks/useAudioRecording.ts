@@ -33,6 +33,10 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
 
 // Chunk duration in ms - shorter = more responsive but more overhead
 const CHUNK_DURATION_MS = 250;
+const PROCESSING_WAIT_MS = 50;
+
+const wait = (durationMs: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, durationMs));
 
 export function useAudioRecording() {
   const [hasPermission, setHasPermission] = useState(false);
@@ -42,27 +46,35 @@ export function useAudioRecording() {
   const onAudioDataRef = useRef<((data: ArrayBuffer) => void) | null>(null);
   const isStreamingRef = useRef(false);
   const isProcessingRef = useRef(false); // Mutex to prevent race conditions
+  const isMountedRef = useRef(true);
 
   // Check permissions on mount
   useEffect(() => {
     const checkPermission = async () => {
       const { granted } = await Audio.getPermissionsAsync();
-      setHasPermission(granted);
+      if (isMountedRef.current) {
+        setHasPermission(granted);
+      }
     };
     checkPermission();
   }, []);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     const { granted } = await Audio.requestPermissionsAsync();
-    setHasPermission(granted);
+    if (isMountedRef.current) {
+      setHasPermission(granted);
+    }
     return granted;
   }, []);
 
   // Function to read and send audio chunk - runs in a loop
   const streamAudioLoop = useCallback(async () => {
     while (isStreamingRef.current) {
+      await wait(CHUNK_DURATION_MS);
+      if (!isStreamingRef.current) break;
+
       if (isProcessingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await wait(PROCESSING_WAIT_MS);
         continue;
       }
 
@@ -118,11 +130,48 @@ export function useAudioRecording() {
       }
 
       isProcessingRef.current = false;
-
-      // Small delay between chunks
-      await new Promise(resolve => setTimeout(resolve, CHUNK_DURATION_MS));
     }
   }, []);
+
+  const cleanupRecording = useCallback(
+    async (updateState: boolean): Promise<void> => {
+      try {
+        isStreamingRef.current = false;
+
+        // Wait for any in-progress chunk processing to release the recorder.
+        while (isProcessingRef.current) {
+          await wait(PROCESSING_WAIT_MS);
+        }
+
+        if (recordingRef.current) {
+          const recording = recordingRef.current;
+          recordingRef.current = null;
+
+          try {
+            await recording.stopAndUnloadAsync();
+          } catch {
+            // Ignore errors if already stopped or unloaded.
+          }
+        }
+
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+        });
+
+        onAudioDataRef.current = null;
+        isProcessingRef.current = false;
+
+        if (updateState && isMountedRef.current) {
+          setIsRecording(false);
+        }
+
+        console.log('Recording stopped');
+      } catch (err) {
+        console.error('Failed to stop recording', err);
+      }
+    },
+    [],
+  );
 
   const startRecording = useCallback(async (onAudioData: (data: ArrayBuffer) => void) => {
     try {
@@ -147,7 +196,9 @@ export function useAudioRecording() {
       await recordingRef.current.prepareToRecordAsync(RECORDING_OPTIONS);
       await recordingRef.current.startAsync();
 
-      setIsRecording(true);
+      if (isMountedRef.current) {
+        setIsRecording(true);
+      }
       console.log('Recording started - streaming audio chunks');
 
       // Start the streaming loop (runs in background)
@@ -155,47 +206,22 @@ export function useAudioRecording() {
     } catch (err) {
       console.error('Failed to start recording', err);
       isStreamingRef.current = false;
+      await cleanupRecording(true);
       throw err;
     }
-  }, [hasPermission, requestPermission, streamAudioLoop]);
+  }, [cleanupRecording, hasPermission, requestPermission, streamAudioLoop]);
 
   const stopRecording = useCallback(async () => {
-    try {
-      isStreamingRef.current = false;
-
-      // Wait for any in-progress processing to complete
-      while (isProcessingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-
-      // Stop and unload the recording
-      if (recordingRef.current) {
-        try {
-          await recordingRef.current.stopAndUnloadAsync();
-        } catch (e) {
-          // Ignore errors if already stopped
-        }
-        recordingRef.current = null;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
-
-      setIsRecording(false);
-      onAudioDataRef.current = null;
-      console.log('Recording stopped');
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-    }
-  }, []);
+    await cleanupRecording(true);
+  }, [cleanupRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      isStreamingRef.current = false;
+      isMountedRef.current = false;
+      void cleanupRecording(false);
     };
-  }, []);
+  }, [cleanupRecording]);
 
   return {
     startRecording,

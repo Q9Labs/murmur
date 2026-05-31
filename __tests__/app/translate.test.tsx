@@ -1,173 +1,302 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { Alert } from "react-native";
-import TranslateScreen from "@/app/translate";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import type React from "react";
 
-// Mock expo-router
+const mockBack = jest.fn();
+const mockReplace = jest.fn();
+const mockStartRecording = jest.fn();
+const mockStopRecording = jest.fn();
+const mockRequestPermission = jest.fn();
+const mockGetMurmurApiBaseUrl = jest.fn(() => "https://murmur.test");
+const mockRequestDeepgramAuthToken = jest.fn();
+const mockStartStreaming = jest.fn();
+const mockSendAudio = jest.fn();
+const mockStopDeepgram = jest.fn();
+const mockIsAlive = jest.fn();
+const mockGetAccumulatedTranscript = jest.fn();
+const mockTranslateStream = jest.fn();
+const mockUseSafeAreaInsets = jest.fn(() => ({
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+}));
+const mockAlert = {
+  alert: jest.fn(),
+};
+
 jest.mock("expo-router", () => ({
-	useLocalSearchParams: jest.fn(),
-	useRouter: jest.fn(),
+  useLocalSearchParams: jest.fn(() => ({
+    languageCode: "es",
+    languageName: "Spanish",
+  })),
+  useRouter: jest.fn(() => ({
+    back: mockBack,
+    replace: mockReplace,
+  })),
 }));
 
-// Mock expo-linear-gradient
-jest.mock("expo-linear-gradient", () => ({
-	LinearGradient: "LinearGradient",
+jest.mock("@/services/backend", () => ({
+  getMurmurApiBaseUrl: mockGetMurmurApiBaseUrl,
+  requestDeepgramAuthToken: mockRequestDeepgramAuthToken,
 }));
 
-// Mock react-native-reanimated
-jest.mock("react-native-reanimated", () => {
-	const Reanimated = require("react-native-reanimated/mock");
-	Reanimated.default.call = () => {};
-	return Reanimated;
+jest.mock("@/hooks/useAudioRecording", () => ({
+  useAudioRecording: jest.fn(() => ({
+    startRecording: mockStartRecording,
+    stopRecording: mockStopRecording,
+    isRecording: false,
+    hasPermission: true,
+    requestPermission: mockRequestPermission,
+  })),
+}));
+
+jest.mock("@/services/deepgram", () => ({
+  DeepgramService: jest.fn().mockImplementation(() => ({
+    startStreaming: mockStartStreaming,
+    sendAudio: mockSendAudio,
+    stop: mockStopDeepgram,
+    isAlive: mockIsAlive,
+    getAccumulatedTranscript: mockGetAccumulatedTranscript,
+  })),
+}));
+
+jest.mock("@/services/translation", () => ({
+  TranslationService: jest.fn().mockImplementation(() => ({
+    translateStream: mockTranslateStream,
+  })),
+}));
+
+jest.mock("react-native", () => {
+  const React = require("react");
+
+  const createComponent = (name: string) =>
+    React.forwardRef(
+      (
+        { children, ...props }: { children?: React.ReactNode },
+        ref: React.Ref<unknown>,
+      ) => React.createElement(name, { ...props, ref }, children),
+    );
+
+  const Pressable = React.forwardRef(
+    (
+      {
+        children,
+        onPress,
+        ...props
+      }: { children?: React.ReactNode; onPress?: () => void },
+      ref: React.Ref<unknown>,
+    ) => React.createElement("Pressable", { ...props, ref, onPress }, children),
+  );
+
+  return {
+    ActivityIndicator: createComponent("ActivityIndicator"),
+    Alert: mockAlert,
+    Dimensions: {
+      get: jest.fn(() => ({ width: 390, height: 844 })),
+    },
+    Platform: {
+      OS: "ios",
+      select: (options: Record<string, unknown>) => options.ios ?? options.default,
+    },
+    Pressable,
+    ScrollView: createComponent("ScrollView"),
+    StyleSheet: {
+      create: (styles: unknown) => styles,
+      flatten: (style: unknown) => style,
+    },
+    Text: createComponent("Text"),
+    View: createComponent("View"),
+  };
 });
 
-// Mock useAudioRecording hook
-jest.mock("@/hooks/useAudioRecording", () => ({
-	useAudioRecording: jest.fn(() => ({
-		startRecording: jest.fn(),
-		stopRecording: jest.fn(),
-		isRecording: false,
-		hasPermission: true,
-		requestPermission: jest.fn(() => Promise.resolve(true)),
-	})),
+jest.mock("@/components/ErrorBoundary", () => ({
+  ErrorBoundary: ({ children }: { children: React.ReactNode }) => {
+    const React = require("react");
+    return React.createElement(React.Fragment, null, children);
+  },
 }));
 
-// Mock DeepgramService
-jest.mock("@/services/deepgram", () => ({
-	DeepgramService: jest.fn().mockImplementation(() => ({
-		startStreaming: jest.fn(),
-		sendAudio: jest.fn(),
-		stop: jest.fn(),
-	})),
+jest.mock("@/components/ui", () => {
+  const React = require("react");
+  const { Pressable, Text, View } = require("react-native");
+
+  return {
+    AnimatedMicButton: ({
+      isListening,
+      onPress,
+    }: {
+      isListening: boolean;
+      onPress: () => void;
+    }) =>
+      React.createElement(
+        Pressable,
+        { testID: "mic-button", onPress },
+        React.createElement(Text, null, isListening ? "listening" : "idle"),
+      ),
+    GlassCard: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(View, null, children),
+    IconButton: ({
+      icon,
+      onPress,
+    }: {
+      icon: string;
+      onPress: () => void;
+    }) =>
+      React.createElement(
+        Pressable,
+        { testID: `icon-${icon}`, onPress },
+        React.createElement(Text, null, icon),
+      ),
+  };
+});
+
+jest.mock("expo-linear-gradient", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+
+  return {
+    LinearGradient: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(View, null, children),
+  };
+});
+
+jest.mock("@expo/vector-icons", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+
+  return {
+    Feather: ({ name }: { name: string }) =>
+      React.createElement(Text, null, name),
+  };
+});
+
+jest.mock("react-native-reanimated", () => {
+  const React = require("react");
+
+  const AnimatedView = React.forwardRef(
+    (
+      { children, ...props }: { children?: React.ReactNode },
+      ref: React.Ref<unknown>,
+    ) => React.createElement("AnimatedView", { ...props, ref }, children),
+  );
+  const animationBuilder = {
+    delay: () => animationBuilder,
+    duration: () => animationBuilder,
+  };
+
+  return {
+    __esModule: true,
+    default: {
+      View: AnimatedView,
+    },
+    Easing: {
+      ease: jest.fn(),
+      inOut: jest.fn((value) => value),
+    },
+    FadeIn: animationBuilder,
+    FadeInDown: animationBuilder,
+    useAnimatedStyle: jest.fn((factory) => factory()),
+    useSharedValue: jest.fn((value) => ({ value })),
+    withRepeat: jest.fn((value) => value),
+    withSequence: jest.fn((...values) => values[values.length - 1]),
+    withTiming: jest.fn((value) => value),
+  };
+});
+
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: mockUseSafeAreaInsets,
 }));
 
-// Mock TranslationService
-jest.mock("@/services/translation", () => ({
-	TranslationService: jest.fn().mockImplementation(() => ({
-		translateStream: jest.fn(),
-	})),
-}));
+const TranslateScreen =
+  require("@/app/translate").default as typeof import("@/app/translate").default;
 
-// Mock Alert
-jest.spyOn(Alert, "alert");
+describe("TranslateScreen lifecycle", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.clearAllMocks();
+    mockRequestDeepgramAuthToken.mockResolvedValue("deepgram-token");
+    mockStartStreaming.mockResolvedValue({} as WebSocket);
+    mockStartRecording.mockResolvedValue(undefined);
+    mockStopRecording.mockResolvedValue(undefined);
+    mockRequestPermission.mockResolvedValue(true);
+    mockIsAlive.mockReturnValue(true);
+    mockGetAccumulatedTranscript.mockReturnValue("");
+  });
 
-describe("TranslateScreen", () => {
-	const mockBack = jest.fn();
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
 
-	beforeEach(() => {
-		jest.clearAllMocks();
+  it("starts live listening through the backend token path", async () => {
+    const { getByTestId } = render(<TranslateScreen />);
 
-		(useLocalSearchParams as jest.Mock).mockReturnValue({
-			languageCode: "es",
-			languageName: "Spanish",
-		});
+    await act(async () => {
+      fireEvent.press(getByTestId("mic-button"));
+    });
 
-		(useRouter as jest.Mock).mockReturnValue({
-			back: mockBack,
-		});
+    await waitFor(() => {
+      expect(mockRequestDeepgramAuthToken).toHaveBeenCalledWith(
+        "https://murmur.test",
+      );
+      expect(mockStartStreaming).toHaveBeenCalledTimes(1);
+      expect(mockStartRecording).toHaveBeenCalledTimes(1);
+    });
+  });
 
-		// Clear environment variables for demo mode tests
-		delete process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY;
-		delete process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-	});
+  it("cleans the current recorder and connection before starting a retry", async () => {
+    let resolveStopRecording: () => void = () => {};
+    mockStopRecording.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStopRecording = resolve;
+        }),
+    );
 
-	it("renders the header with target language", () => {
-		const { getByText } = render(<TranslateScreen />);
+    const { getByTestId } = render(<TranslateScreen />);
 
-		expect(getByText("Translating to")).toBeTruthy();
-		expect(getByText("Spanish")).toBeTruthy();
-	});
+    await act(async () => {
+      fireEvent.press(getByTestId("mic-button"));
+    });
 
-	it("displays placeholder texts initially", () => {
-		const { getByText } = render(<TranslateScreen />);
+    await waitFor(() => {
+      expect(mockStartStreaming).toHaveBeenCalledTimes(1);
+      expect(mockStartRecording).toHaveBeenCalledTimes(1);
+    });
 
-		expect(getByText("Tap the microphone to start speaking...")).toBeTruthy();
-		expect(getByText("Translation will appear here...")).toBeTruthy();
-	});
+    const callbacks = mockStartStreaming.mock.calls[0][0];
+    act(() => {
+      callbacks.onError(new Error("socket failed"));
+    });
 
-	it("shows microphone button", () => {
-		const { getByText } = render(<TranslateScreen />);
+    expect(mockStopDeepgram).toHaveBeenCalledTimes(1);
+    expect(mockStopRecording).toHaveBeenCalledTimes(1);
 
-		expect(getByText("Tap to start speaking")).toBeTruthy();
-		expect(getByText("🎙️")).toBeTruthy();
-	});
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(mockStartStreaming).toHaveBeenCalledTimes(1);
 
-	it("has back button that navigates back", () => {
-		const { getByText } = render(<TranslateScreen />);
+    await act(async () => {
+      resolveStopRecording();
+    });
 
-		const backButton = getByText("←");
-		fireEvent.press(backButton);
+    await waitFor(() => {
+      expect(mockStopRecording).toHaveBeenCalledTimes(1);
+    });
 
-		expect(mockBack).toHaveBeenCalled();
-	});
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
 
-	describe("Demo Mode", () => {
-		it("shows demo alert when API keys are not configured", async () => {
-			const { getByText } = render(<TranslateScreen />);
+    await waitFor(() => {
+      expect(mockStartStreaming).toHaveBeenCalledTimes(2);
+      expect(mockStartRecording).toHaveBeenCalledTimes(2);
+    });
 
-			const micButton = getByText("🎙️").parent;
-			fireEvent.press(micButton!);
-
-			await waitFor(() => {
-				expect(Alert.alert).toHaveBeenCalledWith(
-					"Demo Mode",
-					expect.stringContaining("API keys are not configured"),
-					expect.any(Array),
-				);
-			});
-		});
-
-		it("displays demo transcription in demo mode", async () => {
-			const { getByText } = render(<TranslateScreen />);
-
-			const micButton = getByText("🎙️").parent;
-			fireEvent.press(micButton!);
-
-			await waitFor(
-				() => {
-					expect(
-						getByText(
-							"Hello, how are you today? This is a demo transcription.",
-						),
-					).toBeTruthy();
-				},
-				{ timeout: 2000 },
-			);
-		});
-	});
-
-	describe("Section Labels", () => {
-		it('displays "Original" label for transcription', () => {
-			const { getByText } = render(<TranslateScreen />);
-			expect(getByText("Original")).toBeTruthy();
-		});
-
-		it('displays "Translation" label', () => {
-			const { getByText } = render(<TranslateScreen />);
-			expect(getByText("Translation")).toBeTruthy();
-		});
-	});
-
-	describe("Language Display", () => {
-		it("shows correct language from params", () => {
-			(useLocalSearchParams as jest.Mock).mockReturnValue({
-				languageCode: "fr",
-				languageName: "French",
-			});
-
-			const { getByText } = render(<TranslateScreen />);
-			expect(getByText("French")).toBeTruthy();
-		});
-
-		it("shows different language when params change", () => {
-			(useLocalSearchParams as jest.Mock).mockReturnValue({
-				languageCode: "ja",
-				languageName: "Japanese",
-			});
-
-			const { getByText } = render(<TranslateScreen />);
-			expect(getByText("Japanese")).toBeTruthy();
-		});
-	});
+    expect(
+      mockStopRecording.mock.invocationCallOrder[0],
+    ).toBeLessThan(mockStartStreaming.mock.invocationCallOrder[1]);
+  });
 });

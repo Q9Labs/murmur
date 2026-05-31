@@ -25,7 +25,7 @@ describe("TranslationService", () => {
 				}),
 			});
 
-		const service = new TranslationService("test-key");
+		const service = new TranslationService("https://api.murmur.test");
 		await service.translateStream(
 			"Hello",
 			"Spanish",
@@ -35,6 +35,12 @@ describe("TranslationService", () => {
 		);
 
 		expect(global.fetch).toHaveBeenCalledTimes(2);
+		expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe(
+			"https://api.murmur.test/translate",
+		);
+		expect(
+			(global.fetch as jest.Mock).mock.calls[0][1].headers,
+		).not.toHaveProperty("Authorization");
 		const secondCallBody = JSON.parse(
 			(global.fetch as jest.Mock).mock.calls[1][1].body,
 		);
@@ -69,7 +75,7 @@ describe("TranslationService", () => {
 			},
 		});
 
-		const service = new TranslationService("test-key");
+		const service = new TranslationService("https://api.murmur.test/");
 		await service.translateStream(
 			"Hello",
 			"Spanish",
@@ -79,6 +85,9 @@ describe("TranslationService", () => {
 		);
 
 		expect(global.fetch).toHaveBeenCalledTimes(1);
+		expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe(
+			"https://api.murmur.test/translate",
+		);
 		expect(onChunk).toHaveBeenCalledWith("Hola");
 		expect(onComplete).toHaveBeenCalledWith("Hola");
 		expect(onError).not.toHaveBeenCalled();

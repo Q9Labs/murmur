@@ -1,267 +1,186 @@
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import * as ExpoAudio from "expo-audio";
-import { useAudioRecording } from "@/hooks/useAudioRecording";
 
-// Mock expo-audio
-jest.mock("expo-audio", () => ({
-	useAudioRecorder: jest.fn(),
-	requestRecordingPermissionsAsync: jest.fn(),
-	getRecordingPermissionsAsync: jest.fn(),
-	setAudioModeAsync: jest.fn(),
-	IOSOutputFormat: {
-		LINEARPCM: "lpcm",
-	},
-	AudioQuality: {
-		HIGH: 96,
-	},
+type MockFn = ReturnType<typeof jest.fn>;
+
+const mockRecordingInstances: Array<{
+  prepareToRecordAsync: MockFn;
+  startAsync: MockFn;
+  stopAndUnloadAsync: MockFn;
+  getURI: MockFn;
+}> = [];
+
+const mockGetPermissionsAsync = jest.fn();
+const mockRequestPermissionsAsync = jest.fn();
+const mockSetAudioModeAsync = jest.fn();
+const mockRecordingConstructor = jest.fn().mockImplementation(() => {
+  const recording = {
+    prepareToRecordAsync: jest.fn().mockResolvedValue(undefined),
+    startAsync: jest.fn().mockResolvedValue(undefined),
+    stopAndUnloadAsync: jest.fn().mockResolvedValue(undefined),
+    getURI: jest.fn(() => null),
+  };
+  mockRecordingInstances.push(recording);
+  return recording;
+});
+
+jest.mock("expo-av", () => ({
+  Audio: {
+    getPermissionsAsync: mockGetPermissionsAsync,
+    requestPermissionsAsync: mockRequestPermissionsAsync,
+    setAudioModeAsync: mockSetAudioModeAsync,
+    Recording: mockRecordingConstructor,
+    AndroidOutputFormat: {
+      DEFAULT: "default",
+    },
+    AndroidAudioEncoder: {
+      DEFAULT: "default",
+    },
+    IOSOutputFormat: {
+      LINEARPCM: "lpcm",
+    },
+    IOSAudioQuality: {
+      HIGH: "high",
+    },
+  },
 }));
 
-describe("useAudioRecording Hook", () => {
-	const mockRecorder = {
-		prepareToRecordAsync: jest.fn().mockResolvedValue(undefined),
-		record: jest.fn(),
-		stop: jest.fn().mockResolvedValue(undefined),
-		uri: null,
-	};
+jest.mock("expo-file-system/legacy", () => ({
+  EncodingType: {
+    Base64: "base64",
+  },
+  readAsStringAsync: require("@jest/globals").jest.fn(),
+  deleteAsync: require("@jest/globals").jest.fn(),
+}));
 
-	beforeEach(() => {
-		jest.clearAllMocks();
+const { useAudioRecording } = require("@/hooks/useAudioRecording") as typeof import("@/hooks/useAudioRecording");
+const { Audio } = require("expo-av") as typeof import("expo-av");
 
-		(ExpoAudio.useAudioRecorder as jest.Mock).mockReturnValue(mockRecorder);
-		(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-			granted: false,
-		});
-		(ExpoAudio.requestRecordingPermissionsAsync as jest.Mock).mockResolvedValue(
-			{
-				granted: true,
-			},
-		);
-		(ExpoAudio.setAudioModeAsync as jest.Mock).mockResolvedValue(undefined);
-	});
+describe("useAudioRecording", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.clearAllMocks();
+    mockRecordingInstances.length = 0;
+    mockGetPermissionsAsync.mockResolvedValue({ granted: false });
+    mockRequestPermissionsAsync.mockResolvedValue({ granted: true });
+    mockSetAudioModeAsync.mockResolvedValue(undefined);
+  });
 
-	it("initializes with correct default values", () => {
-		const { result } = renderHook(() => useAudioRecording());
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
 
-		expect(result.current.isRecording).toBe(false);
-		expect(result.current.hasPermission).toBe(false);
-		expect(typeof result.current.startRecording).toBe("function");
-		expect(typeof result.current.stopRecording).toBe("function");
-		expect(typeof result.current.requestPermission).toBe("function");
-	});
+  it("checks permission on mount", async () => {
+    renderHook(() => useAudioRecording());
 
-	it("checks permission on mount", async () => {
-		renderHook(() => useAudioRecording());
+    await waitFor(() => {
+      expect(Audio.getPermissionsAsync).toHaveBeenCalled();
+    });
+  });
 
-		await waitFor(() => {
-			expect(ExpoAudio.getRecordingPermissionsAsync).toHaveBeenCalled();
-		});
-	});
+  it("requests permission and updates state", async () => {
+    const { result } = renderHook(() => useAudioRecording());
 
-	it("updates hasPermission when granted", async () => {
-		(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-			granted: true,
-		});
+    let permissionGranted = false;
+    await act(async () => {
+      permissionGranted = await result.current.requestPermission();
+    });
 
-		const { result } = renderHook(() => useAudioRecording());
+    expect(Audio.requestPermissionsAsync).toHaveBeenCalled();
+    expect(permissionGranted).toBe(true);
+    expect(result.current.hasPermission).toBe(true);
+  });
 
-		await waitFor(() => {
-			expect(result.current.hasPermission).toBe(true);
-		});
-	});
+  it("sets recording audio mode and starts the native recorder", async () => {
+    mockGetPermissionsAsync.mockResolvedValue({ granted: true });
+    const { result } = renderHook(() => useAudioRecording());
 
-	describe("requestPermission", () => {
-		it("requests permission and updates state", async () => {
-			const { result } = renderHook(() => useAudioRecording());
+    await waitFor(() => {
+      expect(result.current.hasPermission).toBe(true);
+    });
 
-			let permissionGranted: boolean = false;
-			await act(async () => {
-				permissionGranted = await result.current.requestPermission();
-			});
+    await act(async () => {
+      await result.current.startRecording(jest.fn());
+    });
 
-			expect(ExpoAudio.requestRecordingPermissionsAsync).toHaveBeenCalled();
-			expect(permissionGranted).toBe(true);
-			expect(result.current.hasPermission).toBe(true);
-		});
+    expect(Audio.setAudioModeAsync).toHaveBeenCalledWith({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    });
+    expect(mockRecordingConstructor).toHaveBeenCalledTimes(1);
+    expect(mockRecordingInstances[0].prepareToRecordAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isMeteringEnabled: true,
+        ios: expect.objectContaining({
+          sampleRate: 16000,
+          numberOfChannels: 1,
+        }),
+      }),
+    );
+    expect(mockRecordingInstances[0].startAsync).toHaveBeenCalled();
+    expect(result.current.isRecording).toBe(true);
 
-		it("returns false when permission denied", async () => {
-			(
-				ExpoAudio.requestRecordingPermissionsAsync as jest.Mock
-			).mockResolvedValue({
-				granted: false,
-			});
+    await act(async () => {
+      await result.current.stopRecording();
+    });
+  });
 
-			const { result } = renderHook(() => useAudioRecording());
+  it("stops, unloads, and clears audio mode", async () => {
+    mockGetPermissionsAsync.mockResolvedValue({ granted: true });
+    const { result } = renderHook(() => useAudioRecording());
 
-			let permissionGranted: boolean = true;
-			await act(async () => {
-				permissionGranted = await result.current.requestPermission();
-			});
+    await waitFor(() => {
+      expect(result.current.hasPermission).toBe(true);
+    });
 
-			expect(permissionGranted).toBe(false);
-			expect(result.current.hasPermission).toBe(false);
-		});
-	});
+    await act(async () => {
+      await result.current.startRecording(jest.fn());
+    });
 
-	describe("startRecording", () => {
-		it("requests permission if not granted", async () => {
-			const { result } = renderHook(() => useAudioRecording());
+    await act(async () => {
+      await result.current.stopRecording();
+    });
 
-			const onAudioData = jest.fn();
+    expect(mockRecordingInstances[0].stopAndUnloadAsync).toHaveBeenCalled();
+    expect(Audio.setAudioModeAsync).toHaveBeenLastCalledWith({
+      allowsRecordingIOS: false,
+    });
+    expect(result.current.isRecording).toBe(false);
+  });
 
-			await act(async () => {
-				await result.current.startRecording(onAudioData);
-			});
+  it("unloads the native recorder and clears audio mode on unmount", async () => {
+    mockGetPermissionsAsync.mockResolvedValue({ granted: true });
+    const { result, unmount } = renderHook(() => useAudioRecording());
 
-			expect(ExpoAudio.requestRecordingPermissionsAsync).toHaveBeenCalled();
-		});
+    await waitFor(() => {
+      expect(result.current.hasPermission).toBe(true);
+    });
 
-		it("sets audio mode for recording", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
+    await act(async () => {
+      await result.current.startRecording(jest.fn());
+    });
 
-			const { result } = renderHook(() => useAudioRecording());
+    act(() => {
+      unmount();
+    });
 
-			const onAudioData = jest.fn();
+    await waitFor(() => {
+      expect(mockRecordingInstances[0].stopAndUnloadAsync).toHaveBeenCalled();
+    });
+    expect(Audio.setAudioModeAsync).toHaveBeenLastCalledWith({
+      allowsRecordingIOS: false,
+    });
+  });
 
-			await act(async () => {
-				await result.current.startRecording(onAudioData);
-			});
+  it("throws when permission is denied", async () => {
+    mockRequestPermissionsAsync.mockResolvedValue({ granted: false });
+    const { result } = renderHook(() => useAudioRecording());
 
-			expect(ExpoAudio.setAudioModeAsync).toHaveBeenCalledWith({
-				allowsRecording: true,
-				playsInSilentMode: true,
-			});
-		});
-
-		it("prepares recorder and starts recording", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			const onAudioData = jest.fn();
-
-			await act(async () => {
-				await result.current.startRecording(onAudioData);
-			});
-
-			expect(mockRecorder.prepareToRecordAsync).toHaveBeenCalled();
-			expect(mockRecorder.record).toHaveBeenCalled();
-		});
-
-		it("updates isRecording state", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			const onAudioData = jest.fn();
-
-			await act(async () => {
-				await result.current.startRecording(onAudioData);
-			});
-
-			await waitFor(() => {
-				expect(result.current.isRecording).toBe(true);
-			});
-		});
-
-		it("throws error when permission denied", async () => {
-			(
-				ExpoAudio.requestRecordingPermissionsAsync as jest.Mock
-			).mockResolvedValue({
-				granted: false,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			const onAudioData = jest.fn();
-
-			await expect(
-				act(async () => {
-					await result.current.startRecording(onAudioData);
-				}),
-			).rejects.toThrow("Microphone permission denied");
-		});
-	});
-
-	describe("stopRecording", () => {
-		it("stops the recorder", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			// Start recording first
-			await act(async () => {
-				await result.current.startRecording(jest.fn());
-			});
-
-			// Stop recording
-			await act(async () => {
-				await result.current.stopRecording();
-			});
-
-			expect(mockRecorder.stop).toHaveBeenCalled();
-		});
-
-		it("resets audio mode", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			await act(async () => {
-				await result.current.startRecording(jest.fn());
-			});
-
-			await act(async () => {
-				await result.current.stopRecording();
-			});
-
-			expect(ExpoAudio.setAudioModeAsync).toHaveBeenCalledWith({
-				allowsRecording: false,
-			});
-		});
-
-		it("updates isRecording to false", async () => {
-			(ExpoAudio.getRecordingPermissionsAsync as jest.Mock).mockResolvedValue({
-				granted: true,
-			});
-
-			const { result } = renderHook(() => useAudioRecording());
-
-			await act(async () => {
-				await result.current.startRecording(jest.fn());
-			});
-
-			await act(async () => {
-				await result.current.stopRecording();
-			});
-
-			await waitFor(() => {
-				expect(result.current.isRecording).toBe(false);
-			});
-		});
-	});
-
-	describe("Recording Options", () => {
-		it("uses correct audio settings for Deepgram", () => {
-			renderHook(() => useAudioRecording());
-
-			const recorderCall = (ExpoAudio.useAudioRecorder as jest.Mock).mock
-				.calls[0];
-			const recordingOptions = recorderCall[0];
-
-			expect(recordingOptions.sampleRate).toBe(16000);
-			expect(recordingOptions.numberOfChannels).toBe(1);
-			expect(recordingOptions.extension).toBe(".wav");
-			expect(recordingOptions.isMeteringEnabled).toBe(true);
-		});
-	});
+    await expect(
+      act(async () => {
+        await result.current.startRecording(jest.fn());
+      }),
+    ).rejects.toThrow("Microphone permission denied");
+  });
 });

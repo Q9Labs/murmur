@@ -2,6 +2,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnimatedMicButton, GlassCard, IconButton } from "@/components/ui";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { theme } from "@/lib/theme";
+import {
+    getMurmurApiBaseUrl,
+    requestDeepgramAuthToken,
+} from "@/services/backend";
 import { DeepgramService } from "@/services/deepgram";
 import { TranslationService } from "@/services/translation";
 import { Feather } from "@expo/vector-icons";
@@ -27,9 +31,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const DEEPGRAM_API_KEY = process.env.EXPO_PUBLIC_DEEPGRAM_API_KEY || "";
-const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
-const DEMO_MODE = !DEEPGRAM_API_KEY || !OPENROUTER_API_KEY;
+const MURMUR_API_BASE_URL = getMurmurApiBaseUrl();
+const DEMO_MODE = !MURMUR_API_BASE_URL;
 
 function TypingIndicator(): ReactNode {
   const dot1 = useSharedValue(0);
@@ -204,26 +207,39 @@ function TranslateScreenContent(): ReactNode {
   const deepgramRef = useRef<DeepgramService | null>(null);
   const translationRef = useRef<TranslationService | null>(null);
   const retryCountRef = useRef<number>(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryScheduledRef = useRef<boolean>(false);
   const maxRetries = 3;
   const isMountedRef = useRef<boolean>(true);
   const contentScrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (DEEPGRAM_API_KEY) {
-      deepgramRef.current = new DeepgramService(DEEPGRAM_API_KEY);
+  const clearRetryTimeout = useCallback((): void => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
     }
-    if (OPENROUTER_API_KEY) {
-      translationRef.current = new TranslationService(OPENROUTER_API_KEY);
+  }, []);
+
+  const cleanupListeningSession = useCallback(async (): Promise<void> => {
+    deepgramRef.current?.stop();
+    await stopRecording();
+  }, [stopRecording]);
+
+  useEffect(() => {
+    if (MURMUR_API_BASE_URL) {
+      translationRef.current = new TranslationService(MURMUR_API_BASE_URL);
     }
 
     return () => {
       isMountedRef.current = false;
+      retryScheduledRef.current = false;
+      clearRetryTimeout();
       if (deepgramRef.current) {
         deepgramRef.current.stop();
       }
       retryCountRef.current = 0;
     };
-  }, []);
+  }, [clearRetryTimeout]);
 
   // Auto-scroll content to bottom
   useEffect(() => {
@@ -289,13 +305,25 @@ function TranslateScreenContent(): ReactNode {
   );
 
   const startListening = useCallback(async (): Promise<void> => {
-    if (!deepgramRef.current || !isMountedRef.current) return;
+    if (!MURMUR_API_BASE_URL || !isMountedRef.current) return;
 
     try {
+      retryScheduledRef.current = false;
       setIsConnecting(true);
       setError(null);
       setTranscription("");
       setTranslation("");
+
+      if (!translationRef.current) {
+        translationRef.current = new TranslationService(MURMUR_API_BASE_URL);
+      }
+
+      const deepgramAuthToken =
+        await requestDeepgramAuthToken(MURMUR_API_BASE_URL);
+      if (!isMountedRef.current) return;
+
+      deepgramRef.current?.stop();
+      deepgramRef.current = new DeepgramService(deepgramAuthToken);
 
       await deepgramRef.current.startStreaming({
         onTranscript: (text: string, isFinal: boolean) => {
@@ -327,15 +355,30 @@ function TranslateScreenContent(): ReactNode {
           console.error("Deepgram error:", err);
           
           if (retryCountRef.current < maxRetries) {
+            if (retryScheduledRef.current) return;
+
             retryCountRef.current++;
-            setTimeout(() => {
-              if (isMountedRef.current) startListening();
-            }, 1000);
+            retryScheduledRef.current = true;
+            setIsListening(false);
+            setIsSpeaking(false);
+            setIsConnecting(true);
+
+            void cleanupListeningSession().then(() => {
+              if (!isMountedRef.current || !retryScheduledRef.current) return;
+
+              retryTimeoutRef.current = setTimeout(() => {
+                retryTimeoutRef.current = null;
+                if (!isMountedRef.current || !retryScheduledRef.current) return;
+                void startListening();
+              }, 1000);
+            });
           } else {
             setError("Connection failed. Please try again.");
             setIsListening(false);
             setIsConnecting(false);
             retryCountRef.current = 0;
+            retryScheduledRef.current = false;
+            void cleanupListeningSession();
           }
         },
       });
@@ -353,26 +396,32 @@ function TranslateScreenContent(): ReactNode {
       });
     } catch (err) {
       console.error("Start error:", err);
-      if (isMountedRef.current) {
+      void cleanupListeningSession();
+      if (isMountedRef.current && !retryScheduledRef.current) {
         setError("Failed to start. Please try again.");
         setIsListening(false);
         setIsConnecting(false);
       }
     }
-  }, [handleTranslate, startRecording]);
+  }, [cleanupListeningSession, handleTranslate, startRecording]);
 
   const stopListening = useCallback(async (): Promise<void> => {
+    retryScheduledRef.current = false;
+    clearRetryTimeout();
     if (isMountedRef.current) {
       setIsListening(false);
       setIsSpeaking(false);
     }
-    deepgramRef.current?.stop();
-    await stopRecording();
-  }, [stopRecording]);
+    await cleanupListeningSession();
+  }, [cleanupListeningSession, clearRetryTimeout]);
 
   const handleToggleListen = async (): Promise<void> => {
     if (DEMO_MODE) {
-      Alert.alert("Demo Mode", "API keys not configured.");
+      Alert.alert(
+        "Live Translation Unavailable",
+        "The Murmur backend is not configured for this build. Provider credentials must stay on the server, so live translation is disabled.",
+        [{ text: "OK" }],
+      );
       setTranscription("Hello world");
       setTranslation("Hola mundo");
       return;

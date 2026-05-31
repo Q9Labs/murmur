@@ -1,3 +1,5 @@
+import { buildBackendUrl } from "@/services/backend";
+
 // Using native fetch instead of ai SDK to avoid Node.js dependencies
 
 interface StreamingState {
@@ -6,14 +8,25 @@ interface StreamingState {
   buffer: string;
 }
 
-export class TranslationService {
-  private readonly apiKey: string;
+interface TranslationResponse {
+  readonly translation?: unknown;
+  readonly text?: unknown;
+  readonly content?: unknown;
+  readonly chunk?: unknown;
+  readonly choices?: ReadonlyArray<{
+    readonly delta?: { readonly content?: unknown };
+    readonly message?: { readonly content?: unknown };
+  }>;
+}
 
-  constructor(apiKey: string) {
-    if (!apiKey || apiKey.trim() === "") {
-      throw new Error("TranslationService: API key is required");
+export class TranslationService {
+  private readonly apiBaseUrl: string;
+
+  constructor(apiBaseUrl: string) {
+    if (!apiBaseUrl || apiBaseUrl.trim() === "") {
+      throw new Error("TranslationService: backend URL is required");
     }
-    this.apiKey = apiKey;
+    this.apiBaseUrl = apiBaseUrl;
   }
 
   private async translateOnce(
@@ -26,23 +39,15 @@ export class TranslationService {
       }
 
       const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
+        buildBackendUrl(this.apiBaseUrl, "/translate"),
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${this.apiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://murmur.app",
           },
           body: JSON.stringify({
-            model: "anthropic/claude-3.5-haiku",
-            messages: [
-              {
-                role: "user",
-                content: `Translate the following text to ${targetLanguage}. Only provide the translation, no explanations or additional text:\n\n${text}`,
-              },
-            ],
-            temperature: 0.3,
+            text,
+            targetLanguage,
             stream: false,
           }),
         },
@@ -50,17 +55,17 @@ export class TranslationService {
 
       if (!response.ok) {
         throw new Error(
-          `OpenRouter API error: ${response.status} ${response.statusText}`,
+          `Murmur backend translation error: ${response.status} ${response.statusText}`,
         );
       }
 
-      const data = await response.json();
-      const content = data?.choices?.[0]?.message?.content;
+      const data = (await response.json()) as TranslationResponse;
+      const content = this.extractTranslationContent(data);
       if (!content) {
-        throw new Error("OpenRouter API returned empty translation");
+        throw new Error("Murmur backend returned empty translation");
       }
 
-      return content as string;
+      return content;
     } catch (error) {
       console.error("[TranslationService] Error in translateOnce:", error);
       throw error;
@@ -68,7 +73,7 @@ export class TranslationService {
   }
 
   /**
-   * Parses Server-Sent Events (SSE) format responses from OpenRouter.
+   * Parses Server-Sent Events (SSE) format responses from the Murmur backend.
    * Handles incomplete messages and multi-line JSON structures.
    */
   private parseSSELine(line: string): string | null {
@@ -84,18 +89,32 @@ export class TranslationService {
       return null;
     }
 
-    // Try to parse JSON and extract content
+    // Try to parse JSON and extract content. Plain text data is also accepted
+    // so the backend can avoid leaking provider-specific response shapes.
     try {
-      const parsed = JSON.parse(data) as {
-        choices?: Array<{ delta?: { content?: string } }>;
-      };
-      // OpenRouter returns content in delta.content for streaming
-      const content = parsed?.choices?.[0]?.delta?.content;
-      return content || null;
+      const parsed = JSON.parse(data) as TranslationResponse;
+      return this.extractTranslationContent(parsed);
     } catch {
-      // JSON parse failed - line is likely incomplete
-      return null;
+      return data;
     }
+  }
+
+  private extractTranslationContent(
+    data: TranslationResponse | string,
+  ): string | null {
+    if (typeof data === "string") {
+      return data || null;
+    }
+
+    const content =
+      data.chunk ??
+      data.translation ??
+      data.text ??
+      data.content ??
+      data.choices?.[0]?.delta?.content ??
+      data.choices?.[0]?.message?.content;
+
+    return typeof content === "string" && content.length > 0 ? content : null;
   }
 
   /**
@@ -160,23 +179,15 @@ export class TranslationService {
       let response: Response | null = null;
       try {
         response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
+          buildBackendUrl(this.apiBaseUrl, "/translate"),
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${this.apiKey}`,
               "Content-Type": "application/json",
-              "HTTP-Referer": "https://murmur.app",
             },
             body: JSON.stringify({
-              model: "anthropic/claude-3.5-haiku",
-              messages: [
-                {
-                  role: "user",
-                  content: `Translate the following text to ${targetLanguage}. Only provide the translation, no explanations or additional text:\n\n${text}`,
-                },
-              ],
-              temperature: 0.3,
+              text,
+              targetLanguage,
               stream: true,
             }),
           },
@@ -188,7 +199,7 @@ export class TranslationService {
 
       if (!response || !response.ok) {
         throw new Error(
-          `OpenRouter API error: ${response?.status ?? "unknown"} ${response?.statusText ?? "Unknown error"}`,
+          `Murmur backend translation error: ${response?.status ?? "unknown"} ${response?.statusText ?? "Unknown error"}`,
         );
       }
 

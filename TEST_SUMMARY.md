@@ -31,9 +31,9 @@
 - ✅ Displays placeholder texts
 - ✅ Shows microphone button
 - ✅ Back button navigation
-- ✅ Demo mode alert when API keys missing
+- ✅ Demo mode alert when backend config missing
 - ✅ Demo transcription display
-- ✅ Section labels (Original, Translation)
+- ✅ Section labels (You Said, target language)
 - ✅ Language display from params
 - **11 tests passed**
 

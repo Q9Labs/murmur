@@ -60,7 +60,12 @@
 │ PHASE 2: SPEECH-TO-TEXT (deepgram.ts)                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
- ④ deepgramRef.startStreaming(onTranscript, onError)
+ ④ requestDeepgramAuthToken() via Murmur backend
+    │
+    └─▶ Backend returns a scoped, short-lived Deepgram auth token
+        Provider credentials stay server-side.
+
+ ⑤ deepgramRef.startStreaming(onTranscript, onError)
     │
     ├─▶ Build WebSocket URL with params:
     │   • model: 'nova-2'
@@ -70,7 +75,7 @@
     │
     └─▶ Open WebSocket: wss://api.deepgram.com/v1/listen?...
          │
-         ├─▶ Auth via Sec-WebSocket-Protocol: ['token', apiKey]
+         ├─▶ Auth via Sec-WebSocket-Protocol: ['token', authToken]
          │
          └─▶ Event Handlers:
               │
@@ -127,16 +132,14 @@
 
  ⑩ translationRef.translateStream(text, targetLang, onChunk, onComplete, onError)
     │
-    └─▶ POST https://openrouter.ai/api/v1/chat/completions
+    └─▶ POST {EXPO_PUBLIC_MURMUR_API_BASE_URL}/translate
          │
          ├─▶ Headers:
-         │   • Authorization: Bearer {apiKey}
          │   • Content-Type: application/json
          │
          ├─▶ Body:
-         │   • model: 'anthropic/claude-3.5-haiku'
-         │   • messages: [{role: 'user', content: 'Translate...'}]
-         │   • temperature: 0.3
+         │   • text
+         │   • targetLanguage
          │   • stream: true
          │
          └─▶ ⑪ Response: Server-Sent Events (SSE) stream
@@ -209,16 +212,15 @@
 ### WebSocket (Deepgram)
 
 - **URL**: `wss://api.deepgram.com/v1/listen`
-- **Auth**: Sec-WebSocket-Protocol header `['token', apiKey]`
+- **Auth**: Sec-WebSocket-Protocol header `['token', authToken]`, where `authToken` is issued by the Murmur backend
 - **Model**: nova-2
 - **Language**: multi (auto-detect)
 - **Interim Results**: Enabled
 
-### HTTP Streaming (OpenRouter)
+### HTTP Streaming (Murmur Backend)
 
-- **URL**: `https://openrouter.ai/api/v1/chat/completions`
-- **Auth**: Bearer token
-- **Model**: anthropic/claude-3.5-haiku
+- **URL**: `{EXPO_PUBLIC_MURMUR_API_BASE_URL}/translate`
+- **Auth**: App does not send provider credentials
 - **Format**: Server-Sent Events (SSE)
 - **Parsing**: Split by `\n`, extract `data: ` prefix
 
@@ -227,7 +229,7 @@
 - **Audio Chunks**: Every 250ms
 - **Translation Debounce**: 1000ms (1 second)
 - **Deepgram**: Real-time (< 100ms latency)
-- **OpenRouter**: Streaming (chunks arrive progressively)
+- **Murmur Backend**: Streaming translation chunks arrive progressively
 
 ### State Management
 
@@ -240,7 +242,7 @@
 ### UI Updates
 
 - **Transcription**: Immediate append on each Deepgram message
-- **Translation**: Incremental update as OpenRouter chunks arrive
+- **Translation**: Incremental update as backend chunks arrive
 - **Animations**: Reanimated shared values (mic pulse, scale)
 - **Error**: Displayed in red alert box below translation
 
@@ -260,4 +262,4 @@
 5. **State coordination** - useRef for services/timers, useState for UI updates
 6. **No heavy SDKs** - Native WebSocket and fetch for minimal dependencies
 7. **PCM extraction** - Skip WAV header (44 bytes) before sending to Deepgram
-8. **SSE parsing** - Manual parsing of Server-Sent Events from OpenRouter
+8. **SSE parsing** - Manual parsing of Server-Sent Events from the Murmur backend

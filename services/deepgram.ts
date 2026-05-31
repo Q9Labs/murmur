@@ -2,6 +2,8 @@
  * DeepgramService - Real-time speech-to-text streaming with VAD and turn detection
  *
  * Uses native WebSocket instead of @deepgram/sdk to avoid Node.js dependencies.
+ * The auth token must come from the Murmur backend as a scoped, short-lived
+ * token; provider secrets must never be embedded in the Expo client bundle.
  * Leverages Deepgram's built-in VAD via `speech_final` and `utterance_end_ms` for turn detection.
  */
 
@@ -153,7 +155,7 @@ const DEFAULT_CONFIG: DeepgramConfig = {
 
 export class DeepgramService {
   private ws: WebSocket | null = null;
-  private readonly apiKey: string;
+  private readonly authToken: string;
   private readonly config: DeepgramConfig;
   private destroyed: boolean = false;
 
@@ -174,12 +176,12 @@ export class DeepgramService {
   private isReconnecting: boolean = false;
   private callbacks: DeepgramCallbacks | null = null;
 
-  constructor(apiKey: string, config: Partial<DeepgramConfig> = {}) {
-    if (!apiKey || apiKey.trim() === "") {
-      throw new Error("DeepgramService: API key is required");
+  constructor(authToken: string, config: Partial<DeepgramConfig> = {}) {
+    if (!authToken || authToken.trim() === "") {
+      throw new Error("DeepgramService: auth token is required");
     }
 
-    this.apiKey = apiKey;
+    this.authToken = authToken;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -191,6 +193,7 @@ export class DeepgramService {
    */
   async startStreaming(callbacks: DeepgramCallbacks): Promise<WebSocket> {
     // Reset state for new session
+    this.destroyed = false;
     this.resetState();
     this.callbacks = callbacks;
     this.isReconnecting = false;
@@ -198,7 +201,7 @@ export class DeepgramService {
     return new Promise((resolve, reject) => {
       try {
         const url = this.buildWebSocketUrl();
-        this.ws = new WebSocket(url, ["token", this.apiKey]);
+        this.ws = new WebSocket(url, ["token", this.authToken]);
 
         this.ws.onopen = (): void => {
             this.startKeepAlive();
@@ -229,7 +232,7 @@ export class DeepgramService {
         this.ws.onerror = (event: Event): void => {
           console.error("[Deepgram] WebSocket error:", event);
           const error = new Error(
-            "Deepgram WebSocket connection failed. Check your API key and network connection.",
+            "Deepgram WebSocket connection failed. Check your backend token service and network connection.",
           );
           callbacks.onError(error);
           reject(error);
@@ -292,7 +295,10 @@ export class DeepgramService {
 
     // Close WebSocket connection
     if (this.ws) {
-      if (this.ws.readyState === WebSocket.OPEN) {
+      if (
+        this.ws.readyState === WebSocket.CONNECTING ||
+        this.ws.readyState === WebSocket.OPEN
+      ) {
         // Send close frame for graceful shutdown
         this.ws.close(1000, "Client requested close");
       }
@@ -708,6 +714,7 @@ export class DeepgramService {
     // Stop keep-alive pings when connection closes
     this.stopKeepAlive();
 
+    if (this.destroyed) return;
 
     try {
       // Update speaking state on close

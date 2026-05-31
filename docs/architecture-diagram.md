@@ -27,7 +27,7 @@ flowchart TB
 
     subgraph Step4["4. AI-Powered Translation"]
         D1["Transcription buffered (1s debounce)"]
-        D2[OpenRouter API request]
+        D2[Murmur backend translation request]
         D3["Claude Haiku LLM Translation"]
         D4[Streaming translation response]
         D1 --> D2 --> D3 --> D4
@@ -63,6 +63,7 @@ sequenceDiagram
     participant User
     participant App as Murmur App
     participant Mic as Device Microphone
+    participant API as Murmur Backend
     participant DG as Deepgram API
     participant OR as OpenRouter API
     participant Claude as Claude Haiku
@@ -71,6 +72,8 @@ sequenceDiagram
     User->>App: Tap microphone button
     App->>Mic: Request permission
     Mic-->>App: Permission granted
+    App->>API: Request scoped Deepgram auth token
+    API-->>App: Short-lived token
 
     loop Real-time Audio Streaming
         Mic->>App: Audio chunk (PCM 16-bit)
@@ -80,12 +83,14 @@ sequenceDiagram
     end
 
     App->>App: Debounce (1000ms)
-    App->>OR: Translation request (SSE)
+    App->>API: Translation request (SSE)
+    API->>OR: Provider request
     OR->>Claude: Process with Haiku
 
     loop Streaming Response
         Claude-->>OR: Translation chunk
-        OR-->>App: SSE data chunk
+        OR-->>API: Provider chunk
+        API-->>App: SSE data chunk
         App->>App: Update translation display
     end
 ```
@@ -102,6 +107,7 @@ graph LR
     end
 
     subgraph External["☁️ External Services"]
+        Backend["Murmur Backend<br/>Token + Translation"]
         Deepgram["🎤 Deepgram<br/>Nova-2 STT"]
         OpenRouter["🔀 OpenRouter<br/>API Gateway"]
         Claude["🤖 Claude Haiku<br/>Translation LLM"]
@@ -109,9 +115,11 @@ graph LR
 
     UI --> Hook
     Hook --> DGService
+    DGService -->|short-lived token from backend| Backend
     DGService <-->|WebSocket| Deepgram
     UI --> TRService
-    TRService <-->|SSE Stream| OpenRouter
+    TRService <-->|SSE Stream| Backend
+    Backend --> OpenRouter
     OpenRouter --> Claude
 
     style Client fill:#f5f5ff,stroke:#6366f1,stroke-width:2px

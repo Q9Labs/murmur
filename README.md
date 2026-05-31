@@ -16,7 +16,7 @@ AI-Powered Real-Time Translation App
 - **Styling**: NativeWind (Tailwind CSS for React Native)
 - **Animations**: React Native Reanimated
 - **Speech-to-Text**: Deepgram SDK
-- **Translation**: Vercel AI SDK with OpenRouter (Claude Haiku 3.5)
+- **Translation**: Murmur backend with OpenRouter (Claude Haiku 3.5)
 - **Package Manager**: Bun
 
 ## Setup
@@ -31,8 +31,8 @@ AI-Powered Real-Time Translation App
 
 2. **Configure environment variables:**
    - Copy `.env.example` to `.env`
-   - Add your Deepgram API key from [console.deepgram.com](https://console.deepgram.com/)
-   - Add your OpenRouter API key from [openrouter.ai/keys](https://openrouter.ai/keys)
+   - Set `EXPO_PUBLIC_MURMUR_API_BASE_URL` to the Murmur backend URL
+   - Keep Deepgram and OpenRouter provider keys on the backend only
 
 3. **Run the app:**
    ```bash
@@ -71,7 +71,8 @@ AI-Powered Real-Time Translation App
 ## Notes
 
 - Microphone permission required for audio capture
-- API keys required for Deepgram and OpenRouter
+- A Murmur backend is required for live translation; production clients must not embed provider API keys
+- Expected backend endpoints: `POST /deepgram/token` returns `{ "token": "..." }`; `POST /translate` accepts `{ text, targetLanguage, stream }` and returns SSE chunks or a non-stream `{ "translation": "..." }`
 - This is a one-way translation tool (no TTS output in MVP)
 
 ## Architecture
@@ -85,7 +86,8 @@ app/
 
 services/
 ├── deepgram.ts              # Deepgram streaming STT
-└── translation.ts           # AI SDK translation with OpenRouter
+├── backend.ts               # Public backend URL and token plumbing
+└── translation.ts           # Backend-routed AI translation
 
 hooks/
 └── useAudioRecording.ts     # Audio recording hook
