@@ -1,12 +1,14 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import {
+  beginSummary,
   beginTranslation,
   canRefreshTokens,
   canCreateSession,
   closeSession,
   createSessionRecord,
   defaultRateLimits,
+  endSummary,
   endTranslation,
   getSession,
   type LimitResult,
@@ -41,7 +43,16 @@ type DurableLimitRequest =
       source_caption: string;
     }
   | {
+      action: "begin_summary";
+      app_session_id: string;
+      now_ms: number;
+    }
+  | {
       action: "end_translation";
+      app_session_id: string;
+    }
+  | {
+      action: "end_summary";
       app_session_id: string;
     }
   | {
@@ -158,8 +169,17 @@ export class RateLimitDurableObject {
           now_ms: body.now_ms,
           source_caption: body.source_caption,
         });
+      case "begin_summary":
+        return adapter.beginSummary({
+          app_session_id: body.app_session_id,
+          config: defaultRateLimits,
+          now_ms: body.now_ms,
+        });
       case "end_translation":
         adapter.endTranslation(body.app_session_id);
+        return { ok: true };
+      case "end_summary":
+        adapter.endSummary(body.app_session_id);
         return { ok: true };
       case "close_session":
         adapter.closeSession(body.app_session_id, body.now_ms);
@@ -272,12 +292,34 @@ export async function beginTranslationDurable(params: {
   })) as LimitResult;
 }
 
+export async function beginSummaryDurable(params: {
+  app_session_id: string;
+  namespace?: DurableObjectNamespace;
+  now_ms: number;
+}): Promise<LimitResult> {
+  return (await callRateLimiter(params.namespace, {
+    action: "begin_summary",
+    app_session_id: params.app_session_id,
+    now_ms: params.now_ms,
+  })) as LimitResult;
+}
+
 export async function endTranslationDurable(params: {
   app_session_id: string;
   namespace?: DurableObjectNamespace;
 }): Promise<void> {
   await callRateLimiter(params.namespace, {
     action: "end_translation",
+    app_session_id: params.app_session_id,
+  });
+}
+
+export async function endSummaryDurable(params: {
+  app_session_id: string;
+  namespace?: DurableObjectNamespace;
+}): Promise<void> {
+  await callRateLimiter(params.namespace, {
+    action: "end_summary",
     app_session_id: params.app_session_id,
   });
 }
@@ -423,8 +465,17 @@ function callMemoryLimiter(body: DurableLimitRequest): unknown {
         now_ms: body.now_ms,
         source_caption: body.source_caption,
       });
+    case "begin_summary":
+      return beginSummary({
+        app_session_id: body.app_session_id,
+        config: defaultRateLimits,
+        now_ms: body.now_ms,
+      });
     case "end_translation":
       endTranslation(body.app_session_id);
+      return { ok: true };
+    case "end_summary":
+      endSummary(body.app_session_id);
       return { ok: true };
     case "close_session":
       closeSession(body.app_session_id, body.now_ms);
@@ -486,6 +537,11 @@ function createMemoryAdapter(state: DurableLimitState) {
   const sessionsById = new Map(Object.entries(state.sessions_by_id));
   const startsByInstall = new Map(Object.entries(state.session_starts_by_install));
   return {
+    beginSummary: (params: Parameters<typeof beginSummary>[0]) => {
+      const result = beginSummaryWithStores(params, sessionsById);
+      syncMaps(state, sessionsById, startsByInstall);
+      return result;
+    },
     beginTranslation: (params: Parameters<typeof beginTranslation>[0]) => {
       const result = beginTranslationWithStores(params, sessionsById);
       syncMaps(state, sessionsById, startsByInstall);
@@ -526,6 +582,10 @@ function createMemoryAdapter(state: DurableLimitState) {
     },
     endTranslation: (appSessionId: string) => {
       endTranslationWithStores(appSessionId, sessionsById);
+      syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
+    },
+    endSummary: (appSessionId: string) => {
+      endSummaryWithStores(appSessionId, sessionsById);
       syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
     },
     getAppAttestDevice: (keyId: string) => appAttestDevices.get(keyId) ?? null,
@@ -632,7 +692,9 @@ function createSessionRecordWithStores(
     closed_at_ms: null,
     created_at_ms: params.now_ms,
     hashed_install_id: params.hashed_install_id,
+    in_flight_summaries: 0,
     in_flight_translations: 0,
+    summary_timestamps: [],
     translated_span_timestamps: [],
   };
   sessionsById.set(params.app_session_id, record);
@@ -703,6 +765,34 @@ function beginTranslationWithStores(
   return { ok: true };
 }
 
+function beginSummaryWithStores(
+  params: Parameters<typeof beginSummary>[0],
+  sessionsById: Map<string, SessionRecord>,
+): LimitResult {
+  const session = sessionsById.get(params.app_session_id);
+  if (!session || session.closed_at_ms !== null) {
+    return { ok: false, code: "session_closed" };
+  }
+  if (params.now_ms - session.created_at_ms > params.config.maxSessionSeconds * 1000) {
+    closeSessionWithStores(params.app_session_id, params.now_ms, sessionsById);
+    return { ok: false, code: "session_expired" };
+  }
+
+  session.summary_timestamps = (session.summary_timestamps ?? []).filter(
+    (timestamp) => timestamp >= params.now_ms - 60 * 1000,
+  );
+  if (session.summary_timestamps.length >= params.config.summariesPerMinute) {
+    return { ok: false, code: "summaries_per_minute_limit" };
+  }
+  if ((session.in_flight_summaries ?? 0) >= params.config.concurrentSummariesPerSession) {
+    return { ok: false, code: "concurrent_summary_limit" };
+  }
+
+  session.in_flight_summaries = (session.in_flight_summaries ?? 0) + 1;
+  session.summary_timestamps.push(params.now_ms);
+  return { ok: true };
+}
+
 function canRefreshTokensWithStores(
   params: {
     app_session_id: string;
@@ -735,6 +825,16 @@ function endTranslationWithStores(
   }
 }
 
+function endSummaryWithStores(
+  appSessionId: string,
+  sessionsById: Map<string, SessionRecord>,
+): void {
+  const session = sessionsById.get(appSessionId);
+  if (session) {
+    session.in_flight_summaries = Math.max(0, (session.in_flight_summaries ?? 0) - 1);
+  }
+}
+
 function closeSessionWithStores(
   appSessionId: string,
   nowMs: number,
@@ -743,6 +843,7 @@ function closeSessionWithStores(
   const session = sessionsById.get(appSessionId);
   if (session && session.closed_at_ms === null) {
     session.closed_at_ms = nowMs;
+    session.in_flight_summaries = 0;
     session.in_flight_translations = 0;
   }
 }
@@ -758,6 +859,7 @@ function closeExpiredSessionsWithStores(
       nowMs - session.created_at_ms > config.maxSessionSeconds * 1000
     ) {
       session.closed_at_ms = nowMs;
+      session.in_flight_summaries = 0;
       session.in_flight_translations = 0;
     }
   }

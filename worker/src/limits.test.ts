@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  beginSummary,
   beginTranslation,
   canCreateSession,
   closeSession,
   createSessionRecord,
   defaultRateLimits,
+  endSummary,
   endTranslation,
 } from "./limits";
 
@@ -140,6 +142,77 @@ describe("worker limits", () => {
         source_caption: "one more",
       }),
     ).toEqual({ ok: false, code: "translated_spans_per_minute_limit" });
+
+    closeSession(appSessionId, now + 1);
+  });
+
+  it("keeps summary limits separate from translation limits", () => {
+    const now = Date.now();
+    const appSessionId = `session_summary_limit_${now}`;
+    createSessionRecord({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_summary_limit_${now}`,
+      now_ms: now,
+    });
+
+    expect(
+      beginSummary({
+        app_session_id: appSessionId,
+        config: defaultRateLimits,
+        now_ms: now,
+      }),
+    ).toEqual({ ok: true });
+
+    for (let index = 0; index < defaultRateLimits.concurrentTranslationsPerSession; index += 1) {
+      expect(
+        beginTranslation({
+          app_session_id: appSessionId,
+          config: defaultRateLimits,
+          now_ms: now + index,
+          source_caption: `foreground ${index}`,
+        }),
+      ).toEqual({ ok: true });
+    }
+
+    expect(
+      beginSummary({
+        app_session_id: appSessionId,
+        config: defaultRateLimits,
+        now_ms: now + 1,
+      }),
+    ).toEqual({ ok: false, code: "concurrent_summary_limit" });
+
+    endSummary(appSessionId);
+    closeSession(appSessionId, now + 2);
+  });
+
+  it("enforces a separate summary rate bucket", () => {
+    const now = Date.now();
+    const appSessionId = `session_summary_rate_${now}`;
+    createSessionRecord({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_summary_rate_${now}`,
+      now_ms: now,
+    });
+
+    for (let index = 0; index < defaultRateLimits.summariesPerMinute; index += 1) {
+      expect(
+        beginSummary({
+          app_session_id: appSessionId,
+          config: defaultRateLimits,
+          now_ms: now + index,
+        }),
+      ).toEqual({ ok: true });
+      endSummary(appSessionId);
+    }
+
+    expect(
+      beginSummary({
+        app_session_id: appSessionId,
+        config: defaultRateLimits,
+        now_ms: now + defaultRateLimits.summariesPerMinute,
+      }),
+    ).toEqual({ ok: false, code: "summaries_per_minute_limit" });
 
     closeSession(appSessionId, now + 1);
   });

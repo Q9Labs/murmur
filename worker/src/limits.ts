@@ -1,10 +1,12 @@
 export type RateLimitConfig = {
   activeSessionsPerInstall: number;
+  concurrentSummariesPerSession: number;
   concurrentTranslationsPerSession: number;
   maxCharsPerSpan: number;
   maxSessionSeconds: number;
   sessionsPerDay: number;
   sessionsPerHour: number;
+  summariesPerMinute: number;
   translatedSpansPerMinute: number;
 };
 
@@ -13,7 +15,9 @@ export type SessionRecord = {
   closed_at_ms: number | null;
   created_at_ms: number;
   hashed_install_id: string;
+  in_flight_summaries: number;
   in_flight_translations: number;
+  summary_timestamps: number[];
   translated_span_timestamps: number[];
 };
 
@@ -23,11 +27,13 @@ export type LimitResult =
 
 export const defaultRateLimits: RateLimitConfig = {
   activeSessionsPerInstall: 1,
+  concurrentSummariesPerSession: 1,
   concurrentTranslationsPerSession: 2,
   maxCharsPerSpan: 600,
   maxSessionSeconds: 900,
   sessionsPerDay: 30,
   sessionsPerHour: 6,
+  summariesPerMinute: 6,
   translatedSpansPerMinute: 60,
 };
 
@@ -44,7 +50,9 @@ export function createSessionRecord(params: {
     closed_at_ms: null,
     created_at_ms: params.now_ms,
     hashed_install_id: params.hashed_install_id,
+    in_flight_summaries: 0,
     in_flight_translations: 0,
+    summary_timestamps: [],
     translated_span_timestamps: [],
   };
   sessionsById.set(params.app_session_id, record);
@@ -130,10 +138,49 @@ export function endTranslation(appSessionId: string): void {
   }
 }
 
+export function beginSummary(params: {
+  app_session_id: string;
+  config: RateLimitConfig;
+  now_ms: number;
+}): LimitResult {
+  const session = sessionsById.get(params.app_session_id);
+  if (!session || session.closed_at_ms !== null) {
+    return { ok: false, code: "session_closed" };
+  }
+
+  if (params.now_ms - session.created_at_ms > params.config.maxSessionSeconds * 1000) {
+    closeSession(params.app_session_id, params.now_ms);
+    return { ok: false, code: "session_expired" };
+  }
+
+  session.summary_timestamps = (session.summary_timestamps ?? []).filter(
+    (timestamp) => timestamp >= params.now_ms - 60 * 1000,
+  );
+  if (session.summary_timestamps.length >= params.config.summariesPerMinute) {
+    return { ok: false, code: "summaries_per_minute_limit" };
+  }
+
+  if ((session.in_flight_summaries ?? 0) >= params.config.concurrentSummariesPerSession) {
+    return { ok: false, code: "concurrent_summary_limit" };
+  }
+
+  session.in_flight_summaries = (session.in_flight_summaries ?? 0) + 1;
+  session.summary_timestamps.push(params.now_ms);
+  return { ok: true };
+}
+
+export function endSummary(appSessionId: string): void {
+  const session = sessionsById.get(appSessionId);
+  if (session) {
+    session.in_flight_summaries = Math.max(0, (session.in_flight_summaries ?? 0) - 1);
+  }
+}
+
 export function closeSession(appSessionId: string, nowMs: number): void {
   const session = sessionsById.get(appSessionId);
   if (session && session.closed_at_ms === null) {
     session.closed_at_ms = nowMs;
+    session.in_flight_summaries = 0;
     session.in_flight_translations = 0;
   }
 }
@@ -169,6 +216,7 @@ function closeExpiredSessions(config: RateLimitConfig, nowMs: number): void {
       nowMs - session.created_at_ms > config.maxSessionSeconds * 1000
     ) {
       session.closed_at_ms = nowMs;
+      session.in_flight_summaries = 0;
       session.in_flight_translations = 0;
     }
   }

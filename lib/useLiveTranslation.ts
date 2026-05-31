@@ -26,6 +26,7 @@ import { CartesiaSpeechClient } from "./providers/cartesia";
 import { DeepgramLiveClient, type DeepgramClientEvent } from "./providers/deepgram";
 import { reportTranslation } from "./providers/reportTranslation";
 import { MurmurTranslationClient } from "./providers/translation";
+import { normalizeSummaryResponse } from "./summaryResponse";
 import {
   canStartSession,
   createConnectionId,
@@ -1140,10 +1141,7 @@ async function requestContinuousSummary(body: {
     return { error: "summary_network_error", retryable: true };
   }
   const payload = (await response.json().catch(() => null)) as unknown;
-  if (!response.ok || !payload) {
-    return { error: `summary_http_${response.status}`, retryable: response.status >= 500 };
-  }
-  return payload as SummaryResponse;
+  return normalizeSummaryResponse(response, payload);
 }
 
 async function refreshWorkerSessionTokens(body: {

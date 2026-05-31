@@ -6,6 +6,7 @@ import type {
 export const rollingMemorySourceCharLimit = 2500;
 export const rollingMemoryKeepRecentSourceChars = 1200;
 export const sessionSummaryCharLimit = 700;
+export const summarySourceCharLimit = 5000;
 export const totalTranslationContextCharLimit = 5000;
 
 export type ContinuousMemoryState = {
@@ -65,6 +66,7 @@ export function shouldScheduleSummary(
 export function selectSpansForSummary(
   spans: RollingMemorySpan[],
   keepRecentSourceChars = rollingMemoryKeepRecentSourceChars,
+  maxSummarySourceChars = summarySourceCharLimit,
 ): SummarySelection {
   let keptChars = 0;
   let keepStartIndex = spans.length;
@@ -76,7 +78,24 @@ export function selectSpansForSummary(
     }
   }
 
-  const spansToSummarize = spans.slice(0, keepStartIndex);
+  const eligibleSpans = spans.slice(0, keepStartIndex);
+  let summarizeEndIndex = 0;
+  let summarizedChars = 0;
+  for (const span of eligibleSpans) {
+    if (
+      summarizeEndIndex > 0 &&
+      summarizedChars + span.source_char_count > maxSummarySourceChars
+    ) {
+      break;
+    }
+    summarizedChars += span.source_char_count;
+    summarizeEndIndex += 1;
+    if (summarizedChars >= maxSummarySourceChars) {
+      break;
+    }
+  }
+
+  const spansToSummarize = eligibleSpans.slice(0, summarizeEndIndex);
   return {
     keep_recent_from_span_id: spans[keepStartIndex]?.span_id ?? null,
     spans_to_summarize: spansToSummarize,

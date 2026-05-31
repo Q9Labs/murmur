@@ -13,6 +13,7 @@ import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { hashInstallId, logWorkerEvent } from "./privacy";
 import {
+  beginSummaryDurable,
   beginTranslationDurable,
   canAcceptReportDurable,
   canCreateSessionDurable,
@@ -20,6 +21,7 @@ import {
   closeSessionDurable,
   createSessionRecordDurable,
   deleteReportDurable,
+  endSummaryDurable,
   endTranslationDurable,
   getSessionDurable,
   listReportsDurable,
@@ -134,6 +136,7 @@ const corsHeaders = {
 
 const defaultOpenRouterProviderOrder = ["deepinfra/fp8", "cloudflare", "google-vertex/global"];
 const sessionSummaryCharLimit = 700;
+const summarySourceCharLimit = 5000;
 
 type WorkerReadiness = {
   env: string;
@@ -383,14 +386,34 @@ async function createSummary(request: Request, env: Env): Promise<Response> {
     return json({ error: "missing_openrouter_api_key", retryable: true }, 503);
   }
 
-  const summary = await generateSessionSummary(body, env).catch((error) => {
-    logWorkerEvent({
-      event: "summary_failed",
-      reason: error instanceof Error ? error.message : "summary_failed",
-      at_ms: Date.now(),
-    });
-    return null;
+  const limitResult = await beginSummaryDurable({
+    app_session_id: body.app_session_id,
+    namespace: env.RATE_LIMITER,
+    now_ms: Date.now(),
   });
+  if (!limitResult.ok) {
+    return json(
+      { error: limitResult.code, retryable: isRetryableSummaryLimitError(limitResult.code) },
+      getSummaryLimitStatus(limitResult.code),
+    );
+  }
+
+  let summary: string | null = null;
+  try {
+    summary = await generateSessionSummary(body, env).catch((error) => {
+      logWorkerEvent({
+        event: "summary_failed",
+        reason: error instanceof Error ? error.message : "summary_failed",
+        at_ms: Date.now(),
+      });
+      return null;
+    });
+  } finally {
+    await endSummaryDurable({
+      app_session_id: body.app_session_id,
+      namespace: env.RATE_LIMITER,
+    });
+  }
   if (!summary) {
     return json({ error: "summary_failed", retryable: true }, 502);
   }
@@ -412,6 +435,14 @@ async function createSummary(request: Request, env: Env): Promise<Response> {
     },
     summary_job_id: body.summary_job_id,
   });
+}
+
+function getSummaryLimitStatus(code: string): number {
+  return isRetryableSummaryLimitError(code) ? 429 : 409;
+}
+
+function isRetryableSummaryLimitError(code: string): boolean {
+  return code === "concurrent_summary_limit" || code === "summaries_per_minute_limit";
 }
 
 async function createReport(request: Request, env: Env): Promise<Response> {
@@ -1250,6 +1281,7 @@ function validateSummaryRequest(request: SummaryRequest | null): string | null {
   if (!Array.isArray(request.spans_to_summarize) || request.spans_to_summarize.length === 0) {
     return "invalid_summary_spans";
   }
+  let sourceCharsToSummarize = 0;
   for (const span of request.spans_to_summarize) {
     if (
       !span ||
@@ -1257,10 +1289,16 @@ function validateSummaryRequest(request: SummaryRequest | null): string | null {
       typeof span.source_caption !== "string" ||
       typeof span.translated_caption !== "string" ||
       typeof span.source_char_count !== "number" ||
-      span.source_char_count < 0
+      !Number.isInteger(span.source_char_count) ||
+      span.source_char_count < 0 ||
+      span.source_char_count !== span.source_caption.length
     ) {
       return "invalid_summary_spans";
     }
+    sourceCharsToSummarize += span.source_caption.length;
+  }
+  if (sourceCharsToSummarize > summarySourceCharLimit) {
+    return "summary_spans_too_large";
   }
   return null;
 }

@@ -32,12 +32,49 @@ import worker, {
   parseOpenRouterChunk,
   validateTranslationRequest,
 } from "./index";
-import type { TranslationRequest } from "../../lib/transport/types";
-import { createSessionRecordDurable } from "./rateLimitDurableObject";
+import type { SummaryRequest, TranslationRequest } from "../../lib/transport/types";
+import { defaultRateLimits } from "./limits";
+import {
+  beginSummaryDurable,
+  beginTranslationDurable,
+  closeSessionDurable,
+  createSessionRecordDurable,
+  endSummaryDurable,
+  endTranslationDurable,
+} from "./rateLimitDurableObject";
 
 const WEBSOCKET_OPEN = 1;
 
 vi.stubGlobal("WebSocket", { CONNECTING: 0, OPEN: WEBSOCKET_OPEN });
+
+function makeSummaryRequestBody(appSessionId: string): SummaryRequest {
+  const sourceCaption = "We are discussing Murmur release readiness.";
+  return {
+    app_session_id: appSessionId,
+    input_memory_version: 4,
+    previous_summary: {
+      memory_version: 4,
+      source_char_count_summarized: 0,
+      text: "",
+      updated_at_ms: 1,
+      updated_through_span_id: null,
+    },
+    session_epoch: 1,
+    source_language: "en",
+    spans_to_summarize: [
+      {
+        committed_at_ms: 2,
+        revision: 1,
+        source_caption: sourceCaption,
+        source_char_count: sourceCaption.length,
+        span_id: "span_1",
+        translated_caption: "target",
+      },
+    ],
+    summary_job_id: "summary_job_123",
+    target_language: "ar",
+  };
+}
 
 describe("worker routes", () => {
   it("serves the marketing homepage at root", async () => {
@@ -356,7 +393,13 @@ describe("worker routes", () => {
     expect(payload.messages[1]?.content).toContain("Bonjour");
   });
 
-  it("generates stateless compact summaries", async () => {
+  it("generates compact summaries for live sessions", async () => {
+    const appSessionId = `session_summary_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_summary_${Date.now()}`,
+      now_ms: Date.now(),
+    });
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
@@ -382,31 +425,7 @@ describe("worker routes", () => {
         new Request("https://murmur.test/v1/summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            app_session_id: "session_summary_123",
-            input_memory_version: 4,
-            previous_summary: {
-              memory_version: 4,
-              source_char_count_summarized: 0,
-              text: "",
-              updated_at_ms: 1,
-              updated_through_span_id: null,
-            },
-            session_epoch: 1,
-            source_language: "en",
-            spans_to_summarize: [
-              {
-                committed_at_ms: 2,
-                revision: 1,
-                source_caption: "We are discussing Murmur release readiness.",
-                source_char_count: 45,
-                span_id: "span_1",
-                translated_caption: "target",
-              },
-            ],
-            summary_job_id: "summary_job_123",
-            target_language: "ar",
-          }),
+          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
         }),
         {
           OPENROUTER_API_KEY: "openrouter_key",
@@ -423,6 +442,297 @@ describe("worker routes", () => {
       expect(body.summary?.text).toContain("Continuous Mode");
     } finally {
       globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects summary generation for unknown sessions before OpenRouter", async () => {
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "should not run" } }] });
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            makeSummaryRequestBody(`session_unknown_summary_${Date.now()}`),
+          ),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toEqual({
+        error: "session_closed",
+        retryable: false,
+      });
+      expect(upstreamCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects summary generation for closed sessions before OpenRouter", async () => {
+    const appSessionId = `session_closed_summary_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_closed_summary_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    await closeSessionDurable({
+      app_session_id: appSessionId,
+      now_ms: Date.now(),
+    });
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "should not run" } }] });
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toEqual({
+        error: "session_closed",
+        retryable: false,
+      });
+      expect(upstreamCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("does not consume summary quota when OpenRouter is unconfigured", async () => {
+    const appSessionId = `session_summary_unconfigured_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_summary_unconfigured_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+
+    for (let index = 0; index < defaultRateLimits.summariesPerMinute + 1; index += 1) {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
+        }),
+        {},
+      );
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        error: "missing_openrouter_api_key",
+        retryable: true,
+      });
+    }
+
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "quota still available" } }] });
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(200);
+      expect(upstreamCalled).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects mismatched summary source character counts before OpenRouter", async () => {
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "should not run" } }] });
+    };
+
+    const body = makeSummaryRequestBody(`session_summary_bad_chars_${Date.now()}`);
+    body.spans_to_summarize[0] = {
+      ...body.spans_to_summarize[0],
+      source_char_count: body.spans_to_summarize[0].source_char_count - 1,
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        error: "invalid_summary_spans",
+        retryable: false,
+      });
+      expect(upstreamCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects oversized summary inputs before OpenRouter", async () => {
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "should not run" } }] });
+    };
+
+    const longCaption = "x".repeat(5001);
+    const body = makeSummaryRequestBody(`session_summary_oversized_${Date.now()}`);
+    body.spans_to_summarize = [
+      {
+        ...body.spans_to_summarize[0],
+        source_caption: longCaption,
+        source_char_count: longCaption.length,
+      },
+    ];
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        error: "summary_spans_too_large",
+        retryable: false,
+      });
+      expect(upstreamCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rate limits summary generation before OpenRouter", async () => {
+    const appSessionId = `session_limited_summary_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_limited_summary_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    for (let index = 0; index < defaultRateLimits.summariesPerMinute; index += 1) {
+      await expect(
+        beginSummaryDurable({
+          app_session_id: appSessionId,
+          now_ms: Date.now(),
+        }),
+      ).resolves.toEqual({ ok: true });
+      await endSummaryDurable({
+        app_session_id: appSessionId,
+      });
+    }
+
+    let upstreamCalled = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return Response.json({ choices: [{ message: { content: "should not run" } }] });
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
+        }),
+        {
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(response.status).toBe(429);
+      await expect(response.json()).resolves.toEqual({
+        error: "summaries_per_minute_limit",
+        retryable: true,
+      });
+      expect(upstreamCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("keeps summary work out of live translation concurrency", async () => {
+    const appSessionId = `session_summary_separate_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_summary_separate_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+
+    await expect(
+      beginSummaryDurable({
+        app_session_id: appSessionId,
+        now_ms: Date.now(),
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    for (let index = 0; index < defaultRateLimits.concurrentTranslationsPerSession; index += 1) {
+      await expect(
+        beginTranslationDurable({
+          app_session_id: appSessionId,
+          now_ms: Date.now(),
+          source_caption: `foreground caption ${index}`,
+        }),
+      ).resolves.toEqual({ ok: true });
+    }
+
+    await expect(
+      beginTranslationDurable({
+        app_session_id: appSessionId,
+        now_ms: Date.now(),
+        source_caption: "one more foreground caption",
+      }),
+    ).resolves.toEqual({ ok: false, code: "concurrent_translation_limit" });
+
+    await endSummaryDurable({ app_session_id: appSessionId });
+    for (let index = 0; index < defaultRateLimits.concurrentTranslationsPerSession; index += 1) {
+      await endTranslationDurable({ app_session_id: appSessionId });
     }
   });
 

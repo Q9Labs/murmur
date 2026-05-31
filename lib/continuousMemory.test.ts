@@ -48,6 +48,21 @@ describe("continuous memory", () => {
     expect(selection.summarized_through_span_id).toBe("span_2");
   });
 
+  it("chunks summary input so large backlogs can recover", () => {
+    const spans = [
+      span("span_1", 10),
+      span("span_2", 10),
+      span("span_3", 10),
+      span("span_4", 10),
+    ];
+
+    const selection = selectSpansForSummary(spans, 10, 20);
+
+    expect(selection.spans_to_summarize.map((item) => item.span_id)).toEqual(["span_1", "span_2"]);
+    expect(selection.keep_recent_from_span_id).toBe("span_4");
+    expect(selection.summarized_through_span_id).toBe("span_2");
+  });
+
   it("rejects stale summary results with compare-and-swap", () => {
     const memory = appendRollingMemorySpan(createContinuousMemoryState(), {
       committed_at_ms: 1,
