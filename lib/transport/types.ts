@@ -3,6 +3,12 @@ import type { StableSpanContext } from "../session";
 
 export type TranslationMode = "continuous" | "phrase";
 
+export type TranslationModelRoute =
+  | "worker_default"
+  | "openrouter_gemma_deepinfra"
+  | "groq_gpt_oss_120b_low"
+  | "openrouter_gpt_oss_120b_cerebras";
+
 export type SessionSummary = {
   memory_version: number;
   source_char_count_summarized: number;
@@ -41,6 +47,7 @@ export type CreateSessionRequest = {
   };
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
 };
 
@@ -59,6 +66,7 @@ export type CreateSessionResponse = {
   tokens: ProviderTokenBundle;
   deepgram_ws_url: string;
   translate_ws_url: string;
+  translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
 };
 
@@ -85,6 +93,7 @@ export type TranslationRequest = {
   span_id: string;
   source_caption: string;
   target_language: LanguageCode;
+  translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
   translation_attempt: number;
 };

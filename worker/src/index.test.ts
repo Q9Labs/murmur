@@ -24,6 +24,7 @@ const appAttestMocks = vi.hoisted(() => {
 vi.mock("@bradford-tech/supabase-integrity-attest", () => appAttestMocks);
 
 import worker, {
+  buildGroqChatPayload,
   buildOpenRouterChatPayload,
   buildOpenRouterProviderPreferences,
   getReadiness,
@@ -261,6 +262,9 @@ describe("worker routes", () => {
     expect(getTranslationErrorCode(new Error("openrouter_timeout"))).toBe("openrouter_timeout");
     expect(getTranslationErrorCode(new Error("openrouter_stream_incomplete"))).toBe("openrouter_stream_incomplete");
     expect(getTranslationErrorCode(new Error("openrouter_empty_translation"))).toBe("openrouter_empty_translation");
+    expect(getTranslationErrorCode(new Error("groq_http_429"))).toBe("groq_http_429");
+    expect(getTranslationErrorCode(new Error("groq_timeout"))).toBe("groq_timeout");
+    expect(getTranslationErrorCode(new Error("missing_groq_api_key"))).toBe("missing_groq_api_key");
     expect(getTranslationErrorCode(new Error("provider leaked prompt text"))).toBe("translation_failed");
   });
 
@@ -327,6 +331,23 @@ describe("worker routes", () => {
       sort: "throughput",
       zdr: true,
     });
+
+    expect(buildOpenRouterProviderPreferences({}, "openrouter_gemma_deepinfra")).toEqual({
+      allow_fallbacks: false,
+      data_collection: "deny",
+      only: ["deepinfra/fp8"],
+      order: ["deepinfra/fp8"],
+      require_parameters: true,
+      sort: "latency",
+    });
+    expect(buildOpenRouterProviderPreferences({}, "openrouter_gpt_oss_120b_cerebras")).toEqual({
+      allow_fallbacks: false,
+      data_collection: "deny",
+      only: ["cerebras"],
+      order: ["cerebras"],
+      require_parameters: true,
+      sort: "latency",
+    });
   });
 
   it("builds OpenRouter chat payloads without raw provider defaults", () => {
@@ -371,6 +392,45 @@ describe("worker routes", () => {
     expect(payload.messages[0]?.content).toContain("English to Arabic");
     expect(payload.messages[1]?.content).toContain("Previous stable spans");
     expect(payload.messages[1]?.content).toContain("How are you?");
+  });
+
+  it("builds dev GPT-OSS payloads for Groq and OpenRouter Cerebras", () => {
+    const baseRequest: TranslationRequest = {
+      app_session_id: "session_1",
+      connection_id: "connection_1",
+      context_spans: [],
+      event_seq: 1,
+      revision: 1,
+      session_epoch: 1,
+      source_caption: "Hello",
+      source_language: "en",
+      span_id: "span_current",
+      target_language: "ar",
+      translation_attempt: 1,
+    };
+
+    expect(buildGroqChatPayload(baseRequest)).toMatchObject({
+      include_reasoning: false,
+      max_tokens: 300,
+      model: "openai/gpt-oss-120b",
+      reasoning_effort: "low",
+      stream: true,
+      temperature: 0.1,
+    });
+
+    expect(
+      buildOpenRouterChatPayload(
+        { ...baseRequest, translation_model_route: "openrouter_gpt_oss_120b_cerebras" },
+        {},
+      ),
+    ).toMatchObject({
+      model: "openai/gpt-oss-120b",
+      provider: {
+        allow_fallbacks: false,
+        only: ["cerebras"],
+        order: ["cerebras"],
+      },
+    });
   });
 
   it("builds translation prompts for auto-detected source language", () => {
@@ -767,6 +827,12 @@ describe("worker routes", () => {
     expect(
       validateTranslationRequest({
         ...request,
+        translation_model_route: "not_a_route",
+      } as unknown as TranslationRequest),
+    ).toBe("invalid_translation_model_route");
+    expect(
+      validateTranslationRequest({
+        ...request,
         context_spans: Array.from({ length: 11 }, (_, index) => ({
           source_caption: `source ${index}`,
           span_id: `span_${index}`,
@@ -861,6 +927,139 @@ describe("worker routes", () => {
           upstream_provider: "DeepInfra",
         },
         translated_caption: "مرحبا!",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects dev translation model routes on production translation sockets", async () => {
+    const sent: unknown[] = [];
+    const socket = {
+      close: vi.fn(),
+      readyState: WEBSOCKET_OPEN,
+      send: (payload: string) => sent.push(JSON.parse(payload)),
+    } as unknown as Parameters<typeof handleSocketMessage>[1];
+
+    await handleSocketMessage(
+      JSON.stringify({
+        app_session_id: "session_translate_model_route",
+        connection_id: "connection_translate_model_route",
+        context_spans: [],
+        event_seq: 1,
+        kind: "translate",
+        revision: 1,
+        session_epoch: 1,
+        source_caption: "Hello",
+        source_language: "en",
+        span_id: "span_translate_model_route",
+        target_language: "ar",
+        translation_attempt: 1,
+        translation_model_route: "groq_gpt_oss_120b_low",
+      }),
+      socket,
+      {
+        MURMUR_ENV: "production",
+      },
+      new Map(),
+    );
+
+    expect(sent).toEqual([
+      expect.objectContaining({
+        error_code: "dev_translation_model_route_unavailable",
+        kind: "translation_error",
+        retryable: false,
+      }),
+    ]);
+  });
+
+  it("streams Groq GPT-OSS low reasoning translations for dev routes", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = `session_groq_translate_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_groq_translate_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    const encoder = new TextEncoder();
+    globalThis.fetch = async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      expect(url).toBe("https://api.groq.com/openai/v1/chat/completions");
+      const body = JSON.parse(String(init?.body)) as {
+        include_reasoning?: boolean;
+        model?: string;
+        reasoning_effort?: string;
+      };
+      expect(body.model).toBe("openai/gpt-oss-120b");
+      expect(body.reasoning_effort).toBe("low");
+      expect(body.include_reasoning).toBe(false);
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                [
+                  'data: {"id":"groq_1","model":"openai/gpt-oss-120b","choices":[{"delta":{"content":"مرحبا"}}]}',
+                  "",
+                  "data: [DONE]",
+                  "",
+                ].join("\n"),
+              ),
+            );
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+
+    try {
+      const sent: unknown[] = [];
+      const socket = {
+        close: vi.fn(),
+        readyState: WEBSOCKET_OPEN,
+        send: (payload: string) => sent.push(JSON.parse(payload)),
+      } as unknown as Parameters<typeof handleSocketMessage>[1];
+      await handleSocketMessage(
+        JSON.stringify({
+          app_session_id: appSessionId,
+          connection_id: "connection_groq_translate",
+          context_spans: [],
+          event_seq: 1,
+          kind: "translate",
+          revision: 1,
+          session_epoch: 1,
+          source_caption: "Hello",
+          source_language: "en",
+          span_id: "span_groq_translate",
+          target_language: "ar",
+          translation_attempt: 1,
+          translation_model_route: "groq_gpt_oss_120b_low",
+        }),
+        socket,
+        {
+          GROQ_API_KEY: "groq_key",
+          MURMUR_ENV: "development",
+        },
+        new Map(),
+      );
+
+      expect(sent).toHaveLength(2);
+      expect(sent[0]).toMatchObject({
+        delta: "مرحبا",
+        kind: "translation_delta",
+      });
+      expect(sent[1]).toMatchObject({
+        kind: "translation_done",
+        provider_metadata: {
+          model: "openai/gpt-oss-120b",
+          provider: "groq",
+          reasoning_effort: "low",
+          route_id: "groq_gpt_oss_120b_low",
+          upstream_id: "groq_1",
+          upstream_model: "openai/gpt-oss-120b",
+        },
+        translated_caption: "مرحبا",
       });
     } finally {
       globalThis.fetch = originalFetch;
@@ -1040,6 +1239,26 @@ describe("worker routes", () => {
     expect(samePairResponse.status).toBe(400);
     await expect(samePairResponse.json()).resolves.toEqual({
       error: "same_language_pair",
+    });
+  });
+
+  it("rejects dev translation model routes in production sessions", async () => {
+    const response = await worker.fetch(
+      new Request("https://murmur.test/v1/session", {
+        body: JSON.stringify({
+          app_install_id: "install_model_route_test",
+          source_language: "en",
+          target_language: "ar",
+          translation_model_route: "groq_gpt_oss_120b_low",
+        }),
+        method: "POST",
+      }),
+      { MURMUR_ENV: "production" },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "dev_translation_model_route_unavailable",
     });
   });
 

@@ -40,9 +40,14 @@ import {
   type SourceLanguageCode,
 } from "../lib/languages";
 import { canStartSession, type TranslationSpan } from "../lib/session";
+import {
+  defaultTranslationModelRoute,
+  devTranslationModelRouteOptions,
+  getTranslationModelRouteLabel,
+} from "../lib/translationModelRoutes";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { ReportTranslationCategory } from "../lib/transport/types";
-import type { TranslationMode } from "../lib/transport/types";
+import type { TranslationMode, TranslationModelRoute } from "../lib/transport/types";
 
 type OnboardingStep = "welcome" | "privacy" | "languages" | "done";
 type PickerMode = "source" | "target" | null;
@@ -80,6 +85,8 @@ type AppStyles = {
   diagnosticActions: ViewStyle;
   diagnosticsMessage: TextStyle;
   diagnosticsContent: ViewStyle;
+  modelRouteDetail: TextStyle;
+  modelRouteMeta: TextStyle;
   emptyTranslatedText: TextStyle;
   error: TextStyle;
   healthText: TextStyle;
@@ -228,6 +235,8 @@ export default function Index(): ReactNode {
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
   const [translationMode, setTranslationMode] = useState<TranslationMode>("phrase");
+  const [devModelRoute, setDevModelRoute] = useState<TranslationModelRoute>(defaultTranslationModelRoute);
+  const [devModelRouteOpen, setDevModelRouteOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
@@ -244,9 +253,12 @@ export default function Index(): ReactNode {
   const sourceLanguage = sourceLanguageCode === autoSourceLanguageCode ? null : getLanguage(sourceLanguageCode);
   const targetLanguage = getLanguage(targetLanguageCode);
   const sourceLanguageDisplayName = sourceLanguage?.display_name ?? "Auto detect";
+  const devModelPickerEnabled = isDevModelPickerEnabled();
+  const activeModelRoute = devModelPickerEnabled ? devModelRoute : defaultTranslationModelRoute;
   const live = useLiveTranslation({
     source_language: sourceLanguageCode,
     target_language: targetLanguage.app_code,
+    translation_model_route: activeModelRoute,
     translation_mode: translationMode,
   });
 
@@ -696,6 +708,8 @@ export default function Index(): ReactNode {
       />
       <SettingsModal
         audioState={audioState}
+        devModelPickerEnabled={devModelPickerEnabled}
+        devModelRoute={devModelRoute}
         latestProviderRoute={latestProviderRoute}
         live={live}
         networkType={networkType}
@@ -704,12 +718,22 @@ export default function Index(): ReactNode {
           setPrivacyAcknowledged(false);
           setPrivacyConsentChecked(false);
         })}
+        onOpenDevModelRoute={() => setDevModelRouteOpen(true)}
         onOpenDiagnostics={() => setDiagnosticsOpen(true)}
         onResetIdentity={() => void resetIdentity(setSettingsMessage)}
         open={settingsOpen}
         settingsMessage={settingsMessage}
         sourceLanguageCode={sourceLanguageCode}
         targetLanguageCode={targetLanguageCode}
+      />
+      <DevModelRouteModal
+        onClose={() => setDevModelRouteOpen(false)}
+        onSelect={(route) => {
+          setDevModelRoute(route);
+          setDevModelRouteOpen(false);
+        }}
+        open={devModelPickerEnabled && devModelRouteOpen}
+        selected={devModelRoute}
       />
       <DiagnosticsModal
         audioState={audioState}
@@ -1011,20 +1035,26 @@ function LanguagePickerModal({
 }
 
 function SettingsModal({
+  devModelPickerEnabled,
+  devModelRoute,
   live,
   onClose,
   onDeleteLocalData,
+  onOpenDevModelRoute,
   onOpenDiagnostics,
   onResetIdentity,
   open,
   settingsMessage,
 }: {
   audioState: AudioStateEvent | null;
+  devModelPickerEnabled: boolean;
+  devModelRoute: TranslationModelRoute;
   latestProviderRoute: string;
   live: ReturnType<typeof useLiveTranslation>;
   networkType: string;
   onClose: () => void;
   onDeleteLocalData: () => void;
+  onOpenDevModelRoute: () => void;
   onOpenDiagnostics: () => void;
   onResetIdentity: () => void;
   open: boolean;
@@ -1045,10 +1075,69 @@ function SettingsModal({
           </View>
           <View style={styles.settingsList}>
             <SettingsAction label="Session diagnostics" onPress={onOpenDiagnostics} />
+            {devModelPickerEnabled ? (
+              <SettingsAction
+                disabled={disabled}
+                label={`Dev model: ${getTranslationModelRouteLabel(devModelRoute)}`}
+                onPress={onOpenDevModelRoute}
+              />
+            ) : null}
             <SettingsAction disabled={disabled} label="Reset accountless identity" onPress={onResetIdentity} />
             <SettingsAction disabled={disabled} label="Delete local data" onPress={onDeleteLocalData} />
           </View>
           {settingsMessage ? <Text style={styles.settingsMessage}>{settingsMessage}</Text> : null}
+        </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
+function DevModelRouteModal({
+  onClose,
+  onSelect,
+  open,
+  selected,
+}: {
+  onClose: () => void;
+  onSelect: (route: TranslationModelRoute) => void;
+  open: boolean;
+  selected: TranslationModelRoute;
+}): ReactNode {
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible={open}>
+      <View style={styles.modalScrim}>
+        <SafeAreaView style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Dev model</Text>
+            <Pressable accessibilityRole="button" onPress={onClose} style={styles.sheetDone}>
+              <Text style={styles.sheetDoneText}>Done</Text>
+            </Pressable>
+          </View>
+          <View style={styles.settingsList}>
+            {devTranslationModelRouteOptions.map((option) => {
+              const active = selected === option.id;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  key={option.id}
+                  onPress={() => onSelect(option.id)}
+                  style={({ pressed }) => [
+                    styles.languageOption,
+                    active && styles.languageOptionSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View>
+                    <Text style={styles.languageOptionName}>{option.label}</Text>
+                    <Text style={styles.modelRouteDetail}>{option.detail}</Text>
+                  </View>
+                  <Text style={styles.languageOptionCheck}>{active ? "Selected" : ""}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.modelRouteMeta}>{selected}</Text>
         </SafeAreaView>
       </View>
     </Modal>
@@ -1288,6 +1377,10 @@ function getLatestProviderRoute(
     }
   }
   return null;
+}
+
+function isDevModelPickerEnabled(): boolean {
+  return typeof __DEV__ !== "undefined" && __DEV__;
 }
 
 function getStatusText(status: string, error: string | null): string {
@@ -1606,6 +1699,19 @@ const styles = StyleSheet.create<AppStyles>({
   diagnosticsContent: {
     gap: 12,
     paddingBottom: 24,
+  },
+  modelRouteDetail: {
+    color: "#716B63",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  modelRouteMeta: {
+    color: "#7A827D",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 14,
+    paddingBottom: 16,
   },
   error: {
     backgroundColor: "#FFF0EE",

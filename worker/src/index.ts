@@ -8,7 +8,16 @@ import {
   type LanguageCode,
   type SourceLanguageCode,
 } from "../../lib/languages";
-import type { SummaryRequest, TranslationMode, TranslationRequest } from "../../lib/transport/types";
+import {
+  defaultTranslationModelRoute,
+  isTranslationModelRoute,
+} from "../../lib/translationModelRoutes";
+import type {
+  SummaryRequest,
+  TranslationMode,
+  TranslationModelRoute,
+  TranslationRequest,
+} from "../../lib/transport/types";
 import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { hashInstallId, logWorkerEvent } from "./privacy";
@@ -60,6 +69,7 @@ export type Env = {
   GOOGLE_PLAY_PACKAGE_NAME?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?: string;
+  GROQ_API_KEY?: string;
   MURMUR_ENABLE_SPEECH?: string;
   MURMUR_ENV?: string;
   MURMUR_REQUIRE_DEVICE_INTEGRITY?: string;
@@ -86,9 +96,11 @@ export type Env = {
   TOKEN_TTL_SECONDS?: string;
 };
 
-type OpenRouterProviderMetadata = {
+type TranslationProviderMetadata = {
   model: string;
-  provider: "openrouter";
+  provider: "groq" | "openrouter";
+  reasoning_effort?: "low" | "medium" | "high";
+  route_id?: TranslationModelRoute;
   upstream_id?: string;
   upstream_model?: string;
   upstream_provider?: string;
@@ -105,11 +117,13 @@ type OpenRouterProviderPreferences = {
   zdr?: boolean;
 };
 
-type OpenRouterChatPayload = {
+type ChatCompletionPayload = {
+  include_reasoning?: boolean;
   max_tokens: number;
   messages: Array<{ content: string; role: "system" | "user" }>;
   model: string;
-  provider: OpenRouterProviderPreferences;
+  provider?: OpenRouterProviderPreferences;
+  reasoning_effort?: "low" | "medium" | "high";
   stream: true;
   temperature: number;
 };
@@ -291,6 +305,17 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   }
   const { sourceLanguage, targetLanguage } = languagePair;
   const translationMode = parseTranslationMode(body.translation_mode);
+  if (
+    typeof body.translation_model_route !== "undefined" &&
+    !isTranslationModelRoute(body.translation_model_route)
+  ) {
+    return json({ error: "invalid_translation_model_route" }, 400);
+  }
+  const translationModelRoute = parseTranslationModelRoute(body.translation_model_route);
+  const routeError = validateTranslationModelRouteForEnv(translationModelRoute, env);
+  if (routeError) {
+    return json({ error: routeError }, 400);
+  }
 
   const nowMs = Date.now();
   const hashedInstallId = await hashInstallId(
@@ -347,6 +372,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
     device_integrity_verified: integrityResult.request_hash_verified,
     source_language: sourceLanguage,
     target_language: targetLanguage,
+    translation_model_route: translationModelRoute,
     at_ms: nowMs,
   });
   return json({
@@ -357,6 +383,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
       translated_spans_per_minute: defaultRateLimits.translatedSpansPerMinute,
     },
     session_epoch: 1,
+    translation_model_route: translationModelRoute,
     translation_mode: translationMode,
     speech: {
       default_voice_id: speechVoiceId,
@@ -870,6 +897,21 @@ export async function handleSocketMessage(
     });
     return;
   }
+  const routeError = validateTranslationModelRouteForEnv(message.translation_model_route, env);
+  if (routeError) {
+    send(socket, {
+      app_session_id: message.app_session_id,
+      connection_id: message.connection_id,
+      kind: "translation_error",
+      session_epoch: message.session_epoch,
+      span_id: message.span_id,
+      revision: message.revision,
+      translation_request_id: null,
+      error_code: routeError,
+      retryable: false,
+    });
+    return;
+  }
 
   const translationRequestId = crypto.randomUUID();
   const controller = new AbortController();
@@ -880,6 +922,7 @@ export async function handleSocketMessage(
     attempt: message.translation_attempt,
     source_chars: message.source_caption.length,
     span_id: message.span_id,
+    translation_route: message.translation_model_route ?? defaultTranslationModelRoute,
     translation_mode: message.translation_mode ?? "phrase",
     at_ms: Date.now(),
   });
@@ -908,7 +951,7 @@ export async function handleSocketMessage(
   requests.set(translationRequestId, controller);
 
   try {
-    await streamOpenRouterTranslation(message, translationRequestId, socket, env, controller.signal, () => ++serverEventSeq);
+    await streamProviderTranslation(message, translationRequestId, socket, env, controller.signal, () => ++serverEventSeq);
   } catch (error) {
     if (!controller.signal.aborted) {
       const errorCode = getTranslationErrorCode(error);
@@ -918,6 +961,7 @@ export async function handleSocketMessage(
         error_code: errorCode,
         retryable: true,
         span_id: message.span_id,
+        translation_route: message.translation_model_route ?? defaultTranslationModelRoute,
         translation_request_id: translationRequestId,
         at_ms: Date.now(),
       });
@@ -943,7 +987,7 @@ export async function handleSocketMessage(
   }
 }
 
-async function streamOpenRouterTranslation(
+async function streamProviderTranslation(
   request: TranslationRequest,
   translationRequestId: string,
   socket: WorkerWebSocket,
@@ -951,43 +995,44 @@ async function streamOpenRouterTranslation(
   signal: AbortSignal,
   nextServerEventSeq: () => number,
 ): Promise<void> {
-  if (!env.OPENROUTER_API_KEY) {
-    throw new Error("missing_openrouter_api_key");
+  const route = buildTranslationProviderRoute(request, env);
+  if (!route.api_key) {
+    throw new Error(route.missing_api_key_error);
   }
 
   const timeoutMs = Number(env.OPENROUTER_TIMEOUT_MS ?? "12000");
   const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort("openrouter_timeout"), timeoutMs);
+  const timeoutId = setTimeout(() => timeoutController.abort(`${route.error_prefix}_timeout`), timeoutMs);
   const fetchSignal = combineAbortSignals(signal, timeoutController.signal);
-  const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const providerResponse = await fetch(route.endpoint, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${route.api_key}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": env.OPENROUTER_SITE_URL ?? "https://murmur.q9labs.ai",
-      "X-Title": env.OPENROUTER_APP_NAME ?? "Murmur",
+      ...route.extra_headers,
     },
-    body: JSON.stringify(buildOpenRouterChatPayload(request, env)),
+    body: JSON.stringify(route.payload),
     signal: fetchSignal,
   }).catch((error) => {
-    throw new Error(isTimeoutAbort(error, timeoutController.signal) ? "openrouter_timeout" : "openrouter_network_error");
+    throw new Error(
+      isTimeoutAbort(error, timeoutController.signal, route.error_prefix)
+        ? `${route.error_prefix}_timeout`
+        : `${route.error_prefix}_network_error`,
+    );
   });
 
   try {
-    if (!openRouterResponse.ok || !openRouterResponse.body) {
-      throw new Error(`openrouter_http_${openRouterResponse.status}`);
+    if (!providerResponse.ok || !providerResponse.body) {
+      throw new Error(`${route.error_prefix}_http_${providerResponse.status}`);
     }
 
-    const reader = openRouterResponse.body.getReader();
+    const reader = providerResponse.body.getReader();
     const decoder = new TextDecoder();
     let translatedCaption = "";
     let firstDeltaLogged = false;
     let partialSeq = 0;
     let buffer = "";
-    const providerMetadata: OpenRouterProviderMetadata = {
-      model: env.OPENROUTER_MODEL ?? "google/gemma-4-26b-a4b-it",
-      provider: "openrouter",
-    };
+    const providerMetadata: TranslationProviderMetadata = { ...route.provider_metadata };
     const processLine = (line: string): boolean => {
       const data = line.trim();
       if (!data.startsWith("data:")) {
@@ -995,13 +1040,14 @@ async function streamOpenRouterTranslation(
       }
       const payload = data.slice(5).trim();
       if (payload === "[DONE]") {
-        const finalCaption = validateTranslatedCaption(request, translatedCaption);
+        const finalCaption = validateTranslatedCaption(request, translatedCaption, route.error_prefix);
         logWorkerEvent({
           event: "translation_done",
           app_session_id: request.app_session_id,
           output_chars: finalCaption.length,
           span_id: request.span_id,
           translation_request_id: translationRequestId,
+          translation_route: route.id,
           upstream_model: providerMetadata.upstream_model,
           upstream_provider: providerMetadata.upstream_provider,
           at_ms: Date.now(),
@@ -1010,7 +1056,7 @@ async function streamOpenRouterTranslation(
         return true;
       }
 
-      const chunk = parseOpenRouterChunk(payload);
+      const chunk = parseProviderChunk(payload, route.error_prefix);
       mergeProviderMetadata(providerMetadata, chunk.provider_metadata);
       if (!chunk.delta) {
         return false;
@@ -1024,6 +1070,7 @@ async function streamOpenRouterTranslation(
           delta_chars: chunk.delta.length,
           span_id: request.span_id,
           translation_request_id: translationRequestId,
+          translation_route: route.id,
           upstream_model: providerMetadata.upstream_model,
           upstream_provider: providerMetadata.upstream_provider,
           at_ms: Date.now(),
@@ -1047,10 +1094,14 @@ async function streamOpenRouterTranslation(
 
     while (true) {
       const { done, value } = await reader.read().catch((error) => {
-        throw new Error(isTimeoutAbort(error, timeoutController.signal) ? "openrouter_timeout" : "openrouter_stream_read_failed");
+        throw new Error(
+          isTimeoutAbort(error, timeoutController.signal, route.error_prefix)
+            ? `${route.error_prefix}_timeout`
+            : `${route.error_prefix}_stream_read_failed`,
+        );
       });
       if (timeoutController.signal.aborted) {
-        throw new Error("openrouter_timeout");
+        throw new Error(`${route.error_prefix}_timeout`);
       }
       if (done) {
         buffer += decoder.decode();
@@ -1070,23 +1121,73 @@ async function streamOpenRouterTranslation(
       }
     }
 
-    throw new Error("openrouter_stream_incomplete");
+    throw new Error(`${route.error_prefix}_stream_incomplete`);
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
+type TranslationProviderRoute = {
+  api_key: string | undefined;
+  endpoint: string;
+  error_prefix: "groq" | "openrouter";
+  extra_headers: Record<string, string>;
+  id: TranslationModelRoute;
+  missing_api_key_error: string;
+  payload: ChatCompletionPayload;
+  provider_metadata: TranslationProviderMetadata;
+};
+
+function buildTranslationProviderRoute(request: TranslationRequest, env: Env): TranslationProviderRoute {
+  const routeId = request.translation_model_route ?? defaultTranslationModelRoute;
+  if (routeId === "groq_gpt_oss_120b_low") {
+    return {
+      api_key: env.GROQ_API_KEY,
+      endpoint: "https://api.groq.com/openai/v1/chat/completions",
+      error_prefix: "groq",
+      extra_headers: {},
+      id: routeId,
+      missing_api_key_error: "missing_groq_api_key",
+      payload: buildGroqChatPayload(request),
+      provider_metadata: {
+        model: "openai/gpt-oss-120b",
+        provider: "groq",
+        reasoning_effort: "low",
+        route_id: routeId,
+      },
+    };
+  }
+
+  return {
+    api_key: env.OPENROUTER_API_KEY,
+    endpoint: "https://openrouter.ai/api/v1/chat/completions",
+    error_prefix: "openrouter",
+    extra_headers: {
+      "HTTP-Referer": env.OPENROUTER_SITE_URL ?? "https://murmur.q9labs.ai",
+      "X-Title": env.OPENROUTER_APP_NAME ?? "Murmur",
+    },
+    id: routeId,
+    missing_api_key_error: "missing_openrouter_api_key",
+    payload: buildOpenRouterChatPayload(request, env),
+    provider_metadata: {
+      model: selectOpenRouterModel(request, env),
+      provider: "openrouter",
+      route_id: routeId,
+    },
+  };
+}
+
 export function buildOpenRouterChatPayload(
   request: TranslationRequest,
   env: Env,
-): OpenRouterChatPayload {
+): ChatCompletionPayload {
   const sourceLanguageName =
     request.source_language === autoSourceLanguageCode
       ? "the detected source language"
       : getLanguage(request.source_language).openrouter_source_name;
   const targetLanguage = getLanguage(request.target_language);
   return {
-    model: env.OPENROUTER_MODEL ?? "google/gemma-4-26b-a4b-it",
+    model: selectOpenRouterModel(request, env),
     messages: [
       {
         role: "system",
@@ -1103,11 +1204,64 @@ export function buildOpenRouterChatPayload(
     temperature: 0.1,
     max_tokens: 300,
     stream: true,
-    provider: buildOpenRouterProviderPreferences(env),
+    provider: buildOpenRouterProviderPreferences(env, request.translation_model_route),
   };
 }
 
-export function buildOpenRouterProviderPreferences(env: Env): OpenRouterProviderPreferences {
+export function buildGroqChatPayload(request: TranslationRequest): ChatCompletionPayload {
+  const sourceLanguageName =
+    request.source_language === autoSourceLanguageCode
+      ? "the detected source language"
+      : getLanguage(request.source_language).openrouter_source_name;
+  const targetLanguage = getLanguage(request.target_language);
+  return {
+    model: "openai/gpt-oss-120b",
+    messages: [
+      {
+        role: "system",
+        content: buildSystemPrompt(
+          sourceLanguageName,
+          targetLanguage.openrouter_target_name,
+        ),
+      },
+      {
+        role: "user",
+        content: buildUserPrompt(request),
+      },
+    ],
+    temperature: 0.1,
+    max_tokens: 300,
+    stream: true,
+    reasoning_effort: "low",
+    include_reasoning: false,
+  };
+}
+
+export function buildOpenRouterProviderPreferences(
+  env: Env,
+  route: TranslationModelRoute = defaultTranslationModelRoute,
+): OpenRouterProviderPreferences {
+  if (route === "openrouter_gemma_deepinfra") {
+    return {
+      allow_fallbacks: false,
+      data_collection: parseDataCollection(env.OPENROUTER_PROVIDER_DATA_COLLECTION),
+      only: ["deepinfra/fp8"],
+      order: ["deepinfra/fp8"],
+      require_parameters: true,
+      sort: parseProviderSort(env.OPENROUTER_PROVIDER_SORT),
+    };
+  }
+  if (route === "openrouter_gpt_oss_120b_cerebras") {
+    return {
+      allow_fallbacks: false,
+      data_collection: parseDataCollection(env.OPENROUTER_PROVIDER_DATA_COLLECTION),
+      only: ["cerebras"],
+      order: ["cerebras"],
+      require_parameters: true,
+      sort: parseProviderSort(env.OPENROUTER_PROVIDER_SORT),
+    };
+  }
+
   const preferences: OpenRouterProviderPreferences = {
     allow_fallbacks: parseBooleanEnv(env.OPENROUTER_PROVIDER_ALLOW_FALLBACKS, true),
     data_collection: parseDataCollection(env.OPENROUTER_PROVIDER_DATA_COLLECTION),
@@ -1128,6 +1282,12 @@ export function buildOpenRouterProviderPreferences(env: Env): OpenRouterProvider
     preferences.zdr = zdr;
   }
   return preferences;
+}
+
+function selectOpenRouterModel(request: TranslationRequest, env: Env): string {
+  return request.translation_model_route === "openrouter_gpt_oss_120b_cerebras"
+    ? "openai/gpt-oss-120b"
+    : env.OPENROUTER_MODEL ?? "google/gemma-4-26b-a4b-it";
 }
 
 function buildSystemPrompt(sourceLanguage: string, targetLanguage: string): string {
@@ -1273,6 +1433,13 @@ export function validateTranslationRequest(request: TranslationRequest): string 
     return "invalid_translation_mode";
   }
   if (
+    "translation_model_route" in request &&
+    typeof request.translation_model_route !== "undefined" &&
+    !isTranslationModelRoute(request.translation_model_route)
+  ) {
+    return "invalid_translation_model_route";
+  }
+  if (
     typeof request.context_summary !== "undefined" &&
     request.context_summary !== null &&
     (typeof request.context_summary !== "string" || request.context_summary.length > sessionSummaryCharLimit)
@@ -1295,6 +1462,16 @@ export function validateTranslationRequest(request: TranslationRequest): string 
     }
   }
   return null;
+}
+
+function validateTranslationModelRouteForEnv(
+  route: TranslationModelRoute | undefined,
+  env: Env,
+): string | null {
+  if (!route || route === defaultTranslationModelRoute) {
+    return null;
+  }
+  return env.MURMUR_ENV === "production" ? "dev_translation_model_route_unavailable" : null;
 }
 
 function validateSummaryRequest(request: SummaryRequest | null): string | null {
@@ -1398,7 +1575,14 @@ function parseProviderSort(value: string | undefined): "latency" | "price" | "th
 
 export function parseOpenRouterChunk(payload: string): {
   delta: string | null;
-  provider_metadata: Partial<OpenRouterProviderMetadata>;
+  provider_metadata: Partial<TranslationProviderMetadata>;
+} {
+  return parseProviderChunk(payload, "openrouter");
+}
+
+function parseProviderChunk(payload: string, errorPrefix: "groq" | "openrouter"): {
+  delta: string | null;
+  provider_metadata: Partial<TranslationProviderMetadata>;
 } {
   const parsed = JSON.parse(payload) as {
     choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
@@ -1408,7 +1592,7 @@ export function parseOpenRouterChunk(payload: string): {
     provider?: string;
   };
   if (parsed.error) {
-    throw new Error("openrouter_stream_error");
+    throw new Error(`${errorPrefix}_stream_error`);
   }
   return {
     delta: parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content ?? null,
@@ -1421,8 +1605,8 @@ export function parseOpenRouterChunk(payload: string): {
 }
 
 function mergeProviderMetadata(
-  target: OpenRouterProviderMetadata,
-  source: Partial<OpenRouterProviderMetadata>,
+  target: TranslationProviderMetadata,
+  source: Partial<TranslationProviderMetadata>,
 ): void {
   if (typeof source.upstream_id === "string") {
     target.upstream_id = source.upstream_id;
@@ -1439,11 +1623,19 @@ export function getTranslationErrorCode(error: unknown): string {
   if (!(error instanceof Error)) {
     return "translation_failed";
   }
-  if (error.message.startsWith("openrouter_http_")) {
+  if (error.message.startsWith("openrouter_http_") || error.message.startsWith("groq_http_")) {
     return error.message;
   }
   if (
     [
+      "groq_empty_translation",
+      "groq_network_error",
+      "groq_stream_error",
+      "groq_stream_incomplete",
+      "groq_stream_read_failed",
+      "groq_suspiciously_short_translation",
+      "groq_timeout",
+      "missing_groq_api_key",
       "openrouter_network_error",
       "openrouter_empty_translation",
       "openrouter_stream_incomplete",
@@ -1475,17 +1667,25 @@ function combineAbortSignals(first: AbortSignal, second: AbortSignal): AbortSign
   return controller.signal;
 }
 
-function isTimeoutAbort(error: unknown, timeoutSignal: AbortSignal): boolean {
-  return timeoutSignal.aborted || (error instanceof Error && error.message === "openrouter_timeout");
+function isTimeoutAbort(
+  error: unknown,
+  timeoutSignal: AbortSignal,
+  errorPrefix = "openrouter",
+): boolean {
+  return timeoutSignal.aborted || (error instanceof Error && error.message === `${errorPrefix}_timeout`);
 }
 
-function validateTranslatedCaption(request: TranslationRequest, translatedCaption: string): string {
+function validateTranslatedCaption(
+  request: TranslationRequest,
+  translatedCaption: string,
+  errorPrefix = "openrouter",
+): string {
   const trimmedCaption = translatedCaption.trim();
   if (!trimmedCaption) {
-    throw new Error("openrouter_empty_translation");
+    throw new Error(`${errorPrefix}_empty_translation`);
   }
   if (request.source_caption.trim().length >= 80 && trimmedCaption.length < 4) {
-    throw new Error("openrouter_suspiciously_short_translation");
+    throw new Error(`${errorPrefix}_suspiciously_short_translation`);
   }
   return translatedCaption;
 }
@@ -1495,7 +1695,7 @@ function sendDone(
   request: TranslationRequest,
   translationRequestId: string,
   translatedCaption: string,
-  providerMetadata: OpenRouterProviderMetadata = {
+  providerMetadata: TranslationProviderMetadata = {
     model: "google/gemma-4-26b-a4b-it",
     provider: "openrouter",
   },
@@ -1585,6 +1785,10 @@ function parseLanguagePair(
 
 function parseTranslationMode(value: unknown): TranslationMode {
   return value === "continuous" ? "continuous" : "phrase";
+}
+
+function parseTranslationModelRoute(value: unknown): TranslationModelRoute {
+  return isTranslationModelRoute(value) ? value : defaultTranslationModelRoute;
 }
 
 function parseDeviceIntegrity(value: unknown): {
