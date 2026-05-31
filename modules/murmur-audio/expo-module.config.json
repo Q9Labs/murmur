@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["MurmurAudioModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.murmuraudio.MurmurAudioModule"]
+  }
+}

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="coral" x1="258" x2="760" y1="338" y2="338" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF7A63"/>
+      <stop offset="1" stop-color="#FF536A"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="274" x2="780" y1="438" y2="438" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#21C7C2"/>
+      <stop offset="1" stop-color="#48B6FF"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="354" x2="784" y1="562" y2="562" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD45A"/>
+      <stop offset="1" stop-color="#FFB22E"/>
+    </linearGradient>
+    <linearGradient id="violet" x1="334" x2="760" y1="690" y2="690" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9B6BFF"/>
+      <stop offset="1" stop-color="#7454E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#F8F4ED"/>
+  <path d="M286 424c18-116 122-198 238-190 88 6 139 64 190 114 34 33 72 45 111 27 20-9 43 5 49 27 17 62 13 132-15 193-46 101-147 165-260 165H464c-117 0-216-85-234-201-8-51 13-103 56-135z" fill="url(#coral)"/>
+  <path d="M245 523c61-85 154-106 226-53 66 48 135 57 199 7 82-65 151-90 244-42 10 112-66 236-197 282H454c-112 0-203-79-209-194z" fill="url(#sky)"/>
+  <path d="M337 624c71-48 127-38 188 18 48 44 101 55 156 11 83-67 157-57 236 10-45 78-126 128-218 128H449c-57 0-94-70-112-167z" fill="url(#sun)"/>
+  <path d="M352 738c73-51 149-25 209 43 51 58 106 65 167 20 42-31 84-42 128-33-43 76-125 126-217 126H517l-82 82c-21 21-56 4-52-25l15-96c-31-22-47-58-46-117z" fill="url(#violet)"/>
+  <g fill="none" stroke-linecap="round" stroke-width="29">
+    <path d="M144 482v52" stroke="#FF6B4A"/>
+    <path d="M207 451v114" stroke="#FFBE30"/>
+    <path d="M270 469v78" stroke="#22C6C5"/>
+    <path d="M817 469v78" stroke="#40C9C5"/>
+    <path d="M880 450v118" stroke="#44AEF9"/>
+    <path d="M943 486v44" stroke="#8C66EE"/>
+  </g>
+</svg>

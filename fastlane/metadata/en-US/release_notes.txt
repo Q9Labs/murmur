@@ -1,0 +1,3 @@
+Initial release.
+
+Murmur is an accountless one-way live translator for real-time translated captions.

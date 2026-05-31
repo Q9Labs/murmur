@@ -1,0 +1,15 @@
+Murmur is an accountless one-way live translator. No account, demo credentials, subscription, or 2FA are required.
+
+Test path:
+1. Open Murmur.
+2. Choose English as source and Arabic as target.
+3. Tap Listen and allow microphone access.
+4. Speak a short phrase such as "Hello, how are you today?"
+5. Confirm source captions and translated captions appear.
+6. If speech output is configured, translated speech may play. If speech output is unavailable, captions continue and the app shows the degraded speech state.
+7. Tap Stop, then start again.
+8. Tap Cancel during a session and confirm microphone capture/playback stop.
+9. Use Report translation on a committed translated span.
+10. Use Reset Murmur Identity and Delete Local Data from the app controls.
+
+Murmur uses the microphone only during an active live translation session. Murmur V1 has no account creation, login, profile, or cloud transcript history.

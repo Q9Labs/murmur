@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="murmurA" x1="334" x2="690" y1="170" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF7A63"/>
+      <stop offset="1" stop-color="#FF536A"/>
+    </linearGradient>
+    <linearGradient id="murmurB" x1="300" x2="724" y1="235" y2="235" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1FC8C2"/>
+      <stop offset="1" stop-color="#48B6FF"/>
+    </linearGradient>
+    <linearGradient id="murmurC" x1="350" x2="712" y1="295" y2="295" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD45A"/>
+      <stop offset="1" stop-color="#FFB22E"/>
+    </linearGradient>
+    <linearGradient id="murmurD" x1="372" x2="682" y1="354" y2="354" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9B6BFF"/>
+      <stop offset="1" stop-color="#7454E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="#F8F4ED"/>
+  <g transform="translate(256 54)">
+    <path d="M106 156c17-82 91-139 174-133 65 5 102 44 138 78 30 28 62 37 92 22 14-7 30 4 34 20 12 44 9 91-10 134-33 72-106 118-188 118H253c-83 0-154-61-168-144-6-37 8-74 21-95z" fill="url(#murmurA)"/>
+    <path d="M68 221c46-63 113-78 166-39 48 35 99 42 146 5 60-47 111-66 179-31 8 81-47 171-143 204H224c-81 0-148-57-156-139z" fill="url(#murmurB)"/>
+    <path d="M132 288c52-35 93-28 138 13 35 32 74 40 114 8 61-49 115-42 172 7-32 57-92 94-160 94H219c-42 0-68-51-87-122z" fill="url(#murmurC)"/>
+    <path d="M143 363c54-38 110-18 154 32 37 43 78 48 123 15 31-23 61-31 94-24-32 56-92 92-160 92h-89l-60 60c-15 15-41 3-38-18l11-70c-23-17-35-43-35-87z" fill="url(#murmurD)"/>
+    <g fill="none" stroke-linecap="round" stroke-width="22">
+      <path d="M-6 220v38" stroke="#FF6B4A"/>
+      <path d="M42 197v84" stroke="#FFBE30"/>
+      <path d="M89 210v58" stroke="#22C6C5"/>
+      <path d="M610 210v58" stroke="#40C9C5"/>
+      <path d="M657 197v86" stroke="#44AEF9"/>
+      <path d="M704 223v32" stroke="#8C66EE"/>
+    </g>
+  </g>
+</svg>
