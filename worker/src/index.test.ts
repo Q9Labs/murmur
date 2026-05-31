@@ -305,9 +305,9 @@ describe("worker routes", () => {
 
   it("pins OpenRouter provider routing and privacy preferences", () => {
     expect(buildOpenRouterProviderPreferences({})).toEqual({
-      allow_fallbacks: true,
+      allow_fallbacks: false,
       data_collection: "deny",
-      order: ["deepinfra/fp8", "cloudflare", "google-vertex/global"],
+      order: ["deepinfra/fp8"],
       require_parameters: true,
       sort: "latency",
     });
@@ -1832,6 +1832,77 @@ describe("worker routes", () => {
       expect(response.status).toBe(200);
       const body = (await response.json()) as { speech?: { default_voice_id?: string } };
       expect(body.speech?.default_voice_id).toBe("voice_ar");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("skips Cartesia token minting for continuous sessions", async () => {
+    const originalFetch = globalThis.fetch;
+    let cartesiaTokensMinted = 0;
+    globalThis.fetch = async (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("cartesia.ai")) {
+        cartesiaTokensMinted += 1;
+        return Response.json({ token: `cartesia_token_${cartesiaTokensMinted}` });
+      }
+      return Response.json({});
+    };
+
+    try {
+      const env = {
+        CARTESIA_API_KEY: "cartesia_key",
+        CARTESIA_DEFAULT_VOICE_ID: "voice_default",
+        DEEPGRAM_API_KEY: "deepgram_key",
+        OPENROUTER_API_KEY: "openrouter_key",
+      };
+      const appInstallId = `install_continuous_speech_${Date.now()}`;
+      const createResponse = await worker.fetch(
+        new Request("https://murmur.test/v1/session", {
+          body: JSON.stringify({
+            app_install_id: appInstallId,
+            source_language: "en",
+            target_language: "ar",
+            translation_mode: "continuous",
+          }),
+          method: "POST",
+        }),
+        env,
+      );
+
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as {
+        app_session_id: string;
+        session_epoch: number;
+        speech?: { enabled?: boolean };
+        tokens: { cartesia_access_token: string | null };
+      };
+      expect(created.tokens.cartesia_access_token).toBeNull();
+      expect(created.speech?.enabled).toBe(false);
+
+      const refreshResponse = await worker.fetch(
+        new Request(`https://murmur.test/v1/session/${created.app_session_id}/tokens`, {
+          body: JSON.stringify({
+            app_install_id: appInstallId,
+            app_session_id: created.app_session_id,
+            session_epoch: created.session_epoch,
+            source_language: "en",
+            target_language: "ar",
+            translation_mode: "continuous",
+          }),
+          method: "POST",
+        }),
+        env,
+      );
+
+      expect(refreshResponse.status).toBe(200);
+      const refreshed = (await refreshResponse.json()) as {
+        speech?: { enabled?: boolean };
+        tokens: { cartesia_access_token: string | null };
+      };
+      expect(refreshed.tokens.cartesia_access_token).toBeNull();
+      expect(refreshed.speech?.enabled).toBe(false);
+      expect(cartesiaTokensMinted).toBe(0);
     } finally {
       globalThis.fetch = originalFetch;
     }

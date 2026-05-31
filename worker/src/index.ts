@@ -152,7 +152,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
 };
 
-const defaultOpenRouterProviderOrder = ["deepinfra/fp8", "cloudflare", "google-vertex/global"];
+const defaultOpenRouterProviderOrder = ["deepinfra/fp8"];
 const sessionSummaryCharLimit = 700;
 const summarySourceCharLimit = 5000;
 
@@ -348,7 +348,10 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   }
 
   const tokenTtlSeconds = Number(env.TOKEN_TTL_SECONDS ?? "120");
-  const tokens = await mintProviderTokens(env, tokenTtlSeconds);
+  const includeSpeechToken = isSpeechEnabled(env) && translationMode !== "continuous";
+  const tokens = await mintProviderTokens(env, tokenTtlSeconds, {
+    includeCartesia: includeSpeechToken,
+  });
   if (!tokens.ok) {
     return json(
       {
@@ -360,7 +363,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   }
 
   const appSessionId = crypto.randomUUID();
-  const speechVoiceId = isSpeechEnabled(env) ? selectCartesiaVoiceId(env, targetLanguage) : null;
+  const speechVoiceId = includeSpeechToken ? selectCartesiaVoiceId(env, targetLanguage) : null;
   await createSessionRecordDurable({
     app_session_id: appSessionId,
     hashed_install_id: hashedInstallId,
@@ -623,6 +626,7 @@ async function refreshSessionTokens(
     return json({ error: languagePair.error }, 400);
   }
   const { targetLanguage } = languagePair;
+  const translationMode = parseTranslationMode(body.translation_mode);
 
   const nowMs = Date.now();
   const hashedInstallId = await hashInstallId(
@@ -653,12 +657,15 @@ async function refreshSessionTokens(
   }
 
   const tokenTtlSeconds = Number(env.TOKEN_TTL_SECONDS ?? "120");
-  const tokens = await mintProviderTokens(env, tokenTtlSeconds);
+  const includeSpeechToken = isSpeechEnabled(env) && translationMode !== "continuous";
+  const tokens = await mintProviderTokens(env, tokenTtlSeconds, {
+    includeCartesia: includeSpeechToken,
+  });
   if (!tokens.ok) {
     return json({ error: "provider_unconfigured", missing: tokens.missing }, 503);
   }
 
-  const speechVoiceId = isSpeechEnabled(env) ? selectCartesiaVoiceId(env, targetLanguage) : null;
+  const speechVoiceId = includeSpeechToken ? selectCartesiaVoiceId(env, targetLanguage) : null;
   logWorkerEvent({
     event: "session_tokens_refreshed",
     app_session_id: appSessionId,
@@ -690,6 +697,7 @@ async function refreshSessionTokens(
 async function mintProviderTokens(
   env: Env,
   tokenTtlSeconds: number,
+  options: { includeCartesia?: boolean } = {},
 ): Promise<
   | { ok: true; cartesiaAccessToken: string | null; deepgramToken: string | null }
   | { ok: false; missing: string[] }
@@ -703,7 +711,7 @@ async function mintProviderTokens(
     return { ok: false, missing };
   }
 
-  const cartesiaAccessToken = isSpeechEnabled(env)
+  const cartesiaAccessToken = options.includeCartesia === true
     ? await mintCartesiaToken(env, tokenTtlSeconds).catch((error) => {
         logWorkerEvent({
           event: "cartesia_token_unavailable",
@@ -1331,7 +1339,7 @@ export function buildOpenRouterProviderPreferences(
   }
 
   const preferences: OpenRouterProviderPreferences = {
-    allow_fallbacks: parseBooleanEnv(env.OPENROUTER_PROVIDER_ALLOW_FALLBACKS, true),
+    allow_fallbacks: parseBooleanEnv(env.OPENROUTER_PROVIDER_ALLOW_FALLBACKS, false),
     data_collection: parseDataCollection(env.OPENROUTER_PROVIDER_DATA_COLLECTION),
     order: parseCsvEnv(env.OPENROUTER_PROVIDER_ORDER) ?? defaultOpenRouterProviderOrder,
     require_parameters: parseBooleanEnv(env.OPENROUTER_PROVIDER_REQUIRE_PARAMETERS, true),

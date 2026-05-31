@@ -15,7 +15,9 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
+import { File, Paths } from "expo-file-system";
 import * as Network from "expo-network";
+import * as Sharing from "expo-sharing";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import MurmurAudioModule, { type AudioStateEvent } from "../modules/murmur-audio";
@@ -1265,9 +1267,19 @@ function DiagnosticsModal({
                 accessibilityRole="button"
                 disabled={!hasReport}
                 onPress={() =>
-                  void downloadDiagnosticsReport(reportParams).then((downloaded) => {
-                    setDiagnosticsMessage(downloaded ? "Diagnostics downloaded." : "Download is available on web.");
-                  })
+                  void downloadDiagnosticsReport(reportParams)
+                    .then((result) => {
+                      setDiagnosticsMessage(
+                        result === "web_downloaded"
+                          ? "Diagnostics downloaded."
+                          : result === "native_shared"
+                            ? "Diagnostics file ready to share."
+                            : "Diagnostics file could not be prepared.",
+                      );
+                    })
+                    .catch(() => {
+                      setDiagnosticsMessage("Diagnostics file could not be prepared.");
+                    })
                 }
                 style={[styles.diagnosticButtonSecondary, !hasReport && styles.pressed]}
               >
@@ -1276,7 +1288,15 @@ function DiagnosticsModal({
               <Pressable
                 accessibilityRole="button"
                 disabled={!hasReport}
-                onPress={() => void shareLatencyReport(reportParams)}
+                onPress={() =>
+                  void shareLatencyReport(reportParams)
+                    .then((result) => {
+                      setDiagnosticsMessage(result === "native_file" ? "Diagnostics file shared." : "Diagnostics shared.");
+                    })
+                    .catch(() => {
+                      setDiagnosticsMessage("Diagnostics could not be shared.");
+                    })
+                }
                 style={[styles.diagnosticButtonSecondary, !hasReport && styles.pressed]}
               >
                 <Text style={styles.diagnosticButtonTextSecondary}>Share</Text>
@@ -1382,9 +1402,38 @@ async function copyDiagnosticsReport(params: DiagnosticsReportParams): Promise<v
   });
 }
 
-async function downloadDiagnosticsReport(params: DiagnosticsReportParams): Promise<boolean> {
-  if (Platform.OS !== "web" || typeof document === "undefined") {
-    return false;
+type DiagnosticsDownloadResult = "native_shared" | "unavailable" | "web_downloaded";
+
+function createDiagnosticsReportFilename(): string {
+  return `murmur-diagnostics-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+}
+
+async function writeDiagnosticsReportFile(params: DiagnosticsReportParams): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return null;
+  }
+
+  const reportFile = new File(Paths.cache, createDiagnosticsReportFilename());
+  reportFile.write(buildDiagnosticsReportText(params), { encoding: "utf8" });
+  return reportFile.uri;
+}
+
+async function downloadDiagnosticsReport(params: DiagnosticsReportParams): Promise<DiagnosticsDownloadResult> {
+  if (Platform.OS !== "web") {
+    const fileUri = await writeDiagnosticsReportFile(params);
+    if (!fileUri || !(await Sharing.isAvailableAsync())) {
+      return "unavailable";
+    }
+    await Sharing.shareAsync(fileUri, {
+      dialogTitle: "Share Murmur diagnostics",
+      mimeType: "text/plain",
+      UTI: "public.plain-text",
+    });
+    return "native_shared";
+  }
+
+  if (typeof document === "undefined") {
+    return "unavailable";
   }
 
   const reportText = buildDiagnosticsReportText(params);
@@ -1392,19 +1441,32 @@ async function downloadDiagnosticsReport(params: DiagnosticsReportParams): Promi
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `murmur-diagnostics-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+  link.download = createDiagnosticsReportFilename();
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  return true;
+  return "web_downloaded";
 }
 
-async function shareLatencyReport(params: DiagnosticsReportParams): Promise<void> {
+async function shareLatencyReport(params: DiagnosticsReportParams): Promise<"native_file" | "shared_text"> {
+  if (Platform.OS !== "web") {
+    const fileUri = await writeDiagnosticsReportFile(params);
+    if (fileUri && (await Sharing.isAvailableAsync())) {
+      await Sharing.shareAsync(fileUri, {
+        dialogTitle: "Share Murmur diagnostics",
+        mimeType: "text/plain",
+        UTI: "public.plain-text",
+      });
+      return "native_file";
+    }
+  }
+
   await Share.share({
     message: buildDiagnosticsReportText(params),
     title: "Murmur latency evidence",
   });
+  return "shared_text";
 }
 
 function getLatestProviderRoute(

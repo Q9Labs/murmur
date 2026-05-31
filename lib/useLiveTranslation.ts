@@ -142,7 +142,8 @@ export function useLiveTranslation(params: {
   const tokenRefreshRetryCountRef = useRef(0);
   const echoGateLoggedRef = useRef(false);
   const firstTranslatedTokenSeenRef = useRef<Set<string>>(new Set());
-  const firstPcmFrameSentAtRef = useRef<number | null>(null);
+  const firstTranscriptSeenRef = useRef(false);
+  const localSpeechStartedAtRef = useRef<number | null>(null);
   const hasSpeechSinceFinalizeRef = useRef(false);
   const continuousWaitPrefixRef = useRef<string | null>(null);
   const lastCommittedSourceCaptionRef = useRef<string | null>(null);
@@ -222,6 +223,7 @@ export function useLiveTranslation(params: {
     continuousStabilizerRef.current.reset();
     continuousTranslationSchedulerRef.current.clear();
     firstTranslatedTokenSeenRef.current.clear();
+    firstTranscriptSeenRef.current = false;
     translationEventSeqRef.current.clear();
     translationSocketOpenRef.current = false;
     translationStartedAtRef.current.clear();
@@ -270,8 +272,12 @@ export function useLiveTranslation(params: {
           echoGateWindowStartedAtMsRef.current = null;
         }
         echoGateLoggedRef.current = false;
-        if (firstPcmFrameSentAtRef.current === null) {
-          firstPcmFrameSentAtRef.current = Date.now();
+        if (frame.rms >= speechRmsThreshold && localSpeechStartedAtRef.current === null) {
+          localSpeechStartedAtRef.current = Date.now();
+          recordDebugRef.current("audio.local_speech_started", "Local audio level crossed speech threshold", "debug", {
+            rms: roundMetric(frame.rms),
+            threshold: speechRmsThreshold,
+          });
         }
         deepgramRef.current?.sendPcm16(frame.data);
         scheduleSilenceFinalize({
@@ -783,7 +789,7 @@ export function useLiveTranslation(params: {
     if (event.type === "utterance_end") {
       hasSpeechSinceFinalizeRef.current = false;
       clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
-      const sttStartedAt = getCurrentSttStartedAt(speechStartedAtRef, firstPcmFrameSentAtRef);
+      const sttStartedAt = getCurrentSttStartedAt(speechStartedAtRef, localSpeechStartedAtRef);
       if (sessionRef.current.translation_mode === "continuous") {
         for (const span of continuousStabilizerRef.current.acceptTranscript(tentativeSourceCaptionRef.current, true)) {
           commitStableSourceCaption(span.source_caption, {
@@ -803,18 +809,25 @@ export function useLiveTranslation(params: {
           stableStartedAtMs: sttStartedAt,
         });
       }
-      resetCurrentSttTiming(speechStartedAtRef, firstPcmFrameSentAtRef);
+      resetCurrentSttTiming(speechStartedAtRef, localSpeechStartedAtRef);
+      firstTranscriptSeenRef.current = false;
       return;
     }
 
     if (event.type === "speech_started") {
       hasSpeechSinceFinalizeRef.current = true;
+      const localSpeechStartedAt = localSpeechStartedAtRef.current;
       speechStartedAtRef.current = Date.now();
+      firstTranscriptSeenRef.current = false;
       if (sessionRef.current.translation_mode === "continuous") {
         continuousStabilizerRef.current.reset();
         updateTentativeSourceCaption("");
       }
-      recordElapsedLatency("deepgram_speech_started", firstPcmFrameSentAtRef.current ?? undefined, recordLatency);
+      recordElapsedLatency("deepgram_speech_started", localSpeechStartedAt ?? undefined, recordLatency);
+      recordDebug("deepgram.speech_started", "Deepgram speech_started event accepted", "debug", {
+        local_to_deepgram_ms:
+          typeof localSpeechStartedAt === "number" ? speechStartedAtRef.current - localSpeechStartedAt : null,
+      });
       clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
       return;
     }
@@ -829,7 +842,11 @@ export function useLiveTranslation(params: {
     }
 
     if (event.type === "transcript") {
-      const sttStartedAt = getCurrentSttStartedAt(speechStartedAtRef, firstPcmFrameSentAtRef);
+      const sttStartedAt = getCurrentSttStartedAt(speechStartedAtRef, localSpeechStartedAtRef);
+      if (!firstTranscriptSeenRef.current) {
+        recordElapsedLatency("deepgram_first_transcript_received", sttStartedAt, recordLatency);
+        firstTranscriptSeenRef.current = true;
+      }
       recordElapsedLatency(
         event.is_final || event.speech_final ? "deepgram_final_received" : "deepgram_interim_received",
         sttStartedAt,
@@ -851,7 +868,8 @@ export function useLiveTranslation(params: {
           updateTentativeSourceCaption("");
           hasSpeechSinceFinalizeRef.current = false;
           clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
-          resetCurrentSttTiming(speechStartedAtRef, firstPcmFrameSentAtRef);
+          resetCurrentSttTiming(speechStartedAtRef, localSpeechStartedAtRef);
+          firstTranscriptSeenRef.current = false;
         } else {
           updateTentativeSourceCaption(continuousStabilizerRef.current.getUnemittedText(event.transcript));
         }
@@ -868,7 +886,8 @@ export function useLiveTranslation(params: {
         sourceStatus: "final",
         stableStartedAtMs: sttStartedAt,
       });
-      resetCurrentSttTiming(speechStartedAtRef, firstPcmFrameSentAtRef);
+      resetCurrentSttTiming(speechStartedAtRef, localSpeechStartedAtRef);
+      firstTranscriptSeenRef.current = false;
     }
   }, [commitStableSourceCaption, recordDebug, recordLatency, updateTentativeSourceCaption]);
 
@@ -1211,6 +1230,7 @@ export function useLiveTranslation(params: {
       session_epoch: sessionRef.current.identity.session_epoch,
       source_language: sessionRef.current.source_language,
       target_language: sessionRef.current.target_language,
+      translation_mode: sessionRef.current.translation_mode,
     }).catch(() => ({ error: "worker_session_network_error" }));
 
     if ("error" in refreshed) {
@@ -1333,7 +1353,8 @@ export function useLiveTranslation(params: {
     clearContinuousTranslationRuntime();
     continuousMemoryRef.current = createContinuousMemoryState();
     continuousStabilizerRef.current.reset();
-    firstPcmFrameSentAtRef.current = null;
+    firstTranscriptSeenRef.current = false;
+    localSpeechStartedAtRef.current = null;
     hasSpeechSinceFinalizeRef.current = false;
     lastCommittedSourceCaptionRef.current = null;
     speechStartedAtRef.current = null;
@@ -1349,12 +1370,16 @@ export function useLiveTranslation(params: {
     }
 
     setStatus("creating_session");
+    const installIdentityStartedAt = Date.now();
     const appInstallId = await getOrCreateInstallId();
+    recordLatency("install_identity_ready", Date.now() - installIdentityStartedAt);
+    const deviceIntegrityStartedAt = Date.now();
     const deviceIntegrity = await collectDeviceIntegrity({
       appInstallId,
       sourceLanguage: params.source_language,
       targetLanguage: params.target_language,
     });
+    recordLatency("device_integrity_collected", Date.now() - deviceIntegrityStartedAt);
     const sessionStartedAt = Date.now();
     const workerSession = await createWorkerSession({
       app_install_id: appInstallId,
@@ -1373,13 +1398,17 @@ export function useLiveTranslation(params: {
       setStatus("failed");
       return;
     }
-    recordLatency("session_create", Date.now() - sessionStartedAt);
+    const workerSessionHttpMs = Date.now() - sessionStartedAt;
+    recordLatency("worker_session_http", workerSessionHttpMs);
+    recordLatency("session_create", workerSessionHttpMs);
     recordDebug("session.created", "Worker session created", "info", {
       app_session_id: workerSession.app_session_id,
       cartesia_enabled: Boolean(workerSession.tokens.cartesia_access_token && workerSession.speech?.default_voice_id),
+      device_integrity_available: deviceIntegrity.available,
       session_epoch: workerSession.session_epoch,
       translation_model_route: workerSession.translation_model_route ?? "worker_default",
       token_bundle_id: workerSession.tokens.token_bundle_id,
+      worker_session_http_ms: workerSessionHttpMs,
     });
 
     updateSession((current) => ({
@@ -1518,7 +1547,8 @@ export function useLiveTranslation(params: {
     echoGateLoggedRef.current = false;
     clearContinuousTranslationRuntime();
     hasSpeechSinceFinalizeRef.current = false;
-    firstPcmFrameSentAtRef.current = null;
+    firstTranscriptSeenRef.current = false;
+    localSpeechStartedAtRef.current = null;
     speechStartedAtRef.current = null;
     deepgramRef.current?.close();
     speechRef.current?.close();
@@ -1558,7 +1588,8 @@ export function useLiveTranslation(params: {
     echoGateLoggedRef.current = false;
     clearContinuousTranslationRuntime();
     hasSpeechSinceFinalizeRef.current = false;
-    firstPcmFrameSentAtRef.current = null;
+    firstTranscriptSeenRef.current = false;
+    localSpeechStartedAtRef.current = null;
     speechStartedAtRef.current = null;
     deepgramRef.current?.close();
     speechRef.current?.close();
@@ -1568,7 +1599,8 @@ export function useLiveTranslation(params: {
     await closeWorkerSession(sessionRef.current.identity.app_session_id, "user_cancel");
     continuousMemoryRef.current = createContinuousMemoryState();
     continuousStabilizerRef.current.reset();
-    firstPcmFrameSentAtRef.current = null;
+    firstTranscriptSeenRef.current = false;
+    localSpeechStartedAtRef.current = null;
     hasSpeechSinceFinalizeRef.current = false;
     lastCommittedSourceCaptionRef.current = null;
     speechStartedAtRef.current = null;
@@ -1752,6 +1784,7 @@ async function refreshWorkerSessionTokens(body: {
   session_epoch: number;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
+  translation_mode: TranslationMode;
 }): Promise<RefreshSessionTokenResponse | { error: string }> {
   const response = await fetch(`${getWorkerBaseUrl()}/v1/session/${body.app_session_id}/tokens`, {
     method: "POST",
@@ -1916,17 +1949,17 @@ function recordElapsedLatency(
 
 function getCurrentSttStartedAt(
   speechStartedAtRef: MutableRefObject<number | null>,
-  firstPcmFrameSentAtRef: MutableRefObject<number | null>,
+  localSpeechStartedAtRef: MutableRefObject<number | null>,
 ): number | undefined {
-  return speechStartedAtRef.current ?? firstPcmFrameSentAtRef.current ?? undefined;
+  return speechStartedAtRef.current ?? localSpeechStartedAtRef.current ?? undefined;
 }
 
 function resetCurrentSttTiming(
   speechStartedAtRef: MutableRefObject<number | null>,
-  firstPcmFrameSentAtRef: MutableRefObject<number | null>,
+  localSpeechStartedAtRef: MutableRefObject<number | null>,
 ): void {
   speechStartedAtRef.current = null;
-  firstPcmFrameSentAtRef.current = null;
+  localSpeechStartedAtRef.current = null;
 }
 
 function startDeepgramKeepAlive(
