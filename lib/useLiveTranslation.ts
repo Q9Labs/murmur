@@ -1373,12 +1373,22 @@ export function useLiveTranslation(params: {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
-      if (nextState !== "active" && isActiveOrRecoveringSession(sessionRef.current.state)) {
-        void cancel();
+      if (!isActiveOrRecoveringSession(sessionRef.current.state)) {
+        return;
       }
+      if (nextState === "active") {
+        recordDebugRef.current("session.foregrounded", "App returned to foreground; live session preserved", "info", {
+          session_state: sessionRef.current.state,
+        });
+        return;
+      }
+      recordDebugRef.current("session.backgrounded", "App moved to background; live session remains active", "info", {
+        app_state: nextState,
+        session_state: sessionRef.current.state,
+      });
     });
     return () => subscription.remove();
-  }, [cancel]);
+  }, []);
 
   const reportSpan = useCallback(
     async (

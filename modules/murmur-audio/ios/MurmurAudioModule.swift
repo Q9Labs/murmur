@@ -73,8 +73,7 @@ public class MurmurAudioModule: Module {
     }
 
     OnAppEntersBackground {
-      self.stopCaptureSync(reason: "app_background")
-      self.clearPlaybackSync(reason: "app_background")
+      self.emitState(reason: "app_background_preserved")
     }
 
     OnDestroy {

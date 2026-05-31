@@ -41,6 +41,10 @@ assert(
     "Murmur needs microphone access to stream speech for live translation.",
   "iOS microphone permission copy must match the store packet",
 );
+assert(
+  JSON.stringify(appConfig.ios?.infoPlist?.UIBackgroundModes ?? []) === JSON.stringify(["audio"]),
+  "iOS background modes must only include audio for live translation capture",
+);
 assert(appConfig.ios?.infoPlist?.ITSAppUsesNonExemptEncryption === false, "iOS export compliance flag must be false");
 const appAttestEnvironment = appConfig.ios?.entitlements?.["com.apple.developer.devicecheck.appattest-environment"];
 assert(
@@ -67,9 +71,14 @@ assert(appConfig.android?.package === "com.q9labsai.murmur", "Android package mu
 assert(appConfig.android?.versionCode === 2, `Android versionCode must be 2 for the refreshed-logo upload; got ${appConfig.android?.versionCode}`);
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
+const requiredAndroidPermissions = [
+  "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+  "android.permission.RECORD_AUDIO",
+];
 assert(
-  JSON.stringify(appConfig.android?.permissions ?? []) === JSON.stringify(["android.permission.RECORD_AUDIO"]),
-  "Android explicit permissions must only include RECORD_AUDIO",
+  JSON.stringify(appConfig.android?.permissions ?? []) === JSON.stringify(requiredAndroidPermissions),
+  "Android explicit permissions must only include foreground microphone capture permissions",
 );
 const blockedPermissions = new Set(appConfig.android?.blockedPermissions ?? []);
 for (const blockedPermission of [

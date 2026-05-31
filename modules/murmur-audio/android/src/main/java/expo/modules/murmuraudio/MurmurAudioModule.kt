@@ -1,6 +1,7 @@
 package expo.modules.murmuraudio
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -10,6 +11,7 @@ import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -85,8 +87,7 @@ class MurmurAudioModule : Module() {
     }
 
     OnActivityEntersBackground {
-      stopCaptureSync("activity_background")
-      clearPlaybackSync("activity_background")
+      emitState("activity_background_preserved")
     }
 
     OnDestroy {
@@ -127,14 +128,23 @@ class MurmurAudioModule : Module() {
       throw IllegalStateException("AudioRecord failed to initialize")
     }
 
+    startForegroundCaptureService()
     audioGenerationId += 1
     droppedFrames = 0
     recorder = record
     enableAudioEffects(record.audioSessionId)
-    record.startRecording()
-    captureActive = true
-    captureThread = Thread({ captureLoop(record) }, "murmur-audio-capture").also { it.start() }
-    emitState("capture_started")
+    try {
+      record.startRecording()
+      captureActive = true
+      captureThread = Thread({ captureLoop(record) }, "murmur-audio-capture").also { it.start() }
+      emitState("capture_started")
+    } catch (error: RuntimeException) {
+      releaseAudioEffects()
+      recorder = null
+      record.release()
+      stopForegroundCaptureService()
+      throw error
+    }
   }
 
   private fun captureLoop(record: AudioRecord) {
@@ -167,6 +177,7 @@ class MurmurAudioModule : Module() {
     recorder?.release()
     recorder = null
     releaseAudioEffects()
+    stopForegroundCaptureService()
     emitState(reason)
   }
 
@@ -321,6 +332,21 @@ class MurmurAudioModule : Module() {
   private fun hasRecordAudioPermission(): Boolean {
     val context = appContext.reactContext ?: return false
     return context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+  }
+
+  private fun startForegroundCaptureService() {
+    val context = appContext.reactContext ?: return
+    val intent = Intent(context, MurmurForegroundService::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      context.startForegroundService(intent)
+      return
+    }
+    context.startService(intent)
+  }
+
+  private fun stopForegroundCaptureService() {
+    val context = appContext.reactContext ?: return
+    context.stopService(Intent(context, MurmurForegroundService::class.java))
   }
 
   private fun requestPlayIntegrityTokenSync(nonce: String): Map<String, Any> {
