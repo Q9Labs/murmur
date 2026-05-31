@@ -48,6 +48,7 @@ import type {
   ReportTranslationCategory,
   RollingMemorySpan,
   SessionSummary,
+  SourceCaptionStatus,
   SummaryResponse,
   TranslationServerEvent,
   TranslationMode,
@@ -55,7 +56,7 @@ import type {
 } from "./transport/types";
 
 const continuousContextSpanLimit = 10;
-const continuousTranslationInFlightLimit = 2;
+const continuousTranslationInFlightLimit = 1;
 
 export type LiveTranslationState = {
   error: string | null;
@@ -118,6 +119,7 @@ export function useLiveTranslation(params: {
   const firstTranslatedTokenSeenRef = useRef<Set<string>>(new Set());
   const firstPcmFrameSentAtRef = useRef<number | null>(null);
   const hasSpeechSinceFinalizeRef = useRef(false);
+  const continuousWaitPrefixRef = useRef<string | null>(null);
   const lastCommittedSourceCaptionRef = useRef<string | null>(null);
   const spansRef = useRef<TranslationSpan[]>([]);
   const sessionRef = useRef(session);
@@ -184,6 +186,7 @@ export function useLiveTranslation(params: {
     resetSession(createSession(normalizedParams));
     setSpans([]);
     updateTentativeSourceCaption("");
+    continuousWaitPrefixRef.current = null;
     lastCommittedSourceCaptionRef.current = null;
     setError(null);
     setReportError(null);
@@ -384,6 +387,7 @@ export function useLiveTranslation(params: {
   }, [flushContinuousTranslationQueue]);
 
   const clearContinuousTranslationRuntime = useCallback(() => {
+    continuousWaitPrefixRef.current = null;
     continuousTranslationSchedulerRef.current.clear();
     firstTranslatedTokenSeenRef.current.clear();
     translationEventSeqRef.current.clear();
@@ -435,23 +439,32 @@ export function useLiveTranslation(params: {
   const commitStableSourceCaption = useCallback((sourceCaption: string, options?: {
     latencyEvent?: string;
     latencyStartedAtMs?: number | null;
+    sourceStatus?: SourceCaptionStatus;
     stableStartedAtMs?: number | null;
   }) => {
-    const normalizedCaption = normalizeCaption(sourceCaption);
+    const sourceStatus = options?.sourceStatus ?? "final";
+    const sourceCaptionForSpan = sessionRef.current.translation_mode === "continuous"
+      ? joinSourceCaptions(continuousWaitPrefixRef.current, sourceCaption)
+      : sourceCaption;
+    const normalizedCaption = normalizeCaption(sourceCaptionForSpan);
     if (!normalizedCaption || normalizeCaption(lastCommittedSourceCaptionRef.current ?? "") === normalizedCaption) {
       recordDebug("span.commit_skipped", "Stable source caption was empty or duplicated", "debug", {
         duplicate: Boolean(normalizedCaption),
-        source_length: sourceCaption.length,
+        source_length: sourceCaptionForSpan.length,
       });
       return;
     }
 
     updateTentativeSourceCaption("");
+    if (sessionRef.current.translation_mode === "continuous") {
+      continuousWaitPrefixRef.current = null;
+    }
     lastCommittedSourceCaptionRef.current = normalizedCaption;
-    const span = createSpan(sourceCaption);
+    const span = createSpan(sourceCaptionForSpan);
     recordDebug("span.committed", "Stable source caption committed for translation", "info", {
       revision: span.revision,
-      source_length: sourceCaption.length,
+      source_length: sourceCaptionForSpan.length,
+      source_status: sourceStatus,
       span_id: span.span_id,
     });
     recordElapsedLatency(options?.latencyEvent, options?.latencyStartedAtMs ?? undefined, recordLatency);
@@ -485,6 +498,7 @@ export function useLiveTranslation(params: {
       session_epoch: nextSession.identity.session_epoch,
       source_caption: span.source_caption,
       source_language: nextSession.source_language,
+      source_status: sourceStatus,
       span_id: span.span_id,
       target_language: nextSession.target_language,
       translation_mode: nextSession.translation_mode,
@@ -601,6 +615,7 @@ export function useLiveTranslation(params: {
           commitStableSourceCaption(span.source_caption, {
             latencyEvent: "deepgram_utterance_end_received",
             latencyStartedAtMs: sttStartedAt,
+            sourceStatus: "final",
             stableStartedAtMs: sttStartedAt,
           });
         }
@@ -610,6 +625,7 @@ export function useLiveTranslation(params: {
         commitStableSourceCaption(tentativeSourceCaptionRef.current, {
           latencyEvent: "deepgram_utterance_end_received",
           latencyStartedAtMs: sttStartedAt,
+          sourceStatus: "final",
           stableStartedAtMs: sttStartedAt,
         });
       }
@@ -652,6 +668,7 @@ export function useLiveTranslation(params: {
         );
         for (const span of stableSpans) {
           commitStableSourceCaption(span.source_caption, {
+            sourceStatus: event.is_final || event.speech_final ? "final" : "stable",
             stableStartedAtMs: sttStartedAt,
           });
         }
@@ -674,6 +691,7 @@ export function useLiveTranslation(params: {
       hasSpeechSinceFinalizeRef.current = false;
       clearSilenceFinalize(deepgramSilenceFinalizeTimeoutRef);
       commitStableSourceCaption(event.transcript, {
+        sourceStatus: "final",
         stableStartedAtMs: sttStartedAt,
       });
       resetCurrentSttTiming(speechStartedAtRef, firstPcmFrameSentAtRef);
@@ -738,9 +756,58 @@ export function useLiveTranslation(params: {
     recordDebug("translation.event", `Translation ${event.kind} event received`, event.kind === "translation_error" ? "error" : "debug", {
       delta_length: event.kind === "translation_delta" ? event.delta.length : null,
       error_code: event.kind === "translation_error" ? event.error_code : null,
+      reason: event.kind === "translation_wait" ? event.reason : null,
       span_id: "span_id" in event ? event.span_id : null,
       translation_request_id: "translation_request_id" in event ? event.translation_request_id : null,
     });
+
+    if (event.kind === "translation_wait") {
+      translationStartedAtRef.current.delete(key);
+      firstTranslatedTokenSeenRef.current.delete(key);
+      translationEventSeqRef.current.delete(key);
+      continuousTranslationSchedulerRef.current.complete(key);
+      const mergedQueuedItem = continuousTranslationSchedulerRef.current.prependSourceToNextQueued(
+        currentSpan.source_caption,
+      );
+      if (!mergedQueuedItem) {
+        continuousWaitPrefixRef.current = joinSourceCaptions(
+          continuousWaitPrefixRef.current,
+          currentSpan.source_caption,
+        );
+      } else {
+        lastCommittedSourceCaptionRef.current = normalizeCaption(mergedQueuedItem.request.source_caption);
+      }
+      setSpans((current) => {
+        const nextSpans = current.map((span) =>
+          span.span_id === event.span_id && span.revision === event.revision
+            ? {
+                ...span,
+                partial_translated_caption: null,
+                status: "superseded" as const,
+                translated_caption: "",
+                translation_request_id: event.translation_request_id,
+                updated_at_ms: Date.now(),
+              }
+            : mergedQueuedItem && span.span_id === mergedQueuedItem.request.span_id && span.revision === mergedQueuedItem.request.revision
+              ? {
+                  ...span,
+                  source_caption: mergedQueuedItem.request.source_caption,
+                  updated_at_ms: Date.now(),
+                }
+            : span,
+        );
+        spansRef.current = nextSpans;
+        return nextSpans;
+      });
+      recordDebug("translation.wait", "Continuous translation is waiting for more source context", "debug", {
+        merged_span_id: mergedQueuedItem?.request.span_id ?? null,
+        pending_source_length: (continuousWaitPrefixRef.current ?? mergedQueuedItem?.request.source_caption ?? "").length,
+        reason: event.reason,
+        span_id: event.span_id,
+      });
+      flushContinuousTranslationQueueRef.current();
+      return;
+    }
 
     if (event.kind === "translation_delta") {
       if (!firstTranslatedTokenSeenRef.current.has(key)) {
@@ -1360,6 +1427,15 @@ export function useLiveTranslation(params: {
 
 function normalizeCaption(caption: string): string {
   return caption.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function joinSourceCaptions(prefix: string | null, caption: string): string {
+  return [prefix, caption]
+    .map((item) => item?.trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function roundMetric(value: number): number {

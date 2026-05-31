@@ -1429,6 +1429,9 @@ function ContinuousTimelineRow({
   span: TranslationSpan;
   targetLanguageRtl: boolean;
 }): ReactNode {
+  if (span.status === "superseded" && !span.committed_translated_caption && !span.partial_translated_caption) {
+    return null;
+  }
   const translationText =
     span.committed_translated_caption ||
     span.partial_translated_caption ||

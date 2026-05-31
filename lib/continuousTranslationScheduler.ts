@@ -105,6 +105,22 @@ export class ContinuousTranslationScheduler {
     return { exhausted: false, item: retryItem, retry_delay_ms: retryDelayMs };
   }
 
+  prependSourceToNextQueued(prefix: string): ContinuousTranslationQueueItem | null {
+    const item = this.queue[0];
+    const normalizedPrefix = prefix.trim().replace(/\s+/g, " ");
+    if (!item || !normalizedPrefix) {
+      return null;
+    }
+    item.request = {
+      ...item.request,
+      source_caption: [normalizedPrefix, item.request.source_caption.trim()]
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " "),
+    };
+    return item;
+  }
+
   requeueInFlight(nowMs = Date.now()): ContinuousTranslationQueueItem[] {
     const active = [...this.inFlight.values()];
     this.inFlight.clear();

@@ -29,7 +29,9 @@ import worker, {
   getReadiness,
   getTranslationErrorCode,
   handleSocketMessage,
+  parseInterpreterTargetAction,
   parseOpenRouterChunk,
+  parseStreamingInterpreterTargetAction,
   validateTranslationRequest,
 } from "./index";
 import type { SummaryRequest, TranslationRequest } from "../../lib/transport/types";
@@ -395,6 +397,52 @@ describe("worker routes", () => {
     expect(payload.messages[1]?.content).toContain("Bonjour");
   });
 
+  it("builds target-action prompts for continuous interpretation", () => {
+    const payload = buildOpenRouterChatPayload(
+      {
+        app_session_id: "session_1",
+        connection_id: "connection_1",
+        context_spans: [
+          {
+            source_caption: "Good morning.",
+            span_id: "span_previous",
+            translated_caption: "صباح الخير.",
+          },
+        ],
+        event_seq: 1,
+        revision: 1,
+        session_epoch: 1,
+        source_caption: "I need to book",
+        source_language: "en",
+        source_status: "stable",
+        span_id: "span_current",
+        target_language: "ar",
+        translation_attempt: 1,
+        translation_mode: "continuous",
+      },
+      {},
+    );
+
+    expect(payload.temperature).toBe(0);
+    expect(payload.messages[0]?.content).toContain("Return exactly one action");
+    expect(payload.messages[0]?.content).toContain("WAIT");
+    expect(payload.messages[0]?.content).toContain("COMMIT");
+    expect(payload.messages[1]?.content).toContain("source_status: stable");
+    expect(payload.messages[1]?.content).toContain("I need to book");
+  });
+
+  it("parses interpreter target actions while preserving target text only", () => {
+    expect(parseStreamingInterpreterTargetAction("COM")).toEqual({ action: "pending" });
+    expect(parseStreamingInterpreterTargetAction("COMMIT\nمرحبا")).toEqual({
+      action: "commit",
+      translated_caption: "مرحبا",
+    });
+    expect(parseInterpreterTargetAction("WAIT: needs an object")).toEqual({
+      action: "wait",
+      reason: "needs an object",
+    });
+  });
+
   it("generates compact summaries for live sessions", async () => {
     const appSessionId = `session_summary_${Date.now()}`;
     await createSessionRecordDurable({
@@ -758,6 +806,9 @@ describe("worker routes", () => {
     expect(
       validateTranslationRequest({ ...request, source_language: "zz" } as unknown as TranslationRequest),
     ).toBe("invalid_source_language");
+    expect(
+      validateTranslationRequest({ ...request, source_status: "draft" } as unknown as TranslationRequest),
+    ).toBe("invalid_source_status");
     expect(validateTranslationRequest({ ...request, target_language: "en" })).toBe(
       "same_language_pair",
     );
@@ -861,6 +912,159 @@ describe("worker routes", () => {
           upstream_provider: "DeepInfra",
         },
         translated_caption: "مرحبا!",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("streams only target text for continuous COMMIT actions", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = `session_interpreter_commit_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_interpreter_commit_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    const encoder = new TextEncoder();
+    globalThis.fetch = async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                [
+                  'data: {"choices":[{"delta":{"content":"COMMIT\\nمر"}}]}',
+                  "",
+                  'data: {"choices":[{"delta":{"content":"حبا"}}]}',
+                  "",
+                  "data: [DONE]",
+                  "",
+                ].join("\n"),
+              ),
+            );
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+
+    try {
+      const sent: unknown[] = [];
+      const socket = {
+        close: vi.fn(),
+        readyState: WEBSOCKET_OPEN,
+        send: (payload: string) => sent.push(JSON.parse(payload)),
+      } as unknown as Parameters<typeof handleSocketMessage>[1];
+      await handleSocketMessage(
+        JSON.stringify({
+          app_session_id: appSessionId,
+          connection_id: "connection_translate",
+          context_spans: [],
+          event_seq: 1,
+          kind: "translate",
+          revision: 1,
+          session_epoch: 1,
+          source_caption: "Hello",
+          source_language: "en",
+          source_status: "stable",
+          span_id: "span_interpreter_commit",
+          target_language: "ar",
+          translation_attempt: 1,
+          translation_mode: "continuous",
+        }),
+        socket,
+        { OPENROUTER_API_KEY: "openrouter_key" },
+        new Map(),
+      );
+
+      expect(sent).toHaveLength(3);
+      expect(sent[0]).toMatchObject({
+        delta: "مر",
+        draft_text: "مر",
+        kind: "translation_delta",
+      });
+      expect(sent[1]).toMatchObject({
+        delta: "حبا",
+        draft_text: "مرحبا",
+        kind: "translation_delta",
+      });
+      expect(sent[2]).toMatchObject({
+        kind: "translation_done",
+        provider_metadata: {
+          action_protocol: "interpreter_v1",
+          target_action: "commit",
+        },
+        translated_caption: "مرحبا",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("returns translation_wait for continuous WAIT actions", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = `session_interpreter_wait_${Date.now()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: `install_interpreter_wait_${Date.now()}`,
+      now_ms: Date.now(),
+    });
+    const encoder = new TextEncoder();
+    globalThis.fetch = async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                [
+                  'data: {"choices":[{"delta":{"content":"WAIT: needs object"}}]}',
+                  "",
+                  "data: [DONE]",
+                  "",
+                ].join("\n"),
+              ),
+            );
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+
+    try {
+      const sent: unknown[] = [];
+      const socket = {
+        close: vi.fn(),
+        readyState: WEBSOCKET_OPEN,
+        send: (payload: string) => sent.push(JSON.parse(payload)),
+      } as unknown as Parameters<typeof handleSocketMessage>[1];
+      await handleSocketMessage(
+        JSON.stringify({
+          app_session_id: appSessionId,
+          connection_id: "connection_translate",
+          context_spans: [],
+          event_seq: 1,
+          kind: "translate",
+          revision: 1,
+          session_epoch: 1,
+          source_caption: "I need to book",
+          source_language: "en",
+          source_status: "stable",
+          span_id: "span_interpreter_wait",
+          target_language: "ar",
+          translation_attempt: 1,
+          translation_mode: "continuous",
+        }),
+        socket,
+        { OPENROUTER_API_KEY: "openrouter_key" },
+        new Map(),
+      );
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({
+        kind: "translation_wait",
+        reason: "needs object",
+        span_id: "span_interpreter_wait",
       });
     } finally {
       globalThis.fetch = originalFetch;

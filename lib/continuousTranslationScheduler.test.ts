@@ -72,4 +72,19 @@ describe("ContinuousTranslationScheduler", () => {
     expect(scheduler.nextReady(1500)?.request.translation_attempt).toBe(2);
     expect(scheduler.nextReady(1500)?.request.translation_attempt).toBe(2);
   });
+
+  it("prepends a waited source prefix to the next queued request", () => {
+    const scheduler = new ContinuousTranslationScheduler({ max_in_flight: 1 });
+
+    scheduler.enqueue(makeRequest("span_1"), "span_1:1", 1000);
+    scheduler.enqueue(makeRequest("span_2"), "span_2:1", 1000);
+    expect(scheduler.nextReady(1000)?.request.span_id).toBe("span_1");
+
+    const merged = scheduler.prependSourceToNextQueued("I need to book");
+
+    expect(merged?.request.span_id).toBe("span_2");
+    expect(merged?.request.source_caption).toBe("I need to book source span_2");
+    scheduler.complete("span_1:1");
+    expect(scheduler.nextReady(1000)?.request.source_caption).toBe("I need to book source span_2");
+  });
 });

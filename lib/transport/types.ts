@@ -3,6 +3,8 @@ import type { StableSpanContext } from "../session";
 
 export type TranslationMode = "continuous" | "phrase";
 
+export type SourceCaptionStatus = "final" | "stable";
+
 export type SessionSummary = {
   memory_version: number;
   source_char_count_summarized: number;
@@ -84,6 +86,7 @@ export type TranslationRequest = {
   source_language: SourceLanguageCode;
   span_id: string;
   source_caption: string;
+  source_status?: SourceCaptionStatus;
   target_language: LanguageCode;
   translation_mode?: TranslationMode;
   translation_attempt: number;
@@ -116,6 +119,18 @@ export type TranslationDone = {
   provider_metadata: Record<string, unknown>;
 };
 
+export type TranslationWait = {
+  app_session_id: string;
+  kind: "translation_wait";
+  session_epoch: number;
+  connection_id?: string;
+  revision: number;
+  reason: string;
+  server_event_seq?: number;
+  span_id: string;
+  translation_request_id: string;
+};
+
 export type TranslationError = {
   app_session_id: string;
   kind: "translation_error";
@@ -132,6 +147,7 @@ export type TranslationError = {
 export type TranslationServerEvent =
   | TranslationDelta
   | TranslationDone
+  | TranslationWait
   | TranslationError;
 
 export type ReportTranslationCategory =

@@ -8,7 +8,12 @@ import {
   type LanguageCode,
   type SourceLanguageCode,
 } from "../../lib/languages";
-import type { SummaryRequest, TranslationMode, TranslationRequest } from "../../lib/transport/types";
+import type {
+  SourceCaptionStatus,
+  SummaryRequest,
+  TranslationMode,
+  TranslationRequest,
+} from "../../lib/transport/types";
 import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { hashInstallId, logWorkerEvent } from "./privacy";
@@ -87,8 +92,11 @@ export type Env = {
 };
 
 type OpenRouterProviderMetadata = {
+  action_protocol?: "interpreter_v1";
   model: string;
   provider: "openrouter";
+  source_status?: SourceCaptionStatus;
+  target_action?: "commit" | "wait";
   upstream_id?: string;
   upstream_model?: string;
   upstream_provider?: string;
@@ -984,9 +992,52 @@ async function streamOpenRouterTranslation(
     let firstDeltaLogged = false;
     let partialSeq = 0;
     let buffer = "";
+    let rawActionOutput = "";
+    const useTargetActionProtocol = shouldUseTargetActionProtocol(request);
     const providerMetadata: OpenRouterProviderMetadata = {
       model: env.OPENROUTER_MODEL ?? "google/gemma-4-26b-a4b-it",
       provider: "openrouter",
+    };
+    if (useTargetActionProtocol) {
+      providerMetadata.action_protocol = "interpreter_v1";
+    }
+    if (request.source_status) {
+      providerMetadata.source_status = request.source_status;
+    }
+    const emitTranslationDelta = (nextDraftText: string, deltaFallback: string): void => {
+      if (nextDraftText === translatedCaption) {
+        return;
+      }
+      const delta = nextDraftText.startsWith(translatedCaption)
+        ? nextDraftText.slice(translatedCaption.length)
+        : deltaFallback;
+      translatedCaption = nextDraftText;
+      if (!firstDeltaLogged) {
+        firstDeltaLogged = true;
+        logWorkerEvent({
+          event: "translation_first_delta",
+          app_session_id: request.app_session_id,
+          delta_chars: delta.length,
+          span_id: request.span_id,
+          translation_request_id: translationRequestId,
+          upstream_model: providerMetadata.upstream_model,
+          upstream_provider: providerMetadata.upstream_provider,
+          at_ms: Date.now(),
+        });
+      }
+      send(socket, {
+        app_session_id: request.app_session_id,
+        connection_id: request.connection_id,
+        kind: "translation_delta",
+        session_epoch: request.session_epoch,
+        span_id: request.span_id,
+        revision: request.revision,
+        server_event_seq: nextServerEventSeq(),
+        partial_seq: ++partialSeq,
+        translation_request_id: translationRequestId,
+        draft_text: translatedCaption,
+        delta,
+      });
     };
     const processLine = (line: string): boolean => {
       const data = line.trim();
@@ -995,6 +1046,25 @@ async function streamOpenRouterTranslation(
       }
       const payload = data.slice(5).trim();
       if (payload === "[DONE]") {
+        if (useTargetActionProtocol) {
+          const action = parseInterpreterTargetAction(rawActionOutput);
+          providerMetadata.target_action = action.action;
+          if (action.action === "wait") {
+            if (request.source_status === "final") {
+              throw new Error("openrouter_wait_for_final_source");
+            }
+            logWorkerEvent({
+              event: "translation_wait",
+              app_session_id: request.app_session_id,
+              span_id: request.span_id,
+              translation_request_id: translationRequestId,
+              at_ms: Date.now(),
+            });
+            sendWait(socket, request, translationRequestId, action.reason, nextServerEventSeq());
+            return true;
+          }
+          emitTranslationDelta(action.translated_caption, action.translated_caption);
+        }
         const finalCaption = validateTranslatedCaption(request, translatedCaption);
         logWorkerEvent({
           event: "translation_done",
@@ -1015,33 +1085,18 @@ async function streamOpenRouterTranslation(
       if (!chunk.delta) {
         return false;
       }
-      translatedCaption += chunk.delta;
-      if (!firstDeltaLogged) {
-        firstDeltaLogged = true;
-        logWorkerEvent({
-          event: "translation_first_delta",
-          app_session_id: request.app_session_id,
-          delta_chars: chunk.delta.length,
-          span_id: request.span_id,
-          translation_request_id: translationRequestId,
-          upstream_model: providerMetadata.upstream_model,
-          upstream_provider: providerMetadata.upstream_provider,
-          at_ms: Date.now(),
-        });
+      if (useTargetActionProtocol) {
+        rawActionOutput += chunk.delta;
+        const action = parseStreamingInterpreterTargetAction(rawActionOutput);
+        if (action.action === "commit") {
+          providerMetadata.target_action = "commit";
+          emitTranslationDelta(action.translated_caption, chunk.delta);
+        } else if (action.action === "wait") {
+          providerMetadata.target_action = "wait";
+        }
+        return false;
       }
-      send(socket, {
-        app_session_id: request.app_session_id,
-        connection_id: request.connection_id,
-        kind: "translation_delta",
-        session_epoch: request.session_epoch,
-        span_id: request.span_id,
-        revision: request.revision,
-        server_event_seq: nextServerEventSeq(),
-        partial_seq: ++partialSeq,
-        translation_request_id: translationRequestId,
-        draft_text: translatedCaption,
-        delta: chunk.delta,
-      });
+      emitTranslationDelta(`${translatedCaption}${chunk.delta}`, chunk.delta);
       return false;
     };
 
@@ -1090,17 +1145,21 @@ export function buildOpenRouterChatPayload(
     messages: [
       {
         role: "system",
-        content: buildSystemPrompt(
-          sourceLanguageName,
-          targetLanguage.openrouter_target_name,
-        ),
+        content: shouldUseTargetActionProtocol(request)
+          ? buildInterpreterSystemPrompt(sourceLanguageName, targetLanguage.openrouter_target_name)
+          : buildSystemPrompt(
+              sourceLanguageName,
+              targetLanguage.openrouter_target_name,
+            ),
       },
       {
         role: "user",
-        content: buildUserPrompt(request),
+        content: shouldUseTargetActionProtocol(request)
+          ? buildInterpreterUserPrompt(request)
+          : buildUserPrompt(request),
       },
     ],
-    temperature: 0.1,
+    temperature: shouldUseTargetActionProtocol(request) ? 0 : 0.1,
     max_tokens: 300,
     stream: true,
     provider: buildOpenRouterProviderPreferences(env),
@@ -1138,6 +1197,21 @@ function buildSystemPrompt(sourceLanguage: string, targetLanguage: string): stri
   ].join("\n");
 }
 
+function buildInterpreterSystemPrompt(sourceLanguage: string, targetLanguage: string): string {
+  return [
+    `You are a simultaneous interpreter from ${sourceLanguage} to ${targetLanguage}.`,
+    "You receive short source-language prefixes from live speech recognition.",
+    "Return exactly one action:",
+    "WAIT",
+    "or",
+    `COMMIT\\n${targetLanguage} translation`,
+    "Use WAIT only when the current prefix is too incomplete or ambiguous to translate safely.",
+    "If source_status is final, you must COMMIT.",
+    "Translate only the current source prefix. Use prior context only for references, tone, names, and terminology.",
+    "Do not add explanations, markdown, quotes, labels, or alternatives.",
+  ].join("\n");
+}
+
 function buildUserPrompt(request: TranslationRequest): string {
   const context = request.context_spans
     .map((span, index) => {
@@ -1156,6 +1230,33 @@ function buildUserPrompt(request: TranslationRequest): string {
     "Current span to translate:",
     request.source_caption,
   ].join("\n");
+}
+
+function buildInterpreterUserPrompt(request: TranslationRequest): string {
+  const context = request.context_spans
+    .map((span, index) => {
+      const translated = span.translated_caption ? `Target: ${span.translated_caption}` : "Target: ";
+      return `${index + 1}. Source: ${span.source_caption}\n${translated}`;
+    })
+    .join("\n\n");
+
+  return [
+    "Untrusted session summary for context only. Do not translate it:",
+    request.context_summary?.trim() || "(none)",
+    "",
+    "Previous committed spans for context only. Do not translate them again:",
+    context || "(none)",
+    "",
+    `source_status: ${request.source_status ?? "stable"}`,
+    "Current live source prefix:",
+    request.source_caption,
+    "",
+    "Return only WAIT or COMMIT followed by a newline and the target-language translation.",
+  ].join("\n");
+}
+
+function shouldUseTargetActionProtocol(request: TranslationRequest): boolean {
+  return request.translation_mode === "continuous";
 }
 
 async function generateSessionSummary(request: SummaryRequest, env: Env): Promise<string> {
@@ -1255,6 +1356,13 @@ export function validateTranslationRequest(request: TranslationRequest): string 
   }
   if (typeof request.source_caption !== "string" || !request.source_caption.trim()) {
     return "empty_source_caption";
+  }
+  if (
+    typeof request.source_status !== "undefined" &&
+    request.source_status !== "stable" &&
+    request.source_status !== "final"
+  ) {
+    return "invalid_source_status";
   }
 
   const languagePair = parseLanguagePair(request.source_language, request.target_language);
@@ -1420,6 +1528,70 @@ export function parseOpenRouterChunk(payload: string): {
   };
 }
 
+export type InterpreterTargetAction =
+  | {
+      action: "commit";
+      translated_caption: string;
+    }
+  | {
+      action: "wait";
+      reason: string;
+    }
+  | {
+      action: "pending";
+    };
+
+export function parseStreamingInterpreterTargetAction(raw: string): InterpreterTargetAction {
+  const withoutLeadingSpace = raw.replace(/^\s+/, "");
+  const upper = withoutLeadingSpace.toUpperCase();
+  if (!withoutLeadingSpace) {
+    return { action: "pending" };
+  }
+  if (upper.length < "WAIT".length && "WAIT".startsWith(upper)) {
+    return { action: "pending" };
+  }
+  if (/^WAIT(?:\s|:|$)/i.test(withoutLeadingSpace)) {
+    return {
+      action: "wait",
+      reason: withoutLeadingSpace.replace(/^WAIT\s*:?\s*/i, "").trim().slice(0, 120) || "needs_more_context",
+    };
+  }
+  if (upper.length < "COMMIT".length && "COMMIT".startsWith(upper)) {
+    return { action: "pending" };
+  }
+  const commitMatch = withoutLeadingSpace.match(/^COMMIT\s*(?::|\n)\s*([\s\S]*)$/i);
+  if (commitMatch) {
+    return {
+      action: "commit",
+      translated_caption: commitMatch[1] ?? "",
+    };
+  }
+  if (withoutLeadingSpace.length <= "COMMIT\n".length) {
+    return { action: "pending" };
+  }
+  return {
+    action: "commit",
+    translated_caption: raw,
+  };
+}
+
+export function parseInterpreterTargetAction(raw: string): Exclude<InterpreterTargetAction, { action: "pending" }> {
+  const parsed = parseStreamingInterpreterTargetAction(raw);
+  if (parsed.action !== "pending") {
+    if (parsed.action === "commit") {
+      return {
+        action: "commit",
+        translated_caption: parsed.translated_caption.trim(),
+      };
+    }
+    return parsed;
+  }
+  return {
+    action: "commit",
+    translated_caption: raw.trim(),
+  };
+}
+
 function mergeProviderMetadata(
   target: OpenRouterProviderMetadata,
   source: Partial<OpenRouterProviderMetadata>,
@@ -1451,6 +1623,7 @@ export function getTranslationErrorCode(error: unknown): string {
       "openrouter_stream_read_failed",
       "openrouter_suspiciously_short_translation",
       "openrouter_timeout",
+      "openrouter_wait_for_final_source",
       "missing_openrouter_api_key",
     ].includes(error.message)
   ) {
@@ -1512,6 +1685,26 @@ function sendDone(
     translation_request_id: translationRequestId,
     translated_caption: translatedCaption,
     provider_metadata: providerMetadata,
+  });
+}
+
+function sendWait(
+  socket: WorkerWebSocket,
+  request: TranslationRequest,
+  translationRequestId: string,
+  reason: string,
+  serverEventSeq = 0,
+): void {
+  send(socket, {
+    app_session_id: request.app_session_id,
+    connection_id: request.connection_id,
+    kind: "translation_wait",
+    session_epoch: request.session_epoch,
+    span_id: request.span_id,
+    revision: request.revision,
+    reason,
+    server_event_seq: serverEventSeq,
+    translation_request_id: translationRequestId,
   });
 }
 

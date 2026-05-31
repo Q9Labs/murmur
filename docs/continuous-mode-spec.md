@@ -471,6 +471,25 @@ Freshness rules:
 
 `translation_partial` uses cumulative `draft_text`, not append-only deltas. The app stores it in a revision-local draft field and resets that field whenever a new `translation_request_id` or revision begins.
 
+### Target-Action Interpretation Experiment
+
+The interim-action worktree keeps the existing app/Worker transport names (`translation_delta` and `translation_done`) for compatibility, but changes Continuous Mode's Worker prompt into a target-action protocol:
+
+```txt
+WAIT
+```
+
+or:
+
+```txt
+COMMIT
+{target-language translation}
+```
+
+`WAIT` is only allowed for `source_status=stable` prefixes. The app marks that source-only span as superseded and prepends its source text to the next queued Continuous Mode request. `COMMIT` streams only target-language text to the app; protocol markers must not appear in visible captions.
+
+Because `WAIT` mutates the next source unit, this experiment uses one in-flight Continuous Mode translation request. Parallel translation can be restored later only if the scheduler can preserve WAIT/COMMIT dependencies across queued spans.
+
 There is no separate `translation_revision` event in V1. A revised translation is a `translation_commit` with `revision > 1`, `supersedes_revision`, and/or `supersedes_span_ids`.
 
 If a committed span is revised, replace only that span in place and mark the latest revision as reportable. Superseded revisions are not reportable, not spoken, and not added to rolling memory. Already-played speech is not retroactively corrected in V1; queued stale speech is cancelled.
