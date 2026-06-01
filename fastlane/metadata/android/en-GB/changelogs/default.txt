@@ -1,0 +1,3 @@
+Initial release.
+
+Murmur is an accountless one-way live translator for real-time translated captions. Choose a source and target language, tap Listen, speak, and stop or cancel the session at any time.

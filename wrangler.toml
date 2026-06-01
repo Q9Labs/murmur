@@ -1,0 +1,67 @@
+name = "murmur-worker"
+main = "worker/src/index.ts"
+compatibility_date = "2026-05-16"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimitDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[vars]
+APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_ENVIRONMENT = "production"
+MURMUR_ENV = "development"
+MURMUR_ENABLE_SPEECH = "true"
+OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it"
+OPENROUTER_SITE_URL = "https://murmur.q9labs.ai"
+OPENROUTER_APP_NAME = "Murmur"
+OPENROUTER_TIMEOUT_MS = "12000"
+OPENROUTER_PROVIDER_ORDER = "deepinfra/fp8"
+OPENROUTER_PROVIDER_ONLY = "deepinfra/fp8"
+OPENROUTER_PROVIDER_ALLOW_FALLBACKS = "false"
+OPENROUTER_PROVIDER_REQUIRE_PARAMETERS = "true"
+OPENROUTER_PROVIDER_DATA_COLLECTION = "deny"
+OPENROUTER_PROVIDER_SORT = "latency"
+CARTESIA_VERSION = "2026-03-01"
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
+GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
+TOKEN_TTL_SECONDS = "120"
+
+[env.production]
+name = "murmur-worker-production"
+workers_dev = true
+routes = [
+  { pattern = "murmur.q9labs.ai", custom_domain = true },
+]
+
+[[env.production.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimitDurableObject"
+
+[[env.production.migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[env.production.vars]
+APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_ENVIRONMENT = "production"
+MURMUR_ENV = "production"
+MURMUR_ENABLE_SPEECH = "true"
+OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it"
+OPENROUTER_SITE_URL = "https://murmur.q9labs.ai"
+OPENROUTER_APP_NAME = "Murmur"
+OPENROUTER_TIMEOUT_MS = "12000"
+OPENROUTER_PROVIDER_ORDER = "deepinfra/fp8"
+OPENROUTER_PROVIDER_ONLY = "deepinfra/fp8"
+OPENROUTER_PROVIDER_ALLOW_FALLBACKS = "false"
+OPENROUTER_PROVIDER_REQUIRE_PARAMETERS = "true"
+OPENROUTER_PROVIDER_DATA_COLLECTION = "deny"
+OPENROUTER_PROVIDER_SORT = "latency"
+CARTESIA_VERSION = "2026-03-01"
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
+GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
+TOKEN_TTL_SECONDS = "120"

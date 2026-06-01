@@ -1,0 +1,39 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { getWorkerBaseUrl, toWebSocketUrl } from "./config";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("Worker URL config", () => {
+  it("uses the explicit Expo public Worker URL when provided", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://worker.example.test");
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(getWorkerBaseUrl()).toBe("https://worker.example.test");
+  });
+
+  it("falls back to localhost only in development", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "");
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(getWorkerBaseUrl()).toBe("http://localhost:8787");
+  });
+
+  it("falls back to the public Murmur host outside development", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
+  });
+
+  it("converts HTTP URLs to matching WebSocket URLs", () => {
+    expect(toWebSocketUrl("https://murmur.q9labs.ai/v1/translate")).toBe(
+      "wss://murmur.q9labs.ai/v1/translate",
+    );
+    expect(toWebSocketUrl("http://localhost:8787/v1/translate")).toBe(
+      "ws://localhost:8787/v1/translate",
+    );
+  });
+});

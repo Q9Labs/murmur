@@ -1,0 +1,54 @@
+{
+  "cli": {
+    "version": ">= 18.8.1",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "android": {
+        "buildType": "apk"
+      },
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true,
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai"
+      },
+      "ios": {
+        "credentialsSource": "remote",
+        "simulator": false
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "6756962206"
+      }
+    }
+  }
+}

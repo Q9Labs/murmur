@@ -1,0 +1,14 @@
+Murmur turns live speech into translated captions.
+
+Pick a source language and a target language, tap Listen, and speak. Translated text appears as your speech is recognized. When available, Murmur can also play translated speech. If speech output is unavailable, captions continue.
+
+Features:
+- One-way live translation
+- Real-time translated captions
+- Optional translated speech output
+- English, Arabic, Spanish, French, Dutch, German, Hindi, Urdu, Portuguese, Chinese, Japanese, Korean, Turkish, Indonesian, and Italian launch-language registry
+- Accountless V1 with no login or cloud transcript history
+- Reset identity and delete local data controls
+- In-app report actions for translation issues
+
+Murmur uses AI speech recognition, translation, and speech generation providers. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.

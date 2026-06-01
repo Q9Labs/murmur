@@ -1,0 +1,7 @@
+Murmur is an accountless live translator for moments when you need speech to become readable captions in another language.
+
+Choose a source language and target language, tap Listen, and speak. Murmur streams your microphone only during the live session, shows translated captions as stable speech spans are recognized, and can play translated speech when speech output is available.
+
+Murmur V1 has no accounts, login, profiles, or cloud transcript history. You can stop or cancel a session at any time, reset your anonymous Murmur identity, and delete local Murmur data from the app.
+
+Murmur uses AI speech recognition, translation, and speech generation providers. Translations can be delayed, incomplete, or inaccurate. Do not rely on Murmur for emergencies, medical, legal, financial, immigration, or other high-stakes decisions without a qualified human interpreter.
