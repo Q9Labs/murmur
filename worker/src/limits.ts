@@ -25,6 +25,17 @@ export type LimitResult =
   | { ok: true }
   | { ok: false; code: string; retry_after_ms?: number };
 
+import {
+  beginSummaryWithStores,
+  beginTranslationWithStores,
+  canCreateSessionWithStores,
+  canRefreshTokensWithStores,
+  closeSessionWithStores,
+  createSessionRecordWithStores,
+  endSummaryWithStores,
+  endTranslationWithStores,
+} from "./rateLimiter/sessionStore";
+
 export const defaultRateLimits: RateLimitConfig = {
   activeSessionsPerInstall: 1,
   concurrentSummariesPerSession: 1,
@@ -39,27 +50,14 @@ export const defaultRateLimits: RateLimitConfig = {
 
 const sessionsById = new Map<string, SessionRecord>();
 const sessionStartsByInstall = new Map<string, number[]>();
+const memoryStore = { sessionStartsByInstall, sessionsById };
 
 export function createSessionRecord(params: {
   app_session_id: string;
   hashed_install_id: string;
   now_ms: number;
 }): SessionRecord {
-  const record: SessionRecord = {
-    app_session_id: params.app_session_id,
-    closed_at_ms: null,
-    created_at_ms: params.now_ms,
-    hashed_install_id: params.hashed_install_id,
-    in_flight_summaries: 0,
-    in_flight_translations: 0,
-    summary_timestamps: [],
-    translated_span_timestamps: [],
-  };
-  sessionsById.set(params.app_session_id, record);
-  const starts = sessionStartsByInstall.get(params.hashed_install_id) ?? [];
-  starts.push(params.now_ms);
-  sessionStartsByInstall.set(params.hashed_install_id, starts);
-  return record;
+  return createSessionRecordWithStores(params, memoryStore);
 }
 
 export function canCreateSession(params: {
@@ -67,32 +65,7 @@ export function canCreateSession(params: {
   hashed_install_id: string;
   now_ms: number;
 }): LimitResult {
-  pruneInstallStarts(params.hashed_install_id, params.now_ms);
-  closeExpiredSessions(params.config, params.now_ms);
-
-  const activeSessions = [...sessionsById.values()].filter(
-    (session) =>
-      session.hashed_install_id === params.hashed_install_id &&
-      session.closed_at_ms === null,
-  );
-  if (activeSessions.length >= params.config.activeSessionsPerInstall) {
-    return { ok: false, code: "active_session_limit" };
-  }
-
-  const starts = sessionStartsByInstall.get(params.hashed_install_id) ?? [];
-  const hourAgo = params.now_ms - 60 * 60 * 1000;
-  const dayAgo = params.now_ms - 24 * 60 * 60 * 1000;
-  const startsInHour = starts.filter((timestamp) => timestamp >= hourAgo);
-  const startsInDay = starts.filter((timestamp) => timestamp >= dayAgo);
-
-  if (startsInHour.length >= params.config.sessionsPerHour) {
-    return { ok: false, code: "sessions_per_hour_limit" };
-  }
-  if (startsInDay.length >= params.config.sessionsPerDay) {
-    return { ok: false, code: "sessions_per_day_limit" };
-  }
-
-  return { ok: true };
+  return canCreateSessionWithStores(params, memoryStore);
 }
 
 export function beginTranslation(params: {
@@ -101,41 +74,11 @@ export function beginTranslation(params: {
   source_caption: string;
   now_ms: number;
 }): LimitResult {
-  const session = sessionsById.get(params.app_session_id);
-  if (!session || session.closed_at_ms !== null) {
-    return { ok: false, code: "session_closed" };
-  }
-
-  if (params.now_ms - session.created_at_ms > params.config.maxSessionSeconds * 1000) {
-    closeSession(params.app_session_id, params.now_ms);
-    return { ok: false, code: "session_expired" };
-  }
-
-  if (params.source_caption.length > params.config.maxCharsPerSpan) {
-    return { ok: false, code: "span_too_long" };
-  }
-
-  session.translated_span_timestamps = session.translated_span_timestamps.filter(
-    (timestamp) => timestamp >= params.now_ms - 60 * 1000,
-  );
-  if (session.translated_span_timestamps.length >= params.config.translatedSpansPerMinute) {
-    return { ok: false, code: "translated_spans_per_minute_limit" };
-  }
-
-  if (session.in_flight_translations >= params.config.concurrentTranslationsPerSession) {
-    return { ok: false, code: "concurrent_translation_limit" };
-  }
-
-  session.in_flight_translations += 1;
-  session.translated_span_timestamps.push(params.now_ms);
-  return { ok: true };
+  return beginTranslationWithStores(params, memoryStore);
 }
 
 export function endTranslation(appSessionId: string): void {
-  const session = sessionsById.get(appSessionId);
-  if (session) {
-    session.in_flight_translations = Math.max(0, session.in_flight_translations - 1);
-  }
+  endTranslationWithStores(appSessionId, sessionsById);
 }
 
 export function beginSummary(params: {
@@ -143,46 +86,15 @@ export function beginSummary(params: {
   config: RateLimitConfig;
   now_ms: number;
 }): LimitResult {
-  const session = sessionsById.get(params.app_session_id);
-  if (!session || session.closed_at_ms !== null) {
-    return { ok: false, code: "session_closed" };
-  }
-
-  if (params.now_ms - session.created_at_ms > params.config.maxSessionSeconds * 1000) {
-    closeSession(params.app_session_id, params.now_ms);
-    return { ok: false, code: "session_expired" };
-  }
-
-  session.summary_timestamps = (session.summary_timestamps ?? []).filter(
-    (timestamp) => timestamp >= params.now_ms - 60 * 1000,
-  );
-  if (session.summary_timestamps.length >= params.config.summariesPerMinute) {
-    return { ok: false, code: "summaries_per_minute_limit" };
-  }
-
-  if ((session.in_flight_summaries ?? 0) >= params.config.concurrentSummariesPerSession) {
-    return { ok: false, code: "concurrent_summary_limit" };
-  }
-
-  session.in_flight_summaries = (session.in_flight_summaries ?? 0) + 1;
-  session.summary_timestamps.push(params.now_ms);
-  return { ok: true };
+  return beginSummaryWithStores(params, memoryStore);
 }
 
 export function endSummary(appSessionId: string): void {
-  const session = sessionsById.get(appSessionId);
-  if (session) {
-    session.in_flight_summaries = Math.max(0, (session.in_flight_summaries ?? 0) - 1);
-  }
+  endSummaryWithStores(appSessionId, sessionsById);
 }
 
 export function closeSession(appSessionId: string, nowMs: number): void {
-  const session = sessionsById.get(appSessionId);
-  if (session && session.closed_at_ms === null) {
-    session.closed_at_ms = nowMs;
-    session.in_flight_summaries = 0;
-    session.in_flight_translations = 0;
-  }
+  closeSessionWithStores(appSessionId, nowMs, sessionsById);
 }
 
 export function canRefreshTokens(params: {
@@ -191,41 +103,9 @@ export function canRefreshTokens(params: {
   hashed_install_id: string;
   now_ms: number;
 }): LimitResult {
-  const session = sessionsById.get(params.app_session_id);
-  if (!session || session.closed_at_ms !== null) {
-    return { ok: false, code: "session_closed" };
-  }
-  if (session.hashed_install_id !== params.hashed_install_id) {
-    return { ok: false, code: "session_install_mismatch" };
-  }
-  if (params.now_ms - session.created_at_ms > params.config.maxSessionSeconds * 1000) {
-    closeSession(params.app_session_id, params.now_ms);
-    return { ok: false, code: "session_expired" };
-  }
-  return { ok: true };
+  return canRefreshTokensWithStores(params, memoryStore);
 }
 
 export function getSession(appSessionId: string): SessionRecord | null {
   return sessionsById.get(appSessionId) ?? null;
-}
-
-function closeExpiredSessions(config: RateLimitConfig, nowMs: number): void {
-  for (const session of sessionsById.values()) {
-    if (
-      session.closed_at_ms === null &&
-      nowMs - session.created_at_ms > config.maxSessionSeconds * 1000
-    ) {
-      session.closed_at_ms = nowMs;
-      session.in_flight_summaries = 0;
-      session.in_flight_translations = 0;
-    }
-  }
-}
-
-function pruneInstallStarts(hashedInstallId: string, nowMs: number): void {
-  const starts = sessionStartsByInstall.get(hashedInstallId) ?? [];
-  sessionStartsByInstall.set(
-    hashedInstallId,
-    starts.filter((timestamp) => timestamp >= nowMs - 24 * 60 * 60 * 1000),
-  );
 }

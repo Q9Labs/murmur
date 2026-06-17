@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getWorkerBaseUrl, toWebSocketUrl } from "./config";
+import {
+  getDevTranslationModelRouteEnv,
+  getWorkerBaseUrl,
+  isUltravoxVadEnabledByDefault,
+  toWebSocketUrl,
+} from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -35,5 +40,13 @@ describe("Worker URL config", () => {
     expect(toWebSocketUrl("http://localhost:8787/v1/translate")).toBe(
       "ws://localhost:8787/v1/translate",
     );
+  });
+
+  it("centralizes public app experiment environment reads", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_DEV_MODEL_ROUTE", "experiment_ultravox_replacement");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ULTRAVOX_VAD", "off");
+
+    expect(getDevTranslationModelRouteEnv()).toBe("experiment_ultravox_replacement");
+    expect(isUltravoxVadEnabledByDefault()).toBe(false);
   });
 });

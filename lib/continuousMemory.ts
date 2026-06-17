@@ -3,11 +3,11 @@ import type {
   SessionSummary,
 } from "./transport/types";
 
-export const rollingMemorySourceCharLimit = 2500;
-export const rollingMemoryKeepRecentSourceChars = 1200;
-export const sessionSummaryCharLimit = 700;
-export const summarySourceCharLimit = 5000;
-export const totalTranslationContextCharLimit = 5000;
+const rollingMemorySourceCharLimit = 2500;
+const rollingMemoryKeepRecentSourceChars = 1200;
+const sessionSummaryCharLimit = 700;
+const summarySourceCharLimit = 5000;
+const totalTranslationContextCharLimit = 5000;
 
 export type ContinuousMemoryState = {
   memory_version: number;
@@ -52,7 +52,7 @@ export function appendRollingMemorySpan(
   };
 }
 
-export function rollingMemorySourceChars(spans: RollingMemorySpan[]): number {
+function rollingMemorySourceChars(spans: RollingMemorySpan[]): number {
   return spans.reduce((total, span) => total + span.source_char_count, 0);
 }
 

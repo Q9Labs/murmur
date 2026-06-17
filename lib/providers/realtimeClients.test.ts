@@ -398,4 +398,43 @@ describe("realtime provider clients", () => {
       reason: "deepgram_invalid_message",
     });
   });
+
+  it("parses Ultravox transcript messages and requests text output", async () => {
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+    const { UltravoxLiveClient } = await import("./ultravox");
+    const events: unknown[] = [];
+    const client = new UltravoxLiveClient({
+      onEvent: (event) => events.push(event),
+      url: "wss://ultravox.example/join",
+    });
+
+    client.connect();
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    socket.onmessage?.({
+      data: JSON.stringify({
+        delta: "مرحبا",
+        final: false,
+        ordinal: 1,
+        role: "agent",
+        type: "transcript",
+      }),
+    });
+    client.sendPcm16(new Uint8Array([1, 2]));
+
+    expect(socket.sent[0]).toEqual(JSON.stringify({ type: "set_output_medium", medium: "text" }));
+    expect(socket.sent[1]).toBeInstanceOf(ArrayBuffer);
+    expect(events).toEqual([
+      { type: "open", reason: "ultravox_open" },
+      {
+        delta: "مرحبا",
+        final: false,
+        medium: null,
+        ordinal: 1,
+        role: "agent",
+        text: null,
+        type: "transcript",
+      },
+    ]);
+  });
 });

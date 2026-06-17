@@ -23,6 +23,16 @@ export const devTranslationModelRouteOptions = [
     label: "GPT-OSS Cerebras",
     detail: "OpenRouter pinned to Cerebras",
   },
+  {
+    id: "experiment_groq_preview_gemma",
+    label: "Experiment: Groq preview + Gemma final",
+    detail: "Groq GPT-OSS 20B W/C preview, Gemma DeepInfra final",
+  },
+  {
+    id: "experiment_ultravox_replacement",
+    label: "Experiment: Ultravox replacement",
+    detail: "Ultravox realtime ASR + LLM full replacement",
+  },
 ] as const satisfies readonly {
   detail: string;
   id: TranslationModelRoute;
@@ -35,4 +45,12 @@ export function isTranslationModelRoute(value: unknown): value is TranslationMod
 
 export function getTranslationModelRouteLabel(route: TranslationModelRoute): string {
   return devTranslationModelRouteOptions.find((option) => option.id === route)?.label ?? "Worker default";
+}
+
+export function isGroqPreviewGemmaRoute(route: TranslationModelRoute | undefined): boolean {
+  return route === "experiment_groq_preview_gemma";
+}
+
+export function isUltravoxReplacementRoute(route: TranslationModelRoute | undefined): boolean {
+  return route === "experiment_ultravox_replacement";
 }

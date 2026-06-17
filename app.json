@@ -3,13 +3,13 @@
     "name": "Murmur",
     "owner": "q9labs",
     "slug": "murmur",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "scheme": "murmur",
     "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
     "ios": {
-      "buildNumber": "8",
+      "buildNumber": "9",
       "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Murmur needs microphone access to stream speech for live translation.",
@@ -88,7 +88,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.q9labsai.murmur",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

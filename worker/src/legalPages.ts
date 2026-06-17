@@ -12,6 +12,10 @@ const marketingUpdated = "2026-05-20";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
+const appStoreUrl = "https://apps.apple.com/app/id6756962206";
+const googlePlayUrl = "https://play.google.com/store/apps/details?id=com.q9labsai.murmur";
+const appleLogoSvg = `<svg class="store-logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.564 13.02c-.012-2.17 1.77-3.21 1.85-3.26-1.01-1.48-2.58-1.68-3.14-1.7-1.34-.13-2.61.79-3.29.79-.68 0-1.72-.77-2.83-.75-1.46.02-2.8.85-3.55 2.16-1.51 2.62-.39 6.5 1.08 8.63.72 1.04 1.58 2.21 2.71 2.17 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.83.68 1.17-.02 1.91-1.06 2.62-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.28-.88-2.3-3.48M15.37 6.65c.6-.73 1.01-1.74.9-2.75-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.22"/></svg>`;
+const playLogoSvg = `<svg class="store-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="#00D7FE" d="M3.27 2.6a1.2 1.2 0 0 0-.32.86v17.08c0 .35.12.65.33.86l.06.05 9.46-9.46v-.22L3.33 2.55z"/><path fill="#FFC107" d="m16.07 15.06-3.16-3.16v-.22l3.16-3.16.07.04 3.74 2.13c1.07.6 1.07 1.6 0 2.21l-3.81 2.16z"/><path fill="#FF3D49" d="m16.14 15.02-3.23-3.23-9.64 9.64c.35.37.93.42 1.59.05l11.28-6.46"/><path fill="#00F076" d="M16.14 8.56 4.86 2.11C4.2 1.73 3.62 1.78 3.27 2.16l9.64 9.63z"/></svg>`;
 const defaultKeywords = [
   "live speech translation app",
   "live voice translator",
@@ -32,72 +36,94 @@ export const legalPages: Record<string, Page> = {
       "Murmur is an accountless live speech translation app with real-time translated captions, optional translated speech, and no cloud transcript history by default.",
     keywords: defaultKeywords,
     html: `
-      <section class="hero-section">
-        <div class="hero-card">
-          <div class="hero-wave hero-wave-coral"></div>
-          <div class="hero-wave hero-wave-mint"></div>
-          <div class="hero-inner">
-            <div class="preview-header">
-              <span>English</span>
-              <span class="preview-arrow">→</span>
-              <span>Arabic</span>
-            </div>
-            <h2 class="preview-translation">أين محطة القطار؟</h2>
-            <p class="preview-source">Where is the train station?</p>
-            <div class="preview-meter">
-              <div class="meter-bar" style="height: 14px; opacity: 0.75;"></div>
-              <div class="meter-bar" style="height: 28px; opacity: 0.9;"></div>
-              <div class="meter-bar" style="height: 42px;"></div>
-              <div class="meter-bar" style="height: 28px; opacity: 0.9;"></div>
-              <div class="meter-bar" style="height: 14px; opacity: 0.75;"></div>
-            </div>
-          </div>
-        </div>
+      <section class="hero">
         <div class="hero-copy">
-          <h1>Murmur Translate: accountless live speech translation</h1>
-          <p>Speak once and see translated captions appear in real time. Murmur is built for simple one-way moments: choose a language direction, tap Listen, and follow the translation as speech is recognized.</p>
+          <h1>Understand anyone,<br><em>the moment they speak.</em></h1>
+          <p class="lede">Murmur turns live speech into translated captions on your screen, in real time. Pick a language direction, tap Listen, and just read along.</p>
           <div class="hero-actions">
-            <span class="button-pill-coral" aria-disabled="true">Listen</span>
-            <p class="hero-hint">Store links will appear after review.</p>
+            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
+          </div>
+          <p class="hero-points">Real-time captions · No account · Nothing saved by default</p>
+        </div>
+        <div class="hero-card">
+          <span class="hero-card-glow"></span>
+          <div class="hero-inner">
+            <div class="lang-row"><span class="dot-live"></span> Translating live</div>
+            <div class="cap-stack">
+              <div class="cap-slide cap-1"><p class="cap-translation" dir="rtl">أين محطة القطار؟</p><p class="cap-source">English &rarr; Arabic &middot; &ldquo;Where is the train station?&rdquo;</p></div>
+              <div class="cap-slide cap-2"><p class="cap-translation">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</p><p class="cap-source">English &rarr; Spanish &middot; &ldquo;Where is the station?&rdquo;</p></div>
+              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39423;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">English &rarr; Japanese &middot; &ldquo;Where is the train station?&rdquo;</p></div>
+            </div>
+            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
       </section>
 
-      <section class="privacy-panel">
-        <div class="privacy-mic-shell">
-          <div class="privacy-mic">
-            <div class="mic-capsule"></div>
-            <div class="mic-stem"></div>
-          </div>
-          <div class="pulse-outer"></div>
-          <div class="pulse-inner"></div>
+      <div class="ticker" aria-hidden="true">
+        <div class="ticker-row">
+          <span>English</span><span>Espa&ntilde;ol</span><span>&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</span><span>&#26085;&#26412;&#35486;</span><span>Fran&ccedil;ais</span><span>&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</span><span>Deutsch</span><span>&#20013;&#25991;</span><span>Portugu&ecirc;s</span><span>&#54620;&#44397;&#50612;</span><span>Italiano</span><span>T&uuml;rk&ccedil;e</span><span>English</span><span>Espa&ntilde;ol</span><span>&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</span><span>&#26085;&#26412;&#35486;</span><span>Fran&ccedil;ais</span><span>&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</span><span>Deutsch</span><span>&#20013;&#25991;</span><span>Portugu&ecirc;s</span><span>&#54620;&#44397;&#50612;</span><span>Italiano</span><span>T&uuml;rk&ccedil;e</span>
         </div>
-        <h3>Only while listening</h3>
-        <p>Microphone access is used during live sessions. Murmur processes stable captions only to translate them, and does not save audio or transcript history by default.</p>
+      </div>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>From speech to caption in one tap.</h2>
+          <p>No phrasebooks, no typing, no passing the phone back and forth. Murmur does one thing well &mdash; it listens, and writes it down in your language.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="stage stage-mint">
+              <div class="pick"><span class="pill">English</span><span class="pick-arrow">→</span><span class="pill pill-alt">Arabic</span></div>
+            </div>
+            <h3>Pick a direction</h3>
+            <p>Choose the language you&rsquo;ll hear and the one you want to read.</p>
+          </div>
+          <div class="step">
+            <div class="stage stage-teal">
+              <span class="mic-pulse"></span><span class="mic-pulse"></span>
+              <div class="mic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
+            </div>
+            <h3>Tap Listen</h3>
+            <p>Murmur uses your microphone only while a session is live.</p>
+          </div>
+          <div class="step">
+            <div class="stage stage-cream">
+              <div class="caption-demo"><span class="cap-line">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</span><span class="cap-line">Where is the station?</span></div>
+            </div>
+            <h3>Read along</h3>
+            <p>Translated captions appear as each phrase is recognized.</p>
+          </div>
+        </div>
       </section>
 
-      <section class="feature-grid">
-        <div class="feature-card">
-          <h4>One-way live translation</h4>
-          <p>Pick a source and target language, then translate speech into clear captions as stable phrases are recognized.</p>
-        </div>
-        <div class="feature-card">
-          <h4>No account required</h4>
-          <p>No login, profile, subscription account, or synced transcript library in V1.</p>
-        </div>
-        <div class="feature-card">
+      <section class="values">
+        <div class="value">
+          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10h4M7 14h7M15 10h2"/></svg></div>
           <h4>Captions first</h4>
-          <p>Translated captions stay useful even when generated speech is unavailable or delayed.</p>
+          <p>Clear, readable text &mdash; even when spoken output isn&rsquo;t available.</p>
         </div>
-        <div class="feature-card">
-          <h4>Privacy-conscious defaults</h4>
-          <p>Murmur does not save audio or transcript history by default. Microphone audio is used only during live sessions.</p>
+        <div class="value">
+          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M17 9l4 4M21 9l-4 4"/></svg></div>
+          <h4>No account</h4>
+          <p>No login, profile, or subscription to get in your way.</p>
+        </div>
+        <div class="value">
+          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+          <h4>Yours alone</h4>
+          <p>No audio or transcript history saved by default.</p>
         </div>
       </section>
 
-      <section class="positioning-panel">
-        <h2>Built for simple one-way live translation</h2>
-        <p>Many translation apps focus on text, cameras, phrasebooks, or two-person conversation modes. Murmur focuses on one thing: turning live speech into translated captions you can read as the session happens.</p>
+      <section class="cta">
+        <div class="cta-inner">
+          <h2>Start translating in seconds.</h2>
+          <p>Free to try, with nothing to sign up for. Download Murmur and read the room in any language.</p>
+          <div class="hero-actions">
+            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
+          </div>
+        </div>
       </section>
     `,
   },
@@ -270,6 +296,9 @@ function renderHtml(page: Page): string {
     <meta name="twitter:description" content="${escapeHtml(socialDescription)}">
     <title>${escapeHtml(page.title)}</title>
     ${jsonLd}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
     <style>
       :root {
         --canvas: #F4FFF9;
@@ -283,6 +312,7 @@ function renderHtml(page: Page): string {
         --text-primary: #151513;
         --text-secondary: #6B7B72;
         --font-main: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-display: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
       }
 
       * { box-sizing: border-box; }
@@ -296,9 +326,9 @@ function renderHtml(page: Page): string {
       }
 
       .container {
-        max-width: 900px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 0 24px;
+        padding: 0 28px;
       }
 
       header {
@@ -336,274 +366,305 @@ function renderHtml(page: Page): string {
       main { padding-bottom: 80px; }
 
       /* Marketing Styles */
-      .hero-section {
+      .hero {
         display: flex;
         flex-direction: column;
-        gap: 48px;
+        gap: 44px;
         padding-top: 40px;
       }
 
-      @media (min-width: 768px) {
-        .hero-section {
-          flex-direction: row-reverse;
+      @media (min-width: 880px) {
+        .hero {
+          flex-direction: row;
           align-items: center;
           justify-content: space-between;
-          padding-top: 60px;
+          gap: 72px;
+          padding-top: 72px;
         }
-        .hero-copy { flex: 1; }
-        .hero-card { flex: 1; max-width: 420px; }
-      }
-
-      .hero-card {
-        background: var(--deep-teal);
-        border-radius: 32px;
-        padding: 32px 24px;
-        position: relative;
-        overflow: hidden;
-        min-height: 320px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        box-shadow: 0 18px 28px rgba(13, 124, 102, 0.24);
-      }
-
-      .hero-wave {
-        position: absolute;
-        width: 260px;
-        height: 58px;
-        border-radius: 999px;
-        opacity: 0.64;
-        transform: rotate(-18deg);
-      }
-
-      .hero-wave-coral {
-        background: #FF8A65;
-        right: -74px;
-        top: 20px;
-      }
-
-      .hero-wave-mint {
-        background: #35D0BA;
-        bottom: 24px;
-        left: -86px;
-      }
-
-      .hero-inner { position: relative; z-index: 2; text-align: center; }
-
-      .preview-header {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        color: #F8FFFC;
-        font-size: 0.85rem;
-        font-weight: 800;
-        margin-bottom: 24px;
-      }
-
-      .preview-arrow { color: #B9F5E5; font-weight: 900; }
-
-      .preview-translation {
-        color: #FFFFFF;
-        font-size: 2rem;
-        font-weight: 800;
-        margin: 0 0 12px;
-        line-height: 1.2;
-        direction: rtl;
-      }
-
-      .preview-source {
-        color: #D8FFF4;
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0;
-      }
-
-      .preview-meter {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        margin-top: 32px;
-      }
-
-      .meter-bar {
-        width: 6px;
-        background: var(--yellow);
-        border-radius: 999px;
+        .hero-copy { flex: 1.05; }
+        .hero-card { flex: 1; max-width: 480px; }
       }
 
       .hero-copy h1 {
-        font-size: clamp(2.25rem, 8vw, 3.25rem);
+        font-family: var(--font-display);
+        font-size: clamp(2.8rem, 7.5vw, 5.2rem);
         font-weight: 800;
-        line-height: 1.1;
-        margin: 0 0 20px;
-        letter-spacing: 0;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+        margin: 0 0 24px;
       }
+      .hero-copy h1 em { font-style: normal; color: var(--coral); }
 
-      .hero-copy p {
-        font-size: 1.15rem;
+      .lede {
+        font-size: clamp(1.1rem, 2.2vw, 1.3rem);
         color: var(--text-secondary);
-        margin: 0 0 32px;
-        max-width: 400px;
+        line-height: 1.55;
+        max-width: 480px;
+        margin: 0 0 30px;
         font-weight: 500;
       }
 
-      .hero-actions { display: flex; flex-direction: column; gap: 12px; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
-      .button-pill-coral {
-        background: var(--coral);
-        color: #FFFFFF;
-        font-weight: 800;
-        font-size: 1.125rem;
-        padding: 16px 40px;
-        border-radius: 999px;
-        display: inline-block;
-        text-align: center;
-        width: fit-content;
-        box-shadow: 0 10px 20px rgba(255, 107, 74, 0.24);
-      }
-
-      .hero-hint {
-        font-size: 0.85rem;
+      .hero-points {
+        margin: 26px 0 0;
         color: var(--text-secondary);
         font-weight: 700;
-        margin: 0 !important;
+        font-size: 0.95rem;
       }
 
-      .privacy-panel {
+      .store-button {
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 54px;
+        padding: 14px 26px;
+        text-decoration: none;
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.2;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .store-button:hover { transform: translateY(-2px); }
+      .store-logo { width: 22px; height: 22px; flex: 0 0 auto; }
+      .store-button-primary {
+        background: var(--coral);
+        color: #FFFFFF;
+        box-shadow: 0 12px 24px rgba(255, 107, 74, 0.28);
+      }
+      .store-button-secondary {
         background: #FFFFFF;
         border: 1px solid var(--mint-border);
-        border-radius: 32px;
-        padding: 48px 32px;
-        text-align: center;
-        margin-top: 80px;
-        box-shadow: 0 16px 28px rgba(24, 169, 153, 0.14);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        color: var(--deep-teal-text);
+        box-shadow: 0 10px 18px rgba(13, 124, 102, 0.12);
       }
 
-      .privacy-mic-shell {
-        width: 210px;
-        height: 210px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      /* Hero live preview */
+      .hero-card {
         position: relative;
-        margin-bottom: 24px;
-      }
-
-      .privacy-mic {
+        overflow: hidden;
         background: var(--deep-teal);
-        width: 76px;
-        height: 76px;
-        border-radius: 38px;
+        border-radius: 32px;
+        padding: 30px 26px;
+        min-height: 340px;
         display: flex;
         flex-direction: column;
-        align-items: center;
         justify-content: center;
-        z-index: 3;
+        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.28);
       }
-
-      .mic-capsule {
-        width: 18px;
-        height: 34px;
-        background: #FFFFFF;
-        border-radius: 999px;
-      }
-
-      .mic-stem {
-        width: 5px;
-        height: 18px;
-        background: #FFFFFF;
-        border-radius: 999px;
-        margin-top: -2px;
-      }
-
-      .pulse-outer {
+      .hero-card-glow {
         position: absolute;
-        width: 210px;
-        height: 210px;
-        background: #FF8A65;
-        border-radius: 999px;
-        opacity: 0.16;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(127, 231, 212, 0.42), transparent 68%);
+        top: -100px;
+        right: -80px;
+        pointer-events: none;
       }
 
-      .pulse-inner {
+      .hero-inner { position: relative; z-index: 2; }
+      .dot-live {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--coral);
+        box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.22);
+        animation: blink 1.4s ease-in-out infinite;
+      }
+      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+      .lang-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0 0 16px;
+        color: #BFEFE2;
+        font-weight: 800;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .cap-stack { position: relative; min-height: 132px; }
+      .cap-slide {
         position: absolute;
-        width: 138px;
-        height: 138px;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 18px;
+        padding: 18px 20px;
+        opacity: 0;
+        animation: capcycle 9s ease-in-out infinite;
+      }
+      .cap-2 { animation-delay: 3s; }
+      .cap-3 { animation-delay: 6s; }
+      @keyframes capcycle {
+        0% { opacity: 0; transform: translateY(12px); }
+        4% { opacity: 1; transform: translateY(0); }
+        28% { opacity: 1; transform: translateY(0); }
+        33% { opacity: 0; transform: translateY(-12px); }
+        100% { opacity: 0; transform: translateY(-12px); }
+      }
+      .cap-translation {
+        color: #FFFFFF;
+        font-size: clamp(1.6rem, 4.6vw, 2rem);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 10px;
+      }
+      .cap-source { color: #BFEFE2; font-size: 0.92rem; font-weight: 600; margin: 0; line-height: 1.45; }
+
+      .eq { display: flex; align-items: flex-end; justify-content: center; gap: 5px; height: 40px; margin-top: 22px; }
+      .eq i {
+        width: 6px;
+        height: 100%;
         background: var(--yellow);
         border-radius: 999px;
-        opacity: 0.24;
+        transform-origin: bottom;
+        animation: eq 1.1s ease-in-out infinite;
       }
+      .eq i:nth-child(odd) { background: #7FE7D4; }
+      .eq i:nth-child(2) { animation-delay: -0.9s; }
+      .eq i:nth-child(3) { animation-delay: -0.6s; }
+      .eq i:nth-child(4) { animation-delay: -0.3s; }
+      .eq i:nth-child(5) { animation-delay: -0.75s; }
+      .eq i:nth-child(6) { animation-delay: -0.15s; }
+      .eq i:nth-child(7) { animation-delay: -0.5s; }
+      .eq i:nth-child(8) { animation-delay: -0.85s; }
+      .eq i:nth-child(9) { animation-delay: -0.35s; }
+      @keyframes eq { 0%, 100% { transform: scaleY(0.28); } 50% { transform: scaleY(1); } }
 
-      .privacy-panel h3 {
-        font-size: 2rem;
-        font-weight: 800;
+      /* Languages ticker */
+      .ticker {
+        margin-top: 64px;
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      }
+      .ticker-row {
+        display: inline-flex;
+        gap: 44px;
+        white-space: nowrap;
+        will-change: transform;
+        animation: ticker 34s linear infinite;
+      }
+      .ticker-row span {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: clamp(1.3rem, 3vw, 1.9rem);
         color: var(--deep-teal-text);
-        margin: 0 0 12px;
+        opacity: 0.4;
       }
+      .ticker-row span:nth-child(3n) { color: var(--coral); opacity: 0.75; }
+      .ticker-row span:nth-child(5n) { color: var(--deep-teal); opacity: 0.7; }
+      @keyframes ticker { to { transform: translateX(-50%); } }
 
-      .privacy-panel p {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-        max-width: 480px;
-        margin: 0;
-        font-weight: 600;
-      }
-
-      .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 24px;
-        margin-top: 48px;
-      }
-
-      .feature-card {
-        background: var(--mint);
-        border: 1px solid var(--mint-border);
-        border-radius: 24px;
-        padding: 24px;
-      }
-
-      .feature-card h4 {
-        font-size: 1.25rem;
+      /* How it works */
+      .section { padding-top: 84px; }
+      .section-head { max-width: 620px; margin: 0 0 44px; }
+      .section-head h2 {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 5vw, 3rem);
         font-weight: 800;
-        color: var(--deep-teal-text);
-        margin: 0 0 8px;
-      }
-
-      .feature-card p {
-        font-size: 0.95rem;
-        color: var(--text-secondary);
-        margin: 0;
-        font-weight: 600;
-      }
-
-      .positioning-panel {
-        background: var(--cream);
-        border-radius: 32px;
-        margin-top: 48px;
-        padding: 36px 32px;
-      }
-
-      .positioning-panel h2 {
-        color: var(--deep-teal-text);
-        font-size: clamp(1.75rem, 5vw, 2.35rem);
-        font-weight: 800;
-        letter-spacing: 0;
-        line-height: 1.15;
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        color: var(--text-primary);
         margin: 0 0 14px;
       }
+      .section-head p { font-size: 1.1rem; color: var(--text-secondary); font-weight: 500; margin: 0; line-height: 1.55; }
 
-      .positioning-panel p {
-        color: var(--text-secondary);
-        font-size: 1.05rem;
-        font-weight: 600;
-        margin: 0;
-        max-width: 680px;
+      .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+      @media (max-width: 760px) { .steps { grid-template-columns: 1fr; max-width: 420px; } }
+      .stage {
+        aspect-ratio: 5 / 4;
+        border-radius: 26px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      .stage > * { grid-area: 1 / 1; }
+      .stage-mint { background: var(--mint); border: 1px solid var(--mint-border); }
+      .stage-teal { background: var(--deep-teal); }
+      .stage-cream { background: var(--cream); }
+      .step h3 { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; margin: 22px 0 6px; color: var(--deep-teal-text); }
+      .step p { color: var(--text-secondary); font-weight: 500; margin: 0; font-size: 0.98rem; line-height: 1.5; }
+
+      .pick { display: flex; align-items: center; gap: 12px; }
+      .pill { background: #FFFFFF; border: 1px solid var(--mint-border); color: var(--deep-teal-text); font-weight: 800; font-size: 0.95rem; padding: 12px 18px; border-radius: 999px; box-shadow: 0 8px 16px rgba(13, 124, 102, 0.08); }
+      .pill-alt { background: var(--deep-teal); color: #FFFFFF; border-color: var(--deep-teal); }
+      .pick-arrow { color: var(--coral); font-weight: 900; font-size: 1.3rem; animation: nudge 1.4s ease-in-out infinite; }
+      @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+
+      .mic-btn { width: 84px; height: 84px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; color: var(--deep-teal); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18); z-index: 2; }
+      .mic-btn svg { width: 34px; height: 34px; }
+      .mic-pulse { width: 84px; height: 84px; border-radius: 50%; background: var(--yellow); opacity: 0; animation: pulse-ring 2s ease-out infinite; }
+      .mic-pulse:nth-child(2) { animation-delay: 1s; }
+      @keyframes pulse-ring { 0% { transform: scale(0.7); opacity: 0.5; } 100% { transform: scale(1.9); opacity: 0; } }
+
+      .caption-demo { width: 78%; display: grid; gap: 10px; }
+      .cap-line {
+        background: #FFFFFF;
+        border: 1px solid var(--mint-border);
+        border-radius: 14px 14px 14px 4px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--deep-teal-text);
+        box-shadow: 0 6px 14px rgba(13, 124, 102, 0.08);
+        opacity: 0;
+        animation: rise 3.6s ease-in-out infinite;
+      }
+      .cap-line:nth-child(2) { animation-delay: 1.8s; }
+      @keyframes rise {
+        0% { opacity: 0; transform: translateY(10px); }
+        14%, 72% { opacity: 1; transform: translateY(0); }
+        92%, 100% { opacity: 0; transform: translateY(-6px); }
+      }
+
+      /* Value props */
+      .values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding-top: 84px; }
+      @media (max-width: 760px) { .values { grid-template-columns: 1fr; max-width: 420px; } }
+      .value { display: flex; flex-direction: column; }
+      .value-ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--mint); color: var(--deep-teal); margin-bottom: 14px; }
+      .value-ico svg { width: 22px; height: 22px; }
+      .value h4 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--deep-teal-text); margin: 0 0 6px; }
+      .value p { color: var(--text-secondary); font-weight: 500; margin: 0; font-size: 0.98rem; line-height: 1.5; }
+
+      /* Closing CTA */
+      .cta { margin-top: 84px; }
+      .cta-inner {
+        position: relative;
+        overflow: hidden;
+        background: var(--deep-teal);
+        border-radius: 32px;
+        padding: clamp(40px, 6vw, 72px) 32px;
+        text-align: center;
+        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.26);
+      }
+      .cta-inner h2 {
+        position: relative;
+        z-index: 2;
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: #FFFFFF;
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        margin: 0 0 14px;
+      }
+      .cta-inner p { position: relative; z-index: 2; color: #CFF6EB; font-size: 1.1rem; font-weight: 500; max-width: 440px; margin: 0 auto 28px; }
+      .cta-inner .hero-actions { position: relative; z-index: 2; justify-content: center; }
+      .cta-inner .store-button-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); color: #FFFFFF; box-shadow: none; }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; }
+        .cap-line { opacity: 1; }
+        .cap-slide { opacity: 0; }
+        .cap-slide.cap-1 { opacity: 1; }
+        .eq i { transform: scaleY(0.7); }
       }
 
       /* Legal Styles */

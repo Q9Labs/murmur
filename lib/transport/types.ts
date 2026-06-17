@@ -9,7 +9,9 @@ export type TranslationModelRoute =
   | "worker_default"
   | "openrouter_gemma_deepinfra"
   | "groq_gpt_oss_120b_low"
-  | "openrouter_gpt_oss_120b_cerebras";
+  | "openrouter_gpt_oss_120b_cerebras"
+  | "experiment_groq_preview_gemma"
+  | "experiment_ultravox_replacement";
 
 export type SessionSummary = {
   memory_version: number;
@@ -35,24 +37,6 @@ export type ProviderTokenBundle = {
   token_bundle_id: string;
 };
 
-export type CreateSessionRequest = {
-  app_install_id: string;
-  device_integrity?: {
-    available: boolean;
-    key_id?: string;
-    kind?: string;
-    nonce?: string;
-    platform: string;
-    provider?: string;
-    reason?: string;
-    token?: string;
-  };
-  source_language: SourceLanguageCode;
-  target_language: LanguageCode;
-  translation_model_route?: TranslationModelRoute;
-  translation_mode?: TranslationMode;
-};
-
 export type CreateSessionResponse = {
   app_session_id: string;
   limits?: {
@@ -66,10 +50,16 @@ export type CreateSessionResponse = {
     enabled: boolean;
   };
   tokens: ProviderTokenBundle;
-  deepgram_ws_url: string;
-  translate_ws_url: string;
+  deepgram_ws_url?: string;
+  translate_ws_url?: string;
   translation_model_route?: TranslationModelRoute;
   translation_mode?: TranslationMode;
+  ultravox?: {
+    call_id: string;
+    join_url: string;
+    vad_enabled: boolean;
+    vad_profile: "default" | "low_latency";
+  };
 };
 
 export type RefreshSessionTokenResponse = {

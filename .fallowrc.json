@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignorePatterns": [
+    "assets/**",
+    "coverage/**",
+    "docs/**",
+    "fastlane/**",
+    "scratchpad/**",
+    "store-assets/**"
+  ],
+  "ignoreDependencies": [
+    "@react-navigation/native",
+    "babel-preset-expo",
+    "react-native-web"
+  ],
+  "audit": {
+    "gate": "new-only",
+    "deadCodeBaseline": "scripts/gates/fallow-baselines/dead-code.json",
+    "healthBaseline": "scripts/gates/fallow-baselines/health.json",
+    "dupesBaseline": "scripts/gates/fallow-baselines/dupes.json"
+  }
+}

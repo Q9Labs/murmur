@@ -6,6 +6,7 @@ export type SessionState =
   | "requesting_mic_permission"
   | "creating_session"
   | "connecting_deepgram"
+  | "connecting_ultravox"
   | "connecting_translate_ws"
   | "live"
   | "network_degraded"
@@ -155,6 +156,7 @@ export function isActiveOrRecoveringSession(status: SessionState): boolean {
     "requesting_mic_permission",
     "creating_session",
     "connecting_deepgram",
+    "connecting_ultravox",
     "connecting_translate_ws",
     "live",
     "network_degraded",

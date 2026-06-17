@@ -1,0 +1,161 @@
+{
+  "finding_counts": {
+    "app/home/components.tsx": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "app/home/diagnostics.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/index.tsx": {
+      "complexity_critical": {
+        "count": 2
+      },
+      "crap_critical": {
+        "count": 4
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/live-translation/useLiveTranslation.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_high": {
+        "count": 6
+      },
+      "crap_moderate": {
+        "count": 17
+      }
+    },
+    "lib/live-translation/workerApi.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/providers/deepgram.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/benchmark-translation-experiments.mjs": {
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "scripts/gates/test-presence.mjs": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/smoke-latency.mjs": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "scripts/validate-no-secrets.mjs": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "scripts/validate-store-assets.mjs": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "worker/src/env.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "worker/src/index.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "worker/src/playIntegrity.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "worker/src/providers/chatCompletionStream.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "worker/src/rateLimitDurableObject.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "worker/src/routes/session.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "worker/src/sockets/deepgram.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "worker/src/sockets/translate.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "worker/src/translation/validation.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "app/index.tsx:complexity",
+    "worker/src/privacy.ts:high impact",
+    "worker/src/translation/validation.ts:high impact"
+  ]
+}

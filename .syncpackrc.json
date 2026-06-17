@@ -1,0 +1,17 @@
+{
+  "semverGroups": [
+    {
+      "range": "",
+      "dependencies": ["react", "react-dom", "react-native"]
+    },
+    {
+      "range": "^",
+      "dependencyTypes": ["dev", "prod"],
+      "dependencies": ["!react", "!react-dom", "!react-native", "!expo", "!expo-*", "!babel-preset-expo", "!@types/react", "!typescript"]
+    },
+    {
+      "range": "~",
+      "dependencies": ["expo", "expo-*", "babel-preset-expo", "@types/react", "typescript"]
+    }
+  ]
+}

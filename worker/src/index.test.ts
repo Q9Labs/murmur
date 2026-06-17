@@ -24,16 +24,8 @@ const appAttestMocks = vi.hoisted(() => {
 vi.mock("@bradford-tech/supabase-integrity-attest", () => appAttestMocks);
 
 import worker, {
-  buildGroqChatPayload,
-  buildOpenRouterChatPayload,
-  buildOpenRouterProviderPreferences,
-  getReadiness,
   getTranslationErrorCode,
   handleSocketMessage,
-  parseInterpreterTargetAction,
-  parseOpenRouterChunk,
-  parseStreamingInterpreterTargetAction,
-  validateTranslationRequest,
 } from "./index";
 import type { SummaryRequest, TranslationRequest } from "../../lib/transport/types";
 import { defaultRateLimits } from "./limits";
@@ -47,6 +39,12 @@ import {
 } from "./rateLimitDurableObject";
 
 const WEBSOCKET_OPEN = 1;
+const configuredProviderEnv = {
+  CARTESIA_API_KEY: "cartesia_key",
+  CARTESIA_DEFAULT_VOICE_ID: "voice_default",
+  DEEPGRAM_API_KEY: "deepgram_key",
+  OPENROUTER_API_KEY: "openrouter_key",
+};
 
 vi.stubGlobal("WebSocket", { CONNECTING: 0, OPEN: WEBSOCKET_OPEN });
 
@@ -79,27 +77,268 @@ function makeSummaryRequestBody(appSessionId: string): SummaryRequest {
   };
 }
 
+type SocketMessage = Parameters<typeof handleSocketMessage>[1];
+type WorkerEnv = Parameters<typeof handleSocketMessage>[2];
+type TranslationSocketRequest = TranslationRequest & { kind: "translate" };
+
+function makeSseResponse(lines: string[]): Response {
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(lines.join("\n")));
+        controller.close();
+      },
+    }),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
+}
+
+function makeSseLines(...events: string[]): string[] {
+  return events.flatMap((event) => [event, ""]);
+}
+
+function makeCollectingSocket(): { sent: unknown[]; socket: SocketMessage } {
+  const sent: unknown[] = [];
+  const socket = {
+    close: vi.fn(),
+    readyState: WEBSOCKET_OPEN,
+    send: (payload: string) => sent.push(JSON.parse(payload)),
+  } as unknown as SocketMessage;
+  return { sent, socket };
+}
+
+async function createTestSession(sessionPrefix: string, installPrefix: string): Promise<string> {
+  const appSessionId = `${sessionPrefix}_${Date.now()}`;
+  await createSessionRecordDurable({
+    app_session_id: appSessionId,
+    hashed_install_id: `${installPrefix}_${Date.now()}`,
+    now_ms: Date.now(),
+  });
+  return appSessionId;
+}
+
+async function fetchProductionText(path: string): Promise<{ body: string; response: Response }> {
+  const response = await worker.fetch(new Request(`https://worker.example${path}`), {
+    MURMUR_ENV: "production",
+  });
+  return { body: await response.text(), response };
+}
+
+function makePlayIntegrityDeviceIntegrity(nonce: string): Record<string, unknown> {
+  return {
+    available: true,
+    nonce,
+    platform: "android",
+    provider: "play_integrity",
+    token: "integrity_token_long_enough_for_worker_contract",
+  };
+}
+
+function makeAppAttestDeviceIntegrity(nonce: string, kind: "assertion" | "attestation"): Record<string, unknown> {
+  return {
+    available: true,
+    key_id: "app_attest_key",
+    kind,
+    nonce,
+    platform: "ios",
+    provider: "app_attest",
+    token: `${kind}_payload_long_enough_for_worker_contract`,
+  };
+}
+
+function makeTranslateRequest(
+  appSessionId: string,
+  spanId: string,
+  overrides: Partial<TranslationRequest> = {},
+): TranslationSocketRequest {
+  return {
+    app_session_id: appSessionId,
+    connection_id: "connection_translate",
+    context_spans: [],
+    event_seq: 1,
+    kind: "translate",
+    revision: 1,
+    session_epoch: 1,
+    source_caption: "Hello",
+    source_language: "en",
+    span_id: spanId,
+    target_language: "ar",
+    translation_attempt: 1,
+    ...overrides,
+  };
+}
+
+async function sendTranslateRequest(
+  request: TranslationSocketRequest,
+  env: WorkerEnv,
+): Promise<unknown[]> {
+  const { sent, socket } = makeCollectingSocket();
+  await handleSocketMessage(JSON.stringify(request), socket, env, new Map());
+  return sent;
+}
+
+function makeJsonPostRequest(url: string, body: unknown): Request {
+  return new Request(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function postSummary(body: SummaryRequest, env: WorkerEnv = { OPENROUTER_API_KEY: "openrouter_key" }): Promise<Response> {
+  return worker.fetch(makeJsonPostRequest("https://murmur.test/v1/summary", body), env);
+}
+
+async function expectSummaryRejectedBeforeOpenRouter(
+  body: SummaryRequest,
+  status: number,
+  expectedJson: unknown,
+): Promise<void> {
+  let upstreamCalled = false;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    upstreamCalled = true;
+    return Response.json({ choices: [{ message: { content: "should not run" } }] });
+  };
+
+  try {
+    const response = await postSummary(body);
+    expect(response.status).toBe(status);
+    await expect(response.json()).resolves.toEqual(expectedJson);
+    expect(upstreamCalled).toBe(false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function makeSessionBody(
+  appInstallId: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    app_install_id: appInstallId,
+    source_language: "en",
+    target_language: "ar",
+    ...overrides,
+  };
+}
+
+async function postSession(body: Record<string, unknown>, env: WorkerEnv = configuredProviderEnv): Promise<Response> {
+  return worker.fetch(makeJsonPostRequest("https://murmur.test/v1/session", body), env);
+}
+
+async function refreshSessionTokensRequest(
+  appSessionId: string,
+  body: Record<string, unknown>,
+  env: WorkerEnv = configuredProviderEnv,
+): Promise<Response> {
+  return worker.fetch(
+    makeJsonPostRequest(`https://murmur.test/v1/session/${appSessionId}/tokens`, body),
+    env,
+  );
+}
+
+function stubProviderTokenFetch(
+  options: { cartesiaStatus?: number; countCartesia?: () => void; countDeepgram?: () => void } = {},
+): () => void {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("deepgram.com")) {
+      options.countDeepgram?.();
+      return Response.json({ access_token: "deepgram_token" });
+    }
+    if (url.includes("cartesia.ai")) {
+      options.countCartesia?.();
+      if (options.cartesiaStatus) {
+        return Response.json({ error: "voice_service_down" }, { status: options.cartesiaStatus });
+      }
+      return Response.json({ token: "cartesia_token" });
+    }
+    return Response.json({});
+  };
+  return () => {
+    globalThis.fetch = originalFetch;
+  };
+}
+
+function stubCountingCartesiaFetch(): { cartesiaTokensMinted: () => number; restoreFetch: () => void } {
+  let cartesiaTokensMinted = 0;
+  const restoreFetch = stubProviderTokenFetch({
+    countCartesia: () => {
+      cartesiaTokensMinted += 1;
+    },
+  });
+  return {
+    cartesiaTokensMinted: () => cartesiaTokensMinted,
+    restoreFetch,
+  };
+}
+
+function stubPlayIntegrityFetch(
+  nonce: string,
+  options: { includeProviderTokens?: boolean; timestampMillis?: string } = {},
+): () => void {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("playintegrity.googleapis.com")) {
+      return Response.json({
+        tokenPayloadExternal: {
+          appIntegrity: {
+            appRecognitionVerdict: "PLAY_RECOGNIZED",
+            packageName: "com.q9labsai.murmur",
+          },
+          deviceIntegrity: {
+            deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"],
+          },
+          requestDetails: {
+            nonce,
+            requestPackageName: "com.q9labsai.murmur",
+            ...(options.timestampMillis ? { timestampMillis: options.timestampMillis } : {}),
+          },
+        },
+      });
+    }
+    if (options.includeProviderTokens && url.includes("deepgram.com")) {
+      return Response.json({ access_token: "deepgram_token" });
+    }
+    if (options.includeProviderTokens && url.includes("cartesia.ai")) {
+      return Response.json({ token: "cartesia_token" });
+    }
+    return Response.json({});
+  };
+  return () => {
+    globalThis.fetch = originalFetch;
+  };
+}
+
 describe("worker routes", () => {
   it("serves the marketing homepage at root", async () => {
-    const response = await worker.fetch(new Request("https://worker.example/"), {
-      MURMUR_ENV: "production",
-    });
-    const body = await response.text();
+    const { body, response } = await fetchProductionText("/");
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/html");
     expect(body).toContain("Murmur");
-    expect(body).toContain("translated captions appear in real time");
+    expect(body).toContain("Translated captions appear as each phrase is recognized.");
     expect(body).toContain("Accountless Live Speech Translation App");
     expect(body).toContain('rel="canonical" href="https://murmur.q9labs.ai/"');
     expect(body).toContain('href="/favicon.svg"');
     expect(body).toContain("application/ld+json");
     expect(body).toContain("Listen");
+    expect(body).toContain('href="https://apps.apple.com/app/id6756962206"');
+    expect(body).toContain(
+      'href="https://play.google.com/store/apps/details?id=com.q9labsai.murmur"',
+    );
+    expect(body).toContain("<span>App Store</span>");
+    expect(body).toContain("<span>Google Play</span>");
+    expect(body).not.toContain("Store links will appear after review.");
     expect(body).toContain('href="/privacy"');
     expect(body).toContain('href="/terms"');
     expect(body).toContain('href="/support"');
-    expect(body).toContain("hero-section");
-    expect(body).toContain("privacy-panel");
+    expect(body).toContain('<section class="hero">');
+    expect(body).toContain('<section class="values">');
   });
 
   it("serves SEO discovery assets", async () => {
@@ -135,10 +374,7 @@ describe("worker routes", () => {
 
   it("serves public legal and support pages", async () => {
     for (const path of ["/privacy", "/terms", "/support"]) {
-      const response = await worker.fetch(new Request(`https://worker.example${path}`), {
-        MURMUR_ENV: "production",
-      });
-      const body = await response.text();
+      const { body, response } = await fetchProductionText(path);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toContain("text/html");
@@ -151,27 +387,6 @@ describe("worker routes", () => {
   });
 
   it("reports non-secret Worker readiness for missing provider configuration", async () => {
-    const payload = getReadiness({ MURMUR_ENV: "production" });
-
-    expect(payload).toEqual({
-      env: "production",
-      missing: {
-        optional: [
-          "CARTESIA_API_KEY",
-          "CARTESIA_DEFAULT_VOICE_ID_OR_CARTESIA_VOICE_ID_BY_LANGUAGE",
-          "REPORT_WEBHOOK_URL_OR_REPORT_ADMIN_TOKEN",
-        ],
-        required: ["DEEPGRAM_API_KEY", "OPENROUTER_API_KEY", "SESSION_HASH_SALT"],
-      },
-      ok: false,
-      providers: {
-        cartesia_speech: "missing_optional",
-        deepgram_stt: "missing_required",
-        openrouter_translation: "missing_required",
-        report_webhook: "missing_optional",
-      },
-    });
-
     const response = await worker.fetch(new Request("https://worker.example/ready"), {
       MURMUR_ENV: "production",
     });
@@ -180,31 +395,6 @@ describe("worker routes", () => {
   });
 
   it("reports ready when required providers are configured", async () => {
-    const payload = getReadiness({
-      CARTESIA_API_KEY: "cartesia_key",
-      CARTESIA_DEFAULT_VOICE_ID: "voice_id",
-      DEEPGRAM_API_KEY: "deepgram_key",
-      MURMUR_ENV: "production",
-      OPENROUTER_API_KEY: "openrouter_key",
-      REPORT_WEBHOOK_URL: "https://example.test/webhook",
-      SESSION_HASH_SALT: "salt",
-    });
-
-    expect(payload).toEqual({
-      env: "production",
-      missing: {
-        optional: [],
-        required: [],
-      },
-      ok: true,
-      providers: {
-        cartesia_speech: "configured",
-        deepgram_stt: "configured",
-        openrouter_translation: "configured",
-        report_webhook: "configured",
-      },
-    });
-
     const response = await worker.fetch(new Request("https://worker.example/ready"), {
       DEEPGRAM_API_KEY: "deepgram_key",
       MURMUR_ENV: "production",
@@ -220,45 +410,6 @@ describe("worker routes", () => {
     });
   });
 
-  it("disables Cartesia readiness requirements only when speech is explicitly disabled", () => {
-    expect(getReadiness({
-      DEEPGRAM_API_KEY: "deepgram_key",
-      MURMUR_ENABLE_SPEECH: "false",
-      MURMUR_ENV: "production",
-      OPENROUTER_API_KEY: "openrouter_key",
-      REPORT_ADMIN_TOKEN: "report_admin_token",
-      SESSION_HASH_SALT: "salt",
-    })).toMatchObject({
-      missing: {
-        optional: [],
-        required: [],
-      },
-      ok: true,
-      providers: {
-        cartesia_speech: "disabled",
-      },
-    });
-  });
-
-  it("treats the report admin inbox token as report triage readiness", () => {
-    expect(
-      getReadiness({
-        DEEPGRAM_API_KEY: "deepgram_key",
-        MURMUR_ENV: "production",
-        OPENROUTER_API_KEY: "openrouter_key",
-        REPORT_ADMIN_TOKEN: "admin_token",
-        SESSION_HASH_SALT: "salt",
-      }),
-    ).toMatchObject({
-      missing: {
-        required: [],
-      },
-      providers: {
-        report_webhook: "configured",
-      },
-    });
-  });
-
   it("sanitizes translation provider error codes", () => {
     expect(getTranslationErrorCode(new Error("openrouter_http_429"))).toBe("openrouter_http_429");
     expect(getTranslationErrorCode(new Error("openrouter_timeout"))).toBe("openrouter_timeout");
@@ -270,247 +421,9 @@ describe("worker routes", () => {
     expect(getTranslationErrorCode(new Error("provider leaked prompt text"))).toBe("translation_failed");
   });
 
-  it("parses OpenRouter stream chunks and captures upstream metadata", () => {
-    expect(
-      parseOpenRouterChunk(
-        JSON.stringify({
-          choices: [{ delta: { content: "مرحبا" } }],
-          id: "gen_123",
-          model: "google/gemma-4-26b-a4b-it",
-          provider: "Google AI Studio",
-        }),
-      ),
-    ).toEqual({
-      delta: "مرحبا",
-      provider_metadata: {
-        upstream_id: "gen_123",
-        upstream_model: "google/gemma-4-26b-a4b-it",
-        upstream_provider: "Google AI Studio",
-      },
-    });
+});
 
-    expect(parseOpenRouterChunk(JSON.stringify({ choices: [{ delta: {} }] }))).toEqual({
-      delta: null,
-      provider_metadata: {
-        upstream_id: undefined,
-        upstream_model: undefined,
-        upstream_provider: undefined,
-      },
-    });
-
-    expect(() => {
-      parseOpenRouterChunk(JSON.stringify({ error: { message: "provider failed" } }));
-    }).toThrow("openrouter_stream_error");
-  });
-
-  it("pins OpenRouter provider routing and privacy preferences", () => {
-    expect(buildOpenRouterProviderPreferences({})).toEqual({
-      allow_fallbacks: false,
-      data_collection: "deny",
-      order: ["deepinfra/fp8"],
-      require_parameters: true,
-      sort: "latency",
-    });
-
-    expect(
-      buildOpenRouterProviderPreferences({
-        OPENROUTER_PROVIDER_ALLOW_FALLBACKS: "false",
-        OPENROUTER_PROVIDER_DATA_COLLECTION: "allow",
-        OPENROUTER_PROVIDER_IGNORE: "venice",
-        OPENROUTER_PROVIDER_ONLY: "deepinfra/fp8,cloudflare",
-        OPENROUTER_PROVIDER_ORDER: "cloudflare,deepinfra/fp8",
-        OPENROUTER_PROVIDER_REQUIRE_PARAMETERS: "false",
-        OPENROUTER_PROVIDER_SORT: "throughput",
-        OPENROUTER_PROVIDER_ZDR: "true",
-      }),
-    ).toEqual({
-      allow_fallbacks: false,
-      data_collection: "allow",
-      ignore: ["venice"],
-      only: ["deepinfra/fp8", "cloudflare"],
-      order: ["cloudflare", "deepinfra/fp8"],
-      require_parameters: false,
-      sort: "throughput",
-      zdr: true,
-    });
-
-    expect(buildOpenRouterProviderPreferences({}, "openrouter_gemma_deepinfra")).toEqual({
-      allow_fallbacks: false,
-      data_collection: "deny",
-      only: ["deepinfra/fp8"],
-      order: ["deepinfra/fp8"],
-      require_parameters: true,
-      sort: "latency",
-    });
-    expect(buildOpenRouterProviderPreferences({}, "openrouter_gpt_oss_120b_cerebras")).toEqual({
-      allow_fallbacks: false,
-      data_collection: "deny",
-      only: ["cerebras"],
-      order: ["cerebras"],
-      require_parameters: true,
-      sort: "latency",
-    });
-  });
-
-  it("builds OpenRouter chat payloads without raw provider defaults", () => {
-    const payload = buildOpenRouterChatPayload(
-      {
-        app_session_id: "session_1",
-        connection_id: "connection_1",
-        context_spans: [
-          {
-            source_caption: "Hello",
-            span_id: "span_previous",
-            translated_caption: "مرحبا",
-          },
-        ],
-        event_seq: 1,
-        revision: 1,
-        session_epoch: 1,
-        source_caption: "How are you?",
-        source_language: "en",
-        span_id: "span_current",
-        target_language: "ar",
-        translation_attempt: 1,
-      },
-      {
-        OPENROUTER_MODEL: "google/gemma-4-26b-a4b-it",
-        OPENROUTER_PROVIDER_ONLY: "deepinfra/fp8",
-      },
-    );
-
-    expect(payload).toMatchObject({
-      max_tokens: 300,
-      model: "google/gemma-4-26b-a4b-it",
-      provider: {
-        data_collection: "deny",
-        only: ["deepinfra/fp8"],
-        require_parameters: true,
-        sort: "latency",
-      },
-      stream: true,
-      temperature: 0.1,
-    });
-    expect(payload.messages[0]?.content).toContain("English to Arabic");
-    expect(payload.messages[1]?.content).toContain("Previous stable spans");
-    expect(payload.messages[1]?.content).toContain("How are you?");
-  });
-
-  it("builds dev GPT-OSS payloads for Groq and OpenRouter Cerebras", () => {
-    const baseRequest: TranslationRequest = {
-      app_session_id: "session_1",
-      connection_id: "connection_1",
-      context_spans: [],
-      event_seq: 1,
-      revision: 1,
-      session_epoch: 1,
-      source_caption: "Hello",
-      source_language: "en",
-      span_id: "span_current",
-      target_language: "ar",
-      translation_attempt: 1,
-    };
-
-    expect(buildGroqChatPayload(baseRequest)).toMatchObject({
-      include_reasoning: false,
-      max_tokens: 300,
-      model: "openai/gpt-oss-120b",
-      reasoning_effort: "low",
-      stream: true,
-      temperature: 0.1,
-    });
-    const continuousGroqPayload = buildGroqChatPayload({
-      ...baseRequest,
-      source_status: "stable",
-      translation_mode: "continuous",
-    });
-    expect(continuousGroqPayload.temperature).toBe(0);
-    expect(continuousGroqPayload.messages[0]?.content).toContain("Return exactly one action");
-    expect(continuousGroqPayload.messages[1]?.content).toContain("source_status: stable");
-
-    expect(
-      buildOpenRouterChatPayload(
-        { ...baseRequest, translation_model_route: "openrouter_gpt_oss_120b_cerebras" },
-        {},
-      ),
-    ).toMatchObject({
-      model: "openai/gpt-oss-120b",
-      provider: {
-        allow_fallbacks: false,
-        only: ["cerebras"],
-        order: ["cerebras"],
-      },
-    });
-  });
-
-  it("builds translation prompts for auto-detected source language", () => {
-    const payload = buildOpenRouterChatPayload(
-      {
-        app_session_id: "session_1",
-        connection_id: "connection_1",
-        context_spans: [],
-        event_seq: 1,
-        revision: 1,
-        session_epoch: 1,
-        source_caption: "Bonjour",
-        source_language: "auto",
-        span_id: "span_current",
-        target_language: "en",
-        translation_attempt: 1,
-      },
-      {},
-    );
-
-    expect(payload.messages[0]?.content).toContain("detected source language to English");
-    expect(payload.messages[1]?.content).toContain("Bonjour");
-  });
-
-  it("builds target-action prompts for continuous interpretation", () => {
-    const payload = buildOpenRouterChatPayload(
-      {
-        app_session_id: "session_1",
-        connection_id: "connection_1",
-        context_spans: [
-          {
-            source_caption: "Good morning.",
-            span_id: "span_previous",
-            translated_caption: "صباح الخير.",
-          },
-        ],
-        event_seq: 1,
-        revision: 1,
-        session_epoch: 1,
-        source_caption: "I need to book",
-        source_language: "en",
-        source_status: "stable",
-        span_id: "span_current",
-        target_language: "ar",
-        translation_attempt: 1,
-        translation_mode: "continuous",
-      },
-      {},
-    );
-
-    expect(payload.temperature).toBe(0);
-    expect(payload.messages[0]?.content).toContain("Return exactly one action");
-    expect(payload.messages[0]?.content).toContain("WAIT");
-    expect(payload.messages[0]?.content).toContain("COMMIT");
-    expect(payload.messages[1]?.content).toContain("source_status: stable");
-    expect(payload.messages[1]?.content).toContain("I need to book");
-  });
-
-  it("parses interpreter target actions while preserving target text only", () => {
-    expect(parseStreamingInterpreterTargetAction("COM")).toEqual({ action: "pending" });
-    expect(parseStreamingInterpreterTargetAction("COMMIT\nمرحبا")).toEqual({
-      action: "commit",
-      translated_caption: "مرحبا",
-    });
-    expect(parseInterpreterTargetAction("WAIT: needs an object")).toEqual({
-      action: "wait",
-      reason: "needs an object",
-    });
-  });
-
+describe("worker summary routes", () => {
   it("generates compact summaries for live sessions", async () => {
     const appSessionId = `session_summary_${Date.now()}`;
     await createSessionRecordDurable({
@@ -564,36 +477,14 @@ describe("worker routes", () => {
   });
 
   it("rejects summary generation for unknown sessions before OpenRouter", async () => {
-    let upstreamCalled = false;
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      upstreamCalled = true;
-      return Response.json({ choices: [{ message: { content: "should not run" } }] });
-    };
-
-    try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            makeSummaryRequestBody(`session_unknown_summary_${Date.now()}`),
-          ),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
-
-      expect(response.status).toBe(409);
-      await expect(response.json()).resolves.toEqual({
+    await expectSummaryRejectedBeforeOpenRouter(
+      makeSummaryRequestBody(`session_unknown_summary_${Date.now()}`),
+      409,
+      {
         error: "session_closed",
         retryable: false,
-      });
-      expect(upstreamCalled).toBe(false);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      },
+    );
   });
 
   it("rejects summary generation for closed sessions before OpenRouter", async () => {
@@ -607,53 +498,24 @@ describe("worker routes", () => {
       app_session_id: appSessionId,
       now_ms: Date.now(),
     });
-    let upstreamCalled = false;
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      upstreamCalled = true;
-      return Response.json({ choices: [{ message: { content: "should not run" } }] });
-    };
-
-    try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
-
-      expect(response.status).toBe(409);
-      await expect(response.json()).resolves.toEqual({
+    await expectSummaryRejectedBeforeOpenRouter(
+      makeSummaryRequestBody(appSessionId),
+      409,
+      {
         error: "session_closed",
         retryable: false,
-      });
-      expect(upstreamCalled).toBe(false);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      },
+    );
   });
 
   it("does not consume summary quota when OpenRouter is unconfigured", async () => {
-    const appSessionId = `session_summary_unconfigured_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_summary_unconfigured_${Date.now()}`,
-      now_ms: Date.now(),
-    });
+    const appSessionId = await createTestSession(
+      "session_summary_unconfigured",
+      "install_summary_unconfigured",
+    );
 
     for (let index = 0; index < defaultRateLimits.summariesPerMinute + 1; index += 1) {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
-        }),
-        {},
-      );
+      const response = await postSummary(makeSummaryRequestBody(appSessionId), {});
 
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({
@@ -670,16 +532,7 @@ describe("worker routes", () => {
     };
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
+      const response = await postSummary(makeSummaryRequestBody(appSessionId));
 
       expect(response.status).toBe(200);
       expect(upstreamCalled).toBe(true);
@@ -689,50 +542,23 @@ describe("worker routes", () => {
   });
 
   it("rejects mismatched summary source character counts before OpenRouter", async () => {
-    let upstreamCalled = false;
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      upstreamCalled = true;
-      return Response.json({ choices: [{ message: { content: "should not run" } }] });
-    };
-
     const body = makeSummaryRequestBody(`session_summary_bad_chars_${Date.now()}`);
     body.spans_to_summarize[0] = {
       ...body.spans_to_summarize[0],
       source_char_count: body.spans_to_summarize[0].source_char_count - 1,
     };
 
-    try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
-
-      expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toEqual({
+    await expectSummaryRejectedBeforeOpenRouter(
+      body,
+      400,
+      {
         error: "invalid_summary_spans",
         retryable: false,
-      });
-      expect(upstreamCalled).toBe(false);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      },
+    );
   });
 
   it("rejects oversized summary inputs before OpenRouter", async () => {
-    let upstreamCalled = false;
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      upstreamCalled = true;
-      return Response.json({ choices: [{ message: { content: "should not run" } }] });
-    };
-
     const longCaption = "x".repeat(5001);
     const body = makeSummaryRequestBody(`session_summary_oversized_${Date.now()}`);
     body.spans_to_summarize = [
@@ -743,36 +569,18 @@ describe("worker routes", () => {
       },
     ];
 
-    try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
-
-      expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toEqual({
+    await expectSummaryRejectedBeforeOpenRouter(
+      body,
+      400,
+      {
         error: "summary_spans_too_large",
         retryable: false,
-      });
-      expect(upstreamCalled).toBe(false);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      },
+    );
   });
 
   it("rate limits summary generation before OpenRouter", async () => {
-    const appSessionId = `session_limited_summary_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_limited_summary_${Date.now()}`,
-      now_ms: Date.now(),
-    });
+    const appSessionId = await createTestSession("session_limited_summary", "install_limited_summary");
     for (let index = 0; index < defaultRateLimits.summariesPerMinute; index += 1) {
       await expect(
         beginSummaryDurable({
@@ -785,34 +593,14 @@ describe("worker routes", () => {
       });
     }
 
-    let upstreamCalled = false;
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      upstreamCalled = true;
-      return Response.json({ choices: [{ message: { content: "should not run" } }] });
-    };
-
-    try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(makeSummaryRequestBody(appSessionId)),
-        }),
-        {
-          OPENROUTER_API_KEY: "openrouter_key",
-        },
-      );
-
-      expect(response.status).toBe(429);
-      await expect(response.json()).resolves.toEqual({
+    await expectSummaryRejectedBeforeOpenRouter(
+      makeSummaryRequestBody(appSessionId),
+      429,
+      {
         error: "summaries_per_minute_limit",
         retryable: true,
-      });
-      expect(upstreamCalled).toBe(false);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      },
+    );
   });
 
   it("keeps summary work out of live translation concurrency", async () => {
@@ -854,118 +642,35 @@ describe("worker routes", () => {
     }
   });
 
-  it("validates translation WebSocket requests before provider work", () => {
-    const request: TranslationRequest = {
-      app_session_id: "session_valid_123",
-      connection_id: "connection_valid_123",
-      context_spans: [],
-      event_seq: 1,
-      revision: 1,
-      session_epoch: 1,
-      source_caption: "Hello",
-      source_language: "en",
-      span_id: "span_valid",
-      target_language: "ar",
-      translation_attempt: 1,
-    };
+});
 
-    expect(validateTranslationRequest(request)).toBeNull();
-    expect(validateTranslationRequest({ ...request, source_language: "auto" })).toBeNull();
-    expect(
-      validateTranslationRequest({ ...request, source_language: "zz" } as unknown as TranslationRequest),
-    ).toBe("invalid_source_language");
-    expect(
-      validateTranslationRequest({ ...request, source_status: "draft" } as unknown as TranslationRequest),
-    ).toBe("invalid_source_status");
-    expect(validateTranslationRequest({ ...request, target_language: "en" })).toBe(
-      "same_language_pair",
-    );
-    expect(validateTranslationRequest({ ...request, source_caption: " " })).toBe(
-      "empty_source_caption",
-    );
-    expect(
-      validateTranslationRequest({
-        ...request,
-        translation_model_route: "not_a_route",
-      } as unknown as TranslationRequest),
-    ).toBe("invalid_translation_model_route");
-    expect(
-      validateTranslationRequest({
-        ...request,
-        context_spans: Array.from({ length: 11 }, (_, index) => ({
-          source_caption: `source ${index}`,
-          span_id: `span_${index}`,
-          translated_caption: `target ${index}`,
-        })),
-      }),
-    ).toBe("invalid_context_spans");
-  });
-
+describe("worker translation sockets", () => {
   it("streams OpenRouter translation deltas and done events for a valid message", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_translate_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_translate_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
+    const appSessionId = await createTestSession("session_translate", "install_translate");
     globalThis.fetch = async (input, init) => {
       const url = input instanceof Request ? input.url : String(input);
       expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
       const body = JSON.parse(String(init?.body)) as { provider?: { data_collection?: string } };
       expect(body.provider?.data_collection).toBe("deny");
-      return new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              encoder.encode(
-                [
-                  'data: {"id":"gen_1","model":"google/gemma-4-26b-a4b-it","provider":"DeepInfra","choices":[{"delta":{"content":"مرحبا"}}]}',
-                  "",
-                  'data: {"choices":[{"delta":{"content":"!"}}]}',
-                  "",
-                  "data: [DONE]",
-                  "",
-                ].join("\n"),
-              ),
-            );
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
+      return makeSseResponse(
+        makeSseLines(
+          'data: {"id":"gen_1","model":"google/gemma-4-26b-a4b-it","provider":"DeepInfra","choices":[{"delta":{"content":"مرحبا"}}]}',
+          'data: {"choices":[{"delta":{"content":"!"}}]}',
+          "data: [DONE]",
+        ),
       );
     };
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_translate", {
           client_request_id: "client_translate_1",
-          connection_id: "connection_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
-          source_caption: "Hello",
-          source_language: "en",
-          span_id: "span_translate",
-          target_language: "ar",
-          translation_attempt: 1,
         }),
-        socket,
         {
           OPENROUTER_API_KEY: "openrouter_key",
           OPENROUTER_MODEL: "google/gemma-4-26b-a4b-it",
         },
-        new Map(),
       );
 
       expect(sent).toHaveLength(3);
@@ -997,63 +702,24 @@ describe("worker routes", () => {
 
   it("streams only target text for continuous COMMIT actions", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_interpreter_commit_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_interpreter_commit_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
+    const appSessionId = await createTestSession("session_interpreter_commit", "install_interpreter_commit");
     globalThis.fetch = async () =>
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              encoder.encode(
-                [
-                  'data: {"choices":[{"delta":{"content":"COMMIT\\nمر"}}]}',
-                  "",
-                  'data: {"choices":[{"delta":{"content":"حبا"}}]}',
-                  "",
-                  "data: [DONE]",
-                  "",
-                ].join("\n"),
-              ),
-            );
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
+      makeSseResponse(
+        makeSseLines(
+          'data: {"choices":[{"delta":{"content":"COMMIT\\nمر"}}]}',
+          'data: {"choices":[{"delta":{"content":"حبا"}}]}',
+          "data: [DONE]",
+        ),
       );
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_interpreter_commit", {
           client_request_id: "client_interpreter_commit_1",
-          connection_id: "connection_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
-          source_caption: "Hello",
-          source_language: "en",
           source_status: "stable",
-          span_id: "span_interpreter_commit",
-          target_language: "ar",
-          translation_attempt: 1,
           translation_mode: "continuous",
         }),
-        socket,
         { OPENROUTER_API_KEY: "openrouter_key" },
-        new Map(),
       );
 
       expect(sent).toHaveLength(3);
@@ -1083,61 +749,24 @@ describe("worker routes", () => {
 
   it("returns translation_wait for continuous WAIT actions", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_interpreter_wait_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_interpreter_wait_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
+    const appSessionId = await createTestSession("session_interpreter_wait", "install_interpreter_wait");
     globalThis.fetch = async () =>
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              encoder.encode(
-                [
-                  'data: {"choices":[{"delta":{"content":"WAIT: needs object"}}]}',
-                  "",
-                  "data: [DONE]",
-                  "",
-                ].join("\n"),
-              ),
-            );
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
+      makeSseResponse(
+        makeSseLines(
+          'data: {"choices":[{"delta":{"content":"WAIT: needs object"}}]}',
+          "data: [DONE]",
+        ),
       );
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_interpreter_wait", {
           client_request_id: "client_interpreter_wait_1",
-          connection_id: "connection_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
           source_caption: "I need to book",
-          source_language: "en",
           source_status: "stable",
-          span_id: "span_interpreter_wait",
-          target_language: "ar",
-          translation_attempt: 1,
           translation_mode: "continuous",
         }),
-        socket,
         { OPENROUTER_API_KEY: "openrouter_key" },
-        new Map(),
       );
 
       expect(sent).toHaveLength(1);
@@ -1153,34 +782,14 @@ describe("worker routes", () => {
   });
 
   it("rejects dev translation model routes on production translation sockets", async () => {
-    const sent: unknown[] = [];
-    const socket = {
-      close: vi.fn(),
-      readyState: WEBSOCKET_OPEN,
-      send: (payload: string) => sent.push(JSON.parse(payload)),
-    } as unknown as Parameters<typeof handleSocketMessage>[1];
-
-    await handleSocketMessage(
-      JSON.stringify({
-        app_session_id: "session_translate_model_route",
+    const sent = await sendTranslateRequest(
+      makeTranslateRequest("session_translate_model_route", "span_translate_model_route", {
         connection_id: "connection_translate_model_route",
-        context_spans: [],
-        event_seq: 1,
-        kind: "translate",
-        revision: 1,
-        session_epoch: 1,
-        source_caption: "Hello",
-        source_language: "en",
-        span_id: "span_translate_model_route",
-        target_language: "ar",
-        translation_attempt: 1,
         translation_model_route: "groq_gpt_oss_120b_low",
       }),
-      socket,
       {
         MURMUR_ENV: "production",
       },
-      new Map(),
     );
 
     expect(sent).toEqual([
@@ -1194,13 +803,7 @@ describe("worker routes", () => {
 
   it("streams Groq GPT-OSS low reasoning translations for dev routes", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_groq_translate_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_groq_translate_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
+    const appSessionId = await createTestSession("session_groq_translate", "install_groq_translate");
     globalThis.fetch = async (input, init) => {
       const url = input instanceof Request ? input.url : String(input);
       expect(url).toBe("https://api.groq.com/openai/v1/chat/completions");
@@ -1212,55 +815,24 @@ describe("worker routes", () => {
       expect(body.model).toBe("openai/gpt-oss-120b");
       expect(body.reasoning_effort).toBe("low");
       expect(body.include_reasoning).toBe(false);
-      return new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              encoder.encode(
-                [
-                  'data: {"id":"groq_1","model":"openai/gpt-oss-120b","choices":[{"delta":{"content":"مرحبا"}}]}',
-                  "",
-                  "data: [DONE]",
-                  "",
-                ].join("\n"),
-              ),
-            );
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
+      return makeSseResponse(
+        makeSseLines(
+          'data: {"id":"groq_1","model":"openai/gpt-oss-120b","choices":[{"delta":{"content":"مرحبا"}}]}',
+          "data: [DONE]",
+        ),
       );
     };
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_groq_translate", {
           connection_id: "connection_groq_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
-          source_caption: "Hello",
-          source_language: "en",
-          span_id: "span_groq_translate",
-          target_language: "ar",
-          translation_attempt: 1,
           translation_model_route: "groq_gpt_oss_120b_low",
         }),
-        socket,
         {
           GROQ_API_KEY: "groq_key",
           MURMUR_ENV: "development",
         },
-        new Map(),
       );
 
       expect(sent).toHaveLength(2);
@@ -1285,55 +857,89 @@ describe("worker routes", () => {
     }
   });
 
-  it("rejects OpenRouter streams that end before DONE", async () => {
+  it("streams Groq preview drafts before Gemma final captions for the preview experiment", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_incomplete_stream_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_incomplete_stream_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
-    globalThis.fetch = async () =>
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              encoder.encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'),
-            );
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
+    const appSessionId = await createTestSession("session_groq_preview_gemma", "install_groq_preview_gemma");
+    const upstreamCalls: Array<{ body: Record<string, unknown>; url: string }> = [];
+    globalThis.fetch = async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      upstreamCalls.push({ body, url });
+      const content = url.includes("groq.com") ? "C\nمسودة" : "نهائي";
+      const model = url.includes("groq.com") ? "openai/gpt-oss-20b" : "google/gemma-4-26b-a4b-it";
+      return makeSseResponse(
+        makeSseLines(
+          `data: ${JSON.stringify({ id: `${model}_1`, model, choices: [{ delta: { content } }] })}`,
+          "data: [DONE]",
+        ),
       );
+    };
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
-          connection_id: "connection_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
-          source_caption: "Hello",
-          source_language: "en",
-          span_id: "span_incomplete_stream",
-          target_language: "ar",
-          translation_attempt: 1,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_preview_gemma", {
+          client_request_id: "client_preview_gemma_1",
+          connection_id: "connection_preview_gemma",
+          source_caption: "Hello there",
+          source_status: "stable",
+          translation_model_route: "experiment_groq_preview_gemma",
+          translation_mode: "continuous",
         }),
-        socket,
+        {
+          GROQ_API_KEY: "groq_key",
+          MURMUR_ENV: "development",
+          OPENROUTER_API_KEY: "openrouter_key",
+        },
+      );
+
+      expect(upstreamCalls).toHaveLength(2);
+      expect(upstreamCalls[0]).toMatchObject({
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        body: { model: "openai/gpt-oss-20b" },
+      });
+      expect(upstreamCalls[1]).toMatchObject({
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        body: { model: "google/gemma-4-26b-a4b-it" },
+      });
+      expect(sent).toHaveLength(3);
+      expect(sent[0]).toMatchObject({
+        draft_text: "مسودة",
+        kind: "translation_delta",
+      });
+      expect(sent[1]).toMatchObject({
+        draft_text: "نهائي",
+        kind: "translation_delta",
+      });
+      expect(sent[2]).toMatchObject({
+        kind: "translation_done",
+        provider_metadata: {
+          experiment: "groq_preview_gemma",
+          final_model: "google/gemma-4-26b-a4b-it",
+          final_provider: "openrouter",
+          preview_model: "openai/gpt-oss-20b",
+          preview_provider: "groq",
+          provider: "mixed",
+          route_id: "experiment_groq_preview_gemma",
+        },
+        translated_caption: "نهائي",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects OpenRouter streams that end before DONE", async () => {
+    const originalFetch = globalThis.fetch;
+    const appSessionId = await createTestSession("session_incomplete_stream", "install_incomplete_stream");
+    globalThis.fetch = async () =>
+      makeSseResponse(['data: {"choices":[{"delta":{"content":"partial"}}]}', ""]);
+
+    try {
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_incomplete_stream"),
         {
           OPENROUTER_API_KEY: "openrouter_key",
         },
-        new Map(),
       );
 
       expect(sent).toHaveLength(2);
@@ -1354,51 +960,15 @@ describe("worker routes", () => {
 
   it("rejects empty OpenRouter translations at DONE", async () => {
     const originalFetch = globalThis.fetch;
-    const appSessionId = `session_empty_stream_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_empty_stream_${Date.now()}`,
-      now_ms: Date.now(),
-    });
-    const encoder = new TextEncoder();
-    globalThis.fetch = async () =>
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            controller.close();
-          },
-        }),
-        { headers: { "Content-Type": "text/event-stream" } },
-      );
+    const appSessionId = await createTestSession("session_empty_stream", "install_empty_stream");
+    globalThis.fetch = async () => makeSseResponse(makeSseLines("data: [DONE]"));
 
     try {
-      const sent: unknown[] = [];
-      const socket = {
-        close: vi.fn(),
-        readyState: WEBSOCKET_OPEN,
-        send: (payload: string) => sent.push(JSON.parse(payload)),
-      } as unknown as Parameters<typeof handleSocketMessage>[1];
-      await handleSocketMessage(
-        JSON.stringify({
-          app_session_id: appSessionId,
-          connection_id: "connection_translate",
-          context_spans: [],
-          event_seq: 1,
-          kind: "translate",
-          revision: 1,
-          session_epoch: 1,
-          source_caption: "Hello",
-          source_language: "en",
-          span_id: "span_empty_stream",
-          target_language: "ar",
-          translation_attempt: 1,
-        }),
-        socket,
+      const sent = await sendTranslateRequest(
+        makeTranslateRequest(appSessionId, "span_empty_stream"),
         {
           OPENROUTER_API_KEY: "openrouter_key",
         },
-        new Map(),
       );
 
       expect(sent).toHaveLength(1);
@@ -1412,6 +982,9 @@ describe("worker routes", () => {
     }
   });
 
+});
+
+describe("worker session routes", () => {
   it("requires POST for session stop", async () => {
     const getResponse = await worker.fetch(
       new Request("https://murmur.test/v1/session/session_123/stop", { method: "GET" }),
@@ -1481,6 +1054,66 @@ describe("worker routes", () => {
     });
   });
 
+  it("creates Ultravox replacement sessions with a server WebSocket join URL", async () => {
+    const originalFetch = globalThis.fetch;
+    let createCallBody: Record<string, unknown> | null = null;
+    globalThis.fetch = async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      expect(url).toBe("https://api.ultravox.ai/api/calls");
+      expect((init?.headers as Record<string, string>)["X-API-Key"]).toBe("ultravox_key");
+      createCallBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return Response.json({ callId: "call_ultravox_1", joinUrl: "wss://ultravox.example/join" }, { status: 201 });
+    };
+
+    try {
+      const response = await worker.fetch(
+        new Request("https://murmur.test/v1/session", {
+          body: JSON.stringify({
+            app_install_id: `install_ultravox_${Date.now()}`,
+            source_language: "en",
+            target_language: "ar",
+            translation_model_route: "experiment_ultravox_replacement",
+            ultravox_vad_enabled: true,
+          }),
+          method: "POST",
+        }),
+        {
+          MURMUR_ENV: "development",
+          ULTRAVOX_API_KEY: "ultravox_key",
+        },
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        deepgram_ws_url?: string;
+        tokens?: { cartesia_access_token?: string | null; deepgram_token?: string | null };
+        ultravox?: { call_id?: string; join_url?: string; vad_profile?: string };
+      };
+      expect(createCallBody).toMatchObject({
+        initialOutputMedium: "MESSAGE_MEDIUM_TEXT",
+        medium: {
+          serverWebSocket: {
+            inputSampleRate: 16000,
+          },
+        },
+        vadSettings: {
+          turnEndpointDelay: "0.096s",
+        },
+      });
+      expect(body.deepgram_ws_url).toBeUndefined();
+      expect(body.tokens?.cartesia_access_token).toBeNull();
+      expect(body.tokens?.deepgram_token).toBeNull();
+      expect(body.ultravox).toEqual({
+        call_id: "call_ultravox_1",
+        join_url: "wss://ultravox.example/join",
+        vad_enabled: true,
+        vad_profile: "low_latency",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("can require device integrity before minting provider tokens", async () => {
     const response = await worker.fetch(
       new Request("https://murmur.test/v1/session", {
@@ -1505,21 +1138,9 @@ describe("worker routes", () => {
   });
 
   it("does not mint provider tokens when required integrity verification is unconfigured", async () => {
-    const response = await worker.fetch(
-      new Request("https://murmur.test/v1/session", {
-        body: JSON.stringify({
-          app_install_id: "install_integrity_unconfigured",
-          device_integrity: {
-            available: true,
-            nonce: "nonce_integrity_unconfigured",
-            platform: "android",
-            provider: "play_integrity",
-            token: "integrity_token_long_enough_for_worker_contract",
-          },
-          source_language: "en",
-          target_language: "ar",
-        }),
-        method: "POST",
+    const response = await postSession(
+      makeSessionBody("install_integrity_unconfigured", {
+        device_integrity: makePlayIntegrityDeviceIntegrity("nonce_integrity_unconfigured"),
       }),
       { MURMUR_REQUIRE_DEVICE_INTEGRITY: "true" },
     );
@@ -1531,52 +1152,13 @@ describe("worker routes", () => {
   });
 
   it("verifies Play Integrity before returning a session when enforcement is enabled", async () => {
-    const originalFetch = globalThis.fetch;
     const nonce = "nonce_integrity_verified";
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("playintegrity.googleapis.com")) {
-        return Response.json({
-          tokenPayloadExternal: {
-            appIntegrity: {
-              appRecognitionVerdict: "PLAY_RECOGNIZED",
-              packageName: "com.q9labsai.murmur",
-            },
-            deviceIntegrity: {
-              deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"],
-            },
-            requestDetails: {
-              nonce,
-              requestPackageName: "com.q9labsai.murmur",
-            },
-          },
-        });
-      }
-      if (url.includes("deepgram.com")) {
-        return Response.json({ access_token: "deepgram_token" });
-      }
-      if (url.includes("cartesia.ai")) {
-        return Response.json({ token: "cartesia_token" });
-      }
-      return Response.json({});
-    };
+    const restoreFetch = stubPlayIntegrityFetch(nonce, { includeProviderTokens: true });
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: `install_integrity_${Date.now()}`,
-            device_integrity: {
-              available: true,
-              nonce,
-              platform: "android",
-              provider: "play_integrity",
-              token: "integrity_token_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const response = await postSession(
+        makeSessionBody(`install_integrity_${Date.now()}`, {
+          device_integrity: makePlayIntegrityDeviceIntegrity(nonce),
         }),
         {
           CARTESIA_API_KEY: "cartesia_key",
@@ -1592,52 +1174,18 @@ describe("worker routes", () => {
       const body = (await response.json()) as { app_session_id?: string };
       expect(body.app_session_id).toBeTruthy();
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
   it("rejects stale Play Integrity tokens when Google returns a signed timestamp", async () => {
-    const originalFetch = globalThis.fetch;
     const nonce = "nonce_integrity_stale";
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("playintegrity.googleapis.com")) {
-        return Response.json({
-          tokenPayloadExternal: {
-            appIntegrity: {
-              appRecognitionVerdict: "PLAY_RECOGNIZED",
-              packageName: "com.q9labsai.murmur",
-            },
-            deviceIntegrity: {
-              deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"],
-            },
-            requestDetails: {
-              nonce,
-              requestPackageName: "com.q9labsai.murmur",
-              timestampMillis: "1",
-            },
-          },
-        });
-      }
-      return Response.json({});
-    };
+    const restoreFetch = stubPlayIntegrityFetch(nonce, { timestampMillis: "1" });
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: `install_integrity_stale_${Date.now()}`,
-            device_integrity: {
-              available: true,
-              nonce,
-              platform: "android",
-              provider: "play_integrity",
-              token: "integrity_token_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const response = await postSession(
+        makeSessionBody(`install_integrity_stale_${Date.now()}`, {
+          device_integrity: makePlayIntegrityDeviceIntegrity(nonce),
         }),
         {
           GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN: "google_access_token",
@@ -1651,28 +1199,14 @@ describe("worker routes", () => {
         error: "play_integrity_token_expired",
       });
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
   it("does not mint provider tokens for iOS App Attest when server verification is unconfigured", async () => {
-    const response = await worker.fetch(
-      new Request("https://murmur.test/v1/session", {
-        body: JSON.stringify({
-          app_install_id: "install_app_attest_unconfigured",
-          device_integrity: {
-            available: true,
-            key_id: "app_attest_key",
-            kind: "attestation",
-            nonce: "nonce_app_attest_unconfigured",
-            platform: "ios",
-            provider: "app_attest",
-            token: "app_attest_payload_long_enough_for_worker_contract",
-          },
-          source_language: "en",
-          target_language: "ar",
-        }),
-        method: "POST",
+    const response = await postSession(
+      makeSessionBody("install_app_attest_unconfigured", {
+        device_integrity: makeAppAttestDeviceIntegrity("nonce_app_attest_unconfigured", "attestation"),
       }),
       {
         MURMUR_REQUIRE_DEVICE_INTEGRITY: "true",
@@ -1686,7 +1220,7 @@ describe("worker routes", () => {
   });
 
   it("verifies iOS App Attest attestation and assertion when enforcement is enabled", async () => {
-    const originalFetch = globalThis.fetch;
+    const restoreFetch = stubProviderTokenFetch();
     const installId = `install_app_attest_${Date.now()}`;
     appAttestMocks.verifyAttestation.mockResolvedValueOnce({
       publicKeyPem: "-----BEGIN PUBLIC KEY-----\nmock\n-----END PUBLIC KEY-----",
@@ -1694,35 +1228,19 @@ describe("worker routes", () => {
       signCount: 0,
     });
     appAttestMocks.verifyAssertion.mockResolvedValueOnce({ signCount: 1 });
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("deepgram.com")) {
-        return Response.json({ access_token: "deepgram_token" });
-      }
-      if (url.includes("cartesia.ai")) {
-        return Response.json({ token: "cartesia_token" });
-      }
-      return Response.json({});
-    };
 
     try {
-      const createResponse = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: installId,
-            device_integrity: {
-              available: true,
-              key_id: "app_attest_key_verified",
-              kind: "attestation",
-              nonce: "nonce_app_attest_verified",
-              platform: "ios",
-              provider: "app_attest",
-              token: "app_attest_payload_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const createResponse = await postSession(
+        makeSessionBody(installId, {
+          device_integrity: {
+            available: true,
+            key_id: "app_attest_key_verified",
+            kind: "attestation",
+            nonce: "nonce_app_attest_verified",
+            platform: "ios",
+            provider: "app_attest",
+            token: "app_attest_payload_long_enough_for_worker_contract",
+          },
         }),
         {
           APPLE_APP_ATTEST_APP_ID: "TEAMID.com.q9labsai.murmur",
@@ -1736,25 +1254,20 @@ describe("worker routes", () => {
       expect(createResponse.status).toBe(200);
       const createBody = (await createResponse.json()) as { app_session_id: string };
 
-      const refreshResponse = await worker.fetch(
-        new Request(`https://murmur.test/v1/session/${createBody.app_session_id}/tokens`, {
-          body: JSON.stringify({
-            app_install_id: installId,
-            app_session_id: createBody.app_session_id,
-            device_integrity: {
-              available: true,
-              key_id: "app_attest_key_verified",
-              kind: "assertion",
-              nonce: "nonce_app_attest_asserted",
-              platform: "ios",
-              provider: "app_attest",
-              token: "app_attest_assertion_payload_long_enough_for_worker_contract",
-            },
-            session_epoch: 1,
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const refreshResponse = await refreshSessionTokensRequest(
+        createBody.app_session_id,
+        makeSessionBody(installId, {
+          app_session_id: createBody.app_session_id,
+          device_integrity: {
+            available: true,
+            key_id: "app_attest_key_verified",
+            kind: "assertion",
+            nonce: "nonce_app_attest_asserted",
+            platform: "ios",
+            provider: "app_attest",
+            token: "app_attest_assertion_payload_long_enough_for_worker_contract",
+          },
+          session_epoch: 1,
         }),
         {
           APPLE_APP_ATTEST_APP_ID: "TEAMID.com.q9labsai.murmur",
@@ -1785,47 +1298,29 @@ describe("worker routes", () => {
         0,
       );
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
       appAttestMocks.verifyAttestation.mockReset();
       appAttestMocks.verifyAssertion.mockReset();
     }
   });
 
   it("selects a Cartesia voice by target language when configured", async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("deepgram.com")) {
-        return Response.json({ access_token: "deepgram_token" });
-      }
-      if (url.includes("cartesia.ai")) {
-        return Response.json({ token: "cartesia_token" });
-      }
-      return Response.json({});
-    };
+    const restoreFetch = stubProviderTokenFetch();
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: `install_voice_${Date.now()}`,
-            device_integrity: {
-              available: true,
-              platform: "android",
-              provider: "play_integrity",
-              token: "integrity_token_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const response = await postSession(
+        makeSessionBody(`install_voice_${Date.now()}`, {
+          device_integrity: {
+            available: true,
+            platform: "android",
+            provider: "play_integrity",
+            token: "integrity_token_long_enough_for_worker_contract",
+          },
         }),
         {
-          CARTESIA_API_KEY: "cartesia_key",
+          ...configuredProviderEnv,
           CARTESIA_DEFAULT_VOICE_ID: "voice_default",
           CARTESIA_VOICE_ID_BY_LANGUAGE: JSON.stringify({ ar: "voice_ar", nl: "voice_nl" }),
-          DEEPGRAM_API_KEY: "deepgram_key",
-          OPENROUTER_API_KEY: "openrouter_key",
         },
       );
 
@@ -1833,40 +1328,18 @@ describe("worker routes", () => {
       const body = (await response.json()) as { speech?: { default_voice_id?: string } };
       expect(body.speech?.default_voice_id).toBe("voice_ar");
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
   it("skips Cartesia token minting for continuous sessions", async () => {
-    const originalFetch = globalThis.fetch;
-    let cartesiaTokensMinted = 0;
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("cartesia.ai")) {
-        cartesiaTokensMinted += 1;
-        return Response.json({ token: `cartesia_token_${cartesiaTokensMinted}` });
-      }
-      return Response.json({});
-    };
+    const cartesiaCounter = stubCountingCartesiaFetch();
 
     try {
-      const env = {
-        CARTESIA_API_KEY: "cartesia_key",
-        CARTESIA_DEFAULT_VOICE_ID: "voice_default",
-        DEEPGRAM_API_KEY: "deepgram_key",
-        OPENROUTER_API_KEY: "openrouter_key",
-      };
+      const env = configuredProviderEnv;
       const appInstallId = `install_continuous_speech_${Date.now()}`;
-      const createResponse = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            source_language: "en",
-            target_language: "ar",
-            translation_mode: "continuous",
-          }),
-          method: "POST",
-        }),
+      const createResponse = await postSession(
+        makeSessionBody(appInstallId, { translation_mode: "continuous" }),
         env,
       );
 
@@ -1880,17 +1353,12 @@ describe("worker routes", () => {
       expect(created.tokens.cartesia_access_token).toBeNull();
       expect(created.speech?.enabled).toBe(false);
 
-      const refreshResponse = await worker.fetch(
-        new Request(`https://murmur.test/v1/session/${created.app_session_id}/tokens`, {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            app_session_id: created.app_session_id,
-            session_epoch: created.session_epoch,
-            source_language: "en",
-            target_language: "ar",
-            translation_mode: "continuous",
-          }),
-          method: "POST",
+      const refreshResponse = await refreshSessionTokensRequest(
+        created.app_session_id,
+        makeSessionBody(appInstallId, {
+          app_session_id: created.app_session_id,
+          session_epoch: created.session_epoch,
+          translation_mode: "continuous",
         }),
         env,
       );
@@ -1902,43 +1370,19 @@ describe("worker routes", () => {
       };
       expect(refreshed.tokens.cartesia_access_token).toBeNull();
       expect(refreshed.speech?.enabled).toBe(false);
-      expect(cartesiaTokensMinted).toBe(0);
+      expect(cartesiaCounter.cartesiaTokensMinted()).toBe(0);
     } finally {
-      globalThis.fetch = originalFetch;
+      cartesiaCounter.restoreFetch();
     }
   });
 
   it("refreshes provider tokens for an existing session without creating a new session", async () => {
-    const originalFetch = globalThis.fetch;
-    let cartesiaTokensMinted = 0;
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("cartesia.ai")) {
-        cartesiaTokensMinted += 1;
-        return Response.json({ token: `cartesia_token_${cartesiaTokensMinted}` });
-      }
-      return Response.json({});
-    };
+    const cartesiaCounter = stubCountingCartesiaFetch();
 
     try {
-      const env = {
-        CARTESIA_API_KEY: "cartesia_key",
-        CARTESIA_DEFAULT_VOICE_ID: "voice_default",
-        DEEPGRAM_API_KEY: "deepgram_key",
-        OPENROUTER_API_KEY: "openrouter_key",
-      };
+      const env = configuredProviderEnv;
       const appInstallId = `install_refresh_${Date.now()}`;
-      const createResponse = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
-        }),
-        env,
-      );
+      const createResponse = await postSession(makeSessionBody(appInstallId), env);
       expect(createResponse.status).toBe(200);
       const created = (await createResponse.json()) as {
         app_session_id: string;
@@ -1949,16 +1393,11 @@ describe("worker routes", () => {
       expect(created.deepgram_ws_url).toContain("/v1/deepgram");
       expect(created.tokens.deepgram_token).toBeNull();
 
-      const refreshResponse = await worker.fetch(
-        new Request(`https://murmur.test/v1/session/${created.app_session_id}/tokens`, {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            app_session_id: created.app_session_id,
-            session_epoch: created.session_epoch,
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const refreshResponse = await refreshSessionTokensRequest(
+        created.app_session_id,
+        makeSessionBody(appInstallId, {
+          app_session_id: created.app_session_id,
+          session_epoch: created.session_epoch,
         }),
         env,
       );
@@ -1975,70 +1414,51 @@ describe("worker routes", () => {
       expect(refreshed.session_epoch).toBe(created.session_epoch + 1);
       expect(refreshed.tokens.deepgram_token).toBeNull();
       expect(refreshed.tokens.token_bundle_id).not.toBe(created.tokens.token_bundle_id);
-      expect(cartesiaTokensMinted).toBe(2);
+      expect(cartesiaCounter.cartesiaTokensMinted()).toBe(2);
 
-      const mismatchResponse = await worker.fetch(
-        new Request(`https://murmur.test/v1/session/${created.app_session_id}/tokens`, {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            app_session_id: "different_session",
-            session_epoch: refreshed.session_epoch,
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const mismatchResponse = await refreshSessionTokensRequest(
+        created.app_session_id,
+        makeSessionBody(appInstallId, {
+          app_session_id: "different_session",
+          session_epoch: refreshed.session_epoch,
         }),
         env,
       );
       expect(mismatchResponse.status).toBe(400);
       await expect(mismatchResponse.json()).resolves.toEqual({ error: "session_id_mismatch" });
 
-      const invalidEpochResponse = await worker.fetch(
-        new Request(`https://murmur.test/v1/session/${created.app_session_id}/tokens`, {
-          body: JSON.stringify({
-            app_install_id: appInstallId,
-            app_session_id: created.app_session_id,
-            session_epoch: 0,
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const invalidEpochResponse = await refreshSessionTokensRequest(
+        created.app_session_id,
+        makeSessionBody(appInstallId, {
+          app_session_id: created.app_session_id,
+          session_epoch: 0,
         }),
         env,
       );
       expect(invalidEpochResponse.status).toBe(400);
       await expect(invalidEpochResponse.json()).resolves.toEqual({ error: "invalid_session_epoch" });
     } finally {
-      globalThis.fetch = originalFetch;
+      cartesiaCounter.restoreFetch();
     }
   });
 
   it("creates a session with a Worker-proxied Deepgram URL instead of minting a Deepgram token", async () => {
-    const originalFetch = globalThis.fetch;
     let deepgramRequests = 0;
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("deepgram.com")) {
+    const restoreFetch = stubProviderTokenFetch({
+      countDeepgram: () => {
         deepgramRequests += 1;
-      }
-      return Response.json({});
-    };
+      },
+    });
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: `install_deepgram_proxy_${Date.now()}`,
-            device_integrity: {
-              available: true,
-              platform: "android",
-              provider: "play_integrity",
-              token: "integrity_token_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const response = await postSession(
+        makeSessionBody(`install_deepgram_proxy_${Date.now()}`, {
+          device_integrity: {
+            available: true,
+            platform: "android",
+            provider: "play_integrity",
+            token: "integrity_token_long_enough_for_worker_contract",
+          },
         }),
         {
           DEEPGRAM_API_KEY: "deepgram_key",
@@ -2056,20 +1476,13 @@ describe("worker routes", () => {
       expect(body.tokens?.deepgram_token).toBeNull();
       expect(deepgramRequests).toBe(0);
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
   it("creates auto-source sessions with a multilingual Deepgram proxy URL", async () => {
-    const response = await worker.fetch(
-      new Request("https://murmur.test/v1/session", {
-        body: JSON.stringify({
-          app_install_id: `install_auto_source_${Date.now()}`,
-          source_language: "auto",
-          target_language: "ar",
-        }),
-        method: "POST",
-      }),
+    const response = await postSession(
+      makeSessionBody(`install_auto_source_${Date.now()}`, { source_language: "auto" }),
       {
         DEEPGRAM_API_KEY: "deepgram_key",
         OPENROUTER_API_KEY: "openrouter_key",
@@ -2082,30 +1495,17 @@ describe("worker routes", () => {
   });
 
   it("keeps captions available when Cartesia token minting fails", async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("cartesia.ai")) {
-        return Response.json({ error: "voice_service_down" }, { status: 503 });
-      }
-      return Response.json({});
-    };
+    const restoreFetch = stubProviderTokenFetch({ cartesiaStatus: 503 });
 
     try {
-      const response = await worker.fetch(
-        new Request("https://murmur.test/v1/session", {
-          body: JSON.stringify({
-            app_install_id: `install_cartesia_fail_${Date.now()}`,
-            device_integrity: {
-              available: true,
-              platform: "android",
-              provider: "play_integrity",
-              token: "integrity_token_long_enough_for_worker_contract",
-            },
-            source_language: "en",
-            target_language: "ar",
-          }),
-          method: "POST",
+      const response = await postSession(
+        makeSessionBody(`install_cartesia_fail_${Date.now()}`, {
+          device_integrity: {
+            available: true,
+            platform: "android",
+            provider: "play_integrity",
+            token: "integrity_token_long_enough_for_worker_contract",
+          },
         }),
         {
           CARTESIA_API_KEY: "cartesia_key",
@@ -2124,10 +1524,13 @@ describe("worker routes", () => {
       expect(body.tokens?.cartesia_access_token).toBeNull();
       expect(body.speech?.enabled).toBe(false);
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
+});
+
+describe("worker report routes", () => {
   it("rate limits repeated report submissions through the report route", async () => {
     const appSessionId = `session_report_route_${Date.now()}`;
     await createSessionRecordDurable({
@@ -2187,12 +1590,7 @@ describe("worker routes", () => {
   });
 
   it("stores report receipts in an admin-protected inbox", async () => {
-    const appSessionId = `session_report_inbox_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_report_inbox_${Date.now()}`,
-      now_ms: Date.now(),
-    });
+    const appSessionId = await createTestSession("session_report_inbox", "install_report_inbox");
 
     const reportResponse = await worker.fetch(
       new Request("https://murmur.test/v1/report", {
@@ -2246,12 +1644,7 @@ describe("worker routes", () => {
   });
 
   it("deletes report inbox records through the admin endpoint", async () => {
-    const appSessionId = `session_report_delete_${Date.now()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: `install_report_delete_${Date.now()}`,
-      now_ms: Date.now(),
-    });
+    const appSessionId = await createTestSession("session_report_delete", "install_report_delete");
 
     const reportResponse = await worker.fetch(
       new Request("https://murmur.test/v1/report", {

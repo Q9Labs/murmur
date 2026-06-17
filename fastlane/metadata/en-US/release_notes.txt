@@ -1,3 +1,1 @@
-Initial release.
-
-Murmur is an accountless one-way live translator for real-time translated captions.
+Improves live translation with auto-detect source language, Continuous Mode, steadier in-progress captions, and a refreshed default translation route for faster testing feedback.

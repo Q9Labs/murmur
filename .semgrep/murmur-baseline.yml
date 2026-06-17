@@ -1,0 +1,184 @@
+rules:
+  - id: murmur.javascript.forbid-dynamic-code
+    languages: [generic]
+    severity: ERROR
+    message: Avoid eval, new Function, and string-based timers.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+        - "/worker/src/**"
+        - "/scripts/**"
+    pattern-regex: \b(eval\s*\(|new\s+Function\s*\(|set(?:Timeout|Interval)\s*\(\s*['"`])
+
+  - id: murmur.tests.forbid-focused-or-skipped-tests
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not commit focused or skipped tests.
+    paths:
+      include:
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/*.test.js"
+        - "**/*.spec.ts"
+        - "**/*.spec.tsx"
+        - "**/*.spec.js"
+    pattern-either:
+      - pattern: test.only(...)
+      - pattern: describe.only(...)
+      - pattern: it.only(...)
+      - pattern: test.skip(...)
+      - pattern: describe.skip(...)
+      - pattern: it.skip(...)
+
+  - id: murmur.javascript.require-suppression-justification
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Suppressions need an adjacent justification.
+    pattern-regex: (?m)^\s*//\s*(?:@ts-ignore|eslint-disable(?:-next-line|-line)?)(?!.*(?:because|reason|justification|intentional|safe|false positive|false-positive)).*$
+
+  - id: murmur.javascript.no-console-in-app-code
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Route logs through the repo logger or keep console usage in scripts/tests.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+        - "/worker/src/**"
+      exclude:
+        - "**/*.test.*"
+        - "/worker/src/privacy.ts"
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.error(...)
+
+  - id: murmur.javascript.process-env-approved-modules
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Read process.env only from approved config, Worker, or script modules.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+        - "/worker/src/**"
+      exclude:
+        - "**/*.test.*"
+        - "/lib/config.ts"
+        - "/services/backend.ts"
+        - "/worker/src/**"
+    pattern: process.env.$KEY
+
+  - id: murmur.javascript.no-raw-token-storage
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not persist token/session material through raw web storage.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+      exclude:
+        - "/lib/installIdentity.ts"
+    patterns:
+      - pattern-either:
+          - pattern: localStorage.setItem($KEY, $VALUE)
+          - pattern: sessionStorage.setItem($KEY, $VALUE)
+          - pattern: $STORAGE.setItem($KEY, $VALUE)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(token|session|secret|key|auth|credential).*
+
+  - id: murmur.javascript.fetch-only-through-approved-clients
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Keep app fetch calls in approved backend/provider/config modules.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+      exclude:
+        - "**/*.test.*"
+        - "/services/backend.ts"
+        - "/lib/useLiveTranslation.ts"
+        - "/lib/live-translation/workerApi.ts"
+        - "/lib/providers/**"
+    pattern: fetch(...)
+
+  - id: murmur.placeholders.no-checked-in-placeholder-copy
+    languages: [generic]
+    severity: ERROR
+    message: Remove placeholder gate/test/lint copy before committing.
+    paths:
+      exclude:
+        - "/.semgrep/**"
+        - "/scripts/gates/hygiene.mjs"
+    pattern-regex: (?i)(TODO:\s*document|No tests configured yet|No linter configured yet|generated contract stub)
+
+  - id: murmur.node.no-shell-true-interpolation
+    languages: [generic]
+    severity: ERROR
+    message: Avoid interpolating untrusted strings into shell:true child process calls.
+    paths:
+      include:
+        - "/scripts/**"
+        - "/plugins/**"
+        - "/worker/src/**"
+    pattern-regex: (?s)\b(?:exec|execSync|spawn|spawnSync)\s*\([^)]*\$\{[^)]*shell\s*:\s*true
+
+  - id: murmur.worker.use-canonical-worker-url-config
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: App code must use getWorkerBaseUrl for Worker URL access.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+      exclude:
+        - "**/*.test.*"
+        - "/lib/config.ts"
+    pattern: process.env.EXPO_PUBLIC_MURMUR_WORKER_URL
+
+  - id: murmur.privacy.microphone-copy-approved-files
+    languages: [generic]
+    severity: ERROR
+    message: Microphone/audio permission copy belongs in approved config and store metadata files.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+        - "/worker/src/**"
+      exclude:
+        - "/app/index.tsx"
+        - "/app.json"
+        - "/docs/legal/**"
+        - "/fastlane/metadata/**"
+        - "/lib/useLiveTranslation.ts"
+        - "/lib/live-translation/useLiveTranslation.ts"
+        - "/worker/src/legalPages.ts"
+    pattern-regex: (?i)\b(audio permission|record audio|speech audio|microphone permission)\b
+
+  - id: murmur.secrets.raw-provider-key-references
+    languages: [generic]
+    severity: ERROR
+    message: Raw OpenRouter/Deepgram key references are allowed only in validators, Worker env types, docs, and examples.
+    paths:
+      include:
+        - "/app/**"
+        - "/lib/**"
+        - "/services/**"
+        - "/worker/src/**"
+      exclude:
+        - "**/*.test.*"
+        - "/scripts/validate-no-secrets.mjs"
+        - "/worker/src/env.ts"
+        - "/worker/src/index.ts"
+        - "/worker/src/providers/credentials.ts"
+        - "/docs/**"
+    pattern-regex: (?i)\b(?:OPENROUTER_API_KEY|DEEPGRAM_API_KEY|sk-or-v1-[A-Za-z0-9_-]+)\b

@@ -4,9 +4,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const appConfig = JSON.parse(readFileSync(join(root, "app.json"), "utf8")).expo;
-const easConfig = JSON.parse(readFileSync(join(root, "eas.json"), "utf8"));
-const appIndex = readFileSync(join(root, "app", "index.tsx"), "utf8");
+const readProjectFile = (...pathParts) => readFileSync(join(root, ...pathParts), "utf8");
+const appConfig = JSON.parse(readProjectFile("app.json")).expo;
+const easConfig = JSON.parse(readProjectFile("eas.json"));
+const appUiSourceFiles = [
+  ["app", "index.tsx"],
+  ["app", "home", "bottomDock.tsx"],
+  ["app", "home", "onboarding.tsx"],
+  ["app", "home", "translationSurface.tsx"],
+];
+const appUiSource = appUiSourceFiles.map((pathParts) => readProjectFile(...pathParts)).join("\n");
 const failures = [];
 
 const assert = (condition, message) => {
@@ -27,7 +34,7 @@ const requiredPrivacyTypes = [
 assert(appConfig.name === "Murmur", `app name must be Murmur; got ${appConfig.name}`);
 assert(appConfig.owner === "q9labs", `Expo owner must be q9labs; got ${appConfig.owner}`);
 assert(appConfig.slug === "murmur", `Expo slug must be murmur; got ${appConfig.slug}`);
-assert(appConfig.version === "1.0.0", `app version must be 1.0.0 for V1; got ${appConfig.version}`);
+assert(appConfig.version === "1.1.0", `app version must be 1.1.0 for this release; got ${appConfig.version}`);
 assert(appConfig.orientation === "portrait", `orientation must be portrait; got ${appConfig.orientation}`);
 assert(appConfig.scheme === "murmur", `scheme must be murmur; got ${appConfig.scheme}`);
 assert(appConfig.icon === "./assets/images/icon.png", "app icon path must use the validated icon asset");
@@ -68,7 +75,7 @@ for (const entry of privacyManifest?.NSPrivacyCollectedDataTypes ?? []) {
 }
 
 assert(appConfig.android?.package === "com.q9labsai.murmur", "Android package must be com.q9labsai.murmur");
-assert(appConfig.android?.versionCode === 2, `Android versionCode must be 2 for the refreshed-logo upload; got ${appConfig.android?.versionCode}`);
+assert(appConfig.android?.versionCode === 3, `Android versionCode must be 3 for the v1.1.0 testing upload; got ${appConfig.android?.versionCode}`);
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
 const requiredAndroidPermissions = [
@@ -95,15 +102,15 @@ for (const blockedPermission of [
 assert(appConfig.plugins?.includes("./plugins/withAndroidReleaseSigning"), "Android release-signing config plugin must be registered");
 assert(appConfig.plugins?.includes("expo-secure-store"), "expo-secure-store plugin must be registered");
 assert(appConfig.extra?.eas?.projectId === "7fc2e2d0-1f74-404f-b8e0-7d80a84681c6", "EAS project id must stay linked");
-assert(!appIndex.includes("Start Listening"), "First-session CTA must use canonical Listen copy, not Start Listening");
-assert(appIndex.includes(">Listen<"), "App UI must include the canonical Listen CTA");
+assert(!appUiSource.includes("Start Listening"), "First-session CTA must use canonical Listen copy, not Start Listening");
+assert(appUiSource.includes(">Listen<"), "App UI must include the canonical Listen CTA");
 
 const productionBuild = easConfig.build?.production;
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
-assert(easConfig.submit?.production?.android?.track === "internal", "EAS Android submit track should remain internal before wider rollout");
+assert(easConfig.submit?.production?.android?.track === "beta", "EAS Android submit track should target beta/open testing for this rollout");
 
 if (failures.length > 0) {
   console.error("App config validation failed:");
