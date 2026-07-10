@@ -7,10 +7,7 @@ import {
 } from "../../../lib/languages";
 import type { Env } from "../env";
 import { logWorkerEvent } from "../privacy";
-import {
-  getDeepgramApiKey,
-  getMissingRequiredProviderKeys,
-} from "./credentials";
+import { getMissingRequiredProviderKeys } from "./credentials";
 
 export type ProviderTokenResult =
   | { ok: true; cartesiaAccessToken: string | null; deepgramToken: string | null }
@@ -124,25 +121,6 @@ export async function createUltravoxCall(params: {
 export function selectCartesiaVoiceId(env: Env, targetLanguage: LanguageCode): string | null {
   const voiceMap = parseVoiceMap(env.CARTESIA_VOICE_ID_BY_LANGUAGE);
   return voiceMap[targetLanguage] ?? env.CARTESIA_DEFAULT_VOICE_ID ?? null;
-}
-
-async function mintDeepgramToken(env: Env): Promise<string> {
-  const deepgramApiKey = getDeepgramApiKey(env);
-  if (!deepgramApiKey) {
-    throw new Error("missing_deepgram_api_key");
-  }
-  const response = await fetch("https://api.deepgram.com/v1/auth/grant", {
-    method: "POST",
-    headers: {
-      Authorization: `Token ${deepgramApiKey}`,
-      "Content-Type": "application/json",
-    },
-  });
-  const body = (await response.json().catch(() => ({}))) as { access_token?: string };
-  if (!response.ok || !body.access_token) {
-    throw new Error(`deepgram_token_http_${response.status}`);
-  }
-  return body.access_token;
 }
 
 async function mintCartesiaToken(env: Env, expiresInSeconds: number): Promise<string | null> {

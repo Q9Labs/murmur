@@ -1,7 +1,20 @@
 {
   "name": "murmur",
+  "description": "A privacy-conscious, one-way live translation app built with Expo and Cloudflare Workers.",
   "main": "expo-router/entry",
   "version": "1.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Q9Labs/murmur.git"
+  },
+  "homepage": "https://murmur.q9labs.ai",
+  "bugs": {
+    "url": "https://github.com/Q9Labs/murmur/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -79,7 +92,9 @@
       "uuid": "11.1.1",
       "vite": "^8.0.16",
       "ws": "^8.21.0",
-      "postcss": "^8.5.14"
+      "postcss": "^8.5.14",
+      "undici@<7": "^6.27.0",
+      "undici@>=7": "^7.28.0"
     }
   },
   "private": true,
