@@ -1,0 +1,33 @@
+{
+  "app": {
+    "name": "Murmur",
+    "android_package": "com.q9labsai.murmur",
+    "ios_bundle_id": "com.q9labsai.murmur",
+    "version": "1.1.0"
+  },
+  "last_updated": "2026-07-11",
+  "status": "submission_ready",
+  "policy_sources_checked": [
+    {
+      "name": "Apple App Review Guidelines",
+      "url": "https://developer.apple.com/app-store/review/guidelines/",
+      "checked_at": "2026-07-11"
+    },
+    {
+      "name": "Apple privacy manifests",
+      "url": "https://developer.apple.com/documentation/bundleresources/privacy_manifest_files",
+      "checked_at": "2026-07-11"
+    },
+    {
+      "name": "Google Play User Data policy",
+      "url": "https://support.google.com/googleplay/android-developer/answer/10144311",
+      "checked_at": "2026-07-11"
+    },
+    {
+      "name": "Google Play target API requirements",
+      "url": "https://developer.android.com/google/play/requirements/target-sdk",
+      "checked_at": "2026-07-11"
+    }
+  ],
+  "p0_blockers": []
+}
