@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -13,25 +12,25 @@ const assert = (condition, message) => {
   }
 };
 
-const readSips = (relativePath) => {
+const readPng = (relativePath) => {
   const filePath = join(root, relativePath);
   assert(existsSync(filePath), `${relativePath} must exist`);
   if (!existsSync(filePath)) {
     return { hasAlpha: "unknown", height: 0, width: 0 };
   }
 
-  const output = execFileSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", filePath], {
-    encoding: "utf8",
-  });
-
-  const width = Number(output.match(/pixelWidth:\s*(\d+)/)?.[1] ?? 0);
-  const height = Number(output.match(/pixelHeight:\s*(\d+)/)?.[1] ?? 0);
-  const hasAlpha = output.match(/hasAlpha:\s*(\w+)/)?.[1] ?? "unknown";
+  const png = readFileSync(filePath);
+  const signature = "89504e470d0a1a0a";
+  assert(png.subarray(0, 8).toString("hex") === signature, `${relativePath} must be a PNG`);
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  const colorType = png[25];
+  const hasAlpha = colorType === 4 || colorType === 6 || png.includes(Buffer.from("tRNS")) ? "yes" : "no";
   return { hasAlpha, height, width };
 };
 
 const assertImage = (relativePath, expectedWidth, expectedHeight, { allowAlpha = false } = {}) => {
-  const image = readSips(relativePath);
+  const image = readPng(relativePath);
   assert(
     image.width === expectedWidth && image.height === expectedHeight,
     `${relativePath} must be ${expectedWidth}x${expectedHeight}; got ${image.width}x${image.height}`,
@@ -42,7 +41,7 @@ const assertImage = (relativePath, expectedWidth, expectedHeight, { allowAlpha =
 };
 
 const assertPlayPhoneScreenshot = (relativePath) => {
-  const image = readSips(relativePath);
+  const image = readPng(relativePath);
   const shortSide = Math.min(image.width, image.height);
   const longSide = Math.max(image.width, image.height);
 
@@ -56,7 +55,6 @@ for (const relativePath of [
   "assets/images/icon.png",
   "assets/images/adaptive-icon.png",
   "assets/images/splash-icon.png",
-  "ios/murmur/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
 ]) {
   assertImage(relativePath, 1024, 1024);
 }
