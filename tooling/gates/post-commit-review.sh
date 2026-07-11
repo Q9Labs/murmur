@@ -14,7 +14,7 @@ if ! [[ "$review_runs" =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 
-log_dir=".git/codex-reviews/$short_commit"
+log_dir="$(git rev-parse --git-path "codex-reviews/$short_commit")"
 mkdir -p "$log_dir"
 
 run=1
