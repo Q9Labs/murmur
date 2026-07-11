@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "ignorePatterns": [
-    "assets/**",
-    "coverage/**",
+    "apps/mobile/assets/**",
+    "**/coverage/**",
     "docs/**",
-    "fastlane/**",
+    "apps/mobile/fastlane/**",
     "scratchpad/**",
-    "store-assets/**"
+    "apps/mobile/store-assets/**"
   ],
   "ignoreDependencies": [
     "@react-navigation/native",
@@ -15,8 +15,8 @@
   ],
   "audit": {
     "gate": "new-only",
-    "deadCodeBaseline": "scripts/gates/fallow-baselines/dead-code.json",
-    "healthBaseline": "scripts/gates/fallow-baselines/health.json",
-    "dupesBaseline": "scripts/gates/fallow-baselines/dupes.json"
+    "deadCodeBaseline": "tooling/gates/fallow-baselines/dead-code.json",
+    "healthBaseline": "tooling/gates/fallow-baselines/health.json",
+    "dupesBaseline": "tooling/gates/fallow-baselines/dupes.json"
   }
 }

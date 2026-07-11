@@ -1,0 +1,19 @@
+{
+  "name": "@murmur/worker",
+  "version": "1.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "unit": "vitest run"
+  },
+  "dependencies": {
+    "@bradford-tech/supabase-integrity-attest": "^0.8.2",
+    "@murmur/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260516.1",
+    "vitest": "^4.1.6",
+    "wrangler": "^4.92.0"
+  }
+}

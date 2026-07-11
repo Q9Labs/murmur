@@ -1,9 +1,9 @@
 pre-commit:
   commands:
     quality-gate:
-      run: pnpm run gate
+      run: bash tooling/gates/commit.sh
 
 post-commit:
   commands:
     codex-review:
-      run: pnpm run review:commit
+      run: bash tooling/gates/post-commit-review.sh

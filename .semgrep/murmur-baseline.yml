@@ -5,11 +5,12 @@ rules:
     message: Avoid eval, new Function, and string-based timers.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
-        - "/worker/src/**"
-        - "/scripts/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
+        - "/apps/mobile/modules/**"
+        - "/apps/mobile/plugins/**"
+        - "/apps/worker/src/**"
+        - "/tooling/**"
     pattern-regex: \b(eval\s*\(|new\s+Function\s*\(|set(?:Timeout|Interval)\s*\(\s*['"`])
 
   - id: murmur.tests.forbid-focused-or-skipped-tests
@@ -44,13 +45,12 @@ rules:
     message: Route logs through the repo logger or keep console usage in scripts/tests.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
-        - "/worker/src/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
+        - "/apps/worker/src/**"
       exclude:
         - "**/*.test.*"
-        - "/worker/src/privacy.ts"
+        - "/apps/worker/src/privacy.ts"
     pattern-either:
       - pattern: console.log(...)
       - pattern: console.error(...)
@@ -61,15 +61,11 @@ rules:
     message: Read process.env only from approved config, Worker, or script modules.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
-        - "/worker/src/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
       exclude:
         - "**/*.test.*"
-        - "/lib/config.ts"
-        - "/services/backend.ts"
-        - "/worker/src/**"
+        - "/apps/mobile/src/lib/config.ts"
     pattern: process.env.$KEY
 
   - id: murmur.javascript.no-raw-token-storage
@@ -78,11 +74,10 @@ rules:
     message: Do not persist token/session material through raw web storage.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
       exclude:
-        - "/lib/installIdentity.ts"
+        - "/apps/mobile/src/lib/installIdentity.ts"
     patterns:
       - pattern-either:
           - pattern: localStorage.setItem($KEY, $VALUE)
@@ -98,15 +93,13 @@ rules:
     message: Keep app fetch calls in approved backend/provider/config modules.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
       exclude:
         - "**/*.test.*"
-        - "/services/backend.ts"
-        - "/lib/useLiveTranslation.ts"
-        - "/lib/live-translation/workerApi.ts"
-        - "/lib/providers/**"
+        - "/apps/mobile/src/lib/useLiveTranslation.ts"
+        - "/apps/mobile/src/lib/live-translation/workerApi.ts"
+        - "/apps/mobile/src/lib/providers/**"
     pattern: fetch(...)
 
   - id: murmur.placeholders.no-checked-in-placeholder-copy
@@ -116,7 +109,7 @@ rules:
     paths:
       exclude:
         - "/.semgrep/**"
-        - "/scripts/gates/hygiene.mjs"
+        - "/tooling/gates/hygiene.mjs"
     pattern-regex: (?i)(TODO:\s*document|No tests configured yet|No linter configured yet|generated contract stub)
 
   - id: murmur.node.no-shell-true-interpolation
@@ -125,9 +118,9 @@ rules:
     message: Avoid interpolating untrusted strings into shell:true child process calls.
     paths:
       include:
-        - "/scripts/**"
-        - "/plugins/**"
-        - "/worker/src/**"
+        - "/tooling/**"
+        - "/apps/mobile/plugins/**"
+        - "/apps/worker/src/**"
     pattern-regex: (?s)\b(?:exec|execSync|spawn|spawnSync)\s*\([^)]*\$\{[^)]*shell\s*:\s*true
 
   - id: murmur.worker.use-canonical-worker-url-config
@@ -136,12 +129,11 @@ rules:
     message: App code must use getWorkerBaseUrl for Worker URL access.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
       exclude:
         - "**/*.test.*"
-        - "/lib/config.ts"
+        - "/apps/mobile/src/lib/config.ts"
     pattern: process.env.EXPO_PUBLIC_MURMUR_WORKER_URL
 
   - id: murmur.privacy.microphone-copy-approved-files
@@ -150,18 +142,17 @@ rules:
     message: Microphone/audio permission copy belongs in approved config and store metadata files.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
-        - "/worker/src/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
+        - "/apps/worker/src/**"
       exclude:
-        - "/app/index.tsx"
-        - "/app.json"
+        - "/apps/mobile/app/index.tsx"
+        - "/apps/mobile/app.json"
         - "/docs/legal/**"
-        - "/fastlane/metadata/**"
-        - "/lib/useLiveTranslation.ts"
-        - "/lib/live-translation/useLiveTranslation.ts"
-        - "/worker/src/legalPages.ts"
+        - "/apps/mobile/fastlane/metadata/**"
+        - "/apps/mobile/src/lib/useLiveTranslation.ts"
+        - "/apps/mobile/src/lib/live-translation/useLiveTranslation.ts"
+        - "/apps/worker/src/legalPages.ts"
     pattern-regex: (?i)\b(audio permission|record audio|speech audio|microphone permission)\b
 
   - id: murmur.secrets.raw-provider-key-references
@@ -170,15 +161,14 @@ rules:
     message: Raw OpenRouter/Deepgram key references are allowed only in validators, Worker env types, docs, and examples.
     paths:
       include:
-        - "/app/**"
-        - "/lib/**"
-        - "/services/**"
-        - "/worker/src/**"
+        - "/apps/mobile/app/**"
+        - "/apps/mobile/src/**"
+        - "/apps/worker/src/**"
       exclude:
         - "**/*.test.*"
-        - "/scripts/validate-no-secrets.mjs"
-        - "/worker/src/env.ts"
-        - "/worker/src/index.ts"
-        - "/worker/src/providers/credentials.ts"
+        - "/tooling/scripts/validate-no-secrets.mjs"
+        - "/apps/worker/src/env.ts"
+        - "/apps/worker/src/index.ts"
+        - "/apps/worker/src/providers/credentials.ts"
         - "/docs/**"
     pattern-regex: (?i)\b(?:OPENROUTER_API_KEY|DEEPGRAM_API_KEY|sk-or-v1-[A-Za-z0-9_-]+)\b

@@ -21,11 +21,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run gate:hygiene
       - run: pnpm test
       - run: pnpm run test:coverage
       - run: pnpm run test:presence
       - run: pnpm run deps:syncpack
       - run: pnpm run lint:spelling
+      - run: pnpm --filter @murmur/mobile exec expo export --platform web --output-dir /tmp/murmur-web
+      - run: pnpm --filter @murmur/worker exec wrangler deploy --dry-run --env=""
       - run: pnpm run store:secrets
       - run: pnpm run store:config
       - run: pnpm run store:metadata

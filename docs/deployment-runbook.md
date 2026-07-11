@@ -4,11 +4,11 @@ This runbook describes local and hosted Worker setup without embedding account-s
 
 ## Local Worker
 
-Copy `.env.example` to `.dev.vars`, replace placeholders, and start the Worker on localhost:
+Copy the Worker example, replace placeholders, and start the Worker on localhost:
 
 ```bash
-cp .env.example .dev.vars
-pnpm worker:dev
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
+pnpm dev:worker
 ```
 
 Provider credentials and signing material must remain outside Git. Use a separate Cloudflare development environment when testing changes that could affect existing clients.
@@ -18,22 +18,22 @@ Provider credentials and signing material must remain outside Git. Use a separat
 Confirm the intended account before any deployment:
 
 ```bash
-pnpm exec wrangler whoami
+pnpm --filter @murmur/worker exec wrangler whoami
 ```
 
 Configure secrets with Wrangler rather than committing values:
 
 ```bash
-pnpm exec wrangler secret put DEEPGRAM_API_KEY
-pnpm exec wrangler secret put OPENROUTER_API_KEY
-pnpm exec wrangler secret put CARTESIA_API_KEY
-pnpm exec wrangler secret put SESSION_HASH_SALT
-pnpm exec wrangler secret put REPORT_ADMIN_TOKEN
-pnpm exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL
-pnpm exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+pnpm --filter @murmur/worker exec wrangler secret put DEEPGRAM_API_KEY --env production
+pnpm --filter @murmur/worker exec wrangler secret put OPENROUTER_API_KEY --env production
+pnpm --filter @murmur/worker exec wrangler secret put CARTESIA_API_KEY --env production
+pnpm --filter @murmur/worker exec wrangler secret put SESSION_HASH_SALT --env production
+pnpm --filter @murmur/worker exec wrangler secret put REPORT_ADMIN_TOKEN --env production
+pnpm --filter @murmur/worker exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL --env production
+pnpm --filter @murmur/worker exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY --env production
 ```
 
-Optional variables and provider routing controls are documented in `.env.example`. Keep production-only values in the Cloudflare secret store.
+Optional variables and provider routing controls are documented in `apps/worker/.dev.vars.example`. Keep production-only values in the Cloudflare secret store. Secret updates create a new Worker version; keep the previous provider credential active until a synthetic session and provider-backed translation or summary succeeds.
 
 ## Verification
 
@@ -47,6 +47,6 @@ After deploying to an approved environment, verify `/health`, `/ready`, `/privac
 
 ## Release signing
 
-Android signing is configured through the `MURMUR_ANDROID_*` environment variables used by `scripts/build-android-release-signed.sh`. Store the keystore and its properties outside the repository. iOS credentials belong in the platform keychain or the approved CI credential store.
+Android signing is configured through the `MURMUR_ANDROID_*` environment variables used by `tooling/scripts/build-android-release-signed.sh`. Store the keystore and its properties outside the repository. iOS credentials belong in the platform keychain or the approved CI credential store.
 
 Never record certificate fingerprints, credential paths, console edit IDs, tester identities, deployment IDs, or production account details in tracked documentation.

@@ -12,11 +12,11 @@ Thank you for helping improve Murmur.
 
 ```bash
 pnpm install
-cp .env.example .env.local
-pnpm start
+cp apps/mobile/.env.example apps/mobile/.env.local
+pnpm dev
 ```
 
-Use `.dev.vars` for local Worker secrets. Both files are ignored by Git.
+Copy `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` for local Worker secrets. Both local files are ignored by Git.
 
 ## Pull requests
 

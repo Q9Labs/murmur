@@ -18,20 +18,20 @@ The mobile client is built with Expo and React Native. A Cloudflare Worker keeps
 git clone https://github.com/Q9Labs/murmur.git
 cd murmur
 pnpm install
-cp .env.example .env.local
-pnpm start
+cp apps/mobile/.env.example apps/mobile/.env.local
+pnpm dev
 ```
 
-Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `.env.local` to a locally running or hosted Worker. Provider credentials belong in `.dev.vars`, which is ignored by Git.
+Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `apps/mobile/.env.local` to a locally running or hosted Worker. Provider credentials belong in `apps/worker/.dev.vars`, which is ignored by Git.
 
 Run the Worker in a second terminal:
 
 ```bash
-cp .env.example .dev.vars
-pnpm worker:dev
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
+pnpm dev:worker
 ```
 
-Replace placeholder values in `.dev.vars` before requesting live provider sessions. Never add production credentials to either file.
+Replace placeholder values in `apps/worker/.dev.vars` before requesting live provider sessions. Never add production credentials to either file.
 
 ## Quality checks
 
@@ -40,7 +40,7 @@ pnpm test
 pnpm run gate
 ```
 
-`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, tests, coverage, and store/config validation without deploying or contacting production release lanes.
+`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, tests, coverage, and store/config validation without deploying or contacting production release lanes. Root commands coordinate the `apps/mobile`, `apps/worker`, and `packages/protocol` workspaces.
 
 ## Architecture
 
@@ -50,7 +50,7 @@ Expo app -> Murmur Worker -> Deepgram streaming speech recognition
                          -> Cartesia translated speech
 ```
 
-The canonical product and implementation contract is [docs/spec.md](docs/spec.md). Continuous mode is documented in [docs/continuous-mode-spec.md](docs/continuous-mode-spec.md), and deployment setup is covered by [docs/deployment-runbook.md](docs/deployment-runbook.md).
+The repository layout and workspace boundaries are documented in [docs/repository-architecture.md](docs/repository-architecture.md). The canonical product contract is [docs/spec.md](docs/spec.md), Continuous Mode is covered by [docs/continuous-mode-spec.md](docs/continuous-mode-spec.md), and deployment setup is in [docs/deployment-runbook.md](docs/deployment-runbook.md).
 
 ## Security and privacy
 

@@ -1,0 +1,144 @@
+{
+  "finding_counts": {
+    "apps/mobile/plugins/withAndroidReleaseSigning.js": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/mobile/src/home/diagnostics.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/mobile/src/home/homeScreen.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/mobile/src/lib/continuousStabilizer.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/mobile/src/lib/live-translation/useLiveTranslation.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "apps/mobile/src/lib/providers/ultravox.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/env.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/index.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/playIntegrity.ts": {
+      "complexity_high": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 2
+      }
+    },
+    "apps/worker/src/privacy.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/providers/chatCompletionStream.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/rateLimitDurableObject.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/routes/session.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "apps/worker/src/sockets/translate.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/translation/streaming.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/worker/src/translation/validation.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "tooling/gates/test-presence.mjs": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "tooling/scripts/benchmark-translation-experiments.mjs": {
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "tooling/scripts/smoke-latency.mjs": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "tooling/scripts/validate-no-secrets.mjs": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "tooling/scripts/validate-store-assets.mjs": {
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "apps/worker/src/translation/validation.ts:high impact",
+    "apps/worker/src/privacy.ts:high impact"
+  ]
+}

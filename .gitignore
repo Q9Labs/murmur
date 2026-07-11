@@ -45,11 +45,13 @@ scratchpad/
 *.tsbuildinfo
 
 # generated native folders
-/ios
-/android
-modules/*/android/build/
-modules/*/ios/build/
+/apps/mobile/ios
+/apps/mobile/android
+apps/mobile/modules/*/android/build/
+apps/mobile/modules/*/ios/build/
 
 # generated fastlane run output
-fastlane/report.xml
-coverage/*
+apps/mobile/fastlane/report.xml
+
+# workspace test output
+coverage/

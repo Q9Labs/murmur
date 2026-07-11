@@ -4,7 +4,7 @@ title = "Murmur Gitleaks"
 description = "Repo paths that intentionally contain store copy, generated metadata, or local scratch evidence."
 paths = [
   '''^docs/legal/''',
-  '''^fastlane/metadata/''',
+  '''^apps/mobile/fastlane/metadata/''',
   '''^scratchpad/''',
-  '''^store-assets/'''
+  '''^apps/mobile/store-assets/source/'''
 ]

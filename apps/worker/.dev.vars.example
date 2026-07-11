@@ -1,0 +1,39 @@
+# Cloudflare Worker vars/secrets.
+# Copy this file to .dev.vars for local development. Set hosted secrets with Wrangler.
+MURMUR_ENV=development
+MURMUR_REQUIRE_DEVICE_INTEGRITY=false
+MURMUR_ENABLE_SPEECH=true
+SESSION_HASH_SALT=replace-with-random-secret-salt
+TOKEN_TTL_SECONDS=120
+
+GOOGLE_PLAY_PACKAGE_NAME=com.q9labsai.murmur
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT=MEETS_DEVICE_INTEGRITY
+GOOGLE_SERVICE_ACCOUNT_EMAIL=play-integrity-verifier@example-project.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nreplace-with-service-account-key\n-----END PRIVATE KEY-----\n"
+APPLE_APP_ATTEST_APP_ID=TEAMID.com.q9labsai.murmur
+APPLE_APP_ATTEST_ENVIRONMENT=production
+
+DEEPGRAM_API_KEY=server-side-only
+GROQ_API_KEY=server-side-only
+OPENROUTER_API_KEY=server-side-only
+OPENROUTER_MODEL=google/gemma-4-26b-a4b-it
+OPENROUTER_SITE_URL=https://murmur.q9labs.ai
+OPENROUTER_APP_NAME=Murmur
+OPENROUTER_TIMEOUT_MS=12000
+OPENROUTER_PROVIDER_ORDER=deepinfra/fp8
+OPENROUTER_PROVIDER_ONLY=deepinfra/fp8
+OPENROUTER_PROVIDER_IGNORE=
+OPENROUTER_PROVIDER_ALLOW_FALLBACKS=false
+OPENROUTER_PROVIDER_REQUIRE_PARAMETERS=true
+OPENROUTER_PROVIDER_DATA_COLLECTION=deny
+OPENROUTER_PROVIDER_ZDR=
+OPENROUTER_PROVIDER_SORT=latency
+
+CARTESIA_API_KEY=server-side-only
+CARTESIA_VERSION=2026-03-01
+CARTESIA_DEFAULT_VOICE_ID=replace-with-cartesia-voice-id
+CARTESIA_VOICE_ID_BY_LANGUAGE={"ar":"replace-with-arabic-voice-id","nl":"replace-with-dutch-voice-id"}
+
+# Optional webhook. REPORT_ADMIN_TOKEN is the required fallback for operational triage.
+REPORT_WEBHOOK_URL=https://example.invalid/murmur-report-webhook
+REPORT_ADMIN_TOKEN=server-side-random-admin-token

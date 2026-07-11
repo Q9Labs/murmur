@@ -9,11 +9,11 @@ ignorePaths:
   - dist/**
   - build/**
   - pnpm-lock.yaml
-  - assets/**
-  - store-assets/**
+  - apps/mobile/assets/**
+  - apps/mobile/store-assets/**
   - scratchpad/**
-  - fastlane/metadata/**/images/**
-  - fastlane/metadata/**/screenshots/**
+  - apps/mobile/fastlane/metadata/**/images/**
+  - apps/mobile/fastlane/metadata/**/screenshots/**
 ignoreRegExpList:
   - "[^\\x00-\\x7F]+"
 words:
@@ -129,6 +129,7 @@ words:
   - Simul
   - skillbox
   - Soniox
+  - subpaths
   - splashscreen
   - stazione
   - Supabase
