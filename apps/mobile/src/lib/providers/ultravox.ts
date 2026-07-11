@@ -72,7 +72,7 @@ export class UltravoxLiveClient {
       return;
     }
     this.backpressureActive = false;
-    const data = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength);
+    const data = new Uint8Array(frame).buffer;
     this.socket.send(data);
   }
 

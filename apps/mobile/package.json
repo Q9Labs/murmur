@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "@types/react-dom": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
     "vitest": "^4.1.6"
   }

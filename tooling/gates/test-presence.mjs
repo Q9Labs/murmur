@@ -69,6 +69,38 @@ const explicitPolicyExclusions = new Map([
     "React Native language/mode controls; state decisions are covered by view-model tests and route-level flows.",
   ],
   [
+    "apps/mobile/src/home/variants/classic.tsx",
+    "Composition-only shell around existing home components; decision logic is covered by view-model and variants/logic tests.",
+  ],
+  [
+    "apps/mobile/src/home/variants/hooks.ts",
+    "React Native Animated/AccessibilityInfo subscriptions; the pure derivations they use live in variants/logic.ts with tests.",
+  ],
+  [
+    "apps/mobile/src/home/variants/shared.tsx",
+    "Shared React Native presentation pieces reused by variant shells; span/scroll decision logic is covered by variants/logic tests.",
+  ],
+  [
+    "apps/mobile/src/home/variants/sharedControls.tsx",
+    "Shared React Native language/mode/primary-action controls styled per variant; state decisions are covered by view-model tests.",
+  ],
+  [
+    "apps/mobile/src/home/variants/onboardingFlow.tsx",
+    "Theme-driven React Native onboarding steps shared by variant shells; onboarding state transitions are owned by apps/mobile/src/home/homeScreen.tsx.",
+  ],
+  [
+    "apps/mobile/src/home/variants/aura/onboarding.tsx",
+    "React Native onboarding presentation for the Aura variant; onboarding state transitions are owned by apps/mobile/src/home/homeScreen.tsx and covered there.",
+  ],
+  [
+    "apps/mobile/src/home/variants/bloom/onboarding.tsx",
+    "React Native onboarding presentation for the Bloom variant; onboarding state transitions are owned by apps/mobile/src/home/homeScreen.tsx and covered there.",
+  ],
+  [
+    "apps/mobile/src/home/variants/fieldConsole/onboarding.tsx",
+    "React Native onboarding presentation for the Field Console variant; onboarding state transitions are owned by apps/mobile/src/home/homeScreen.tsx and covered there.",
+  ],
+  [
     "apps/mobile/src/home/languagePicker.tsx",
     "React Native modal language picker; direct tests require a renderer/native harness.",
   ],

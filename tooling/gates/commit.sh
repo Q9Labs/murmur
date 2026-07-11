@@ -28,6 +28,9 @@ pnpm run deps:syncpack
 # Catch typos in identifiers, comments, docs, config, and user-facing copy.
 pnpm run lint:spelling
 
+# Diagnose common Node.js, iOS, Android, and React Native project health issues.
+pnpm run react:doctor
+
 # Require meaningful source files to have matching tests unless explicitly excluded.
 pnpm run test:presence
 

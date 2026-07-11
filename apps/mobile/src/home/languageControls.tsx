@@ -4,6 +4,7 @@ import { Pressable, Text, View, type ViewStyle } from "react-native";
 import type { TranslationMode } from "@murmur/protocol/transport/types";
 import { styles } from "./styles";
 import type { PickerMode } from "./types";
+import { TextModeTabs } from "./variants/sharedControls";
 
 export function LanguageStrip({
   canChangeLanguages,
@@ -67,54 +68,23 @@ export function ModeToggle({
   translationMode: TranslationMode;
 }): ReactNode {
   return (
-    <View
-      accessibilityLabel={`Translation mode ${translationMode === "continuous" ? "Continuous" : "Phrase"}`}
-      accessibilityRole="tablist"
-      style={styles.modeToggle}
-    >
-      {(["phrase", "continuous"] as const).map((mode) => {
-        const active = translationMode === mode;
-        return (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active, disabled: !canChangeLanguages }}
-            disabled={!canChangeLanguages}
-            key={mode}
-            onPress={() => onToggleTranslationMode(mode)}
-            style={({ pressed }) => getModeButtonStyle({
-              active,
-              canChangeLanguages,
-              pressed,
-            })}
-          >
-            <Text style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
-              {mode === "continuous" ? "Continuous" : "Phrase"}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <TextModeTabs
+      activeStyle={[styles.modeButtonText, styles.modeButtonTextActive]}
+      activeTabStyle={styles.modeButtonActive}
+      canChangeLanguages={canChangeLanguages}
+      containerStyle={styles.modeToggle}
+      inactiveStyle={styles.modeButtonText}
+      onToggleTranslationMode={onToggleTranslationMode}
+      pressedStyle={styles.pressed}
+      tabStyle={styles.modeButton}
+      translationMode={translationMode}
+    />
   );
 }
 
 function getLanguageSwapButtonStyle(pressed: boolean, canSwapLanguages: boolean): ViewStyle[] {
   const result: ViewStyle[] = [styles.languageSwapButton];
   if (pressed || !canSwapLanguages) {
-    result.push(styles.pressed);
-  }
-  return result;
-}
-
-function getModeButtonStyle(params: {
-  active: boolean;
-  canChangeLanguages: boolean;
-  pressed: boolean;
-}): ViewStyle[] {
-  const result: ViewStyle[] = [styles.modeButton];
-  if (params.active) {
-    result.push(styles.modeButtonActive);
-  }
-  if (params.pressed || !params.canChangeLanguages) {
     result.push(styles.pressed);
   }
   return result;

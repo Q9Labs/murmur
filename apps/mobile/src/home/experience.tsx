@@ -1,21 +1,27 @@
-import type { MutableRefObject, ReactNode } from "react";
+import type { ComponentType, MutableRefObject, ReactNode } from "react";
 import { ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { AudioStateEvent } from "../../modules/murmur-audio";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import type { TranslationMode, TranslationModelRoute } from "@murmur/protocol/transport/types";
-import { AppChrome } from "./appChrome";
-import { BottomDock } from "./bottomDock";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
-import { LanguageStrip, ModeToggle } from "./languageControls";
 import { DevModelRouteModal, SettingsModal } from "./settingsModals";
-import { styles } from "./styles";
-import { TranslationSurface } from "./translationSurface";
 import type { PickerMode } from "./types";
+import { AuraShell } from "./variants/aura";
+import { BloomShell } from "./variants/bloom";
+import { ClassicShell } from "./variants/classic";
+import { FieldConsoleShell } from "./variants/fieldConsole";
+import type { UiVariant, VariantShellProps } from "./variants/types";
 import type { HomeViewModel } from "./viewModel";
+
+const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
+  aura: AuraShell,
+  bloom: BloomShell,
+  classic: ClassicShell,
+  console: FieldConsoleShell,
+};
 
 export function HomeExperience({
   audioState,
@@ -40,6 +46,7 @@ export function HomeExperience({
   onPrimaryAction,
   onResetIdentity,
   onSelectDevModelRoute,
+  onSelectUiVariant,
   onSwapLanguages,
   onToggleTranslationMode,
   onToggleUltravoxVad,
@@ -51,6 +58,7 @@ export function HomeExperience({
   sourceLanguageCode,
   targetLanguageCode,
   translationMode,
+  uiVariant,
   ultravoxVadEnabled,
   viewModel,
 }: {
@@ -76,6 +84,7 @@ export function HomeExperience({
   onPrimaryAction: () => void;
   onResetIdentity: () => void;
   onSelectDevModelRoute: (route: TranslationModelRoute) => void;
+  onSelectUiVariant: (variant: UiVariant) => void;
   onSwapLanguages: () => void;
   onToggleTranslationMode: (mode: TranslationMode) => void;
   onToggleUltravoxVad: () => void;
@@ -87,45 +96,27 @@ export function HomeExperience({
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   translationMode: TranslationMode;
+  uiVariant: UiVariant;
   ultravoxVadEnabled: boolean;
   viewModel: HomeViewModel;
 }): ReactNode {
+  const Shell = variantShells[uiVariant];
+
   return (
-    <SafeAreaView style={styles.screen}>
-      <AppChrome
+    <>
+      <Shell
         audioState={audioState}
-        healthText={viewModel.healthText}
-        onOpenSettings={onOpenSettings}
-        status={live.status}
-      />
-      <LanguageStrip
-        canChangeLanguages={viewModel.canChangeLanguages}
-        canSwapLanguages={viewModel.canSwapLanguages}
-        onOpenPicker={onOpenPicker}
-        onSwapLanguages={onSwapLanguages}
-        sourceLanguageDisplayName={viewModel.sourceLanguageDisplayName}
-        targetLanguageDisplayName={viewModel.targetLanguage.display_name}
-      />
-      <ModeToggle
-        canChangeLanguages={viewModel.canChangeLanguages}
-        onToggleTranslationMode={onToggleTranslationMode}
-        translationMode={translationMode}
-      />
-      <TranslationSurface
         continuousAutoScrollRef={continuousAutoScrollRef}
         continuousTimelineRef={continuousTimelineRef}
         continuousUserInteractedRef={continuousUserInteractedRef}
         live={live}
+        onOpenPicker={onOpenPicker}
+        onOpenSettings={onOpenSettings}
+        onPrimaryAction={onPrimaryAction}
+        onSwapLanguages={onSwapLanguages}
+        onToggleTranslationMode={onToggleTranslationMode}
         translationMode={translationMode}
         viewModel={viewModel}
-      />
-      <BottomDock
-        canStart={viewModel.canStart}
-        error={live.error}
-        isLive={viewModel.isLive}
-        onPrimaryAction={onPrimaryAction}
-        reportError={live.report_error}
-        reportReceiptId={live.report_receipt_id}
       />
       <LanguagePickerController
         mode={pickerMode}
@@ -144,9 +135,11 @@ export function HomeExperience({
         onOpenDevModelRoute={onOpenDevModelRoute}
         onOpenDiagnostics={onOpenDiagnostics}
         onResetIdentity={onResetIdentity}
+        onSelectUiVariant={onSelectUiVariant}
         onToggleUltravoxVad={onToggleUltravoxVad}
         open={settingsOpen}
         settingsMessage={settingsMessage}
+        uiVariant={uiVariant}
         ultravoxVadEnabled={ultravoxVadEnabled}
       />
       <DevModelRouteModal
@@ -166,6 +159,6 @@ export function HomeExperience({
         targetLanguage={viewModel.targetLanguage}
         targetLanguageCode={targetLanguageCode}
       />
-    </SafeAreaView>
+    </>
   );
 }

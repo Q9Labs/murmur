@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { styles } from "./styles";
@@ -8,11 +8,13 @@ export function ModalSheet({
   children,
   onClose,
   open,
+  scroll = false,
   title,
 }: {
   children: ReactNode;
   onClose: () => void;
   open: boolean;
+  scroll?: boolean;
   title: string;
 }): ReactNode {
   return (
@@ -20,12 +22,18 @@ export function ModalSheet({
       <View style={styles.modalScrim}>
         <SafeAreaView style={styles.sheet}>
           <ModalSheetHeader onClose={onClose} title={title} />
-          {children}
+          {scroll ? (
+            <ScrollView contentContainerStyle={sheetContent} showsVerticalScrollIndicator={false}>
+              {children}
+            </ScrollView>
+          ) : children}
         </SafeAreaView>
       </View>
     </Modal>
   );
 }
+
+const sheetContent = { paddingBottom: 24 } as const;
 
 function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: string }): ReactNode {
   return (

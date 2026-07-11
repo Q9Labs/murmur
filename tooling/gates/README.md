@@ -19,7 +19,8 @@ The static and security layers are:
 - `pnpm run security:osv`: OSV-Scanner dependency vulnerability scan.
 - `pnpm run deps:syncpack`: dependency/version policy.
 - `pnpm run lint:spelling`: CSpell typo hygiene.
+- `pnpm run react:doctor`: pinned Expo Doctor 1.20.0 diagnostics for the React Native app stack.
 
-The Murmur project checks are `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`.
+The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`.
 
 Excluded from the hook on purpose: `store:live`, `store:preflight`, live production smoke checks, Fastlane submission validation, release lanes, and any command that mutates files.

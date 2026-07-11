@@ -26,6 +26,8 @@ import {
   getInitialDevModelRoute,
   isDevModelPickerEnabled,
 } from "./modelRoute";
+import { deleteStoredUiVariant, getStoredUiVariant, setStoredUiVariant } from "./variants/preference";
+import type { UiVariant } from "./variants/types";
 import { buildHomeViewModel } from "./viewModel";
 
 export default function HomeScreen(): ReactNode {
@@ -42,8 +44,10 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [uiVariant, setUiVariant] = useState<UiVariant>("console");
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState<string>("unknown");
+  const uiVariantSelectionRef = useRef(false);
   const continuousTimelineRef = useRef<ScrollView | null>(null);
   const continuousAutoScrollRef = useRef(true);
   const continuousUserInteractedRef = useRef(false);
@@ -91,6 +95,18 @@ export default function HomeScreen(): ReactNode {
       }
       if (mounted && acknowledged) {
         setOnboardingStep("done");
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void getStoredUiVariant().then((storedVariant) => {
+      if (mounted && storedVariant && !uiVariantSelectionRef.current) {
+        setUiVariant(storedVariant);
       }
     });
     return () => {
@@ -180,6 +196,12 @@ export default function HomeScreen(): ReactNode {
     await live.start();
   }
 
+  function selectUiVariant(variant: UiVariant): void {
+    uiVariantSelectionRef.current = true;
+    setUiVariant(variant);
+    void setStoredUiVariant(variant);
+  }
+
   function swapLanguages(): void {
     if (sourceLanguageCode === autoSourceLanguageCode) {
       return;
@@ -207,6 +229,7 @@ export default function HomeScreen(): ReactNode {
         step={onboardingStep}
         targetLanguageCode={targetLanguageCode}
         targetLanguageDisplayName={viewModel.targetLanguage.display_name}
+        uiVariant={uiVariant}
       />
     );
   }
@@ -230,6 +253,8 @@ export default function HomeScreen(): ReactNode {
       onDeleteLocalData={() => void deleteLocalData(setSettingsMessage, live.cancel, () => {
         setPrivacyAcknowledged(false);
         setPrivacyConsentChecked(false);
+        uiVariantSelectionRef.current = true;
+        setUiVariant("console");
       })}
       onOpenDevModelRoute={() => setDevModelRouteOpen(true)}
       onOpenDiagnostics={() => setDiagnosticsOpen(true)}
@@ -241,6 +266,7 @@ export default function HomeScreen(): ReactNode {
         setDevModelRoute(route);
         setDevModelRouteOpen(false);
       }}
+      onSelectUiVariant={selectUiVariant}
       onSwapLanguages={swapLanguages}
       onToggleTranslationMode={setTranslationMode}
       onToggleUltravoxVad={() => setUltravoxVadEnabled((current) => !current)}
@@ -252,6 +278,7 @@ export default function HomeScreen(): ReactNode {
       sourceLanguageCode={sourceLanguageCode}
       targetLanguageCode={targetLanguageCode}
       translationMode={translationMode}
+      uiVariant={uiVariant}
       ultravoxVadEnabled={ultravoxVadEnabled}
       viewModel={viewModel}
     />
@@ -270,6 +297,7 @@ async function deleteLocalData(
 ): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
+  await deleteStoredUiVariant();
   onDeleted?.();
   setMessage("Local Murmur data deleted. Privacy acknowledgement and install id were cleared.");
 }
