@@ -1,6 +1,9 @@
 title = "Murmur Gitleaks"
 
-[allowlist]
+[extend]
+useDefault = true
+
+[[allowlists]]
 description = "Repo paths that intentionally contain store copy, generated metadata, or local scratch evidence."
 paths = [
   '''^docs/legal/''',
