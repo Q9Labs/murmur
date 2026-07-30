@@ -72,7 +72,7 @@ export function isPartialSpan(span: TranslationSpan): boolean {
 }
 
 export function shouldHideSpan(span: TranslationSpan): boolean {
-  return span.status === "superseded" &&
+  return !span.source_caption.trim() &&
     !span.committed_translated_caption &&
     !span.partial_translated_caption;
 }

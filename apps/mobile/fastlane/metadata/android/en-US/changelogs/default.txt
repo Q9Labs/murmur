@@ -1,1 +1,1 @@
-Improves live translation with auto-detect source language, Continuous Mode, steadier in-progress captions, and a refreshed default translation route for faster testing feedback.
+Rebuilds live translation on OpenAI Realtime Translation for streaming source captions, translated captions, and translated speech in one experience.

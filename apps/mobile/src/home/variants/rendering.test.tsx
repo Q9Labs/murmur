@@ -6,7 +6,7 @@ import { createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "../viewModel";
 import { FieldConsoleShell } from "./fieldConsole";
 import { OnboardingFlow, type OnboardingText, type OnboardingTheme } from "./onboardingFlow";
-import { continuousScrollHandlers } from "./shared";
+import { timelineScrollHandlers } from "./shared";
 import type { VariantOnboardingProps, VariantShellProps } from "./types";
 
 const harness = vi.hoisted(() => ({
@@ -115,7 +115,6 @@ function trigger(accessibilityLabel: string): void {
 function shellProps(params: {
   hasTimeline: boolean;
   isLive: boolean;
-  translationMode: "continuous" | "phrase";
 }): VariantShellProps {
   const committed = {
     ...createSpan("hello"),
@@ -152,18 +151,16 @@ function shellProps(params: {
       playback_queued_ms: 0,
       reason: params.isLive ? "active" : "idle",
       route: "speaker",
-      sample_rate: 16000,
+      sample_rate: 24000,
     },
-    continuousAutoScrollRef: { current: true },
-    continuousTimelineRef: { current: null },
-    continuousUserInteractedRef: { current: false },
+    autoScrollRef: { current: true },
     live: liveState as VariantShellProps["live"],
     onOpenPicker: vi.fn(),
     onOpenSettings: vi.fn(),
     onPrimaryAction: vi.fn(),
     onSwapLanguages: vi.fn(),
-    onToggleTranslationMode: vi.fn(),
-    translationMode: params.translationMode,
+    timelineRef: { current: null },
+    userInteractedRef: { current: false },
     viewModel,
   };
 }
@@ -189,13 +186,13 @@ beforeEach(() => {
 });
 
 describe("Field Console variant", () => {
-  it("renders phrase controls and wires language, settings, and mode actions", () => {
-    const props = shellProps({ hasTimeline: false, isLive: false, translationMode: "phrase" });
+  it("renders controls and wires language and settings actions", () => {
+    const props = shellProps({ hasTimeline: false, isLive: false });
 
     const markup = render(<FieldConsoleShell {...props} />);
 
     expect(markup).toContain("MURMUR");
-    expect(markup).toContain("Ready to translate");
+    expect(markup).toContain("The session log starts");
     expect(markup).toContain("LISTEN");
     expect(markup).toContain("Report received: receipt-");
 
@@ -203,20 +200,14 @@ describe("Field Console variant", () => {
     trigger("Change spoken language");
     trigger("Change translation language");
     trigger("Reverse translation languages");
-    for (const tab of harness.controls.filter((control) => control.accessibilityRole === "tab")) {
-      tab.onPress?.();
-    }
-
     expect(props.onOpenSettings).toHaveBeenCalledOnce();
     expect(props.onOpenPicker).toHaveBeenCalledWith("source");
     expect(props.onOpenPicker).toHaveBeenCalledWith("target");
     expect(props.onSwapLanguages).toHaveBeenCalledOnce();
-    expect(props.onToggleTranslationMode).toHaveBeenCalledWith("phrase");
-    expect(props.onToggleTranslationMode).toHaveBeenCalledWith("continuous");
   });
 
-  it("renders committed, translating, and tentative entries in continuous mode", () => {
-    const props = shellProps({ hasTimeline: true, isLive: true, translationMode: "continuous" });
+  it("renders committed, translating, and tentative entries", () => {
+    const props = shellProps({ hasTimeline: true, isLive: true });
 
     const markup = render(<FieldConsoleShell {...props} />);
 
@@ -260,19 +251,19 @@ describe("shared variant onboarding flow", () => {
   });
 });
 
-describe("continuous scroll behavior", () => {
+describe("timeline scroll behavior", () => {
   it("keeps following live text until a user scrolls away from the bottom", () => {
     const scrollToEnd = vi.fn();
     const refs = {
-      continuousAutoScrollRef: { current: true },
-      continuousTimelineRef: {
+      autoScrollRef: { current: true },
+      timelineRef: {
         current: { scrollToEnd } as unknown as NonNullable<
-          VariantShellProps["continuousTimelineRef"]["current"]
+          VariantShellProps["timelineRef"]["current"]
         >,
       },
-      continuousUserInteractedRef: { current: false },
+      userInteractedRef: { current: false },
     };
-    const handlers = continuousScrollHandlers(refs);
+    const handlers = timelineScrollHandlers(refs);
 
     handlers.onContentSizeChange();
     handlers.onScrollBeginDrag();
@@ -288,7 +279,7 @@ describe("continuous scroll behavior", () => {
     handlers.onContentSizeChange();
 
     expect(scrollToEnd).toHaveBeenCalledOnce();
-    expect(refs.continuousAutoScrollRef.current).toBe(false);
-    expect(refs.continuousUserInteractedRef.current).toBe(true);
+    expect(refs.autoScrollRef.current).toBe(false);
+    expect(refs.userInteractedRef.current).toBe(true);
   });
 });

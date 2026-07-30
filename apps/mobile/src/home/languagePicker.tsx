@@ -74,7 +74,7 @@ function LanguagePickerModal({
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredLanguages = languageRegistry.filter((language) => {
-    const haystack = `${language.display_name} ${language.native_name} ${language.openrouter_label}`.toLowerCase();
+    const haystack = `${language.display_name} ${language.native_name}`.toLowerCase();
     return haystack.includes(normalizedQuery);
   });
   const showAutoDetect =

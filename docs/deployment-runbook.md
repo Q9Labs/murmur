@@ -24,16 +24,14 @@ pnpm --filter @murmur/worker exec wrangler whoami
 Configure secrets with Wrangler rather than committing values:
 
 ```bash
-pnpm --filter @murmur/worker exec wrangler secret put DEEPGRAM_API_KEY --env production
-pnpm --filter @murmur/worker exec wrangler secret put OPENROUTER_API_KEY --env production
-pnpm --filter @murmur/worker exec wrangler secret put CARTESIA_API_KEY --env production
+pnpm --filter @murmur/worker exec wrangler secret put OPENAI_API_KEY --env production
 pnpm --filter @murmur/worker exec wrangler secret put SESSION_HASH_SALT --env production
 pnpm --filter @murmur/worker exec wrangler secret put REPORT_ADMIN_TOKEN --env production
 pnpm --filter @murmur/worker exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL --env production
 pnpm --filter @murmur/worker exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY --env production
 ```
 
-Optional variables and provider routing controls are documented in `apps/worker/.dev.vars.example`. Keep production-only values in the Cloudflare secret store. Secret updates create a new Worker version; keep the previous provider credential active until a synthetic session and provider-backed translation or summary succeeds.
+Optional variables are documented in `apps/worker/.dev.vars.example`. Keep production-only values in the Cloudflare secret store. Secret updates create a new Worker version; keep the previous credential active until a provider-backed live translation succeeds.
 
 ## Verification
 

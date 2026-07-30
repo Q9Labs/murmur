@@ -21,16 +21,16 @@ import {
   shouldHideSpan,
   timelineTranslationText,
 } from "../logic";
-import { continuousScrollHandlers, PhraseCaptions, StatusMessages } from "../shared";
-import { PrimaryAction, TextModeTabs } from "../sharedControls";
+import { timelineScrollHandlers, StatusMessages } from "../shared";
+import { PrimaryAction } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { consoleAccents, consolePalettes, styles, type ConsolePalette } from "./styles";
 
 function shellSignalStages(props: VariantShellProps): ReturnType<typeof deriveSignalStages> {
   return deriveSignalStages({
     captureActive: Boolean(props.audioState?.capture_active),
-    hasTentativeCaption: Boolean(props.live.tentative_source_caption.trim()),
-    pendingCount: props.viewModel.continuousPendingCount,
+    hasTentativeCaption: Boolean(props.live.spans.at(-1)?.source_caption.trim()),
+    pendingCount: props.viewModel.pendingCount,
     playbackActive: Boolean(props.audioState?.playback_active),
   });
 }
@@ -39,7 +39,7 @@ export function FieldConsoleShell(props: VariantShellProps): ReactNode {
   const scheme = useColorScheme();
   const dark = scheme === "dark";
   const palette = consolePalettes[dark ? "dark" : "light"];
-  const { live, translationMode, viewModel } = props;
+  const { live, viewModel } = props;
   const stages = shellSignalStages(props);
 
   return (
@@ -53,12 +53,6 @@ export function FieldConsoleShell(props: VariantShellProps): ReactNode {
           errorStyle={[styles.error, errorColor]}
           live={live}
           receiptStyle={[styles.error, receiptColor]}
-        />
-        <ModeRow
-          canChangeLanguages={viewModel.canChangeLanguages}
-          onToggleTranslationMode={props.onToggleTranslationMode}
-          palette={palette}
-          translationMode={translationMode}
         />
         <PrimaryAction
           canStart={viewModel.canStart}
@@ -232,39 +226,11 @@ function RouteKey({
 }
 
 function ReadoutPanel(props: VariantShellProps & { palette: ConsolePalette }): ReactNode {
-  const { palette, translationMode } = props;
+  const { palette } = props;
 
   return (
     <View style={[styles.readoutPanel, { backgroundColor: palette.panel, borderColor: palette.hairline }]}>
-      {translationMode === "continuous" ? (
-        <LogTimeline {...props} />
-      ) : (
-        <PhraseReadout palette={palette} viewModel={props.viewModel} />
-      )}
-    </View>
-  );
-}
-
-function PhraseReadout({
-  palette,
-  viewModel,
-}: {
-  palette: ConsolePalette;
-  viewModel: VariantShellProps["viewModel"];
-}): ReactNode {
-  return (
-    <View style={styles.readoutPhrase}>
-      <Text style={[styles.kicker, { color: consoleAccents.signal }]}>
-        {viewModel.hasTranslatedText ? "TRANSLATED" : viewModel.statusText.toUpperCase()}
-      </Text>
-      <PhraseCaptions
-        partialStyle={styles.translationPartial}
-        sourceRtlStyle={styles.rtlText}
-        sourceStyle={[styles.readoutSource, { color: palette.muted }]}
-        translationRtlStyle={styles.rtlText}
-        translationStyle={[styles.readoutTranslation, { color: palette.ink }]}
-        viewModel={viewModel}
-      />
+      <LogTimeline {...props} />
     </View>
   );
 }
@@ -272,15 +238,15 @@ function PhraseReadout({
 function LogTimeline(props: VariantShellProps & { palette: ConsolePalette }): ReactNode {
   const { live, palette, viewModel } = props;
   const sourceRtl = Boolean(viewModel.sourceLanguage?.rtl);
-  const visibleSpans = live.spans.filter((span) => !shouldHideSpan(span));
+  const visibleSpans = visibleLogSpans(live.spans);
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
 
   return (
     <ScrollView
-      ref={props.continuousTimelineRef}
+      ref={props.timelineRef}
       scrollEventThrottle={80}
       showsVerticalScrollIndicator
-      {...continuousScrollHandlers(props)}
+      {...timelineScrollHandlers(props)}
     >
       {!hasTimeline ? <LogEmptyNotice isLive={viewModel.isLive} palette={palette} /> : null}
       {visibleSpans.map((span) => (
@@ -292,11 +258,17 @@ function LogTimeline(props: VariantShellProps & { palette: ConsolePalette }): Re
           targetRtl={viewModel.targetLanguage.rtl}
         />
       ))}
-      {live.tentative_source_caption.trim() ? (
-        <ListeningRow palette={palette} sourceRtl={sourceRtl} text={live.tentative_source_caption} />
-      ) : null}
+      <ListeningRow
+        palette={palette}
+        sourceRtl={sourceRtl}
+        text={live.tentative_source_caption}
+      />
     </ScrollView>
   );
+}
+
+function visibleLogSpans(spans: TranslationSpan[]): TranslationSpan[] {
+  return spans.filter((span) => !shouldHideSpan(span));
 }
 
 function LogEmptyNotice({ isLive, palette }: { isLive: boolean; palette: ConsolePalette }): ReactNode {
@@ -316,6 +288,9 @@ function ListeningRow({
   sourceRtl: boolean;
   text: string;
 }): ReactNode {
+  if (!text.trim()) {
+    return null;
+  }
   return (
     <View style={styles.logRow}>
       <Text style={[styles.logStamp, { color: consoleAccents.signal }]}>LISTENING</Text>
@@ -355,38 +330,6 @@ function LogRow({
       <Text style={[styles.logSource, { color: palette.muted }, sourceRtl && styles.rtlText]}>
         {span.source_caption}
       </Text>
-    </View>
-  );
-}
-
-const consoleModeLabels = { continuous: "CONT", phrase: "PHRASE" };
-
-function ModeRow({
-  canChangeLanguages,
-  onToggleTranslationMode,
-  palette,
-  translationMode,
-}: {
-  canChangeLanguages: boolean;
-  onToggleTranslationMode: VariantShellProps["onToggleTranslationMode"];
-  palette: ConsolePalette;
-  translationMode: VariantShellProps["translationMode"];
-}): ReactNode {
-  return (
-    <View style={styles.modeRow}>
-      <Text style={[styles.kicker, { color: palette.muted }]}>MODE</Text>
-      <TextModeTabs
-        activeStyle={[styles.modeKeyText, { color: palette.panel }]}
-        activeTabStyle={{ backgroundColor: palette.ink }}
-        canChangeLanguages={canChangeLanguages}
-        containerStyle={[styles.modeSwitch, { borderColor: palette.hairline }]}
-        inactiveStyle={[styles.modeKeyText, { color: palette.muted }]}
-        labels={consoleModeLabels}
-        onToggleTranslationMode={onToggleTranslationMode}
-        pressedStyle={styles.pressed}
-        tabStyle={styles.modeKey}
-        translationMode={translationMode}
-      />
     </View>
   );
 }

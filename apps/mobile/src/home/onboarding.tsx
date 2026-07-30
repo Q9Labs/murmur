@@ -108,8 +108,8 @@ function PrivacyOnboarding({
         <View style={styles.privacyPulseInner} />
         <Text style={styles.privacyHeroTitle}>AI processing notice</Text>
         <Text style={styles.privacyHeroCopy}>
-          When you tap Listen, Murmur sends live audio to Deepgram, captions to OpenRouter
-          through Q9 Labs on Cloudflare, and translated text to Cartesia for speech.
+          When you tap Listen, Murmur sends live audio through Q9 Labs on Cloudflare
+          to OpenAI for transcription, translation, and translated speech.
         </Text>
         <View style={styles.privacyDetails}>
           <Text style={styles.privacyDetailText}>

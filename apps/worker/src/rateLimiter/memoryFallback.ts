@@ -1,13 +1,8 @@
 import {
-  beginSummary,
-  beginTranslation,
-  canRefreshTokens,
   canCreateSession,
   closeSession,
   createSessionRecord,
   defaultRateLimits,
-  endSummary,
-  endTranslation,
   getSession,
   type LimitResult,
 } from "../limits";
@@ -37,25 +32,6 @@ export function callMemoryLimiter(body: DurableLimitRequest): unknown {
         hashed_install_id: body.hashed_install_id,
         now_ms: body.now_ms,
       });
-    case "begin_translation":
-      return beginTranslation({
-        app_session_id: body.app_session_id,
-        config: defaultRateLimits,
-        now_ms: body.now_ms,
-        source_caption: body.source_caption,
-      });
-    case "begin_summary":
-      return beginSummary({
-        app_session_id: body.app_session_id,
-        config: defaultRateLimits,
-        now_ms: body.now_ms,
-      });
-    case "end_translation":
-      endTranslation(body.app_session_id);
-      return { ok: true };
-    case "end_summary":
-      endSummary(body.app_session_id);
-      return { ok: true };
     case "close_session":
       closeSession(body.app_session_id, body.now_ms);
       return { ok: true };
@@ -70,13 +46,6 @@ export function callMemoryLimiter(body: DurableLimitRequest): unknown {
       return listReportInboxMemory(body.limit);
     case "delete_report":
       return deleteReportInboxMemory(body.report_id);
-    case "can_refresh_tokens":
-      return canRefreshTokens({
-        app_session_id: body.app_session_id,
-        config: defaultRateLimits,
-        hashed_install_id: body.hashed_install_id,
-        now_ms: body.now_ms,
-      });
     case "get_session":
       return getSession(body.app_session_id);
     case "get_app_attest_device":

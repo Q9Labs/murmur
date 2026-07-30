@@ -35,10 +35,6 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
     counts[span.status] = (counts[span.status] ?? 0) + 1;
     return counts;
   }, {});
-  const oldestInFlightMs = Math.max(
-    0,
-    ...params.diagnosticsSnapshot.translation_scheduler.in_flight.map((item) => item.active_ms ?? 0),
-  );
   const report = buildLatencyEvidenceReport({
     metadata: {
       app_session_id: params.appSessionId || undefined,
@@ -57,14 +53,12 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
         audio_playback_active: params.audioState?.playback_active ?? null,
         debug_log_count: params.debugLog.length,
         error: params.error,
-        oldest_in_flight_translation_ms: oldestInFlightMs,
-        queued_translation_count: params.diagnosticsSnapshot.translation_scheduler.counts.queued,
-        in_flight_translation_count: params.diagnosticsSnapshot.translation_scheduler.counts.in_flight,
+        realtime_socket_open: params.diagnosticsSnapshot.runtime.realtime_socket_open,
+        source_char_count: params.diagnosticsSnapshot.runtime.source_char_count,
         span_count: params.spans.length,
         spans_by_status: spansByStatus,
         status: params.status,
-        translation_mode: params.session.translation_mode,
-        translation_route: params.session.translation_model_route ?? "worker_default",
+        translated_char_count: params.diagnosticsSnapshot.runtime.translated_char_count,
       },
       audio_state: toDiagnosticJson(params.audioState),
       runtime: toDiagnosticJson(params.diagnosticsSnapshot),

@@ -9,8 +9,8 @@ vi.mock("expo", () => ({
 
 import {
   calculatePcm16Rms,
-  downsampleTo16Khz,
   float32ToPcm16Bytes,
+  resampleForRealtime,
 } from "./MurmurAudioModule.web";
 
 describe("MurmurAudioModule web audio helpers", () => {
@@ -31,11 +31,11 @@ describe("MurmurAudioModule web audio helpers", () => {
     ]);
   });
 
-  it("downsamples 48 kHz browser capture to 16 kHz mono frames", () => {
-    const input = new Float32Array([0, 0.3, 0.6, 0.9, 0.6, 0.3]);
-    const output = downsampleTo16Khz(input, 48_000);
+  it("resamples 48 kHz browser capture to 24 kHz mono frames", () => {
+    const input = new Float32Array([0, 0.4, 0.8, 0.4]);
+    const output = resampleForRealtime(input, 48_000);
 
-    expect(output[0]).toBeCloseTo(0.3);
+    expect(output[0]).toBeCloseTo(0.2);
     expect(output[1]).toBeCloseTo(0.6);
   });
 

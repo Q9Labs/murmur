@@ -1,45 +1,28 @@
-import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
-import type { SessionState, TranslationSession, TranslationSpan } from "@murmur/protocol/session";
-import type {
-  ReportTranslationCategory,
-  TranslationMode,
-  TranslationModelRoute,
-} from "@murmur/protocol/transport/types";
-import type { ContinuousTranslationSchedulerSnapshot } from "../continuousTranslationScheduler";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
+import type { SessionState, TranslationSession, TranslationSpan } from "@murmur/protocol/session";
+import type { ReportTranslationCategory } from "@murmur/protocol/transport/types";
+
+import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
 
 export type LiveTranslationParams = {
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
-  translation_model_route?: TranslationModelRoute;
-  translation_mode?: TranslationMode;
-  ultravox_vad_enabled?: boolean;
 };
 
 export type LiveTranslationDiagnosticsSnapshot = {
-  continuous_memory: {
-    memory_version: number;
-    rolling_source_char_count: number;
-    rolling_span_count: number;
-    summary_job_running: boolean;
-    summary_length: number;
-    summary_updated_through_span_id: string | null;
-  };
   runtime: {
-    last_committed_source_caption: string | null;
-    pending_wait_prefix: string | null;
-    tentative_source_caption: string;
-    translation_socket_open: boolean;
+    realtime_socket_open: boolean;
+    source_char_count: number;
+    translated_char_count: number;
   };
-  translation_scheduler: ContinuousTranslationSchedulerSnapshot;
 };
 
 export type LiveTranslationState = {
-  error: string | null;
   debug_log: DebugLogEntry[];
+  diagnostics_snapshot: LiveTranslationDiagnosticsSnapshot;
+  error: string | null;
   latency_report: LatencyReport;
   latency_samples: LatencySample[];
-  diagnostics_snapshot: LiveTranslationDiagnosticsSnapshot;
   report_error: string | null;
   report_receipt_id: string | null;
   session: TranslationSession;

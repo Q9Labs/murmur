@@ -87,58 +87,6 @@ export function TextLanguageRow({
   );
 }
 
-const defaultModeLabels = { continuous: "Continuous", phrase: "Phrase" };
-
-export function TextModeTabs({
-  activeStyle,
-  activeTabStyle,
-  canChangeLanguages,
-  containerStyle,
-  inactiveStyle,
-  labels = defaultModeLabels,
-  onToggleTranslationMode,
-  pressedStyle,
-  tabStyle,
-  translationMode,
-}: Pick<VariantShellProps, "onToggleTranslationMode" | "translationMode"> & {
-  activeStyle: StyleProp<TextStyle>;
-  activeTabStyle?: StyleProp<ViewStyle>;
-  canChangeLanguages: boolean;
-  containerStyle: StyleProp<ViewStyle>;
-  inactiveStyle: StyleProp<TextStyle>;
-  labels?: { continuous: string; phrase: string };
-  pressedStyle: StyleProp<ViewStyle>;
-  tabStyle?: StyleProp<ViewStyle>;
-}): ReactNode {
-  return (
-    <View
-      accessibilityLabel={`Translation mode ${translationMode === "continuous" ? labels.continuous : labels.phrase}`}
-      accessibilityRole="tablist"
-      style={containerStyle}
-    >
-      {(["phrase", "continuous"] as const).map((mode) => {
-        const active = translationMode === mode;
-        return (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active, disabled: !canChangeLanguages }}
-            disabled={!canChangeLanguages}
-            key={mode}
-            onPress={() => onToggleTranslationMode(mode)}
-            style={({ pressed }) => [
-              tabStyle,
-              active && activeTabStyle,
-              (pressed || !canChangeLanguages) && pressedStyle,
-            ]}
-          >
-            <Text style={active ? activeStyle : inactiveStyle}>{labels[mode]}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 export function PrimaryAction({
   canStart,
   isLive,

@@ -10,13 +10,6 @@ type AppStyles = {
   brand: TextStyle;
   brandMark: ViewStyle;
   brandLogo: ImageStyle;
-  continuousContent: ViewStyle;
-  continuousEmpty: TextStyle;
-  continuousFooterText: TextStyle;
-  continuousHeader: ViewStyle;
-  continuousSourcePanel: ViewStyle;
-  continuousStatus: TextStyle;
-  continuousTimeline: ViewStyle;
   diagnosticButton: ViewStyle;
   diagnosticButtonSecondary: ViewStyle;
   diagnosticButtonText: TextStyle;
@@ -144,7 +137,9 @@ type AppStyles = {
   textButton: ViewStyle;
   textButtonText: TextStyle;
   timeline: ViewStyle;
+  timelineContent: ViewStyle;
   timelineEmpty: TextStyle;
+  timelineScroll: ViewStyle;
   translatedText: TextStyle;
   translatedTextPartial: TextStyle;
   translationContent: ViewStyle;
@@ -223,7 +218,7 @@ export const styles = StyleSheet.create<AppStyles>({
     height: 40,
     width: 40,
   },
-  continuousContent: {
+  timelineContent: {
     flexGrow: 1,
     gap: 12,
     justifyContent: "flex-start",
@@ -231,35 +226,7 @@ export const styles = StyleSheet.create<AppStyles>({
     paddingHorizontal: 24,
     paddingTop: 18,
   },
-  continuousEmpty: {
-    color: "#6B7B72",
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 24,
-    paddingVertical: 28,
-  },
-  continuousFooterText: {
-    color: "#7A827D",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 17,
-    paddingBottom: 6,
-  },
-  continuousHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  continuousSourcePanel: {
-    borderBottomWidth: 0,
-    opacity: 0.72,
-  },
-  continuousStatus: {
-    color: "#5F6A64",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  continuousTimeline: {
+  timelineScroll: {
     flex: 1,
   },
   diagnosticButton: {

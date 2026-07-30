@@ -6,6 +6,7 @@ All notable changes to Murmur are documented here.
 
 ### Added
 
+- OpenAI Realtime Translation through a provider-neutral Worker WebSocket, including source transcripts, translated transcripts, and translated audio.
 - Public contribution, security, conduct, licensing, and repository templates.
 - Continuous integration for tests, static checks, secret scanning, and dependency review.
 - A small pnpm workspace with separate mobile, Worker, and cross-runtime protocol packages.
@@ -16,6 +17,7 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Unified live translation into one streaming experience and moved capture/playback to 24 kHz PCM16.
 - Reworked the README and deployment documentation for reproducible public development.
 - Replaced private store-operation ledgers with a minimal machine-readable readiness record.
 - Updated vulnerable transitive `undici` versions through scoped pnpm overrides.
@@ -26,6 +28,7 @@ All notable changes to Murmur are documented here.
 
 ### Removed
 
+- The Phrase/Continuous mode split and the previous multi-provider speech, translation, and speech-generation stack.
 - Tracked coverage output, local paths, operational session records, stale store audits, and unreferenced design prototypes.
 - Obsolete Deepgram token-grant client code and its unused backend wrapper.
 - Duplicate store screenshots, unused image-generation helpers, stale service paths, and unused runtime exports.

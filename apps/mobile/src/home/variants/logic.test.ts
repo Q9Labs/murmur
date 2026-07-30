@@ -101,18 +101,21 @@ describe("span display helpers", () => {
   it("marks partial and translating spans as partial", () => {
     expect(isPartialSpan({ ...createSpan("hi"), partial_translated_caption: "مرح" })).toBe(true);
     expect(isPartialSpan({ ...createSpan("hi"), status: "translating" })).toBe(true);
-    expect(isPartialSpan({ ...createSpan("hi"), committed_translated_caption: "مرحبا" })).toBe(false);
+    expect(isPartialSpan({
+      ...createSpan("hi"),
+      committed_translated_caption: "مرحبا",
+      status: "committed",
+    })).toBe(false);
   });
 
-  it("hides only superseded spans without captions", () => {
-    expect(shouldHideSpan({ ...createSpan("hi"), status: "superseded" })).toBe(true);
-    expect(shouldHideSpan({ ...createSpan("hi"), committed_translated_caption: "مرحبا", status: "superseded" })).toBe(false);
+  it("hides only empty spans without captions", () => {
+    expect(shouldHideSpan(createSpan())).toBe(true);
     expect(shouldHideSpan(createSpan("hi"))).toBe(false);
   });
 
   it("shows an empty timeline when every span is hidden", () => {
-    expect(hasVisibleTimeline([{ ...createSpan("hi"), status: "superseded" }], "")).toBe(false);
-    expect(hasVisibleTimeline([{ ...createSpan("hi"), status: "superseded" }], "listening")).toBe(true);
+    expect(hasVisibleTimeline([createSpan()], "")).toBe(false);
+    expect(hasVisibleTimeline([createSpan()], "listening")).toBe(true);
   });
 });
 

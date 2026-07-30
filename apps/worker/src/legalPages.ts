@@ -134,17 +134,17 @@ export const legalPages: Record<string, Page> = {
     html: `
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
+      <p>Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.</p>
       <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with the third-party processors named below. The app does not create a provider session or request microphone audio until this permission is granted.</p>
       <h2>Data Murmur Processes</h2>
-      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio is transmitted to Deepgram for speech-to-text. Murmur does not save microphone audio by default.</p>
-      <p><strong>Source captions.</strong> Deepgram returns source-language captions from your speech. Stable caption spans are sent through Murmur's Cloudflare Worker to OpenRouter and its routed model provider for translation. Murmur does not save transcript history by default.</p>
-      <p><strong>Translated captions and speech.</strong> OpenRouter returns translated text for local display. If speech output is enabled, stable translated phrases are sent to Cartesia to generate speech audio.</p>
+      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI for live translation. Murmur does not save microphone audio by default.</p>
+      <p><strong>Source and translated captions.</strong> OpenAI returns source-language and translated transcripts for local display. Murmur does not save transcript history by default.</p>
+      <p><strong>Translated speech.</strong> OpenAI returns translated speech audio for local playback.</p>
       <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and provider-token minting.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
       <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, provider metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, provider tokens, or generated speech audio by default.</p>
       <h2>Third-Party Processors</h2>
-      <p>Murmur's V1 architecture uses Cloudflare for the Worker gateway, Deepgram for streaming speech-to-text, OpenRouter and routed model providers for translation, and Cartesia for optional translated speech generation. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
+      <p>Murmur uses Cloudflare for the Worker gateway and OpenAI for live transcription, translation, and translated speech. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
       <h2>Retention</h2>
       <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session/rate-limit metadata is retained only as needed for abuse prevention, diagnostics, and service operation. Translation reports may be retained for support, safety, and quality review.</p>
       <h2>Your Choices</h2>
@@ -168,7 +168,7 @@ export const legalPages: Record<string, Page> = {
     html: `
       <h1>Murmur Terms of Use</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Optional speech output may play translated phrases when available.</p>
+      <p>Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.</p>
       <h2>Using Murmur</h2>
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>

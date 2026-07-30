@@ -50,34 +50,31 @@ export function StatusMessages({
   );
 }
 
-type ContinuousScrollRefs = Pick<
-  VariantShellProps,
-  "continuousAutoScrollRef" | "continuousTimelineRef" | "continuousUserInteractedRef"
->;
+type TimelineScrollRefs = Pick<VariantShellProps, "autoScrollRef" | "timelineRef" | "userInteractedRef">;
 
-export function continuousScrollHandlers(refs: ContinuousScrollRefs): {
+export function timelineScrollHandlers(refs: TimelineScrollRefs): {
   onContentSizeChange: () => void;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onScrollBeginDrag: () => void;
 } {
   return {
     onContentSizeChange: () => {
-      if (refs.continuousAutoScrollRef.current || !refs.continuousUserInteractedRef.current) {
-        refs.continuousTimelineRef.current?.scrollToEnd({ animated: true });
+      if (refs.autoScrollRef.current || !refs.userInteractedRef.current) {
+        refs.timelineRef.current?.scrollToEnd({ animated: true });
       }
     },
     onScroll: (event) => {
-      if (refs.continuousUserInteractedRef.current) {
-        refs.continuousAutoScrollRef.current = shouldKeepAutoScroll(event.nativeEvent);
+      if (refs.userInteractedRef.current) {
+        refs.autoScrollRef.current = shouldKeepAutoScroll(event.nativeEvent);
       }
     },
     onScrollBeginDrag: () => {
-      refs.continuousUserInteractedRef.current = true;
+      refs.userInteractedRef.current = true;
     },
   };
 }
 
-function continuousEmptyText(isLive: boolean): string {
+function timelineEmptyText(isLive: boolean): string {
   return isLive
     ? "Listening. The conversation will appear here."
     : "The conversation appears here once you start.";
@@ -97,7 +94,7 @@ export function SpanTimeline({
   textStyles,
   viewModel,
   ...refs
-}: ContinuousScrollRefs & {
+}: TimelineScrollRefs & {
   contentStyle?: StyleProp<ViewStyle>;
   live: VariantShellProps["live"];
   style?: StyleProp<ViewStyle>;
@@ -111,14 +108,14 @@ export function SpanTimeline({
   return (
     <ScrollView
       contentContainerStyle={contentStyle}
-      ref={refs.continuousTimelineRef}
+      ref={refs.timelineRef}
       scrollEventThrottle={80}
       showsVerticalScrollIndicator={false}
       style={style}
-      {...continuousScrollHandlers(refs)}
+      {...timelineScrollHandlers(refs)}
     >
       {!hasTimeline ? (
-        <Text style={textStyles.source}>{continuousEmptyText(viewModel.isLive)}</Text>
+        <Text style={textStyles.source}>{timelineEmptyText(viewModel.isLive)}</Text>
       ) : null}
       {visibleSpans.map((span) => (
         <SpanRow
@@ -172,52 +169,5 @@ function SpanRow({
       </Text>
       <Text style={[textStyles.source, sourceRtl && textStyles.rtl]}>{span.source_caption}</Text>
     </View>
-  );
-}
-
-type PhraseCaptionProps = {
-  partialStyle: StyleProp<TextStyle>;
-  sourceRtlStyle: StyleProp<TextStyle>;
-  sourceStyle: StyleProp<TextStyle>;
-  translationRtlStyle: StyleProp<TextStyle>;
-  translationStyle: StyleProp<TextStyle>;
-  viewModel: VariantShellProps["viewModel"];
-};
-
-export function PhraseCaptions(props: PhraseCaptionProps): ReactNode {
-  return (
-    <>
-      <TranslationCaption {...props} />
-      <SourceCaption {...props} />
-    </>
-  );
-}
-
-function TranslationCaption({ partialStyle, translationRtlStyle, translationStyle, viewModel }: PhraseCaptionProps): ReactNode {
-  return (
-    <Text
-      numberOfLines={8}
-      style={[
-        translationStyle,
-        viewModel.latestTranslationIsPartial && partialStyle,
-        viewModel.hasTranslatedText && viewModel.targetLanguage.rtl && translationRtlStyle,
-      ]}
-    >
-      {viewModel.primaryCanvasText}
-    </Text>
-  );
-}
-
-function SourceCaption({ sourceRtlStyle, sourceStyle, viewModel }: PhraseCaptionProps): ReactNode {
-  return (
-    <Text
-      numberOfLines={4}
-      style={[
-        sourceStyle,
-        viewModel.hasSourceText && Boolean(viewModel.sourceLanguage?.rtl) && sourceRtlStyle,
-      ]}
-    >
-      {viewModel.secondaryCanvasText}
-    </Text>
   );
 }

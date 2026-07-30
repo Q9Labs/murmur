@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-22
 
-Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.
+Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
 Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with the third-party processors named below. The app does not create a provider session or request microphone audio until this permission is granted.
 
@@ -10,15 +10,15 @@ Before a live translation session starts, Murmur asks for permission to share th
 
 ### Microphone Audio
 
-Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio is transmitted to Deepgram for speech-to-text. Murmur does not save microphone audio by default.
+Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI for live translation. Murmur does not save microphone audio by default.
 
 ### Source Captions
 
-Deepgram returns source-language captions from your speech. Murmur sends stable caption spans through Murmur's Cloudflare Worker to OpenRouter and its routed model provider for translation. Murmur does not save transcript history by default.
+OpenAI returns source-language and translated transcripts through Murmur's Cloudflare Worker. Murmur displays them locally and does not save transcript history by default.
 
 ### Translated Captions
 
-OpenRouter returns translated text. The app displays translated captions locally. If speech output is enabled, stable translated phrases are sent to Cartesia to generate speech audio.
+OpenAI returns translated speech audio through Murmur's Cloudflare Worker for local playback.
 
 ### Anonymous Install And Session Metadata
 
@@ -37,9 +37,7 @@ Murmur may process timing, provider metadata, error codes, language pair, networ
 Murmur's V1 architecture uses these processors. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.
 
 - Cloudflare: Worker gateway, rate limits, token brokerage, translation proxy, report endpoint, and privacy-safe logs.
-- Deepgram: streaming speech-to-text.
-- OpenRouter and routed model providers: text translation using the configured Gemma model route.
-- Cartesia: optional translated speech generation.
+- OpenAI: live transcription, translation, and translated speech generation.
 
 ## Retention
 

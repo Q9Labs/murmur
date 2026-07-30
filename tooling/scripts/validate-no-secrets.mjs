@@ -39,12 +39,8 @@ const failures = [];
 
 const patterns = [
   {
-    description: "OpenRouter API key",
-    pattern: /\bsk-or-v1-[A-Za-z0-9_-]{20,}\b/g,
-  },
-  {
-    description: "Deepgram API key assignment",
-    pattern: /\bDEEPGRAM_API_KEY\s*=\s*["']?[a-f0-9]{40}\b/gi,
+    description: "OpenAI API key",
+    pattern: /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/g,
     allow: (match) => match.includes("server-side-only"),
   },
   {

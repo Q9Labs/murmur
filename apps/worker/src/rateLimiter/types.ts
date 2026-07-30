@@ -44,25 +44,6 @@ export type DurableLimitRequest =
       now_ms: number;
     }
   | {
-      action: "begin_translation";
-      app_session_id: string;
-      now_ms: number;
-      source_caption: string;
-    }
-  | {
-      action: "begin_summary";
-      app_session_id: string;
-      now_ms: number;
-    }
-  | {
-      action: "end_translation";
-      app_session_id: string;
-    }
-  | {
-      action: "end_summary";
-      app_session_id: string;
-    }
-  | {
       action: "close_session";
       app_session_id: string;
       now_ms: number;
@@ -83,12 +64,6 @@ export type DurableLimitRequest =
   | {
       action: "delete_report";
       report_id: string;
-    }
-  | {
-      action: "can_refresh_tokens";
-      app_session_id: string;
-      hashed_install_id: string;
-      now_ms: number;
     }
   | {
       action: "get_session";

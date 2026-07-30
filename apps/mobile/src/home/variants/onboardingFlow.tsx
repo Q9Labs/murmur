@@ -89,8 +89,8 @@ function PrivacyStep({
         <Text style={theme.privacyEyebrow ?? theme.eyebrow}>{text.privacyEyebrowText}</Text>
         {text.privacyTitle ? <Text style={theme.title}>{text.privacyTitle}</Text> : null}
         <Text style={theme.copyEmphasis ?? theme.copy}>
-          When you tap Listen, Murmur sends live audio to Deepgram, captions to OpenRouter
-          through Q9 Labs on Cloudflare, and translated text to Cartesia for speech.
+          When you tap Listen, Murmur sends live audio through Q9 Labs on Cloudflare
+          to OpenAI for transcription, translation, and translated speech.
         </Text>
         <Text style={theme.copy}>
           Murmur uses this data only to provide translation, speech output, safety reports,

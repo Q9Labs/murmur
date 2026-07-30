@@ -7,12 +7,9 @@ export function getLatestProviderRoute(
       continue;
     }
     const provider = typeof metadata.provider === "string" ? metadata.provider : "provider";
-    const upstreamProvider =
-      typeof metadata.upstream_provider === "string" ? metadata.upstream_provider : null;
-    const upstreamModel =
-      typeof metadata.upstream_model === "string" ? metadata.upstream_model : null;
-    if (upstreamProvider || upstreamModel) {
-      return [provider, upstreamProvider, upstreamModel].filter(Boolean).join(":");
+    const model = typeof metadata.model === "string" ? metadata.model : null;
+    if (model) {
+      return `${provider}:${model}`;
     }
   }
   return null;

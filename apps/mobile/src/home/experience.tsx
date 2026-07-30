@@ -1,13 +1,12 @@
+import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { ComponentType, MutableRefObject, ReactNode } from "react";
-import { ScrollView } from "react-native";
+import type { ScrollView } from "react-native";
 
 import type { AudioStateEvent } from "../../modules/murmur-audio";
-import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
-import type { TranslationMode, TranslationModelRoute } from "@murmur/protocol/transport/types";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
-import { DevModelRouteModal, SettingsModal } from "./settingsModals";
+import { SettingsModal } from "./settingsModals";
 import type { PickerMode } from "./types";
 import { AuraShell } from "./variants/aura";
 import { BloomShell } from "./variants/bloom";
@@ -23,71 +22,23 @@ const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
   console: FieldConsoleShell,
 };
 
-export function HomeExperience({
-  audioState,
-  continuousAutoScrollRef,
-  continuousTimelineRef,
-  continuousUserInteractedRef,
-  devModelPickerEnabled,
-  devModelRoute,
-  devModelRouteOpen,
-  diagnosticsOpen,
-  live,
-  networkType,
-  onCloseDevModelRoute,
-  onCloseDiagnostics,
-  onClosePicker,
-  onCloseSettings,
-  onDeleteLocalData,
-  onOpenDevModelRoute,
-  onOpenDiagnostics,
-  onOpenPicker,
-  onOpenSettings,
-  onPrimaryAction,
-  onResetIdentity,
-  onSelectDevModelRoute,
-  onSelectUiVariant,
-  onSwapLanguages,
-  onToggleTranslationMode,
-  onToggleUltravoxVad,
-  pickerMode,
-  setSourceLanguageCode,
-  setTargetLanguageCode,
-  settingsMessage,
-  settingsOpen,
-  sourceLanguageCode,
-  targetLanguageCode,
-  translationMode,
-  uiVariant,
-  ultravoxVadEnabled,
-  viewModel,
-}: {
+export function HomeExperience(props: {
   audioState: AudioStateEvent | null;
-  continuousAutoScrollRef: MutableRefObject<boolean>;
-  continuousTimelineRef: MutableRefObject<ScrollView | null>;
-  continuousUserInteractedRef: MutableRefObject<boolean>;
-  devModelPickerEnabled: boolean;
-  devModelRoute: TranslationModelRoute;
-  devModelRouteOpen: boolean;
+  autoScrollRef: MutableRefObject<boolean>;
   diagnosticsOpen: boolean;
   live: LiveTranslationController;
   networkType: string;
-  onCloseDevModelRoute: () => void;
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
   onCloseSettings: () => void;
   onDeleteLocalData: () => void;
-  onOpenDevModelRoute: () => void;
   onOpenDiagnostics: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
   onPrimaryAction: () => void;
   onResetIdentity: () => void;
-  onSelectDevModelRoute: (route: TranslationModelRoute) => void;
   onSelectUiVariant: (variant: UiVariant) => void;
   onSwapLanguages: () => void;
-  onToggleTranslationMode: (mode: TranslationMode) => void;
-  onToggleUltravoxVad: () => void;
   pickerMode: PickerMode;
   setSourceLanguageCode: (language: SourceLanguageCode) => void;
   setTargetLanguageCode: (language: LanguageCode) => void;
@@ -95,69 +46,55 @@ export function HomeExperience({
   settingsOpen: boolean;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
-  translationMode: TranslationMode;
+  timelineRef: MutableRefObject<ScrollView | null>;
   uiVariant: UiVariant;
-  ultravoxVadEnabled: boolean;
+  userInteractedRef: MutableRefObject<boolean>;
   viewModel: HomeViewModel;
 }): ReactNode {
-  const Shell = variantShells[uiVariant];
-
+  const Shell = variantShells[props.uiVariant];
   return (
     <>
       <Shell
-        audioState={audioState}
-        continuousAutoScrollRef={continuousAutoScrollRef}
-        continuousTimelineRef={continuousTimelineRef}
-        continuousUserInteractedRef={continuousUserInteractedRef}
-        live={live}
-        onOpenPicker={onOpenPicker}
-        onOpenSettings={onOpenSettings}
-        onPrimaryAction={onPrimaryAction}
-        onSwapLanguages={onSwapLanguages}
-        onToggleTranslationMode={onToggleTranslationMode}
-        translationMode={translationMode}
-        viewModel={viewModel}
+        audioState={props.audioState}
+        autoScrollRef={props.autoScrollRef}
+        live={props.live}
+        onOpenPicker={props.onOpenPicker}
+        onOpenSettings={props.onOpenSettings}
+        onPrimaryAction={props.onPrimaryAction}
+        onSwapLanguages={props.onSwapLanguages}
+        timelineRef={props.timelineRef}
+        userInteractedRef={props.userInteractedRef}
+        viewModel={props.viewModel}
       />
       <LanguagePickerController
-        mode={pickerMode}
-        onClose={onClosePicker}
-        setSourceLanguageCode={setSourceLanguageCode}
-        setTargetLanguageCode={setTargetLanguageCode}
-        sourceLanguageCode={sourceLanguageCode}
-        targetLanguageCode={targetLanguageCode}
+        mode={props.pickerMode}
+        onClose={props.onClosePicker}
+        setSourceLanguageCode={props.setSourceLanguageCode}
+        setTargetLanguageCode={props.setTargetLanguageCode}
+        sourceLanguageCode={props.sourceLanguageCode}
+        targetLanguageCode={props.targetLanguageCode}
       />
       <SettingsModal
-        devModelPickerEnabled={devModelPickerEnabled}
-        devModelRoute={devModelRoute}
-        live={live}
-        onClose={onCloseSettings}
-        onDeleteLocalData={onDeleteLocalData}
-        onOpenDevModelRoute={onOpenDevModelRoute}
-        onOpenDiagnostics={onOpenDiagnostics}
-        onResetIdentity={onResetIdentity}
-        onSelectUiVariant={onSelectUiVariant}
-        onToggleUltravoxVad={onToggleUltravoxVad}
-        open={settingsOpen}
-        settingsMessage={settingsMessage}
-        uiVariant={uiVariant}
-        ultravoxVadEnabled={ultravoxVadEnabled}
-      />
-      <DevModelRouteModal
-        onClose={onCloseDevModelRoute}
-        onSelect={onSelectDevModelRoute}
-        open={devModelPickerEnabled && devModelRouteOpen}
-        selected={devModelRoute}
+        live={props.live}
+        onClose={props.onCloseSettings}
+        onDeleteLocalData={props.onDeleteLocalData}
+        onOpenDiagnostics={props.onOpenDiagnostics}
+        onResetIdentity={props.onResetIdentity}
+        onSelectUiVariant={props.onSelectUiVariant}
+        open={props.settingsOpen}
+        settingsMessage={props.settingsMessage}
+        uiVariant={props.uiVariant}
       />
       <DiagnosticsModal
-        audioState={audioState}
-        latestProviderRoute={viewModel.latestProviderRoute}
-        live={live}
-        networkType={networkType}
-        onClose={onCloseDiagnostics}
-        open={diagnosticsOpen}
-        sourceLanguageCode={sourceLanguageCode}
-        targetLanguage={viewModel.targetLanguage}
-        targetLanguageCode={targetLanguageCode}
+        audioState={props.audioState}
+        latestProviderRoute={props.viewModel.latestProviderRoute}
+        live={props.live}
+        networkType={props.networkType}
+        onClose={props.onCloseDiagnostics}
+        open={props.diagnosticsOpen}
+        sourceLanguageCode={props.sourceLanguageCode}
+        targetLanguage={props.viewModel.targetLanguage}
+        targetLanguageCode={props.targetLanguageCode}
       />
     </>
   );
