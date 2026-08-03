@@ -10,7 +10,6 @@ describe("legalPages", () => {
       "/english-to-arabic-live-captions",
       "/live-translation-for-talks",
       "/live-translation-for-travel",
-      "/phrase-mode-vs-continuous-mode",
       "/privacy",
       "/support",
       "/terms",
@@ -30,5 +29,11 @@ describe("legalPages", () => {
     expect(legalPages["/support"].html).toContain("q9labs.ai@gmail.com");
     expect(legalPages["/privacy"].html).toContain("Murmur Privacy Policy");
     expect(legalPages["/terms"].html).toContain("Murmur Terms of Use");
+  });
+
+  it("keeps landing pages mode-neutral and on the OpenAI Realtime path", () => {
+    const html = Object.values(legalPages).map((page) => page.html).join("\n");
+
+    expect(html).toContain("OpenAI Realtime");
   });
 });

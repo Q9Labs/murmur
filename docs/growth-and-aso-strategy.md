@@ -28,7 +28,7 @@ The live listings do not yet have enough traffic to support statistical ASO deci
 | Experiments | No App Store product page or Play listing experiments | There is no creative learning history. |
 | Product analytics | No acquisition or product analytics SDK in the mobile app | Store downloads cannot yet be connected to successful caption sessions. |
 
-The public App Store listing is in Utilities and exposes only English as the interface language. The Google Play listing shows `1+` downloads. The current screenshot sets are raw product captures: onboarding, microphone disclosure, language selection, and a final translated-caption screen. They do not explain a use case, and the first three images do not show the continuous-caption experience that differentiates Murmur.
+The public App Store listing is in Utilities and exposes only English as the interface language. The Google Play listing shows `1+` downloads. The current screenshot sets are raw product captures: onboarding, microphone disclosure, language selection, and a final translated-caption screen. They do not explain a use case, and the first three images do not show the rolling-caption experience that differentiates Murmur.
 
 A July 30, 2026 snapshot of Apple's public Search API found Murmur first for its exact brand query, but it did not appear among roughly 180–193 returned results for sampled non-brand queries such as `voice translator`, `live translator`, `Arabic translator`, `مترجم صوتي`, and `ترجمة صوتية` in the UAE, Saudi Arabia, and Qatar. This is a visibility baseline rather than keyword-volume data. Apple's own discovery guidance confirms that search ranking combines text relevance with customer behavior, including downloads and the number and quality of ratings and reviews. [Apple App Store discovery](https://developer.apple.com/app-store/discoverability/)
 
@@ -40,9 +40,9 @@ Conference translation products solve a different problem. Wordly, KUDO, and Int
 
 The defensible position is:
 
-> Live translated captions for the person in front of you, from a short phrase to a full talk.
+> Live translated captions for the person in front of you, from a quick exchange to a full talk.
 
-This position uses Murmur's Phrase and Continuous modes, works for a guide or conference speaker, and does not imply camera translation, offline use, automatic two-way conversation, organizer controls, or professional human interpretation.
+This position works for a guide or conference speaker and does not imply camera translation, offline use, automatic two-way conversation, organizer controls, or professional human interpretation.
 
 ## Store strategy
 
@@ -56,7 +56,7 @@ The repository-owned English metadata should use the following search structure:
 | Google Play short description | `Live translated captions for tours, talks, and conferences. No account needed.` |
 | Primary message | Follow ongoing speech in another language through live captions. |
 | Trust message | No account and no saved cloud transcript history. |
-| Supporting message | Phrase Mode handles short speech; Continuous Mode handles tours, lectures, talks, and other ongoing speech. |
+| Supporting message | Live sessions handle short exchanges, tours, lectures, talks, and other ongoing speech. |
 
 The App Store keyword field avoids repeating exact words already present in the name and subtitle, which leaves room for use cases and language terms. The public Apple search snapshot suggests the English clusters `voice translator`, `live translator`, `speech translator`, `real time translation`, and `Arabic translator`, plus the Arabic clusters `مترجم صوتي`, `ترجمة صوتية`, and `ترجمة مباشرة`. Real Apple Ads popularity and bid data are still required before assigning spend; the CollabEZ Apple Ads account has not been created.
 
@@ -68,12 +68,12 @@ English should remain the only localized listing until the app interface support
 
 The first three screenshots need to show value before setup:
 
-1. **Follow every word in your language.** Show Continuous Mode translating a real talk from Arabic into English, with enough committed captions to make the result obvious.
+1. **Follow every word in your language.** Show a real Arabic-to-English talk session with enough committed captions to make the result obvious.
 2. **Live captions while the speaker keeps talking.** Show the rolling caption timeline and the source-to-target language pair.
 3. **Built for tours, talks, and lectures.** Show the phone in the attendee context, using a real product capture inside the device frame.
-4. **Short phrase or ongoing speech.** Show the Phrase and Continuous mode control without implying a two-way conversation mode.
+4. **Short exchange or ongoing speech.** Show the live caption flow without implying a two-way conversation feature.
 5. **15 supported languages, including Arabic.** Show the language picker with accurate availability.
-6. **Translated speech when available.** Show Phrase Mode audio without making speech output look more reliable than captions.
+6. **Translated speech when available.** Show translated audio without making speech output look more reliable than captions.
 7. **No account. No saved transcript history.** Explain the privacy benefit in plain language.
 
 Every screenshot must use the current shipping interface and a successful real caption session. Marketing overlays may clarify the benefit, but the underlying app state cannot be fabricated. The Android feature graphic should use the same first message rather than a generic logo composition.
@@ -81,7 +81,7 @@ Every screenshot must use the current shipping interface and a successful real c
 Once traffic exists, create two App Store custom product pages and two Google Play custom store listings:
 
 - **Tours and travel:** language selection, short phrases, guides, directions, and translated speech.
-- **Talks and conferences:** Continuous Mode, rolling captions, long speech, and privacy.
+- **Talks and conferences:** rolling captions, long speech, and privacy.
 
 Apple allows custom product pages to use their own screenshots, promotional text, and keywords, while Google Play can target custom listings by country, ad group, URL, and known search keywords. This gives each audience a specific page without weakening the default product definition. [Apple custom product pages](https://developer.apple.com/help/app-store-connect/create-custom-product-pages/configure-multiple-product-page-versions/), [Google Play custom store listings](https://support.google.com/googleplay/android-developer/answer/9867158)
 
@@ -116,7 +116,7 @@ Partnership distribution should focus on moments where the need already exists:
 - Place a one-line install prompt in attendee emails, event apps, booth cards, hotel concierge material, and tour confirmation messages.
 - Ask Gulf travel creators to record a real Arabic-to-English tour or talk demo, then reuse the best creator post as paid creative with permission.
 
-GITEX Global, scheduled for December 7–11, 2026 at Expo City Dubai, is a strong public field test because it combines international visitors, dense talks, and a tech-literate audience. Murmur should seek an attendee-facing pilot or partner activation rather than present itself as the event's interpretation provider. [GITEX Global 2026](https://www.gitex.com/about)
+GITEX Global, scheduled for December 7–11, 2026 at Expo City Dubai, is a strong public field test because it combines international visitors, dense talks, and a tech-literate audience. Murmur should seek an attendee-facing pilot or partner activation rather than present itself as the event's interpretation service. [GITEX Global 2026](https://www.gitex.com/about)
 
 The marketing site should add focused, indexable pages for:
 
@@ -124,7 +124,7 @@ The marketing site should add focused, indexable pages for:
 - live translation for talks and lectures;
 - English-to-Arabic live captions;
 - Arabic-to-English live captions;
-- a comparison between short Phrase Mode and ongoing Continuous Mode.
+- a page for short exchanges and ongoing speech.
 
 Each page should show a real demo, name the supported languages and limits, link to the matching store page with a page-specific store campaign identifier, and avoid claims about offline use, two-way conversation, emergency interpretation, or professional accuracy. These parameters provide store-console attribution. Murmur's in-app session attribution is limited to direct tagged app launches until a privacy-reviewed deferred-link system exists.
 
@@ -132,8 +132,8 @@ Each page should show a real demo, name the supported languages and limits, link
 
 ASO copy will not compensate for failed activation. The following product changes have direct growth value:
 
-1. **Instrument a qualified session.** Count a user as activated only after Murmur commits a translated caption and either runs Continuous Mode for at least 60 seconds or commits at least two Phrase Mode translations. Store download counts alone cannot distinguish curiosity from product value.
-2. **Add privacy-conscious acquisition events.** Record first open, onboarding completion, microphone permission outcome, session start, first committed caption, qualified session, session end, language pair, mode, non-content error code, and campaign source. Never send raw audio or caption text to analytics.
+1. **Instrument a qualified session.** Count a user as activated only after Murmur commits a translated caption and the live session either runs for at least 60 seconds or commits at least two translated captions. Store download counts alone cannot distinguish curiosity from product value.
+2. **Add privacy-conscious acquisition events.** Record first open, onboarding completion, microphone permission outcome, session start, first committed caption, qualified session, session end, language pair, session duration, non-content error code, and normalized campaign source. Keep the install identifier hashed and never send raw audio or caption text to analytics.
 3. **Add a rating prompt after success.** Ask only after several successful sessions and never while the microphone is active or after an error. Apple recommends requesting a review after a completed task when the user is likely to feel satisfied. [Apple ratings and reviews](https://developer.apple.com/app-store/ratings-and-reviews/)
 4. **Localize the whole interface into Arabic.** Verify right-to-left layout, native copy, permission context, language names, caption rendering, support, and real Arabic speech before buying Arabic-language installs.
 5. **Expose a simple share path.** After a successful ended session, let the user share Murmur's store link with a short use-case message. Do not share captions unless the product later adds an explicit, privacy-reviewed export.
@@ -154,7 +154,7 @@ store impression
   -> rating or referral
 ```
 
-Report every stage by store, country, campaign, product page, language pair, and Phrase versus Continuous Mode. For a situational travel utility, day-seven retention alone can understate value, so pair it with qualified activation, second successful session, caption success rate, and cost per qualified session.
+Report every stage by store, country, campaign, product page, language pair, and short versus ongoing speech. For a situational travel utility, day-seven retention alone can understate value, so pair it with qualified activation, second successful session, caption success rate, and cost per qualified session.
 
 ## Execution sequence
 

@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  getDevTranslationModelRouteEnv,
-  getWorkerBaseUrl,
-  isUltravoxVadEnabledByDefault,
-} from "./config";
+import { getWorkerBaseUrl } from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -30,13 +26,5 @@ describe("Worker URL config", () => {
     vi.stubEnv("NODE_ENV", "production");
 
     expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
-  });
-
-  it("centralizes public app experiment environment reads", () => {
-    vi.stubEnv("EXPO_PUBLIC_MURMUR_DEV_MODEL_ROUTE", "experiment_ultravox_replacement");
-    vi.stubEnv("EXPO_PUBLIC_MURMUR_ULTRAVOX_VAD", "off");
-
-    expect(getDevTranslationModelRouteEnv()).toBe("experiment_ultravox_replacement");
-    expect(isUltravoxVadEnabledByDefault()).toBe(false);
   });
 });

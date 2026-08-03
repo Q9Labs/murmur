@@ -35,8 +35,8 @@ type MarketingLandingPageOptions = {
   heading: string;
   keywords: string;
   lede: string;
-  modeBody: string;
-  modeTitle: string;
+  useCaseBody: string;
+  useCaseTitle: string;
   path: string;
   title: string;
 };
@@ -67,12 +67,12 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
       <section class="landing-grid">
         <div class="landing-copy">
           <p class="landing-eyebrow">How to use Murmur</p>
-          <h2>${escapeHtml(options.modeTitle)}</h2>
-          <p>${escapeHtml(options.modeBody)}</p>
+          <h2>${escapeHtml(options.useCaseTitle)}</h2>
+          <p>${escapeHtml(options.useCaseBody)}</p>
           <ol class="landing-steps">
             <li>Choose the language being spoken.</li>
             <li>Choose the language you want to read.</li>
-            <li>Select Phrase or Continuous Mode, then tap Listen.</li>
+            <li>Tap Listen to start live translated captions.</li>
           </ol>
         </div>
         <div class="landing-caption-card">
@@ -186,15 +186,15 @@ export const legalPages: Record<string, Page> = {
               <div class="caption-demo"><span class="cap-line">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</span><span class="cap-line">Where is the station?</span></div>
             </div>
             <h3>Read along</h3>
-            <p>Translated captions appear as each phrase is recognized.</p>
+            <p>Translated captions appear as each part of the speech is recognized.</p>
           </div>
         </div>
       </section>
 
       <section class="section">
         <div class="section-head">
-          <h2>One app for short phrases and full talks.</h2>
-          <p>Use Phrase Mode when someone says a few deliberate words. Switch to Continuous Mode when a guide, lecturer, or conference speaker keeps talking.</p>
+          <h2>One app for quick moments and full talks.</h2>
+          <p>Use Murmur for a short exchange or keep live translated captions moving while a guide, lecturer, or conference speaker continues.</p>
         </div>
         <div class="use-case-links">
           <a class="use-case-link use-case-link-travel" href="/live-translation-for-travel">
@@ -251,9 +251,9 @@ export const legalPages: Record<string, Page> = {
     heading: "Understand the guide without interrupting the tour.",
     lede:
       "Choose the language you hear and the language you want to read. Murmur turns the guide's speech into live translated captions while the tour keeps moving.",
-    modeTitle: "Phrase Mode for quick moments. Continuous Mode for the whole explanation.",
-    modeBody:
-      "Use Phrase Mode for a direction or short question. Use Continuous Mode when a guide, host, or demonstrator speaks for longer.",
+    useCaseTitle: "Live captions for quick questions and full explanations.",
+    useCaseBody:
+      "Use Murmur for a direction or short question, then keep live translated captions moving when a guide, host, or demonstrator speaks for longer.",
     examples: [
       "Walking tours and museum explanations",
       "Hotel, transport, and visitor information",
@@ -270,10 +270,10 @@ export const legalPages: Record<string, Page> = {
     eyebrow: "Live translation for talks",
     heading: "Read the talk live on your own phone.",
     lede:
-      "Murmur is for the attendee who needs translated captions now. Select the spoken and reading languages, start Continuous Mode, and follow the speaker without an event code or organizer-managed feed.",
-    modeTitle: "A rolling timeline for ongoing speech.",
-    modeBody:
-      "Continuous Mode keeps committed captions on screen as the talk progresses. Phrase Mode remains available for questions, introductions, and shorter exchanges.",
+      "Murmur is for the attendee who needs translated captions now. Select the spoken and reading languages, tap Listen, and follow the speaker without an event code or organizer-managed feed.",
+    useCaseTitle: "A rolling timeline for ongoing speech.",
+    useCaseBody:
+      "Committed captions stay on screen as the talk progresses. Use the same live session for questions, introductions, and shorter exchanges.",
     examples: [
       "Conference talks and community stages",
       "Lectures, classes, workshops, and sermons",
@@ -291,9 +291,9 @@ export const legalPages: Record<string, Page> = {
     heading: "Hear English. Read Arabic live.",
     lede:
       "Set English as the spoken language and Arabic as the caption language. Murmur displays right-to-left translated captions as stable speech is recognized.",
-    modeTitle: "Use the mode that matches the speaker.",
-    modeBody:
-      "Phrase Mode suits short, deliberate speech. Continuous Mode keeps a translated timeline when a guide or speaker continues.",
+    useCaseTitle: "Captions that fit the speaker.",
+    useCaseBody:
+      "Murmur handles a short sentence or a longer explanation, keeping translated captions readable as speech is recognized.",
     examples: [
       "English-language tours and visitor experiences",
       "Talks, lectures, workshops, and demonstrations",
@@ -311,33 +311,13 @@ export const legalPages: Record<string, Page> = {
     heading: "Hear Arabic. Read English live.",
     lede:
       "Set Arabic as the spoken language and English as the caption language. Murmur turns stable speech into readable translated captions on your phone.",
-    modeTitle: "Follow a phrase or keep up with a full explanation.",
-    modeBody:
-      "Phrase Mode works for shorter speech. Continuous Mode is designed for tours, talks, lectures, demonstrations, and other ongoing speech.",
+    useCaseTitle: "Follow a question or a full explanation.",
+    useCaseBody:
+      "Murmur handles a short sentence or a longer explanation, so you can keep translated captions on screen through tours, talks, lectures, and demonstrations.",
     examples: [
       "Arabic-speaking guides and hosts",
       "Talks, workshops, lectures, and sermons",
       "Visitor information and short explanations",
-    ],
-  }),
-  "/phrase-mode-vs-continuous-mode": buildMarketingLandingPage({
-    campaignToken: "modes",
-    path: "/phrase-mode-vs-continuous-mode",
-    title: "Phrase Mode vs Continuous Mode | Murmur Live Translation",
-    description:
-      "Choose Phrase Mode for short deliberate speech or Continuous Mode for tours, talks, lectures, and other ongoing speech.",
-    keywords: "continuous speech translator, phrase translation mode, live caption timeline, ongoing speech translation",
-    eyebrow: "Two listening modes",
-    heading: "Match Murmur to the way someone is speaking.",
-    lede:
-      "Short exchanges and long explanations need different pacing. Murmur gives each one a focused mode without pretending to be an automatic two-way conversation.",
-    modeTitle: "Phrase Mode is deliberate. Continuous Mode keeps moving.",
-    modeBody:
-      "Phrase Mode translates a short unit of speech and can play translated audio when available. Continuous Mode prioritizes rolling captions and context while the speaker continues.",
-    examples: [
-      "Phrase Mode: directions, questions, and short explanations",
-      "Continuous Mode: tours, lectures, talks, and demonstrations",
-      "Both modes: live captions with no account required",
     ],
   }),
   "/privacy": {
@@ -348,18 +328,18 @@ export const legalPages: Record<string, Page> = {
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
       <p>Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
-      <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with the third-party processors named below. The app does not create a provider session or request microphone audio until this permission is granted.</p>
+      <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.</p>
       <h2>Data Murmur Processes</h2>
-      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio is transmitted to Deepgram for speech-to-text. Murmur does not save microphone audio by default.</p>
-      <p><strong>Source captions.</strong> Deepgram returns source-language captions from your speech. Stable caption spans are sent through Murmur's Cloudflare Worker to OpenRouter and its routed model provider for translation. Murmur does not save transcript history by default.</p>
-      <p><strong>Translated captions and speech.</strong> OpenRouter returns translated text for local display. If speech output is enabled, stable translated phrases are sent to Cartesia to generate speech audio.</p>
-      <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, provider-token minting, and pseudonymous session measurement.</p>
+      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.</p>
+      <p><strong>Source and translated captions.</strong> OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker for local display. Murmur does not save transcript history by default.</p>
+
+      <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.</p>
       <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
       <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
-      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, provider metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, provider tokens, or generated speech audio by default.</p>
+      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.</p>
       <h2>Third-Party Processors</h2>
-      <p>Murmur's V1 architecture uses Cloudflare for the Worker gateway, Deepgram for streaming speech-to-text, OpenRouter and routed model providers for translation, and Cartesia for optional translated speech generation. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
+      <p>Murmur uses Cloudflare for the Worker gateway and OpenAI Realtime for live transcription, translation, and translated speech. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
       <h2>Retention</h2>
       <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session, campaign, and rate-limit metadata is retained only as needed for abuse prevention, diagnostics, acquisition measurement, and service operation. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review.</p>
       <h2>Your Choices</h2>
@@ -388,27 +368,27 @@ export const legalPages: Record<string, Page> = {
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>
       <h2>AI Translation Limits</h2>
-      <p>Murmur uses speech recognition, machine translation, and speech generation providers. AI output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
+      <p>OpenAI Realtime handles speech recognition, translation, and translated speech. Its output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
       <p>You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.</p>
       <h2>Accounts and Local Data</h2>
-      <p>Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and provider-token minting. You can reset this identity or delete local Murmur data in the app.</p>
+      <p>Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. You can reset this identity or delete local Murmur data in the app.</p>
       <h2>Acceptable Use</h2>
       <ul>
         <li>Do not break the law or violate someone else's rights.</li>
         <li>Do not harass, threaten, abuse, impersonate, or exploit others.</li>
         <li>Do not generate or distribute hateful, sexual, violent, deceptive, or harmful content.</li>
-        <li>Do not attempt to bypass rate limits, device integrity checks, provider restrictions, or security controls.</li>
-        <li>Do not reverse engineer, scrape, overload, or disrupt Murmur or its providers.</li>
+        <li>Do not attempt to bypass rate limits, device integrity checks, service safeguards, or security controls.</li>
+        <li>Do not reverse engineer, scrape, overload, or disrupt Murmur or its services.</li>
         <li>Do not attempt to access administrative endpoints or private diagnostics data.</li>
       </ul>
       <h2>Privacy and Third-Party Services</h2>
-      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on third-party processors for speech recognition, translation, speech generation, infrastructure, diagnostics, and support workflows. Their services may be unavailable or may change independently from Murmur.</p>
+      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on Cloudflare and OpenAI Realtime for live translation, infrastructure, diagnostics, and support workflows. OpenAI Realtime or Cloudflare may be unavailable or may change independently from Murmur.</p>
       <h2>Availability</h2>
-      <p>Murmur may change, suspend, or discontinue features. Provider failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
+      <p>Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
       <h2>No Warranty</h2>
       <p>Murmur is provided as-is and as-available. To the maximum extent allowed by law, Murmur disclaims warranties of accuracy, availability, fitness for a particular purpose, and non-infringement.</p>
       <h2>Limitation of Liability</h2>
-      <p>To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, provider failures, misuse, or reliance on AI output.</p>
+      <p>To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, OpenAI Realtime failures, misuse, or reliance on AI output.</p>
       <h2>Contact</h2>
       <p>Email <a href="mailto:${supportEmail}">${supportEmail}</a> for legal or support requests.</p>
     `,
@@ -431,7 +411,7 @@ export const legalPages: Record<string, Page> = {
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
       <h2>Store Submission Notes</h2>
-      <p>Store reviewers can use the app without creating an account. Tap Listen, speak a phrase, review translated captions, and use the report buttons on a committed translation span.</p>
+      <p>Store reviewers can use the app without creating an account. Tap Listen, speak naturally, review translated captions, and use the report buttons on a committed translation span.</p>
     `,
   },
 };
@@ -1049,7 +1029,6 @@ function renderHtml(page: Page): string {
           <a href="/live-translation-for-talks">Talk translation</a>
           <a href="/english-to-arabic-live-captions">English to Arabic</a>
           <a href="/arabic-to-english-live-captions">Arabic to English</a>
-          <a href="/phrase-mode-vs-continuous-mode">Phrase vs Continuous</a>
         </div>
         &copy; 2026 Q9 Labs. Murmur is an accountless AI translation service.
       </footer>

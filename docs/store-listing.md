@@ -14,8 +14,8 @@ The tour guide is speaking. The lecture is running. The sermon has started. And 
 Open Murmur, tap Listen, and follow along in yours — live captions of what's being said, translated as it happens, with the original text alongside.
 
 Made for listening, not conversation
-- Phrase Mode for short bursts: announcements, questions, quick exchanges.
-- Continuous Mode for long talks: an ordered, scrollable caption timeline that firms up as speech is confirmed.
+- Live sessions for announcements, questions, quick exchanges, and long talks.
+- Committed captions stay ordered on screen as speech is recognized.
 - Auto-detect the speaker's language, or pick it yourself.
 - Optional translated speech when you'd rather listen than read.
 
@@ -50,8 +50,8 @@ The tour guide is speaking. The lecture is running. The sermon has started. And 
 Open Murmur, tap Listen, and follow along in yours — live captions of what's being said, translated as it happens, with the original text alongside.
 
 Made for listening, not conversation:
-- Phrase Mode for short bursts: announcements, questions, quick exchanges.
-- Continuous Mode for long talks: an ordered, scrollable caption timeline that firms up as speech is confirmed.
+- Live sessions for announcements, questions, quick exchanges, and long talks.
+- Committed captions stay ordered on screen as speech is recognized.
 - Auto-detect the speaker's language, or pick it yourself.
 - Optional translated speech when you'd rather listen than read.
 
@@ -77,4 +77,4 @@ No account required. Grant microphone permission, pick a target language (or lea
 No account required. Microphone is used only during an active Listen session; audio is streamed for recognition and translation and is not retained by default. An internet connection is required. To test: grant mic access, choose a target language, tap Listen, and speak in any supported language.
 
 ## Claims deliberately avoided (keep it this way)
-15 languages / Urdu, Turkish, or Indonesian; offline or on-device translation; two-way conversation mode; camera/document translation; organizer or enterprise event features; accuracy guarantees; "unlimited use" (session and rate limits exist); background/lock-screen listening (spec vs. code conflict unresolved); "free forever"; "no data collected" (anonymous install ID and diagnostics exist).
+15 languages / Urdu, Turkish, or Indonesian; offline or on-device translation; two-way conversation features; camera/document translation; organizer or enterprise event features; accuracy guarantees; "unlimited use" (session and rate limits exist); background/lock-screen listening (spec vs. code conflict unresolved); "free forever"; "no data collected" (anonymous install ID and diagnostics exist).

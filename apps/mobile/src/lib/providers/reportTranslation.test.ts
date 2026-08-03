@@ -53,6 +53,23 @@ describe("reportTranslation", () => {
         span_id: "span_1",
         target_language: "es",
       }),
-    ).resolves.toEqual({ error: "report_http_400" });
+    ).resolves.toEqual({ error: "bad_report" });
+  });
+
+  it("normalizes network failures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("offline");
+    }));
+
+    await expect(
+      reportTranslation({
+        app_session_id: "session_1",
+        error_category: "other",
+        revision: 1,
+        source_language: "en",
+        span_id: "span_1",
+        target_language: "es",
+      }),
+    ).resolves.toEqual({ error: "worker_session_network_error" });
   });
 });

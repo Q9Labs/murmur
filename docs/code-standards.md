@@ -55,7 +55,7 @@ These standards define the code shape Murmur should preserve across the Expo mob
 
 ## Boundaries and Adapters
 
-- Core behavior uses provider-neutral domain language. Provider adapters own credentials, URLs, SDK calls, request mapping, response parsing, and provider error translation.
+- Core behavior uses product-domain language. The OpenAI Realtime adapter owns credentials, URLs, request mapping, response parsing, and upstream error translation.
 - Provider-specific IDs, headers, model quirks, SDK errors, and retry semantics must not leak into shared protocol contracts or unrelated UI state.
 - Define a port from the consumer's current needs. Do not copy an entire vendor SDK surface into an interface.
 - Keep transport work at the edge: parse requests, validate limits, authenticate or attest the caller, and translate errors before entering product logic.
@@ -83,7 +83,7 @@ These standards define the code shape Murmur should preserve across the Expo mob
 ## Security and Request Hardening
 
 - Defaults must be safe to ship. Production configuration either supplies valid secrets and secure endpoints or fails fast.
-- Keep provider credentials on the Worker. Mobile receives only scoped, short-lived credentials when a provider connection requires them.
+- Keep the OpenAI credential on the Worker. Mobile never receives it or any upstream connection credential.
 - Treat every request body, query parameter, header, WebSocket message, provider response, environment value, and persisted preference as untrusted input.
 - Bound request bodies, strings, collections, audio buffers, WebSocket queues, timeouts, retries, and provider output before expensive work.
 - Apply authentication, device-integrity checks, authorization, and rate limits before the protected operation. An identifier supplied by a client is never proof of access.

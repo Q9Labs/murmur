@@ -62,7 +62,7 @@ describe("latency percentiles", () => {
         generated_at_ms: 1234,
         network_type: "wifi",
         platform: "android",
-        provider_route: "openrouter:deepinfra/fp8",
+        provider_route: "openai:gpt-realtime-translate",
         source_language: "en",
         target_language: "ar",
       },

@@ -172,7 +172,9 @@ const explicitPolicyExclusions = new Map([
 
 const tracked = git(["ls-files", ...sourceRoots]);
 const untracked = git(["ls-files", "--others", "--exclude-standard", ...sourceRoots]);
-const files = [...new Set([...tracked, ...untracked])].sort();
+const files = [...new Set([...tracked, ...untracked])]
+  .filter((file) => existsSync(join(repoRoot, file)))
+  .sort();
 const allFiles = new Set(files);
 const testedFiles = findTestedFiles(files, allFiles);
 const missing = [];

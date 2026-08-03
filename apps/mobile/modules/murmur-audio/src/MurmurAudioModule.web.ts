@@ -2,8 +2,8 @@ import { NativeModule, registerWebModule } from "expo";
 
 import type { AudioFrameEvent, AudioStateEvent, MurmurAudioModuleEvents } from "./MurmurAudio.types";
 
-const murmurSampleRate = 16_000;
-const frameSamples = 320;
+const murmurSampleRate = 24_000;
+const frameSamples = 480;
 const frameDurationMs = 20;
 const playbackIdlePaddingMs = 120;
 
@@ -318,7 +318,7 @@ export function float32ToPcm16Bytes(samples: Float32Array): Uint8Array {
   return bytes;
 }
 
-export function downsampleTo16Khz(samples: Float32Array, inputSampleRate: number): Float32Array {
+export function resampleForRealtime(samples: Float32Array, inputSampleRate: number): Float32Array {
   if (inputSampleRate === murmurSampleRate) {
     return samples.slice();
   }
@@ -400,7 +400,7 @@ async function createCaptureNode(
 
   const node = audioContext.createScriptProcessor(2048, 1, 1);
   node.onaudioprocess = (event) => {
-    onSamples(downsampleTo16Khz(event.inputBuffer.getChannelData(0), audioContext.sampleRate));
+    onSamples(resampleForRealtime(event.inputBuffer.getChannelData(0), audioContext.sampleRate));
     event.outputBuffer.getChannelData(0).fill(0);
   };
   return node;

@@ -2,7 +2,7 @@ Follow spoken language as it happens.
 
 Murmur turns speech into live translated captions, so you can keep up with a tour, conference talk, lecture, class, demo, or sermon in another language.
 
-Choose a source language and target language, then tap Listen. Use Phrase Mode for short, deliberate speech or Continuous Mode when someone keeps talking. Murmur shows translated captions as stable speech is recognized and can play translated speech when speech output is available.
+Choose a source language and target language, then tap Listen. Murmur shows translated captions as speech is recognized and can play translated speech when audio output is available.
 
 Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
@@ -13,12 +13,12 @@ Murmur is accountless: there is no login, profile, or cloud transcript history. 
 BUILT FOR READABLE LIVE TRANSLATION
 
 • Live translated captions
-• Phrase Mode for short speech
-• Continuous Mode for tours, talks, lectures, and other ongoing speech
+• Live captions for short exchanges and ongoing speech
+• Ordered translated captions as speech is recognized
 • Optional translated speech output
 • Source and target language controls
 • In-app reporting for translation issues
 
 Murmur needs an internet connection and a microphone — that's it.
 
-Murmur uses AI speech recognition, translation, and speech generation providers. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.
+Murmur uses OpenAI Realtime for speech recognition, translation, and translated speech. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.

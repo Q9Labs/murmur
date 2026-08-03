@@ -1,28 +1,28 @@
-# Murmur Privacy Policy Draft
+# Murmur Privacy Policy
 
 Last updated: 2026-07-30
 
-Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.
+Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
-Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with the third-party processors named below. The app does not create a provider session or request microphone audio until this permission is granted.
+Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.
 
 ## Data Murmur Processes
 
 ### Microphone Audio
 
-Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio is transmitted to Deepgram for speech-to-text. Murmur does not save microphone audio by default.
+Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.
 
 ### Source Captions
 
-Deepgram returns source-language captions from your speech. Murmur sends stable caption spans through Murmur's Cloudflare Worker to OpenRouter and its routed model provider for translation. Murmur does not save transcript history by default.
+OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker. Murmur displays them locally and does not save transcript history by default.
 
 ### Translated Captions
 
-OpenRouter returns translated text. The app displays translated captions locally. If speech output is enabled, stable translated phrases are sent to Cartesia to generate speech audio.
+OpenAI Realtime returns translated speech audio through Murmur's Cloudflare Worker for local playback.
 
 ### Anonymous Install And Session Metadata
 
-Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, provider-token minting, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.
+Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.
 
 ### Campaign And Referral Tags
 
@@ -38,16 +38,14 @@ You can report an inaccurate, wrong-language, harmful, speech-related, or other 
 
 ### Diagnostics And Latency Telemetry
 
-Murmur may process timing, provider metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Network type means a broad connection category such as Wi-Fi, cellular, offline, unknown, or other; Murmur does not use this to collect network names, nearby network identifiers, or location. Logs should not include raw microphone audio, source captions, translated captions, provider tokens, or generated speech audio by default.
+Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Network type means a broad connection category such as Wi-Fi, cellular, offline, unknown, or other; Murmur does not use this to collect network names, nearby network identifiers, or location. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.
 
 ## Third-Party Processors
 
-Murmur's V1 architecture uses these processors. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.
+Murmur uses these processors. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.
 
-- Cloudflare: Worker gateway, rate limits, token brokerage, translation proxy, report endpoint, and privacy-safe logs.
-- Deepgram: streaming speech-to-text.
-- OpenRouter and routed model providers: text translation using the configured Gemma model route.
-- Cartesia: optional translated speech generation.
+- Cloudflare: Worker gateway, rate limits, session records, report endpoint, and privacy-safe logs.
+- OpenAI Realtime: live transcription, translation, and translated speech generation.
 
 ## Retention
 

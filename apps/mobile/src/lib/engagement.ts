@@ -1,5 +1,3 @@
-import type { TranslationMode } from "@murmur/protocol/transport/types";
-
 import {
   deleteLocalValue,
   getLocalValue,
@@ -20,7 +18,6 @@ export type SessionOutcome = {
   committed_caption_count: number;
   duration_ms: number;
   error: string | null;
-  translation_mode: TranslationMode;
 };
 
 export type EngagementResult = {
@@ -33,10 +30,7 @@ export function isQualifiedSession(outcome: SessionOutcome): boolean {
   if (outcome.error || outcome.committed_caption_count < 1) {
     return false;
   }
-  if (outcome.translation_mode === "continuous") {
-    return outcome.duration_ms >= 60_000;
-  }
-  return outcome.committed_caption_count >= 2;
+  return outcome.duration_ms >= 60_000 || outcome.committed_caption_count >= 2;
 }
 
 export async function recordSessionOutcome(params: {

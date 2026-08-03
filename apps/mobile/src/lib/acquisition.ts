@@ -10,7 +10,6 @@ const landingByPath: Record<string, string> = {
   "english-to-arabic-live-captions": "english-arabic",
   "live-translation-for-talks": "talks",
   "live-translation-for-travel": "travel",
-  "phrase-mode-vs-continuous-mode": "modes",
 };
 
 export function getAcquisitionContextFromUrl(url: string | null): AcquisitionContext | undefined {

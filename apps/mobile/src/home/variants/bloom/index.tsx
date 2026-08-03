@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import {
   Animated,
-  ScrollView,
   StatusBar,
   Text,
   View,
@@ -10,13 +9,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
-import { PhraseCaptions, SpanTimeline, StatusMessages } from "../shared";
-import { PrimaryAction, SettingsChrome, TextLanguageRow, TextModeTabs } from "../sharedControls";
+import { SpanTimeline, StatusMessages } from "../shared";
+import { PrimaryAction, SettingsChrome, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { styles } from "./styles";
 
 export function BloomShell(props: VariantShellProps): ReactNode {
-  const { live, translationMode, viewModel } = props;
+  const { live, viewModel } = props;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -28,7 +27,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         pressedStyle={styles.pressed}
         rightSlot={<Text style={styles.wordmark}>Murmur</Text>}
       />
-      {translationMode === "continuous" ? <ContinuousStage {...props} /> : <PhraseStage viewModel={viewModel} />}
+      <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
         <TextLanguageRow
@@ -40,15 +39,6 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           swapStyle={styles.swapText}
           textStyle={styles.languageText}
           viewModel={viewModel}
-        />
-        <TextModeTabs
-          activeStyle={styles.modeTabActive}
-          canChangeLanguages={viewModel.canChangeLanguages}
-          containerStyle={styles.modeTabs}
-          inactiveStyle={styles.modeTab}
-          onToggleTranslationMode={props.onToggleTranslationMode}
-          pressedStyle={styles.pressed}
-          translationMode={translationMode}
         />
         <PrimaryAction
           canStart={viewModel.canStart}
@@ -101,34 +91,15 @@ function BlobDot({ isLive }: { isLive: boolean }): ReactNode {
   );
 }
 
-function PhraseStage({ viewModel }: { viewModel: VariantShellProps["viewModel"] }): ReactNode {
-  return (
-    <ScrollView contentContainerStyle={styles.stage} showsVerticalScrollIndicator={false} style={styles.flexFill}>
-      <BreathingBlob isLive={viewModel.isLive} />
-      <PhraseCaptions
-        partialStyle={styles.translationPartial}
-        sourceRtlStyle={rtlWriting}
-        sourceStyle={[styles.sourceText, centeredSource]}
-        translationRtlStyle={rtlWriting}
-        translationStyle={styles.translationText}
-        viewModel={viewModel}
-      />
-    </ScrollView>
-  );
-}
-
 const rtlWriting: TextStyle = { writingDirection: "rtl" };
-const centeredSource: TextStyle = { textAlign: "center" };
 
-function ContinuousStage(props: VariantShellProps): ReactNode {
+function TranslationStage(props: VariantShellProps): ReactNode {
   return (
     <View style={styles.flexFill}>
       <BlobDot isLive={props.viewModel.isLive} />
       <SpanTimeline
         contentStyle={styles.timelineContent}
-        continuousAutoScrollRef={props.continuousAutoScrollRef}
-        continuousTimelineRef={props.continuousTimelineRef}
-        continuousUserInteractedRef={props.continuousUserInteractedRef}
+        autoScrollRef={props.autoScrollRef}
         live={props.live}
         style={styles.flexFill}
         textStyles={{
@@ -137,6 +108,8 @@ function ContinuousStage(props: VariantShellProps): ReactNode {
           source: styles.sourceText,
           translation: styles.timelineTranslation,
         }}
+        timelineRef={props.timelineRef}
+        userInteractedRef={props.userInteractedRef}
         viewModel={props.viewModel}
       />
     </View>

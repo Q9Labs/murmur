@@ -11,13 +11,16 @@ export async function reportTranslation(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
-  });
-  const payload = (await response.json().catch(() => null)) as unknown;
-  if (!response.ok || !payload) {
-    return { error: `report_http_${response.status}` };
+  }).catch(() => null);
+  if (!response) {
+    return { error: "worker_session_network_error" };
   }
+  const payload = (await response.json().catch(() => null)) as unknown;
   if (isErrorPayload(payload)) {
     return { error: payload.error };
+  }
+  if (!response.ok || !payload) {
+    return { error: `report_http_${response.status}` };
   }
   return payload as ReportTranslationResponse;
 }

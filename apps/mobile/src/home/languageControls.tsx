@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, View, type ViewStyle } from "react-native";
 
-import type { TranslationMode } from "@murmur/protocol/transport/types";
 import { styles } from "./styles";
 import type { PickerMode } from "./types";
-import { TextModeTabs } from "./variants/sharedControls";
 
 export function LanguageStrip({
   canChangeLanguages,
@@ -55,30 +53,6 @@ export function LanguageStrip({
         </Pressable>
       </View>
     </View>
-  );
-}
-
-export function ModeToggle({
-  canChangeLanguages,
-  onToggleTranslationMode,
-  translationMode,
-}: {
-  canChangeLanguages: boolean;
-  onToggleTranslationMode: (mode: TranslationMode) => void;
-  translationMode: TranslationMode;
-}): ReactNode {
-  return (
-    <TextModeTabs
-      activeStyle={[styles.modeButtonText, styles.modeButtonTextActive]}
-      activeTabStyle={styles.modeButtonActive}
-      canChangeLanguages={canChangeLanguages}
-      containerStyle={styles.modeToggle}
-      inactiveStyle={styles.modeButtonText}
-      onToggleTranslationMode={onToggleTranslationMode}
-      pressedStyle={styles.pressed}
-      tabStyle={styles.modeButton}
-      translationMode={translationMode}
-    />
   );
 }
 

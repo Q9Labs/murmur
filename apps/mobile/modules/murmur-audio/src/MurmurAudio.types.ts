@@ -9,7 +9,7 @@ export type AudioFrameEvent = {
   duration_ms: number;
   event_seq: number;
   rms: number;
-  sample_rate: 16000;
+  sample_rate: 24000;
   timestamp_ms: number;
 };
 
@@ -22,7 +22,7 @@ export type AudioStateEvent = {
   playback_queued_ms: number;
   reason: string;
   route: string;
-  sample_rate: 16000;
+  sample_rate: 24000;
 };
 
 export type DeviceIntegrityPayload = {

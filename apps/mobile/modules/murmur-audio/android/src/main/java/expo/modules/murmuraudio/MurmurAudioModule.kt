@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.sqrt
 
-private const val MURMUR_SAMPLE_RATE = 16_000
-private const val MURMUR_FRAME_BYTES = 640
+private const val MURMUR_SAMPLE_RATE = 24_000
+private const val MURMUR_FRAME_BYTES = 960
 private const val MURMUR_FRAME_DURATION_MS = 20
 
 class MurmurAudioModule : Module() {

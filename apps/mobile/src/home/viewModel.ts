@@ -17,8 +17,7 @@ export type HomeViewModel = {
   canChangeLanguages: boolean;
   canStart: boolean;
   canSwapLanguages: boolean;
-  continuousPendingCount: number;
-  hasContinuousTimeline: boolean;
+  pendingCount: number;
   hasSourceText: boolean;
   hasTranslatedText: boolean;
   healthText: string;
@@ -58,13 +57,12 @@ export function buildHomeViewModel(params: {
       targetLanguageCode: params.targetLanguageCode,
     }),
     canSwapLanguages: canChangeLanguages && params.sourceLanguageCode !== autoSourceLanguageCode,
-    continuousPendingCount: countContinuousPendingSpans(params.live.spans),
-    hasContinuousTimeline: hasContinuousTimeline(params.live),
+    pendingCount: countPendingSpans(params.live.spans),
     hasSourceText,
     hasTranslatedText,
     healthText: getHealthText(params.live.status, params.live.error),
     isLive,
-    latestProviderRoute: getLatestProviderRoute(params.live.spans) ?? "openrouter:configured-worker-route",
+    latestProviderRoute: getLatestProviderRoute(params.live.spans) ?? "openai:gpt-realtime-translate",
     latestSourceCaption,
     latestTranslationIsPartial: isPartialTranslation(latestTranslation),
     latestTranslationText,
@@ -120,17 +118,13 @@ function canStartTranslation(params: {
       params.sourceLanguageCode !== params.targetLanguageCode);
 }
 
-function countContinuousPendingSpans(spans: TranslationSpan[]): number {
-  return spans.filter(isContinuousPendingSpan).length;
+function countPendingSpans(spans: TranslationSpan[]): number {
+  return spans.filter(isPendingSpan).length;
 }
 
-function isContinuousPendingSpan(span: TranslationSpan): boolean {
+function isPendingSpan(span: TranslationSpan): boolean {
   return span.status === "translating" ||
     Boolean(span.partial_translated_caption && !span.committed_translated_caption);
-}
-
-function hasContinuousTimeline(params: Pick<LiveTranslationController, "spans" | "tentative_source_caption">): boolean {
-  return params.spans.length > 0 || Boolean(params.tentative_source_caption.trim());
 }
 
 function isPartialTranslation(span: TranslationSpan | undefined): boolean {

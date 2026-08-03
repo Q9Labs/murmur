@@ -65,21 +65,17 @@ for (const relativePath of [
   "brand/murmur-logo-2026-05-20.png",
   "google-play/app-icon-512.png",
   "google-play/feature-graphic.svg",
-  "screenshots/android/android-controls-1080x2400.png",
   "screenshots/android/android-home-1080x2400.png",
   "screenshots/android/android-launch-1080x2400.png",
   "screenshots/android/android-listening-1080x2400.png",
   "screenshots/android-captures/android-arabic-caption.png",
   "screenshots/android-captures/android-direction.png",
   "screenshots/android-captures/android-french-caption.png",
-  "screenshots/android-captures/android-privacy.png",
   "screenshots/android-captures/android-welcome.png",
   "screenshots/ios/ios-caption.png",
   "screenshots/ios/ios-direction.png",
-  "screenshots/ios/ios-privacy.png",
   "screenshots/ios/ios-ready.png",
   "screenshots/ios/ios-source-picker.png",
-  "screenshots/ios/ios-target-picker.png",
   "screenshots/ios/ios-welcome.png",
 ]) {
   assert(
@@ -89,9 +85,7 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
-  "store-assets/generated/social/instagram/01-travel-guide-story.png",
   "store-assets/generated/social/instagram/02-conference-talk-story.png",
-  "store-assets/generated/social/instagram/03-accountless-privacy-story.png",
   "store-assets/generated/social/instagram/04-how-murmur-works-story.png",
 ]) {
   assertImage(relativePath, 1080, 1920);

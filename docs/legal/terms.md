@@ -1,10 +1,10 @@
-# Murmur Terms Of Use Draft
+# Murmur Terms Of Use
 
-Last updated: 2026-05-17
+Last updated: 2026-07-30
 
-Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Optional speech output may play translated phrases when available.
+Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
-This draft is not legal advice. It is hosted by the production Worker and must still be reviewed and matched to the final production provider settings before App Store, TestFlight external testing, Google Play closed testing, or public release.
+This text is not legal advice. It describes the OpenAI Realtime service path hosted by the production Worker.
 
 ## Using Murmur
 
@@ -14,13 +14,13 @@ Murmur is not intended for emergencies, medical diagnosis, legal advice, immigra
 
 ## AI Translation Limits
 
-Murmur uses speech recognition, machine translation, and speech generation providers. AI output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.
+OpenAI Realtime handles speech recognition, translation, and translated speech. Its output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.
 
 You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.
 
 ## Accounts And Local Data
 
-Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, provider-token minting, and pseudonymous session measurement. It also keeps local interface and rating-prompt eligibility preferences. You can reset the anonymous identity or delete local Murmur data in the app.
+Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. It also keeps local interface and rating-prompt eligibility preferences. You can reset the anonymous identity or delete local Murmur data in the app.
 
 ## Acceptable Use
 
@@ -29,8 +29,8 @@ Do not use Murmur to:
 - Break the law or violate someone else's rights.
 - Harass, threaten, abuse, impersonate, or exploit others.
 - Generate or distribute hateful, sexual, violent, deceptive, or harmful content.
-- Attempt to bypass rate limits, device integrity checks, provider restrictions, or security controls.
-- Reverse engineer, scrape, overload, or disrupt Murmur or its providers.
+- Attempt to bypass rate limits, device integrity checks, service safeguards, or security controls.
+- Reverse engineer, scrape, overload, or disrupt Murmur or its services.
 
 ## Privacy
 
@@ -38,11 +38,11 @@ Murmur's privacy practices are described in the Murmur Privacy Policy at `https:
 
 ## Third-Party Services
 
-Murmur relies on third-party processors for speech recognition, translation, speech generation, infrastructure, diagnostics, and support workflows. Their services may be unavailable or may change independently from Murmur.
+Murmur relies on Cloudflare and OpenAI Realtime for live translation, infrastructure, diagnostics, and support workflows. OpenAI Realtime or Cloudflare may be unavailable or may change independently from Murmur.
 
 ## Availability
 
-Murmur may change, suspend, or discontinue features. Provider failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.
+Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.
 
 ## No Warranty
 
@@ -50,11 +50,11 @@ Murmur is provided as-is and as-available. To the maximum extent allowed by law,
 
 ## Limitation Of Liability
 
-To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, provider failures, misuse, or reliance on AI output.
+To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, OpenAI Realtime failures, misuse, or reliance on AI output.
 
 ## Changes
 
-These terms may be updated as the app, providers, or legal requirements change. The hosted version must include the effective date.
+These terms may be updated as the app, OpenAI Realtime service, or legal requirements change. The hosted version must include the effective date.
 
 ## Contact
 

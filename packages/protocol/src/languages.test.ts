@@ -38,13 +38,11 @@ describe("language registry", () => {
     }
   });
 
-  it("contains provider mappings and smoke fixtures for every language", () => {
+  it("contains display metadata and smoke fixtures for every language", () => {
     for (const language of languageRegistry) {
       expect(language.script).toBeTruthy();
-      expect(language.deepgram_language).toBeTruthy();
-      expect(language.openrouter_source_name).toBeTruthy();
-      expect(language.openrouter_target_name).toBeTruthy();
-      expect(language.cartesia_language).toBeTruthy();
+      expect(language.display_name).toBeTruthy();
+      expect(language.native_name).toBeTruthy();
       expect(language.smoke_test_source_phrase).toBeTruthy();
       expect(language.expected_translation_notes).toBeTruthy();
       expect(language.dialect_or_variant_notes).toBeTruthy();
@@ -54,6 +52,10 @@ describe("language registry", () => {
   it("validates language codes without throwing", () => {
     expect(isLanguageCode("ar")).toBe(true);
     expect(isLanguageCode("zz")).toBe(false);
+  });
+
+  it("rejects unsupported registry lookups", () => {
+    expect(() => getLanguage("zz" as LanguageCode)).toThrow("Unsupported language: zz");
   });
 
   it("allows auto-detect only for source languages", () => {
@@ -66,7 +68,7 @@ describe("language registry", () => {
     expect(getLanguage("ar").script).toBe("Arab");
     expect(getLanguage("ar").smoke_test_source_phrase).toContain("؟");
     expect(getLanguage("nl")).toMatchObject({
-      deepgram_language: "nl",
+      app_code: "nl",
       script: "Latn",
     });
   });
