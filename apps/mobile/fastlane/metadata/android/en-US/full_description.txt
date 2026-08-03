@@ -1,14 +1,24 @@
-Murmur turns live speech into translated captions.
+Follow spoken language as it happens.
 
-Pick a source language and a target language, tap Listen, and speak. Translated text appears as your speech is recognized. When available, Murmur can also play translated speech. If speech output is unavailable, captions continue.
+Murmur turns speech into live translated captions, so you can keep up with a tour, conference talk, lecture, class, demo, or sermon in another language.
 
-Features:
-- One-way live translation
-- Real-time translated captions
-- Optional translated speech output
-- English, Arabic, Spanish, French, Dutch, German, Hindi, Urdu, Portuguese, Chinese, Japanese, Korean, Turkish, Indonesian, and Italian launch-language registry
-- Accountless V1 with no login or cloud transcript history
-- Reset identity and delete local data controls
-- In-app report actions for translation issues
+Choose a source language and target language, then tap Listen. Use Phrase Mode for short, deliberate speech or Continuous Mode when someone keeps talking. Murmur shows translated captions as stable speech is recognized and can play translated speech when speech output is available.
+
+Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
+
+NO ACCOUNT OR SAVED TRANSCRIPT HISTORY
+
+Murmur is accountless: there is no login, profile, or cloud transcript history. Microphone audio streams only during a live session. You can stop or cancel at any time, reset your anonymous Murmur identity, and delete local Murmur data from the app.
+
+BUILT FOR READABLE LIVE TRANSLATION
+
+• Live translated captions
+• Phrase Mode for short speech
+• Continuous Mode for tours, talks, lectures, and other ongoing speech
+• Optional translated speech output
+• Source and target language controls
+• In-app reporting for translation issues
+
+Murmur needs an internet connection and a microphone — that's it.
 
 Murmur uses AI speech recognition, translation, and speech generation providers. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.

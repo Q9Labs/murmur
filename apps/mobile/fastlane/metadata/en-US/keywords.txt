@@ -1,1 +1,1 @@
-translator,translation,speech,voice,captions,interpreter,arabic,spanish,french,dutch
+interpreter,conference,meeting,tour,lecture,sermon,arabic,hindi,spanish,speech,translate,transcribe

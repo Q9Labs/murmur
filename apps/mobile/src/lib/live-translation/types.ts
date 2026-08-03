@@ -1,3 +1,4 @@
+import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
 import type { SessionState, TranslationSession, TranslationSpan } from "@murmur/protocol/session";
 import type {
@@ -9,6 +10,7 @@ import type { ContinuousTranslationSchedulerSnapshot } from "../continuousTransl
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
 export type LiveTranslationParams = {
+  acquisition?: AcquisitionContext;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
   translation_model_route?: TranslationModelRoute;

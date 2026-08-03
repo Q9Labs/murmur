@@ -3,6 +3,7 @@ import { PermissionsAndroid, Platform } from "react-native";
 import MurmurAudioModule, {
   type DeviceIntegrityPayload,
 } from "../../../modules/murmur-audio";
+import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 import { getWorkerBaseUrl } from "../config";
 import { autoSourceLanguageCode, getLanguage, type LanguageCode, type SourceLanguageCode } from "@murmur/protocol/languages";
 import { normalizeSummaryResponse } from "../summaryResponse";
@@ -25,6 +26,7 @@ export async function requestMicrophonePermission(): Promise<boolean> {
 }
 
 export async function createWorkerSession(body: {
+  acquisition?: AcquisitionContext;
   app_install_id: string;
   device_integrity: DeviceIntegrityPayload;
   source_language: SourceLanguageCode;

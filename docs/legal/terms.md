@@ -20,7 +20,7 @@ You can report translation issues in the app. Reports help support and quality r
 
 ## Accounts And Local Data
 
-Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and provider-token minting. You can reset this identity or delete local Murmur data in the app.
+Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, provider-token minting, and pseudonymous session measurement. It also keeps local interface and rating-prompt eligibility preferences. You can reset the anonymous identity or delete local Murmur data in the app.
 
 ## Acceptable Use
 

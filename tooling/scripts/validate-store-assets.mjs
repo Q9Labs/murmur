@@ -49,7 +49,7 @@ const assertPlayPhoneScreenshot = (relativePath) => {
 
   assert(shortSide >= 320, `${relativePath} short side must be at least 320px; got ${shortSide}`);
   assert(longSide <= 3840, `${relativePath} long side must be no more than 3840px; got ${longSide}`);
-  assert(longSide / shortSide <= 2.3, `${relativePath} aspect ratio must be 2.3:1 or less; got ${longSide}:${shortSide}`);
+  assert(longSide / shortSide <= 2, `${relativePath} aspect ratio must be 2:1 or less; got ${longSide}:${shortSide}`);
   assert(image.height > image.width, `${relativePath} must be a portrait phone screenshot; got ${image.width}x${image.height}`);
 };
 
@@ -69,11 +69,32 @@ for (const relativePath of [
   "screenshots/android/android-home-1080x2400.png",
   "screenshots/android/android-launch-1080x2400.png",
   "screenshots/android/android-listening-1080x2400.png",
+  "screenshots/android-captures/android-arabic-caption.png",
+  "screenshots/android-captures/android-direction.png",
+  "screenshots/android-captures/android-french-caption.png",
+  "screenshots/android-captures/android-privacy.png",
+  "screenshots/android-captures/android-welcome.png",
+  "screenshots/ios/ios-caption.png",
+  "screenshots/ios/ios-direction.png",
+  "screenshots/ios/ios-privacy.png",
+  "screenshots/ios/ios-ready.png",
+  "screenshots/ios/ios-source-picker.png",
+  "screenshots/ios/ios-target-picker.png",
+  "screenshots/ios/ios-welcome.png",
 ]) {
   assert(
     existsSync(join(mobileRoot, "store-assets", "source", relativePath)),
     `store-assets/source/${relativePath} must exist`,
   );
+}
+
+for (const relativePath of [
+  "store-assets/generated/social/instagram/01-travel-guide-story.png",
+  "store-assets/generated/social/instagram/02-conference-talk-story.png",
+  "store-assets/generated/social/instagram/03-accountless-privacy-story.png",
+  "store-assets/generated/social/instagram/04-how-murmur-works-story.png",
+]) {
+  assertImage(relativePath, 1080, 1920);
 }
 
 for (const locale of ["en-US", "en-GB"]) {

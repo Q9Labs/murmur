@@ -1,1 +1,1 @@
-Accountless live speech translation with real-time captions.
+Live translated captions for tours, talks, and lectures — no account, no setup.

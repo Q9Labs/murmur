@@ -28,7 +28,7 @@ These standards define the code shape Murmur should preserve across the Expo mob
 - Keep files focused on one concept. Split files approaching 300 lines unless cohesion or framework constraints make the larger shape clearer.
 - Prefer direct imports from the owning module. Do not add forwarding files, compatibility aliases, or barrel exports without a stable public API need.
 - Keep route entrypoints and composition roots thin. Expo Router files compose screens; the Worker entrypoint mounts routes and bindings. Neither should own substantial product logic.
-- Keep dependencies directional according to [repository architecture](repository-architecture.md): mobile and Worker may depend on protocol; protocol must remain runtime-neutral; mobile and Worker must not import each other's source.
+- Keep dependencies directional. Mobile and Worker may depend on protocol; protocol must remain runtime-neutral; mobile and Worker must not import each other's source.
 - Colocate focused tests with the behavior they verify. Keep generated files, assets, provider configuration, and release metadata in their canonical package locations.
 
 ## Types and Runtime Boundaries

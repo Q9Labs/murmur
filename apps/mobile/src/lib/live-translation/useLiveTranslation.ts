@@ -1694,6 +1694,7 @@ export function useLiveTranslation(params: LiveTranslationParams): LiveTranslati
     recordLatency("device_integrity_collected", Date.now() - deviceIntegrityStartedAt);
     const sessionStartedAt = Date.now();
     const workerSession = await createWorkerSession({
+      acquisition: normalizedParams.acquisition,
       app_install_id: appInstallId,
       device_integrity: deviceIntegrity,
       source_language: params.source_language,
@@ -1927,6 +1928,7 @@ export function useLiveTranslation(params: LiveTranslationParams): LiveTranslati
     handleDeepgramEvent,
     handleUltravoxEvent,
     handleTranslationEvent,
+    normalizedParams.acquisition,
     normalizedParams.translation_mode,
     normalizedParams.translation_model_route,
     normalizedParams.ultravox_vad_enabled,

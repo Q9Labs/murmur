@@ -47,6 +47,7 @@ export function HomeExperience({
   onResetIdentity,
   onSelectDevModelRoute,
   onSelectUiVariant,
+  onShare,
   onSwapLanguages,
   onToggleTranslationMode,
   onToggleUltravoxVad,
@@ -85,6 +86,7 @@ export function HomeExperience({
   onResetIdentity: () => void;
   onSelectDevModelRoute: (route: TranslationModelRoute) => void;
   onSelectUiVariant: (variant: UiVariant) => void;
+  onShare: () => void;
   onSwapLanguages: () => void;
   onToggleTranslationMode: (mode: TranslationMode) => void;
   onToggleUltravoxVad: () => void;
@@ -136,6 +138,7 @@ export function HomeExperience({
         onOpenDiagnostics={onOpenDiagnostics}
         onResetIdentity={onResetIdentity}
         onSelectUiVariant={onSelectUiVariant}
+        onShare={onShare}
         onToggleUltravoxVad={onToggleUltravoxVad}
         open={settingsOpen}
         settingsMessage={settingsMessage}

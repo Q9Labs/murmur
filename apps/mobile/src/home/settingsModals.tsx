@@ -21,6 +21,7 @@ export function SettingsModal({
   onOpenDevModelRoute,
   onOpenDiagnostics,
   onResetIdentity,
+  onShare,
   onSelectUiVariant,
   onToggleUltravoxVad,
   open,
@@ -36,6 +37,7 @@ export function SettingsModal({
   onOpenDevModelRoute: () => void;
   onOpenDiagnostics: () => void;
   onResetIdentity: () => void;
+  onShare: () => void;
   onSelectUiVariant: (variant: UiVariant) => void;
   onToggleUltravoxVad: () => void;
   open: boolean;
@@ -50,6 +52,7 @@ export function SettingsModal({
       <UiVariantPicker onSelectUiVariant={onSelectUiVariant} uiVariant={uiVariant} />
       <View style={styles.settingsList}>
         <SettingsAction label="Session diagnostics" onPress={onOpenDiagnostics} />
+        <SettingsAction disabled={disabled} label="Share Murmur" onPress={onShare} />
         <DevSettingsActions
           devModelPickerEnabled={devModelPickerEnabled}
           devModelRoute={devModelRoute}

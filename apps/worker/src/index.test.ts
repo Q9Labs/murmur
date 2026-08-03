@@ -322,7 +322,10 @@ describe("worker routes", () => {
     expect(response.headers.get("Content-Type")).toContain("text/html");
     expect(body).toContain("Murmur");
     expect(body).toContain("Translated captions appear as each phrase is recognized.");
-    expect(body).toContain("Accountless Live Speech Translation App");
+    expect(body).toContain("Live Translated Captions for Tours and Talks");
+    expect(body).toContain("Follow every word");
+    expect(body).toContain('href="/live-translation-for-travel"');
+    expect(body).toContain('href="/live-translation-for-talks"');
     expect(body).toContain('rel="canonical" href="https://murmur.q9labs.ai/"');
     expect(body).toContain('href="/favicon.svg"');
     expect(body).toContain("application/ld+json");
@@ -370,6 +373,35 @@ describe("worker routes", () => {
     expect(sitemap).toContain("https://murmur.q9labs.ai/privacy");
     expect(sitemap).toContain("https://murmur.q9labs.ai/terms");
     expect(sitemap).toContain("https://murmur.q9labs.ai/support");
+    expect(sitemap).toContain("https://murmur.q9labs.ai/live-translation-for-travel");
+    expect(sitemap).toContain("https://murmur.q9labs.ai/live-translation-for-talks");
+    expect(sitemap).toContain("https://murmur.q9labs.ai/english-to-arabic-live-captions");
+    expect(sitemap).toContain("https://murmur.q9labs.ai/arabic-to-english-live-captions");
+    expect(sitemap).toContain("https://murmur.q9labs.ai/phrase-mode-vs-continuous-mode");
+  });
+
+  it("serves focused live-translation landing pages", async () => {
+    const pages = [
+      ["/live-translation-for-travel", "Understand the guide", "travel"],
+      ["/live-translation-for-talks", "Read the talk live", "talks"],
+      ["/english-to-arabic-live-captions", "Hear English. Read Arabic live.", "english-arabic"],
+      ["/arabic-to-english-live-captions", "Hear Arabic. Read English live.", "arabic-english"],
+      ["/phrase-mode-vs-continuous-mode", "Match Murmur", "modes"],
+    ] as const;
+
+    for (const [path, heading, campaignToken] of pages) {
+      const { body, response } = await fetchProductionText(path);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toContain("text/html");
+      expect(body).toContain(heading);
+      expect(body).toContain(`rel="canonical" href="https://murmur.q9labs.ai${path}"`);
+      expect(body).toContain("App Store");
+      expect(body).toContain("Google Play");
+      expect(body).toContain(`ct=${campaignToken}`);
+      expect(body).toContain(`utm_campaign=${campaignToken}`);
+      expect(body).toContain("AI output can be delayed, incomplete, or inaccurate.");
+    }
   });
 
   it("serves public legal and support pages", async () => {
@@ -1032,6 +1064,45 @@ describe("worker session routes", () => {
     await expect(samePairResponse.json()).resolves.toEqual({
       error: "same_language_pair",
     });
+  });
+
+  it("logs normalized acquisition without raw install or content data", async () => {
+    const restoreFetch = stubProviderTokenFetch();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    try {
+      const response = await postSession(makeSessionBody(`install_acquisition_${Date.now()}`, {
+        acquisition: {
+          campaign: " UAE Travel Launch ",
+          content: "Guide Demo #1",
+          ignored_caption: "this must not be logged",
+          medium: "QR Code",
+          source: "Instagram",
+        },
+        translation_mode: "continuous",
+      }));
+
+      expect(response.status).toBe(200);
+      const event = logSpy.mock.calls
+        .map(([entry]) => JSON.parse(String(entry)) as Record<string, unknown>)
+        .find((entry) => entry.event === "session_created");
+      expect(event).toMatchObject({
+        acquisition: {
+          campaign: "uae-travel-launch",
+          content: "guide-demo-1",
+          medium: "qr-code",
+          source: "instagram",
+        },
+        hashed_install_id: expect.stringMatching(/^[a-f0-9]{64}$/),
+        translation_mode: "continuous",
+      });
+      expect(JSON.stringify(event)).not.toContain("ignored_caption");
+      expect(JSON.stringify(event)).not.toContain("this must not be logged");
+      expect(JSON.stringify(event)).not.toContain("install_acquisition");
+    } finally {
+      logSpy.mockRestore();
+      restoreFetch();
+    }
   });
 
   it("rejects dev translation model routes in production sessions", async () => {

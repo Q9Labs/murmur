@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
+import Constants from "expo-constants";
+import * as Linking from "expo-linking";
 import * as Network from "expo-network";
 
 import MurmurAudioModule, { type AudioStateEvent } from "../../modules/murmur-audio";
+import { getAcquisitionContextFromUrl } from "../lib/acquisition";
 import { isUltravoxVadEnabledByDefault } from "../lib/config";
+import {
+  deleteEngagementState,
+  markReviewRequested,
+  recordSessionOutcome,
+} from "../lib/engagement";
 import {
   acknowledgePrivacyDisclosure,
   deleteLocalMurmurData,
   hasAcknowledgedPrivacyDisclosure,
   resetInstallId,
 } from "../lib/installIdentity";
+import { shareMurmur } from "../lib/shareMurmur";
+import { requestMurmurReview } from "../lib/requestReview";
 import {
   autoSourceLanguageCode,
   type LanguageCode,
@@ -54,7 +64,14 @@ export default function HomeScreen(): ReactNode {
 
   const devModelPickerEnabled = isDevModelPickerEnabled();
   const activeModelRoute = devModelPickerEnabled ? devModelRoute : defaultTranslationModelRoute;
+  const incomingUrl = Linking.useURL();
+  const incomingAcquisition = useMemo(
+    () => getAcquisitionContextFromUrl(incomingUrl),
+    [incomingUrl],
+  );
+  const [acquisition, setAcquisition] = useState(incomingAcquisition);
   const live = useLiveTranslation({
+    acquisition,
     source_language: sourceLanguageCode,
     target_language: targetLanguageCode,
     translation_model_route: activeModelRoute,
@@ -86,6 +103,16 @@ export default function HomeScreen(): ReactNode {
         .join("|"),
     [live.spans],
   );
+
+  useEffect(() => {
+    setAcquisition(incomingAcquisition);
+  }, [incomingAcquisition, incomingUrl]);
+
+  useEffect(() => {
+    if (live.status === "live" && acquisition) {
+      setAcquisition(undefined);
+    }
+  }, [acquisition, live.status]);
 
   useEffect(() => {
     let mounted = true;
@@ -182,7 +209,18 @@ export default function HomeScreen(): ReactNode {
 
   async function handlePrimaryAction(): Promise<void> {
     if (viewModel.isLive) {
+      const completedSession = {
+        committed_caption_count: live.spans.filter(
+          (span) =>
+            span.status === "committed" &&
+            Boolean(span.committed_translated_caption?.trim()),
+        ).length,
+        duration_ms: Math.max(0, Date.now() - live.session.created_at_ms),
+        error: live.error,
+        translation_mode: live.session.translation_mode,
+      };
       await live.stop();
+      await handleCompletedSessionEngagement(completedSession);
       return;
     }
     if (!viewModel.canStart) {
@@ -267,6 +305,7 @@ export default function HomeScreen(): ReactNode {
         setDevModelRouteOpen(false);
       }}
       onSelectUiVariant={selectUiVariant}
+      onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       onToggleTranslationMode={setTranslationMode}
       onToggleUltravoxVad={() => setUltravoxVadEnabled((current) => !current)}
@@ -285,6 +324,22 @@ export default function HomeScreen(): ReactNode {
   );
 }
 
+async function handleCompletedSessionEngagement(
+  outcome: Parameters<typeof recordSessionOutcome>[0]["outcome"],
+): Promise<void> {
+  const appVersion = Constants.expoConfig?.version ?? "unknown";
+  const engagement = await recordSessionOutcome({
+    app_version: appVersion,
+    outcome,
+  });
+  if (!engagement.should_request_review) {
+    return;
+  }
+  if (await requestMurmurReview()) {
+    await markReviewRequested({ app_version: appVersion });
+  }
+}
+
 async function resetIdentity(setMessage: (message: string | null) => void): Promise<void> {
   await resetInstallId();
   setMessage("Accountless identity reset. The next session will use a fresh install id.");
@@ -297,7 +352,8 @@ async function deleteLocalData(
 ): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
+  await deleteEngagementState();
   await deleteStoredUiVariant();
   onDeleted?.();
-  setMessage("Local Murmur data deleted. Privacy acknowledgement and install id were cleared.");
+  setMessage("Local Murmur data deleted. Privacy acknowledgement, install id, app style, and rating eligibility were cleared.");
 }

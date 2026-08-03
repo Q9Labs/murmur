@@ -1,7 +1,24 @@
-Murmur is an accountless live translator for moments when you need speech to become readable captions in another language.
+Follow spoken language as it happens.
 
-Choose a source language and target language, tap Listen, and speak. Murmur streams your microphone only during the live session, shows translated captions as stable speech spans are recognized, and can play translated speech when speech output is available.
+Murmur turns speech into live translated captions, so you can keep up with a tour, conference talk, lecture, class, demo, or sermon in another language.
 
-Murmur V1 has no accounts, login, profiles, or cloud transcript history. You can stop or cancel a session at any time, reset your anonymous Murmur identity, and delete local Murmur data from the app.
+Choose a source language and target language, then tap Listen. Use Phrase Mode for short, deliberate speech or Continuous Mode when someone keeps talking. Murmur shows translated captions as stable speech is recognized and can play translated speech when speech output is available.
+
+Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
+
+NO ACCOUNT OR SAVED TRANSCRIPT HISTORY
+
+Murmur has no accounts, login, profiles, or cloud transcript history. Microphone audio streams only during a live session. You can stop or cancel at any time, reset your anonymous Murmur identity, and delete local Murmur data from the app.
+
+BUILT FOR READABLE LIVE TRANSLATION
+
+• Live translated captions
+• Phrase Mode for short speech
+• Continuous Mode for tours, talks, lectures, and other ongoing speech
+• Optional translated speech output
+• Source and target language controls
+• In-app reporting for translation issues
+
+Murmur needs an internet connection and a microphone — that's it.
 
 Murmur uses AI speech recognition, translation, and speech generation providers. Translations can be delayed, incomplete, or inaccurate. Do not rely on Murmur for emergencies, medical, legal, financial, immigration, or other high-stakes decisions without a qualified human interpreter.

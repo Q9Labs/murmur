@@ -6,6 +6,11 @@ describe("legalPages", () => {
   it("defines the public legal and marketing routes", () => {
     expect(Object.keys(legalPages).sort()).toEqual([
       "/",
+      "/arabic-to-english-live-captions",
+      "/english-to-arabic-live-captions",
+      "/live-translation-for-talks",
+      "/live-translation-for-travel",
+      "/phrase-mode-vs-continuous-mode",
       "/privacy",
       "/support",
       "/terms",

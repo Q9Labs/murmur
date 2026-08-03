@@ -13,9 +13,13 @@ All notable changes to Murmur are documented here.
 - Four selectable mobile presentation variants: Field Console, Aura, Bloom, and Classic.
 - Persistent UI-style preference storage and rendering coverage for the shared mobile variant flows.
 - Logged mobile and Worker development commands, plus an Expo Doctor check in the canonical quality gate.
+- Focused travel, talk, English-to-Arabic, Arabic-to-English, and listening-mode landing pages for organic discovery.
+- Privacy-conscious campaign attribution, success-timed native review requests after three useful sessions, and an in-app Murmur referral action without caption-content collection.
 
 ### Changed
 
+- Repositioned the English App Store and Google Play listings around live translated captions for tours and talks, with a Gulf-first growth and ASO strategy.
+- Reframed the iOS and Android screenshot sets around live-caption value, tours and talks, language choice, and accountless privacy using verified app captures.
 - Reworked the README and deployment documentation for reproducible public development.
 - Replaced private store-operation ledgers with a minimal machine-readable readiness record.
 - Updated vulnerable transitive `undici` versions through scoped pnpm overrides.

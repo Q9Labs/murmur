@@ -1,3 +1,7 @@
+import {
+  normalizeAcquisitionContext,
+  type AcquisitionContext,
+} from "@murmur/protocol/acquisition";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import {
   isTranslationModelRoute,
@@ -59,11 +63,18 @@ export async function createSession(request: Request, env: Env): Promise<Respons
     namespace: env.RATE_LIMITER,
     now_ms: nowMs,
   });
-  logCreateSession(parsed.value, admission.requestHashVerified, appSessionId, nowMs);
+  logCreateSession(
+    parsed.value,
+    admission.hashedInstallId,
+    admission.requestHashVerified,
+    appSessionId,
+    nowMs,
+  );
   return buildCreateSessionResponse(request, appSessionId, parsed.value, providers);
 }
 
 type ParsedCreateSessionRequest = {
+  acquisition?: AcquisitionContext;
   appInstallId: string;
   deviceIntegrity: ReturnType<typeof parseDeviceIntegrity>;
   sourceLanguage: SourceLanguageCode;
@@ -99,6 +110,7 @@ function parseCreateSessionRequest(
   return {
     ok: true,
     value: {
+      acquisition: normalizeAcquisitionContext(body.acquisition),
       appInstallId: body.app_install_id,
       deviceIntegrity: parseDeviceIntegrity(body.device_integrity),
       sourceLanguage: languagePair.sourceLanguage,
@@ -202,20 +214,24 @@ async function maybeCreateUltravoxCall(
 
 function logCreateSession(
   parsed: ParsedCreateSessionRequest,
+  hashedInstallId: string,
   requestHashVerified: boolean,
   appSessionId: string,
   nowMs: number,
 ): void {
   logWorkerEvent({
+    acquisition: parsed.acquisition ?? null,
     event: "session_created",
     app_session_id: appSessionId,
     device_integrity_available: parsed.deviceIntegrity.available,
     device_integrity_platform: parsed.deviceIntegrity.platform,
     device_integrity_provider: parsed.deviceIntegrity.provider,
     device_integrity_verified: requestHashVerified,
+    hashed_install_id: hashedInstallId,
     source_language: parsed.sourceLanguage,
     target_language: parsed.targetLanguage,
     translation_model_route: parsed.translationModelRoute,
+    translation_mode: parsed.translationMode,
     at_ms: nowMs,
   });
 }
