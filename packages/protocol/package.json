@@ -5,7 +5,6 @@
   "exports": {
     "./languages": "./src/languages.ts",
     "./session": "./src/session.ts",
-    "./translationModelRoutes": "./src/translationModelRoutes.ts",
     "./transport/types": "./src/transport/types.ts"
   },
   "scripts": {
