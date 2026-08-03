@@ -21,6 +21,9 @@ All notable changes to Murmur are documented here.
 
 - Unified live translation into one streaming experience and moved capture/playback to 24 kHz PCM16.
 - Reworked the README and deployment documentation for reproducible public development.
+- Restored Gitleaks' built-in detectors, pinned CI dependencies to immutable revisions, and replaced the licensed organization-only scanning action with the official Gitleaks CLI container.
+- Moved pnpm overrides into the workspace configuration and refreshed vulnerable transitive packages to their patched releases.
+- Updated Expo to the SDK 54 patch required by Expo Doctor.
 - Replaced private store-operation ledgers with a minimal machine-readable readiness record.
 - Updated vulnerable transitive `undici` versions through scoped pnpm overrides.
 - Repositioned the English App Store and Google Play listings around live translated captions for tours and talks, with a Gulf-first growth and ASO strategy.
