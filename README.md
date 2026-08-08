@@ -1,8 +1,8 @@
 # Murmur
 
-Murmur is a privacy-conscious, one-way live translation app. Speak once and receive translated captions in real time, with optional translated speech for stable phrases.
+Murmur is a privacy-conscious, one-way live translation app. While you speak, it streams source captions, translated captions, and translated speech.
 
-The mobile client is built with Expo and React Native. A Cloudflare Worker keeps provider credentials off devices, proxies live speech recognition, translates text, and issues short-lived speech access.
+The mobile client is built with Expo and React Native. A Cloudflare Worker keeps OpenAI credentials off devices and adapts the app-facing protocol to OpenAI's Realtime Translation API.
 
 ## Requirements
 
@@ -11,6 +11,7 @@ The mobile client is built with Expo and React Native. A Cloudflare Worker keeps
 - Xcode for local iOS builds
 - Android Studio and a JDK for local Android builds
 - A Cloudflare account for Worker development or deployment
+- An OpenAI API key with access to `gpt-realtime-translate` for live sessions
 
 ## Local development
 
@@ -19,19 +20,17 @@ git clone https://github.com/Q9Labs/murmur.git
 cd murmur
 pnpm install
 cp apps/mobile/.env.example apps/mobile/.env.local
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
 pnpm dev
 ```
 
-Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `apps/mobile/.env.local` to a locally running or hosted Worker. Provider credentials belong in `apps/worker/.dev.vars`, which is ignored by Git.
-
-Run the Worker in a second terminal:
+Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `apps/mobile/.env.local`. Put `OPENAI_API_KEY` in the ignored `apps/worker/.dev.vars`, then run the Worker in a second terminal:
 
 ```bash
-cp apps/worker/.dev.vars.example apps/worker/.dev.vars
 pnpm dev:worker
 ```
 
-Replace placeholder values in `apps/worker/.dev.vars` before requesting live provider sessions. Never add production credentials to either file.
+Never add production credentials to either file.
 
 ## Quality checks
 
@@ -40,17 +39,20 @@ pnpm test
 pnpm run gate
 ```
 
-`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, tests, coverage, and store/config validation without deploying or contacting production release lanes. Root commands coordinate the `apps/mobile`, `apps/worker`, and `packages/protocol` workspaces.
+`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, tests, coverage, and store/config validation without deploying or contacting production release lanes.
 
 ## Architecture
 
 ```text
-Expo app -> Murmur Worker -> Deepgram streaming speech recognition
-                         -> OpenRouter text translation
-                         -> Cartesia translated speech
+Expo app <------- app-facing realtime WebSocket -------> Murmur Worker
+                                                       |
+                                                       v
+                                          OpenAI Realtime Translation
 ```
 
-The repository layout and workspace boundaries are documented in [docs/repository-architecture.md](docs/repository-architecture.md). The canonical product contract is [docs/spec.md](docs/spec.md), Continuous Mode is covered by [docs/continuous-mode-spec.md](docs/continuous-mode-spec.md), and deployment setup is in [docs/deployment-runbook.md](docs/deployment-runbook.md).
+The app sends 24 kHz mono PCM16 audio to the Worker and receives normalized transcript events plus raw PCM16 translated audio. The Worker alone knows OpenAI's credentials and wire protocol. OpenAI Realtime is the sole supported live translation service; there is no adapter registry or fallback service.
+
+See [docs/spec.md](docs/spec.md) for the product and protocol contract and [docs/deployment-runbook.md](docs/deployment-runbook.md) for setup.
 
 ## Security and privacy
 

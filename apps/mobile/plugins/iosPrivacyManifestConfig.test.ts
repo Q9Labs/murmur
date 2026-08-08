@@ -19,15 +19,27 @@ describe("iOS privacy manifest config", () => {
         "NSPrivacyCollectedDataTypeOtherDiagnosticData",
         "NSPrivacyCollectedDataTypePerformanceData",
         "NSPrivacyCollectedDataTypeDeviceID",
+        "NSPrivacyCollectedDataTypeProductInteraction",
       ]),
     );
 
     for (const entry of privacyManifests.NSPrivacyCollectedDataTypes) {
       expect(entry.NSPrivacyCollectedDataTypeLinked).toBe(false);
       expect(entry.NSPrivacyCollectedDataTypeTracking).toBe(false);
-      expect(entry.NSPrivacyCollectedDataTypePurposes).toEqual([
-        "NSPrivacyCollectedDataTypePurposeAppFunctionality",
-      ]);
     }
+
+    const purposeByType = Object.fromEntries(
+      privacyManifests.NSPrivacyCollectedDataTypes.map((entry) => [
+        entry.NSPrivacyCollectedDataType,
+        entry.NSPrivacyCollectedDataTypePurposes,
+      ]),
+    );
+    expect(purposeByType.NSPrivacyCollectedDataTypeProductInteraction).toEqual([
+      "NSPrivacyCollectedDataTypePurposeAnalytics",
+    ]);
+    expect(purposeByType.NSPrivacyCollectedDataTypeDeviceID).toEqual([
+      "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+      "NSPrivacyCollectedDataTypePurposeAnalytics",
+    ]);
   });
 });

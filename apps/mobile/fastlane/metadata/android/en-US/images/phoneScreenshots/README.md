@@ -1,12 +1,5 @@
-Capture 2-8 phone screenshots from the final production-connected Android build.
+The current five-image set pairs verified Android app captures with Imagegen-created Murmur compositions. Each composition supplies the exact benefit headline and abstract visual direction; the build script replaces its device placeholder with the untouched verified app capture. Run `node tooling/scripts/build-store-screenshots.mjs` from the repository root to reproduce the en-US set and its mirrored en-GB copy.
 
-Current captured screenshot:
-- `01-android-launch.png`: physical Android device `M2007J3SY`, 1080 x 2400, package-aligned release APK launch screen.
+The immutable source captures live under `store-assets/source/screenshots/android-captures/`. The first two generated images contain real committed translation states; the remaining images show direction setup, microphone disclosure, and onboarding.
 
-Required V1 set:
-- Ready state with source/target language selection.
-- Microphone permission prompt.
-- Live translated captions from a real provider session.
-- Speech unavailable degraded state or verified speech playback.
-- Report translation action/receipt.
-- Reset identity / delete local data controls.
+A future capture pass should add a longer live-caption session from the current default interface before store publication. The generated composition may establish a verified use case, but the underlying product screen must remain a real capture.

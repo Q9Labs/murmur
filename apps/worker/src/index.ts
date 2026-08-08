@@ -15,33 +15,18 @@ import {
   RateLimitDurableObject,
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
-import { createSession, refreshSessionTokens } from "./routes/session";
-import { createSummary } from "./routes/summary";
-import { connectDeepgramSocket } from "./sockets/deepgram";
-import { connectTranslateSocket } from "./sockets/translate";
+import { createSession } from "./routes/session";
+import { connectRealtimeSocket } from "./sockets/realtime";
 
 export { RateLimitDurableObject };
 export type { Env } from "./env";
 export { getReadiness } from "./env";
-export type { InterpreterTargetAction, PreviewTargetAction } from "./translation/targetAction";
 export {
-  parseInterpreterTargetAction,
-  parsePreviewTargetAction,
-  parseStreamingInterpreterTargetAction,
-  parseStreamingPreviewTargetAction,
-} from "./translation/targetAction";
-export { getTranslationErrorCode } from "./translation/errors";
-export { handleSocketMessage } from "./sockets/translate";
-export { validateTranslationRequest } from "./translation/validation";
-export {
-  buildGroqChatPayload,
-  buildGroqPreviewChatPayload,
-} from "./providers/groq";
-export {
-  buildOpenRouterChatPayload,
-  buildOpenRouterProviderPreferences,
-} from "./providers/openrouter";
-export { parseOpenRouterChunk } from "./providers/streamParsing";
+  createCloseMessage,
+  createInputAudioMessage,
+  createSessionUpdate,
+  parseTranslationOutput,
+} from "./providers/openaiRealtime";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -66,23 +51,19 @@ export default {
     }
 
     if (url.pathname === "/v1/session" && request.method === "POST") {
+      return json({ error: "client_upgrade_required" }, 426);
+    }
+
+    if (url.pathname === "/v2/session" && request.method === "POST") {
       return createSession(request, env);
     }
 
-    if (url.pathname === "/v1/translate" && request.headers.get("Upgrade") === "websocket") {
-      return connectTranslateSocket(request, env);
-    }
-
-    if (url.pathname === "/v1/deepgram" && request.headers.get("Upgrade") === "websocket") {
-      return connectDeepgramSocket(request, env);
+    if (url.pathname === "/v2/realtime" && request.headers.get("Upgrade") === "websocket") {
+      return connectRealtimeSocket(request, env);
     }
 
     if (url.pathname === "/v1/report" && request.method === "POST") {
       return createReport(request, env);
-    }
-
-    if (url.pathname === "/v1/summary" && request.method === "POST") {
-      return createSummary(request, env);
     }
 
     if (url.pathname === "/v1/reports" && request.method === "GET") {
@@ -98,16 +79,7 @@ export default {
     }
 
     if (
-      url.pathname.startsWith("/v1/session/") &&
-      url.pathname.endsWith("/tokens") &&
-      request.method === "POST"
-    ) {
-      const appSessionId = url.pathname.split("/")[3];
-      return refreshSessionTokens(request, env, appSessionId);
-    }
-
-    if (
-      url.pathname.startsWith("/v1/session/") &&
+      url.pathname.startsWith("/v2/session/") &&
       url.pathname.endsWith("/stop") &&
       request.method === "POST"
     ) {

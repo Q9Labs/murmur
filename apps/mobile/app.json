@@ -9,6 +9,7 @@
     "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
     "ios": {
+      "appStoreUrl": "https://apps.apple.com/app/id6756962206",
       "buildNumber": "9",
       "supportsTablet": false,
       "infoPlist": {
@@ -56,11 +57,20 @@
             ]
           },
           {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          },
+          {
             "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
             "NSPrivacyCollectedDataTypeLinked": false,
             "NSPrivacyCollectedDataTypeTracking": false,
             "NSPrivacyCollectedDataTypePurposes": [
-              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
             ]
           }
         ]
@@ -87,6 +97,7 @@
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
         "android.permission.RECORD_AUDIO"
       ],
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
       "package": "com.q9labsai.murmur",
       "versionCode": 3
     },

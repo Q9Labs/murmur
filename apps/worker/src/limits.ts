@@ -1,24 +1,15 @@
 import {
-  beginSummaryWithStores,
-  beginTranslationWithStores,
   canCreateSessionWithStores,
-  canRefreshTokensWithStores,
   closeSessionWithStores,
   createSessionRecordWithStores,
-  endSummaryWithStores,
-  endTranslationWithStores,
+  reserveRealtimeSessionWithStores,
 } from "./rateLimiter/sessionStore";
 
 export type RateLimitConfig = {
   activeSessionsPerInstall: number;
-  concurrentSummariesPerSession: number;
-  concurrentTranslationsPerSession: number;
-  maxCharsPerSpan: number;
   maxSessionSeconds: number;
   sessionsPerDay: number;
   sessionsPerHour: number;
-  summariesPerMinute: number;
-  translatedSpansPerMinute: number;
 };
 
 export type SessionRecord = {
@@ -26,11 +17,19 @@ export type SessionRecord = {
   closed_at_ms: number | null;
   created_at_ms: number;
   hashed_install_id: string;
-  in_flight_summaries: number;
-  in_flight_translations: number;
-  summary_timestamps: number[];
-  translated_span_timestamps: number[];
+  realtime_connected_at_ms: number | null;
 };
+
+export type RealtimeReservationResult =
+  | {
+      expires_at_ms: number;
+      hashed_install_id: string;
+      ok: true;
+    }
+  | {
+      code: "session_already_connected" | "session_closed" | "session_expired";
+      ok: false;
+    };
 
 export type LimitResult =
   | { ok: true }
@@ -38,14 +37,9 @@ export type LimitResult =
 
 export const defaultRateLimits: RateLimitConfig = {
   activeSessionsPerInstall: 1,
-  concurrentSummariesPerSession: 1,
-  concurrentTranslationsPerSession: 2,
-  maxCharsPerSpan: 600,
   maxSessionSeconds: 900,
   sessionsPerDay: 30,
   sessionsPerHour: 6,
-  summariesPerMinute: 6,
-  translatedSpansPerMinute: 60,
 };
 
 const sessionsById = new Map<string, SessionRecord>();
@@ -68,42 +62,16 @@ export function canCreateSession(params: {
   return canCreateSessionWithStores(params, memoryStore);
 }
 
-export function beginTranslation(params: {
-  app_session_id: string;
-  config: RateLimitConfig;
-  source_caption: string;
-  now_ms: number;
-}): LimitResult {
-  return beginTranslationWithStores(params, memoryStore);
-}
-
-export function endTranslation(appSessionId: string): void {
-  endTranslationWithStores(appSessionId, sessionsById);
-}
-
-export function beginSummary(params: {
-  app_session_id: string;
-  config: RateLimitConfig;
-  now_ms: number;
-}): LimitResult {
-  return beginSummaryWithStores(params, memoryStore);
-}
-
-export function endSummary(appSessionId: string): void {
-  endSummaryWithStores(appSessionId, sessionsById);
-}
-
 export function closeSession(appSessionId: string, nowMs: number): void {
   closeSessionWithStores(appSessionId, nowMs, sessionsById);
 }
 
-export function canRefreshTokens(params: {
+export function reserveRealtimeSession(params: {
   app_session_id: string;
   config: RateLimitConfig;
-  hashed_install_id: string;
   now_ms: number;
-}): LimitResult {
-  return canRefreshTokensWithStores(params, memoryStore);
+}): RealtimeReservationResult {
+  return reserveRealtimeSessionWithStores(params, sessionsById);
 }
 
 export function getSession(appSessionId: string): SessionRecord | null {

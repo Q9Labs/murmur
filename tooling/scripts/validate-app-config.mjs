@@ -30,6 +30,7 @@ const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeOtherUserContent",
   "NSPrivacyCollectedDataTypeOtherDiagnosticData",
   "NSPrivacyCollectedDataTypePerformanceData",
+  "NSPrivacyCollectedDataTypeProductInteraction",
   "NSPrivacyCollectedDataTypeDeviceID",
 ];
 
@@ -44,6 +45,10 @@ assert(appConfig.splash?.image === "./assets/images/splash-icon.png", "splash im
 assert(appConfig.splash?.backgroundColor === "#F8F4ED", "splash background must match the validated launch asset");
 
 assert(appConfig.ios?.bundleIdentifier === "com.q9labsai.murmur", "iOS bundle id must be com.q9labsai.murmur");
+assert(
+  appConfig.ios?.appStoreUrl === "https://apps.apple.com/app/id6756962206",
+  "iOS store URL must target Murmur's App Store listing",
+);
 assert(appConfig.ios?.supportsTablet === false, "iPad support must stay disabled until iPad screenshots/device proof exist");
 assert(
   appConfig.ios?.infoPlist?.NSMicrophoneUsageDescription ===
@@ -76,7 +81,22 @@ for (const entry of privacyManifest?.NSPrivacyCollectedDataTypes ?? []) {
   assert(entry.NSPrivacyCollectedDataTypeTracking === false, `${entry.NSPrivacyCollectedDataType} must not be used for tracking`);
 }
 
+const deviceIdPrivacyEntry = privacyManifest?.NSPrivacyCollectedDataTypes?.find(
+  (entry) => entry.NSPrivacyCollectedDataType === "NSPrivacyCollectedDataTypeDeviceID",
+);
+assert(
+  deviceIdPrivacyEntry?.NSPrivacyCollectedDataTypePurposes?.includes(
+    "NSPrivacyCollectedDataTypePurposeAnalytics",
+  ),
+  "DeviceID privacy declaration must include analytics for pseudonymous session measurement",
+);
+
 assert(appConfig.android?.package === "com.q9labsai.murmur", "Android package must be com.q9labsai.murmur");
+assert(
+  appConfig.android?.playStoreUrl ===
+    "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
+  "Android store URL must target Murmur's Google Play listing",
+);
 assert(appConfig.android?.versionCode === 3, `Android versionCode must be 3 for the v1.1.0 testing upload; got ${appConfig.android?.versionCode}`);
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");

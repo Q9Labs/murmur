@@ -1,5 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "tooling/scripts/build-store-screenshots.mjs"
+  ],
   "ignorePatterns": [
     "apps/mobile/assets/**",
     "**/coverage/**",

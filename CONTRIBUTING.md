@@ -7,6 +7,7 @@ Thank you for helping improve Murmur.
 1. Search existing issues and pull requests.
 2. Open an issue for substantial product, architecture, privacy, or provider changes.
 3. Keep provider credentials, user content, store-console data, signing material, and production identifiers out of commits and discussions.
+4. Read the [TypeScript code standards](docs/code-standards.md) and preserve the repository boundaries they define.
 
 ## Development
 

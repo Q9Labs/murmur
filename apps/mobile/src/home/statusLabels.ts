@@ -13,10 +13,7 @@ export function getStatusText(status: string, error: string | null): string {
 }
 
 export function getHealthText(status: string, error: string | null): string {
-  if (error === "translation_transport_reconnecting" || error?.startsWith("provider_token_refresh_retrying")) {
-    return "Recovering";
-  }
-  if (error === "translation_transport_error" || status === "network_degraded") {
+  if (error === "realtime_transport_error" || status === "network_degraded") {
     return "Degraded";
   }
   if (status === "recovering") {
@@ -29,9 +26,7 @@ export function getHealthText(status: string, error: string | null): string {
     return "OK";
   }
   if (
-    status === "connecting_deepgram" ||
-    status === "connecting_translate_ws" ||
-    status === "connecting_ultravox" ||
+    status === "connecting_realtime" ||
     status === "creating_session"
   ) {
     return "Connecting";
@@ -49,18 +44,8 @@ const directStatusText: Record<string, string> = {
 };
 
 function getErrorStatusText(error: string): string {
-  if (error.startsWith("speech_unavailable")) {
-    return "Speech unavailable";
-  }
-  if (isRecoveringError(error)) {
-    return "Recovering";
-  }
-  if (error === "translation_transport_error") {
+  if (error === "realtime_transport_error") {
     return "Network degraded";
   }
   return "Needs setup";
-}
-
-function isRecoveringError(error: string): boolean {
-  return error === "translation_transport_reconnecting" || error.startsWith("provider_token_refresh_retrying");
 }

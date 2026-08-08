@@ -9,24 +9,10 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     cancel: async () => undefined,
     debug_log: [],
     diagnostics_snapshot: {
-      continuous_memory: {
-        memory_version: 1,
-        rolling_source_char_count: 0,
-        rolling_span_count: 0,
-        summary_job_running: false,
-        summary_length: 0,
-        summary_updated_through_span_id: null,
-      },
       runtime: {
-        last_committed_source_caption: null,
-        pending_wait_prefix: null,
-        tentative_source_caption: "",
-        translation_socket_open: false,
-      },
-      translation_scheduler: {
-        counts: { in_flight: 0, queued: 0 },
-        in_flight: [],
-        queued: [],
+        realtime_socket_open: false,
+        source_char_count: 0,
+        translated_char_count: 0,
       },
     },
     error: null,
@@ -65,15 +51,14 @@ describe("home view model", () => {
     });
   });
 
-  it("uses latest partial or committed caption for the phrase canvas", () => {
-    const first = createSpan("hello");
+  it("uses the latest partial or committed caption", () => {
+    const first = { ...createSpan("hello"), status: "committed" as const };
     const second = {
       ...createSpan("where is the train"),
       partial_translated_caption: "أين",
       provider_metadata: {
-        provider: "openrouter",
-        upstream_model: "gemma",
-        upstream_provider: "DeepInfra",
+        model: "gpt-realtime-translate",
+        provider: "openai",
       },
       status: "translating" as const,
     };
@@ -87,9 +72,8 @@ describe("home view model", () => {
       targetLanguageCode: "ar",
     });
 
-    expect(model.latestProviderRoute).toBe("openrouter:DeepInfra:gemma");
-    expect(model.continuousPendingCount).toBe(1);
-    expect(model.hasContinuousTimeline).toBe(true);
+    expect(model.latestProviderRoute).toBe("openai:gpt-realtime-translate");
+    expect(model.pendingCount).toBe(1);
     expect(model.latestTranslationIsPartial).toBe(true);
     expect(model.primaryCanvasText).toBe("أين");
     expect(model.secondaryCanvasText).toBe("where is the train");

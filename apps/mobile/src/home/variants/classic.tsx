@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppChrome } from "../appChrome";
 import { BottomDock } from "../bottomDock";
-import { LanguageStrip, ModeToggle } from "../languageControls";
+import { LanguageStrip } from "../languageControls";
 import { Onboarding } from "../onboarding";
 import { styles } from "../styles";
 import { TranslationSurface } from "../translationSurface";
@@ -19,16 +19,14 @@ export function ClassicOnboarding(props: VariantOnboardingProps): ReactNode {
 
 export function ClassicShell({
   audioState,
-  continuousAutoScrollRef,
-  continuousTimelineRef,
-  continuousUserInteractedRef,
+  autoScrollRef,
   live,
   onOpenPicker,
   onOpenSettings,
   onPrimaryAction,
   onSwapLanguages,
-  onToggleTranslationMode,
-  translationMode,
+  timelineRef,
+  userInteractedRef,
   viewModel,
 }: VariantShellProps): ReactNode {
   return (
@@ -47,17 +45,11 @@ export function ClassicShell({
         sourceLanguageDisplayName={viewModel.sourceLanguageDisplayName}
         targetLanguageDisplayName={viewModel.targetLanguage.display_name}
       />
-      <ModeToggle
-        canChangeLanguages={viewModel.canChangeLanguages}
-        onToggleTranslationMode={onToggleTranslationMode}
-        translationMode={translationMode}
-      />
       <TranslationSurface
-        continuousAutoScrollRef={continuousAutoScrollRef}
-        continuousTimelineRef={continuousTimelineRef}
-        continuousUserInteractedRef={continuousUserInteractedRef}
+        autoScrollRef={autoScrollRef}
         live={live}
-        translationMode={translationMode}
+        timelineRef={timelineRef}
+        userInteractedRef={userInteractedRef}
         viewModel={viewModel}
       />
       <BottomDock

@@ -7,8 +7,8 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-05-22";
-const marketingUpdated = "2026-05-20";
+const lastUpdated = "2026-07-30";
+const marketingUpdated = "2026-07-30";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
@@ -27,19 +27,113 @@ const defaultKeywords = [
   "voice translator with captions",
 ].join(", ");
 
+type MarketingLandingPageOptions = {
+  campaignToken: string;
+  description: string;
+  examples: string[];
+  eyebrow: string;
+  heading: string;
+  keywords: string;
+  lede: string;
+  useCaseBody: string;
+  useCaseTitle: string;
+  path: string;
+  title: string;
+};
+
+function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
+  const examples = options.examples
+    .map((example) => `<li>${escapeHtml(example)}</li>`)
+    .join("");
+  const campaignToken = options.campaignToken;
+  const trackedAppStoreUrl = `${appStoreUrl}?ct=${encodeURIComponent(campaignToken)}&mt=8`;
+  const trackedGooglePlayUrl =
+    `${googlePlayUrl}&utm_source=murmur-site&utm_campaign=${encodeURIComponent(campaignToken)}`;
+
+  return {
+    description: options.description,
+    html: `
+      <section class="landing-hero">
+        <p class="landing-eyebrow">${escapeHtml(options.eyebrow)}</p>
+        <h1>${escapeHtml(options.heading)}</h1>
+        <p class="lede">${escapeHtml(options.lede)}</p>
+        <div class="hero-actions">
+          <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+          <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
+        </div>
+        <p class="hero-points">Live translated captions · No account · No saved transcript history</p>
+      </section>
+
+      <section class="landing-grid">
+        <div class="landing-copy">
+          <p class="landing-eyebrow">How to use Murmur</p>
+          <h2>${escapeHtml(options.useCaseTitle)}</h2>
+          <p>${escapeHtml(options.useCaseBody)}</p>
+          <ol class="landing-steps">
+            <li>Choose the language being spoken.</li>
+            <li>Choose the language you want to read.</li>
+            <li>Tap Listen to start live translated captions.</li>
+          </ol>
+        </div>
+        <div class="landing-caption-card">
+          <span class="landing-live"><span class="dot-live"></span> Translating live</span>
+          <p class="landing-translation">Where is the next stop?</p>
+          <p class="landing-source" dir="rtl">أين المحطة التالية؟</p>
+        </div>
+      </section>
+
+      <section class="landing-examples">
+        <p class="landing-eyebrow">Good fits</p>
+        <h2>Use live captions when you need to keep listening.</h2>
+        <ul>${examples}</ul>
+      </section>
+
+      <section class="values landing-values">
+        <div class="value">
+          <h4>Captions first</h4>
+          <p>Readable translated text remains useful when speech output is unavailable.</p>
+        </div>
+        <div class="value">
+          <h4>No event setup</h4>
+          <p>Start from your own phone without waiting for an organizer or host to configure a feed.</p>
+        </div>
+        <div class="value">
+          <h4>Know the limits</h4>
+          <p>AI output can be delayed, incomplete, or inaccurate. Use a qualified human interpreter for high-stakes decisions.</p>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div class="cta-inner">
+          <h2>Follow spoken language through live captions.</h2>
+          <p>Download Murmur for iOS or Android. No account required.</p>
+          <div class="hero-actions">
+            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
+          </div>
+        </div>
+      </section>
+    `,
+    isMarketing: true,
+    keywords: options.keywords,
+    path: options.path,
+    title: options.title,
+  };
+}
+
 export const legalPages: Record<string, Page> = {
   "/": {
     isMarketing: true,
     path: "/",
-    title: "Murmur Translate | Accountless Live Speech Translation App",
+    title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Murmur is an accountless live speech translation app with real-time translated captions, optional translated speech, and no cloud transcript history by default.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Murmur needs no account and saves no cloud transcript history by default.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
         <div class="hero-copy">
-          <h1>Understand anyone,<br><em>the moment they speak.</em></h1>
-          <p class="lede">Murmur turns live speech into translated captions on your screen, in real time. Pick a language direction, tap Listen, and just read along.</p>
+          <h1>Follow every word,<br><em>in your language.</em></h1>
+          <p class="lede">Murmur turns a guide, speaker, or lecturer into live translated captions on your phone. Pick a language direction, tap Listen, and read along.</p>
           <div class="hero-actions">
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
@@ -53,7 +147,7 @@ export const legalPages: Record<string, Page> = {
             <div class="cap-stack">
               <div class="cap-slide cap-1"><p class="cap-translation" dir="rtl">أين محطة القطار؟</p><p class="cap-source">English &rarr; Arabic &middot; &ldquo;Where is the train station?&rdquo;</p></div>
               <div class="cap-slide cap-2"><p class="cap-translation">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</p><p class="cap-source">English &rarr; Spanish &middot; &ldquo;Where is the station?&rdquo;</p></div>
-              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39423;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">English &rarr; Japanese &middot; &ldquo;Where is the train station?&rdquo;</p></div>
+              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39365;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">English &rarr; Japanese &middot; &ldquo;Where is the train station?&rdquo;</p></div>
             </div>
             <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
@@ -68,8 +162,8 @@ export const legalPages: Record<string, Page> = {
 
       <section class="section">
         <div class="section-head">
-          <h2>From speech to caption in one tap.</h2>
-          <p>No phrasebooks, no typing, no passing the phone back and forth. Murmur does one thing well &mdash; it listens, and writes it down in your language.</p>
+          <h2>From spoken words to readable captions.</h2>
+          <p>No phrasebook or organizer setup. Murmur listens to the person in front of you and writes what they say in your language.</p>
         </div>
         <div class="steps">
           <div class="step">
@@ -92,8 +186,27 @@ export const legalPages: Record<string, Page> = {
               <div class="caption-demo"><span class="cap-line">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</span><span class="cap-line">Where is the station?</span></div>
             </div>
             <h3>Read along</h3>
-            <p>Translated captions appear as each phrase is recognized.</p>
+            <p>Translated captions appear as each part of the speech is recognized.</p>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>One app for quick moments and full talks.</h2>
+          <p>Use Murmur for a short exchange or keep live translated captions moving while a guide, lecturer, or conference speaker continues.</p>
+        </div>
+        <div class="use-case-links">
+          <a class="use-case-link use-case-link-travel" href="/live-translation-for-travel">
+            <span class="use-case-kicker">Tours and travel</span>
+            <strong>Read along with a guide.</strong>
+            <span>Follow explanations, directions, and short conversations without passing the phone back and forth.</span>
+          </a>
+          <a class="use-case-link use-case-link-talks" href="/live-translation-for-talks">
+            <span class="use-case-kicker">Talks and lectures</span>
+            <strong>Keep up while the speaker continues.</strong>
+            <span>Use a rolling translated-caption timeline for lectures, workshops, demonstrations, and conference talks.</span>
+          </a>
         </div>
       </section>
 
@@ -117,8 +230,8 @@ export const legalPages: Record<string, Page> = {
 
       <section class="cta">
         <div class="cta-inner">
-          <h2>Start translating in seconds.</h2>
-          <p>Free to try, with nothing to sign up for. Download Murmur and read the room in any language.</p>
+          <h2>Take Murmur to your next tour or talk.</h2>
+          <p>Free to try, with nothing to sign up for. Download Murmur and follow spoken language through live captions.</p>
           <div class="hero-actions">
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
@@ -127,6 +240,86 @@ export const legalPages: Record<string, Page> = {
       </section>
     `,
   },
+  "/live-translation-for-travel": buildMarketingLandingPage({
+    campaignToken: "travel",
+    path: "/live-translation-for-travel",
+    title: "Live Translation for Travel and Tours | Murmur",
+    description:
+      "Follow guides and spoken explanations in another language with live translated captions on your phone. No account required.",
+    keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
+    eyebrow: "Live translation for travel",
+    heading: "Understand the guide without interrupting the tour.",
+    lede:
+      "Choose the language you hear and the language you want to read. Murmur turns the guide's speech into live translated captions while the tour keeps moving.",
+    useCaseTitle: "Live captions for quick questions and full explanations.",
+    useCaseBody:
+      "Use Murmur for a direction or short question, then keep live translated captions moving when a guide, host, or demonstrator speaks for longer.",
+    examples: [
+      "Walking tours and museum explanations",
+      "Hotel, transport, and visitor information",
+      "Demonstrations, tastings, and guided experiences",
+    ],
+  }),
+  "/live-translation-for-talks": buildMarketingLandingPage({
+    campaignToken: "talks",
+    path: "/live-translation-for-talks",
+    title: "Live Translation for Talks, Lectures, and Conferences | Murmur",
+    description:
+      "Read live translated captions while a lecturer, workshop host, or conference speaker continues talking. No event setup or account required.",
+    keywords: "conference speech translator, live translation for lectures, translated captions for talks, event voice translator",
+    eyebrow: "Live translation for talks",
+    heading: "Read the talk live on your own phone.",
+    lede:
+      "Murmur is for the attendee who needs translated captions now. Select the spoken and reading languages, tap Listen, and follow the speaker without an event code or organizer-managed feed.",
+    useCaseTitle: "A rolling timeline for ongoing speech.",
+    useCaseBody:
+      "Committed captions stay on screen as the talk progresses. Use the same live session for questions, introductions, and shorter exchanges.",
+    examples: [
+      "Conference talks and community stages",
+      "Lectures, classes, workshops, and sermons",
+      "Product demonstrations and guided presentations",
+    ],
+  }),
+  "/english-to-arabic-live-captions": buildMarketingLandingPage({
+    campaignToken: "english-arabic",
+    path: "/english-to-arabic-live-captions",
+    title: "English to Arabic Live Captions | Murmur",
+    description:
+      "Turn spoken English into live Arabic captions for tours, talks, lectures, and short phrases with Murmur.",
+    keywords: "English to Arabic live captions, English Arabic voice translator, live English Arabic translation",
+    eyebrow: "English to Arabic",
+    heading: "Hear English. Read Arabic live.",
+    lede:
+      "Set English as the spoken language and Arabic as the caption language. Murmur displays right-to-left translated captions as stable speech is recognized.",
+    useCaseTitle: "Captions that fit the speaker.",
+    useCaseBody:
+      "Murmur handles a short sentence or a longer explanation, keeping translated captions readable as speech is recognized.",
+    examples: [
+      "English-language tours and visitor experiences",
+      "Talks, lectures, workshops, and demonstrations",
+      "Short spoken instructions and explanations",
+    ],
+  }),
+  "/arabic-to-english-live-captions": buildMarketingLandingPage({
+    campaignToken: "arabic-english",
+    path: "/arabic-to-english-live-captions",
+    title: "Arabic to English Live Captions | Murmur",
+    description:
+      "Turn spoken Arabic into live English captions for tours, talks, lectures, and short phrases with Murmur.",
+    keywords: "Arabic to English live captions, Arabic English voice translator, live Arabic English translation",
+    eyebrow: "Arabic to English",
+    heading: "Hear Arabic. Read English live.",
+    lede:
+      "Set Arabic as the spoken language and English as the caption language. Murmur turns stable speech into readable translated captions on your phone.",
+    useCaseTitle: "Follow a question or a full explanation.",
+    useCaseBody:
+      "Murmur handles a short sentence or a longer explanation, so you can keep translated captions on screen through tours, talks, lectures, and demonstrations.",
+    examples: [
+      "Arabic-speaking guides and hosts",
+      "Talks, workshops, lectures, and sermons",
+      "Visitor information and short explanations",
+    ],
+  }),
   "/privacy": {
     description: "Murmur privacy policy for accountless live translation.",
     path: "/privacy",
@@ -135,18 +328,20 @@ export const legalPages: Record<string, Page> = {
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
       <p>Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
-      <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with the third-party processors named below. The app does not create a provider session or request microphone audio until this permission is granted.</p>
+      <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.</p>
       <h2>Data Murmur Processes</h2>
-      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio is transmitted to Deepgram for speech-to-text. Murmur does not save microphone audio by default.</p>
-      <p><strong>Source captions.</strong> Deepgram returns source-language captions from your speech. Stable caption spans are sent through Murmur's Cloudflare Worker to OpenRouter and its routed model provider for translation. Murmur does not save transcript history by default.</p>
-      <p><strong>Translated captions and speech.</strong> OpenRouter returns translated text for local display. If speech output is enabled, stable translated phrases are sent to Cartesia to generate speech audio.</p>
-      <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and provider-token minting.</p>
+      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.</p>
+      <p><strong>Source and translated captions.</strong> OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker for local display. Murmur does not save transcript history by default.</p>
+
+      <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.</p>
+      <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
+      <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
-      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, provider metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, provider tokens, or generated speech audio by default.</p>
+      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.</p>
       <h2>Third-Party Processors</h2>
-      <p>Murmur's V1 architecture uses Cloudflare for the Worker gateway, Deepgram for streaming speech-to-text, OpenRouter and routed model providers for translation, and Cartesia for optional translated speech generation. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
+      <p>Murmur uses Cloudflare for the Worker gateway and OpenAI Realtime for live transcription, translation, and translated speech. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
       <h2>Retention</h2>
-      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session/rate-limit metadata is retained only as needed for abuse prevention, diagnostics, and service operation. Translation reports may be retained for support, safety, and quality review.</p>
+      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session, campaign, and rate-limit metadata is retained only as needed for abuse prevention, diagnostics, acquisition measurement, and service operation. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review.</p>
       <h2>Your Choices</h2>
       <ul>
         <li>Stop or cancel a live session at any time.</li>
@@ -173,27 +368,27 @@ export const legalPages: Record<string, Page> = {
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>
       <h2>AI Translation Limits</h2>
-      <p>Murmur uses speech recognition, machine translation, and speech generation providers. AI output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
+      <p>OpenAI Realtime handles speech recognition, translation, and translated speech. Its output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
       <p>You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.</p>
       <h2>Accounts and Local Data</h2>
-      <p>Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and provider-token minting. You can reset this identity or delete local Murmur data in the app.</p>
+      <p>Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. You can reset this identity or delete local Murmur data in the app.</p>
       <h2>Acceptable Use</h2>
       <ul>
         <li>Do not break the law or violate someone else's rights.</li>
         <li>Do not harass, threaten, abuse, impersonate, or exploit others.</li>
         <li>Do not generate or distribute hateful, sexual, violent, deceptive, or harmful content.</li>
-        <li>Do not attempt to bypass rate limits, device integrity checks, provider restrictions, or security controls.</li>
-        <li>Do not reverse engineer, scrape, overload, or disrupt Murmur or its providers.</li>
+        <li>Do not attempt to bypass rate limits, device integrity checks, service safeguards, or security controls.</li>
+        <li>Do not reverse engineer, scrape, overload, or disrupt Murmur or its services.</li>
         <li>Do not attempt to access administrative endpoints or private diagnostics data.</li>
       </ul>
       <h2>Privacy and Third-Party Services</h2>
-      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on third-party processors for speech recognition, translation, speech generation, infrastructure, diagnostics, and support workflows. Their services may be unavailable or may change independently from Murmur.</p>
+      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on Cloudflare and OpenAI Realtime for live translation, infrastructure, diagnostics, and support workflows. OpenAI Realtime or Cloudflare may be unavailable or may change independently from Murmur.</p>
       <h2>Availability</h2>
-      <p>Murmur may change, suspend, or discontinue features. Provider failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
+      <p>Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
       <h2>No Warranty</h2>
       <p>Murmur is provided as-is and as-available. To the maximum extent allowed by law, Murmur disclaims warranties of accuracy, availability, fitness for a particular purpose, and non-infringement.</p>
       <h2>Limitation of Liability</h2>
-      <p>To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, provider failures, misuse, or reliance on AI output.</p>
+      <p>To the maximum extent allowed by law, Murmur is not liable for losses caused by translation errors, delays, service interruptions, OpenAI Realtime failures, misuse, or reliance on AI output.</p>
       <h2>Contact</h2>
       <p>Email <a href="mailto:${supportEmail}">${supportEmail}</a> for legal or support requests.</p>
     `,
@@ -209,14 +404,14 @@ export const legalPages: Record<string, Page> = {
       <p>Email <a href="mailto:${supportEmail}">${supportEmail}</a> for support, safety issues, privacy questions, and deletion requests. Include your report receipt id if your request relates to a translation report.</p>
       <h2>Accountless App Explanation</h2>
       <p>Murmur V1 does not create accounts. There is no login, profile, password, subscription account, cloud transcript history, or account deletion flow.</p>
-      <p>The app stores an anonymous install identifier on the device. Use <strong>Reset Murmur Identity</strong> to replace it, or <strong>Delete Local Data</strong> to clear the anonymous install id and local privacy acknowledgement.</p>
+      <p>The app stores an anonymous install identifier, interface preference, and rating-prompt eligibility state on the device. Use <strong>Reset Murmur Identity</strong> to replace the identifier, or <strong>Delete Local Data</strong> to clear all of this local Murmur data and the privacy acknowledgement.</p>
       <h2>Server-Side Deletion Requests</h2>
       <p>Murmur may process rate-limit metadata, diagnostic records, and translation report receipts. Support can review deletion requests for records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.</p>
       <p>Support will not ask users to send microphone recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.</p>
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
       <h2>Store Submission Notes</h2>
-      <p>Store reviewers can use the app without creating an account. Tap Listen, speak a phrase, review translated captions, and use the report buttons on a committed translation span.</p>
+      <p>Store reviewers can use the app without creating an account. Tap Listen, speak naturally, review translated captions, and use the report buttons on a committed translation span.</p>
     `,
   },
 };
@@ -268,12 +463,8 @@ export function renderLegalPage(pathname: string): Response | null {
 
 function renderHtml(page: Page): string {
   const canonicalUrl = canonicalFor(page.path);
-  const socialTitle = page.isMarketing
-    ? "Murmur Translate | Accountless Live Speech Translation"
-    : page.title;
-  const socialDescription = page.isMarketing
-    ? "Translate live speech into readable captions in another language. No account, no login, and no cloud transcript history by default."
-    : page.description;
+  const socialTitle = page.title;
+  const socialDescription = page.description;
   const jsonLd = renderJsonLd(page, canonicalUrl);
 
   return `<!doctype html>
@@ -624,6 +815,121 @@ function renderHtml(page: Page): string {
         92%, 100% { opacity: 0; transform: translateY(-6px); }
       }
 
+      .use-case-links {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 760px) { .use-case-links { grid-template-columns: 1fr; } }
+      .use-case-link {
+        min-height: 240px;
+        border-radius: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 30px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .use-case-link:hover { transform: translateY(-3px); box-shadow: 0 18px 32px rgba(13, 124, 102, 0.14); }
+      .use-case-link-travel { background: var(--cream); color: var(--deep-teal-text); }
+      .use-case-link-talks { background: var(--deep-teal); color: #FFFFFF; }
+      .use-case-kicker { font-size: 0.82rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.72; }
+      .use-case-link strong { font-family: var(--font-display); font-size: 1.7rem; line-height: 1.1; }
+      .use-case-link > span:last-child { max-width: 480px; font-weight: 600; line-height: 1.55; opacity: 0.78; }
+
+      .landing-hero {
+        max-width: 830px;
+        padding: 80px 0 48px;
+      }
+      .landing-hero h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2.8rem, 7vw, 5rem);
+        font-weight: 800;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+        margin: 0 0 24px;
+      }
+      .landing-eyebrow {
+        color: var(--coral);
+        font-size: 0.84rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        margin: 0 0 14px;
+        text-transform: uppercase;
+      }
+      .landing-grid {
+        align-items: stretch;
+        display: grid;
+        gap: 32px;
+        grid-template-columns: 1.15fr 0.85fr;
+        padding-top: 50px;
+      }
+      @media (max-width: 760px) { .landing-grid { grid-template-columns: 1fr; } }
+      .landing-copy, .landing-caption-card, .landing-examples {
+        border-radius: 28px;
+        padding: clamp(28px, 5vw, 48px);
+      }
+      .landing-copy { background: var(--cream); }
+      .landing-copy h2, .landing-examples h2 {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 4.5vw, 3rem);
+        line-height: 1.05;
+        margin: 0 0 18px;
+      }
+      .landing-copy > p:not(.landing-eyebrow), .landing-examples li {
+        color: var(--text-secondary);
+        font-size: 1.05rem;
+        font-weight: 500;
+      }
+      .landing-steps { color: var(--deep-teal-text); font-weight: 700; line-height: 1.8; padding-left: 24px; }
+      .landing-caption-card {
+        background: var(--deep-teal);
+        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.22);
+        color: #FFFFFF;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 340px;
+      }
+      .landing-live {
+        align-items: center;
+        color: #BFEFE2;
+        display: flex;
+        font-size: 0.78rem;
+        font-weight: 800;
+        gap: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .landing-translation {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        font-weight: 800;
+        line-height: 1.05;
+        margin: 44px 0 18px;
+      }
+      .landing-source { color: #BFEFE2; font-size: 1.3rem; font-weight: 700; margin: 0; }
+      .landing-examples { background: var(--mint); margin-top: 32px; }
+      .landing-examples ul {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, 1fr);
+        list-style: none;
+        margin: 28px 0 0;
+        padding: 0;
+      }
+      @media (max-width: 760px) { .landing-examples ul { grid-template-columns: 1fr; } }
+      .landing-examples li {
+        background: #FFFFFF;
+        border: 1px solid var(--mint-border);
+        border-radius: 18px;
+        color: var(--deep-teal-text);
+        padding: 22px;
+      }
+      .landing-values { padding-top: 64px; }
+
       /* Value props */
       .values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding-top: 84px; }
       @media (max-width: 760px) { .values { grid-template-columns: 1fr; max-width: 420px; } }
@@ -688,6 +994,15 @@ function renderHtml(page: Page): string {
         color: var(--text-secondary);
         font-weight: 600;
       }
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+      .footer-links a { color: var(--deep-teal); text-decoration: none; }
+      .footer-links a:hover { text-decoration: underline; }
     </style>
   </head>
   <body>
@@ -709,6 +1024,12 @@ function renderHtml(page: Page): string {
       </main>
 
       <footer>
+        <div class="footer-links" aria-label="Murmur use cases">
+          <a href="/live-translation-for-travel">Travel translation</a>
+          <a href="/live-translation-for-talks">Talk translation</a>
+          <a href="/english-to-arabic-live-captions">English to Arabic</a>
+          <a href="/arabic-to-english-live-captions">Arabic to English</a>
+        </div>
         &copy; 2026 Q9 Labs. Murmur is an accountless AI translation service.
       </footer>
     </div>

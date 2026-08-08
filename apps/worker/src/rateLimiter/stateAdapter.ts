@@ -1,21 +1,15 @@
 import { defaultRateLimits } from "../limits";
 import type {
-  beginSummary,
-  beginTranslation,
   canCreateSession,
   createSessionRecord,
   LimitResult,
   SessionRecord,
 } from "../limits";
 import {
-  beginSummaryWithStores,
-  beginTranslationWithStores,
   canCreateSessionWithStores,
-  canRefreshTokensWithStores,
   closeSessionWithStores,
   createSessionRecordWithStores,
-  endSummaryWithStores,
-  endTranslationWithStores,
+  reserveRealtimeSessionWithStores,
   type SessionStore,
 } from "./sessionStore";
 import type {
@@ -44,16 +38,6 @@ export function createMemoryAdapter(state: DurableLimitState) {
   const startsByInstall = new Map(Object.entries(state.session_starts_by_install));
   const sessionStore: SessionStore = { sessionStartsByInstall: startsByInstall, sessionsById };
   return {
-    beginSummary: (params: Parameters<typeof beginSummary>[0]) => {
-      const result = beginSummaryWithStores(params, sessionStore);
-      syncMaps(state, sessionsById, startsByInstall);
-      return result;
-    },
-    beginTranslation: (params: Parameters<typeof beginTranslation>[0]) => {
-      const result = beginTranslationWithStores(params, sessionStore);
-      syncMaps(state, sessionsById, startsByInstall);
-      return result;
-    },
     canAcceptReport: (appSessionId: string, nowMs: number) => {
       const result = canAcceptReportWithStores(
         appSessionId,
@@ -69,18 +53,6 @@ export function createMemoryAdapter(state: DurableLimitState) {
       syncMaps(state, sessionsById, startsByInstall);
       return result;
     },
-    canRefreshTokens: (params: {
-      app_session_id: string;
-      hashed_install_id: string;
-      now_ms: number;
-    }) => {
-      const result = canRefreshTokensWithStores(
-        { ...params, config: defaultRateLimits },
-        sessionStore,
-      );
-      syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
-      return result;
-    },
     closeSession: (appSessionId: string, nowMs: number) => {
       closeSessionWithStores(appSessionId, nowMs, sessionsById);
       syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
@@ -90,16 +62,17 @@ export function createMemoryAdapter(state: DurableLimitState) {
       syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
       return record;
     },
-    endTranslation: (appSessionId: string) => {
-      endTranslationWithStores(appSessionId, sessionsById);
-      syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
-    },
-    endSummary: (appSessionId: string) => {
-      endSummaryWithStores(appSessionId, sessionsById);
-      syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
-    },
     getAppAttestDevice: (keyId: string) => appAttestDevices.get(keyId) ?? null,
     getSession: (appSessionId: string) => sessionsById.get(appSessionId) ?? null,
+    reserveRealtimeSession: (appSessionId: string, nowMs: number) => {
+      const result = reserveRealtimeSessionWithStores({
+        app_session_id: appSessionId,
+        config: defaultRateLimits,
+        now_ms: nowMs,
+      }, sessionsById);
+      syncMaps(state, sessionsById, startsByInstall, reportsBySession, appAttestDevices);
+      return result;
+    },
     deleteReport: (reportId: string) => {
       const deleted = reportInboxById.delete(reportId);
       const existingIndex = reportInboxOrder.indexOf(reportId);

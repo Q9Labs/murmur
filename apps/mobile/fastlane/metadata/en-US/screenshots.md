@@ -1,9 +1,5 @@
-The current App Store screenshot set comes from the latest seven iPhone WhatsApp captures from 2026-05-20, resized to Apple's accepted 6.7/6.9-inch portrait size.
+The current App Store screenshot set pairs seven verified iPhone app captures with Imagegen-created Murmur compositions. Each composition contains its exact benefit headline, abstract visual direction, and a device-frame placeholder; the build script replaces that placeholder with the untouched verified app capture. No generated product UI appears in the submitted frames.
 
-Required V1 set:
-- Ready state with source/target language selection.
-- Microphone permission prompt.
-- Live translated captions from a real provider session.
-- Speech unavailable degraded state or verified speech playback.
-- Report translation action/receipt.
-- Reset identity / delete local data controls.
+Run `node tooling/scripts/build-store-screenshots.mjs` from the repository root to reproduce the set. The immutable source captures live under `store-assets/source/screenshots/ios/`.
+
+The first screenshot uses a real committed translated-caption state. A future capture pass should add a longer live-caption session from the current default interface before store publication; do not fabricate that state in the frame generator.

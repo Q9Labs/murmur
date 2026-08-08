@@ -19,7 +19,7 @@ Murmur V1 does not create accounts. There is no login, profile, password, subscr
 The app does store an anonymous install identifier on the device. The app includes:
 
 - Reset Murmur Identity: replaces the anonymous install id.
-- Delete Local Data: clears the anonymous install id and local privacy acknowledgement.
+- Delete Local Data: clears the anonymous install id, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
 
 ## Server-Side Deletion Requests
 

@@ -197,24 +197,13 @@ function DiagnosticActions({
 function DiagnosticsLatency({ live }: { live: LiveTranslationController }): ReactNode {
   return (
     <>
-      <LatencyRow label="Session setup" value={formatLatencyPercentiles(live.latency_report.session_create)} />
-      <LatencyRow label="Mic start" value={formatLatencyPercentiles(live.latency_report.mic_capture_started)} />
       <LatencyRow
-        label="STT interim"
-        value={formatLatencyPercentiles(live.latency_report.deepgram_interim_received)}
-      />
-      <LatencyRow label="STT final" value={formatLatencyPercentiles(live.latency_report.deepgram_final_received)} />
-      <LatencyRow
-        label="First token"
-        value={formatLatencyPercentiles(live.latency_report.first_translated_token_returned)}
+        label="First source transcript"
+        value={formatLatencyPercentiles(live.latency_report.first_source_transcript)}
       />
       <LatencyRow
-        label="Translation done"
-        value={formatLatencyPercentiles(live.latency_report.translation_done)}
-      />
-      <LatencyRow
-        label="Speech queued"
-        value={formatLatencyPercentiles(live.latency_report.stable_phrase_sent_to_cartesia)}
+        label="First translated transcript"
+        value={formatLatencyPercentiles(live.latency_report.first_translated_transcript)}
       />
     </>
   );

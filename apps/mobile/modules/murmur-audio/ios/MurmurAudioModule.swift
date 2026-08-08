@@ -3,8 +3,8 @@ import CryptoKit
 import DeviceCheck
 import ExpoModulesCore
 
-private let murmurSampleRate = 16_000.0
-private let murmurFrameBytes = 640
+private let murmurSampleRate = 24_000.0
+private let murmurFrameBytes = 960
 private let murmurFrameDurationMs = 20
 private let murmurAppAttestKeyId = "murmur.app_attest.key_id.v1"
 

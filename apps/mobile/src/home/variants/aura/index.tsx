@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   Animated,
   Image,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -11,15 +10,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
-import { PhraseCaptions, SpanTimeline, StatusMessages } from "../shared";
-import { PrimaryAction, SettingsChrome, TextLanguageRow, TextModeTabs } from "../sharedControls";
+import { SpanTimeline, StatusMessages } from "../shared";
+import { PrimaryAction, SettingsChrome, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { auraColors, styles } from "./styles";
 
 const grainTexture = require("../../../../assets/images/grain.png");
 
 export function AuraShell(props: VariantShellProps): ReactNode {
-  const { live, translationMode, viewModel } = props;
+  const { live, viewModel } = props;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -32,25 +31,21 @@ export function AuraShell(props: VariantShellProps): ReactNode {
         pressedStyle={styles.pressed}
         rightSlot={<Text style={styles.chromeStatus}>{viewModel.isLive ? "Live" : viewModel.healthText}</Text>}
       />
-      {translationMode === "continuous" ? (
-        <SpanTimeline
-          contentStyle={styles.timelineContent}
-          live={live}
-          style={styles.stageScroll}
-          textStyles={{
-            partial: styles.translationPartial,
-            rtl: styles.rtlText,
-            source: styles.sourceText,
-            translation: styles.timelineTranslation,
-          }}
-          viewModel={viewModel}
-          continuousAutoScrollRef={props.continuousAutoScrollRef}
-          continuousTimelineRef={props.continuousTimelineRef}
-          continuousUserInteractedRef={props.continuousUserInteractedRef}
-        />
-      ) : (
-        <PhraseStage viewModel={viewModel} />
-      )}
+      <SpanTimeline
+        autoScrollRef={props.autoScrollRef}
+        contentStyle={styles.timelineContent}
+        live={live}
+        style={styles.stageScroll}
+        textStyles={{
+          partial: styles.translationPartial,
+          rtl: styles.rtlText,
+          source: styles.sourceText,
+          translation: styles.timelineTranslation,
+        }}
+        timelineRef={props.timelineRef}
+        userInteractedRef={props.userInteractedRef}
+        viewModel={viewModel}
+      />
       <View style={styles.footer}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
         <View style={styles.hairline} />
@@ -64,15 +59,6 @@ export function AuraShell(props: VariantShellProps): ReactNode {
             swapStyle={styles.modeTab}
             textStyle={styles.controlText}
             viewModel={viewModel}
-          />
-          <TextModeTabs
-            activeStyle={styles.modeTabActive}
-            canChangeLanguages={viewModel.canChangeLanguages}
-            containerStyle={styles.modeTabs}
-            inactiveStyle={styles.modeTab}
-            onToggleTranslationMode={props.onToggleTranslationMode}
-            pressedStyle={styles.pressed}
-            translationMode={translationMode}
           />
         </View>
         <ListenRing
@@ -135,22 +121,6 @@ function DriftOrb({
         },
       ]}
     />
-  );
-}
-
-function PhraseStage({ viewModel }: { viewModel: VariantShellProps["viewModel"] }): ReactNode {
-  return (
-    <ScrollView contentContainerStyle={styles.stage} showsVerticalScrollIndicator={false} style={styles.stageScroll}>
-      <Text style={styles.eyebrow}>{viewModel.targetLanguage.display_name}</Text>
-      <PhraseCaptions
-        partialStyle={styles.translationPartial}
-        sourceRtlStyle={styles.rtlText}
-        sourceStyle={styles.sourceText}
-        translationRtlStyle={styles.rtlText}
-        translationStyle={styles.translationText}
-        viewModel={viewModel}
-      />
-    </ScrollView>
   );
 }
 

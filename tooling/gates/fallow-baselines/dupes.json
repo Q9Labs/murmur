@@ -1,21 +1,8 @@
 {
   "clone_groups": [
-    "apps/mobile/src/lib/continuousTranslationScheduler.test.ts:62-66|apps/mobile/src/lib/continuousTranslationScheduler.test.ts:77-81",
-    "apps/mobile/src/lib/latency.ts:66-79|tooling/scripts/smoke-latency.mjs:280-292",
-    "apps/mobile/src/lib/providers/cartesia.ts:119-123|apps/mobile/src/lib/providers/translation.ts:97-101",
-    "apps/mobile/src/lib/providers/deepgram.ts:55-70|apps/mobile/src/lib/providers/ultravox.ts:54-69",
-    "apps/mobile/src/lib/providers/deepgram.ts:70-77|apps/mobile/src/lib/providers/ultravox.ts:69-76",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:160-169|apps/mobile/src/lib/providers/realtimeClients.test.ts:69-78",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:102-113|apps/mobile/src/lib/providers/realtimeClients.test.ts:120-131|apps/mobile/src/lib/providers/realtimeClients.test.ts:141-152",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:120-132|apps/mobile/src/lib/providers/realtimeClients.test.ts:141-153",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:180-188|apps/mobile/src/lib/providers/realtimeClients.test.ts:291-299",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:219-228|apps/mobile/src/lib/providers/realtimeClients.test.ts:249-258|apps/mobile/src/lib/providers/realtimeClients.test.ts:270-279",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:249-261|apps/mobile/src/lib/providers/realtimeClients.test.ts:270-282",
-    "apps/mobile/src/lib/providers/realtimeClients.test.ts:292-302|apps/mobile/src/lib/providers/realtimeClients.test.ts:310-320",
-    "tooling/scripts/benchmark-translation-experiments.mjs:299-308|tooling/scripts/smoke-latency.mjs:156-165",
-    "tooling/scripts/benchmark-translation-experiments.mjs:319-345|tooling/scripts/smoke-latency.mjs:172-193",
-    "tooling/scripts/benchmark-translation-experiments.mjs:364-395|tooling/scripts/smoke-latency.mjs:201-232",
-    "tooling/scripts/benchmark-translation-experiments.mjs:395-411|tooling/scripts/smoke-latency.mjs:232-248",
-    "tooling/scripts/benchmark-translation-experiments.mjs:411-428|tooling/scripts/smoke-latency.mjs:248-265"
+    "apps/mobile/src/home/variants/preference.test.ts:3-25|apps/mobile/src/lib/installIdentity.test.ts:9-34",
+    "apps/mobile/src/home/variants/preference.test.ts:3-9|apps/mobile/src/lib/localStorage.test.ts:3-9",
+    "apps/worker/src/sockets/realtime.test.ts:164-182|apps/worker/src/sockets/realtime.test.ts:274-291",
+    "apps/worker/src/sockets/realtime.test.ts:190-209|apps/worker/src/sockets/realtime.test.ts:273-290"
   ]
 }

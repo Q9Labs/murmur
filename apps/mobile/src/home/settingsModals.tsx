@@ -2,173 +2,43 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
-import {
-  devTranslationModelRouteOptions,
-  getTranslationModelRouteLabel,
-  isUltravoxReplacementRoute,
-} from "@murmur/protocol/translationModelRoutes";
-import type { TranslationModelRoute } from "@murmur/protocol/transport/types";
 import { ModalSheet } from "./modalSheet";
 import { styles } from "./styles";
 import { uiVariantOptions, type UiVariant } from "./variants/types";
 
-export function SettingsModal({
-  devModelPickerEnabled,
-  devModelRoute,
-  live,
-  onClose,
-  onDeleteLocalData,
-  onOpenDevModelRoute,
-  onOpenDiagnostics,
-  onResetIdentity,
-  onSelectUiVariant,
-  onToggleUltravoxVad,
-  open,
-  settingsMessage,
-  uiVariant,
-  ultravoxVadEnabled,
-}: {
-  devModelPickerEnabled: boolean;
-  devModelRoute: TranslationModelRoute;
+export function SettingsModal(props: {
   live: LiveTranslationController;
   onClose: () => void;
   onDeleteLocalData: () => void;
-  onOpenDevModelRoute: () => void;
   onOpenDiagnostics: () => void;
   onResetIdentity: () => void;
   onSelectUiVariant: (variant: UiVariant) => void;
-  onToggleUltravoxVad: () => void;
+  onShare: () => void;
   open: boolean;
   settingsMessage: string | null;
   uiVariant: UiVariant;
-  ultravoxVadEnabled: boolean;
 }): ReactNode {
-  const disabled = live.status === "live";
-  const ultravoxSelected = isUltravoxReplacementRoute(devModelRoute);
+  const disabled = props.live.status === "live";
   return (
-    <ModalSheet onClose={onClose} open={open} scroll title="Settings">
-      <UiVariantPicker onSelectUiVariant={onSelectUiVariant} uiVariant={uiVariant} />
-      <View style={styles.settingsList}>
-        <SettingsAction label="Session diagnostics" onPress={onOpenDiagnostics} />
-        <DevSettingsActions
-          devModelPickerEnabled={devModelPickerEnabled}
-          devModelRoute={devModelRoute}
-          disabled={disabled}
-          onOpenDevModelRoute={onOpenDevModelRoute}
-          onToggleUltravoxVad={onToggleUltravoxVad}
-          ultravoxSelected={ultravoxSelected}
-          ultravoxVadEnabled={ultravoxVadEnabled}
-        />
-        <SettingsAction disabled={disabled} label="Reset accountless identity" onPress={onResetIdentity} />
-        <SettingsAction disabled={disabled} label="Delete local data" onPress={onDeleteLocalData} />
-      </View>
-      {settingsMessage ? <Text style={styles.settingsMessage}>{settingsMessage}</Text> : null}
-    </ModalSheet>
-  );
-}
-
-function UiVariantPicker({
-  onSelectUiVariant,
-  uiVariant,
-}: {
-  onSelectUiVariant: (variant: UiVariant) => void;
-  uiVariant: UiVariant;
-}): ReactNode {
-  return (
-    <View accessibilityLabel="App style" accessibilityRole="radiogroup">
-      <Text style={styles.setupLabel}>App style</Text>
-      {uiVariantOptions.map((option) => {
-        const active = uiVariant === option.id;
-        return (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ selected: active }}
-            key={option.id}
-            onPress={() => onSelectUiVariant(option.id)}
-            style={({ pressed }) => [
-              styles.settingsAction,
-              active && styles.languageOptionSelected,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View>
-              <Text style={styles.settingsActionText}>{option.label}</Text>
-              <Text style={styles.modelRouteDetail}>{option.detail}</Text>
-            </View>
-            <Text style={styles.languageOptionCheck}>{active ? "Selected" : ""}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function DevSettingsActions({
-  devModelPickerEnabled,
-  devModelRoute,
-  disabled,
-  onOpenDevModelRoute,
-  onToggleUltravoxVad,
-  ultravoxSelected,
-  ultravoxVadEnabled,
-}: {
-  devModelPickerEnabled: boolean;
-  devModelRoute: TranslationModelRoute;
-  disabled: boolean;
-  onOpenDevModelRoute: () => void;
-  onToggleUltravoxVad: () => void;
-  ultravoxSelected: boolean;
-  ultravoxVadEnabled: boolean;
-}): ReactNode {
-  if (!devModelPickerEnabled) {
-    return null;
-  }
-  return (
-    <>
-      <SettingsAction
-        disabled={disabled}
-        label={`Dev model: ${getTranslationModelRouteLabel(devModelRoute)}`}
-        onPress={onOpenDevModelRoute}
-      />
-      <SettingsAction
-        disabled={disabled || !ultravoxSelected}
-        label={`Ultravox VAD: ${ultravoxVadEnabled ? "On" : "Off"}`}
-        onPress={onToggleUltravoxVad}
-      />
-    </>
-  );
-}
-
-export function DevModelRouteModal({
-  onClose,
-  onSelect,
-  open,
-  selected,
-}: {
-  onClose: () => void;
-  onSelect: (route: TranslationModelRoute) => void;
-  open: boolean;
-  selected: TranslationModelRoute;
-}): ReactNode {
-  return (
-    <ModalSheet onClose={onClose} open={open} title="Dev model">
-      <View style={styles.settingsList}>
-        {devTranslationModelRouteOptions.map((option) => {
-          const active = selected === option.id;
+    <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
+      <View accessibilityLabel="App style" accessibilityRole="radiogroup">
+        <Text style={styles.setupLabel}>App style</Text>
+        {uiVariantOptions.map((option) => {
+          const active = props.uiVariant === option.id;
           return (
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole="radio"
               accessibilityState={{ selected: active }}
               key={option.id}
-              onPress={() => onSelect(option.id)}
+              onPress={() => props.onSelectUiVariant(option.id)}
               style={({ pressed }) => [
-                styles.languageOption,
+                styles.settingsAction,
                 active && styles.languageOptionSelected,
                 pressed && styles.pressed,
               ]}
             >
               <View>
-                <Text style={styles.languageOptionName}>{option.label}</Text>
+                <Text style={styles.settingsActionText}>{option.label}</Text>
                 <Text style={styles.modelRouteDetail}>{option.detail}</Text>
               </View>
               <Text style={styles.languageOptionCheck}>{active ? "Selected" : ""}</Text>
@@ -176,16 +46,18 @@ export function DevModelRouteModal({
           );
         })}
       </View>
-      <Text style={styles.modelRouteMeta}>{selected}</Text>
+      <View style={styles.settingsList}>
+        <SettingsAction label="Session diagnostics" onPress={props.onOpenDiagnostics} />
+        <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
+        <SettingsAction disabled={disabled} label="Reset accountless identity" onPress={props.onResetIdentity} />
+        <SettingsAction disabled={disabled} label="Delete local data" onPress={props.onDeleteLocalData} />
+      </View>
+      {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
     </ModalSheet>
   );
 }
 
-function SettingsAction({
-  disabled,
-  label,
-  onPress,
-}: {
+function SettingsAction(props: {
   disabled?: boolean;
   label: string;
   onPress: () => void;
@@ -193,11 +65,14 @@ function SettingsAction({
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [styles.settingsAction, (pressed || disabled) && styles.pressed]}
+      disabled={props.disabled}
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.settingsAction,
+        (pressed || props.disabled) && styles.pressed,
+      ]}
     >
-      <Text style={styles.settingsActionText}>{label}</Text>
+      <Text style={styles.settingsActionText}>{props.label}</Text>
       <Text style={styles.settingsChevron}>{">"}</Text>
     </Pressable>
   );

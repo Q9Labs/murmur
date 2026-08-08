@@ -155,10 +155,10 @@ rules:
         - "/apps/worker/src/legalPages.ts"
     pattern-regex: (?i)\b(audio permission|record audio|speech audio|microphone permission)\b
 
-  - id: murmur.secrets.raw-provider-key-references
+  - id: murmur.secrets.raw-openai-key-references
     languages: [generic]
     severity: ERROR
-    message: Raw OpenRouter/Deepgram key references are allowed only in validators, Worker env types, docs, and examples.
+    message: Raw OpenAI key references are allowed only in validators, Worker provider/env modules, docs, and examples.
     paths:
       include:
         - "/apps/mobile/app/**"
@@ -169,6 +169,6 @@ rules:
         - "/tooling/scripts/validate-no-secrets.mjs"
         - "/apps/worker/src/env.ts"
         - "/apps/worker/src/index.ts"
-        - "/apps/worker/src/providers/credentials.ts"
+        - "/apps/worker/src/providers/openaiRealtime.ts"
         - "/docs/**"
-    pattern-regex: (?i)\b(?:OPENROUTER_API_KEY|DEEPGRAM_API_KEY|sk-or-v1-[A-Za-z0-9_-]+)\b
+    pattern-regex: (?i)\b(?:OPENAI_API_KEY|sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,})\b

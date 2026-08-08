@@ -3,7 +3,6 @@ import type { ScrollView } from "react-native";
 
 import type { AudioStateEvent } from "../../../modules/murmur-audio";
 import type { LiveTranslationController } from "../../lib/useLiveTranslation";
-import type { TranslationMode } from "@murmur/protocol/transport/types";
 import type { OnboardingStep, PickerMode } from "../types";
 import type { HomeViewModel } from "../viewModel";
 
@@ -18,16 +17,14 @@ export const uiVariantOptions = [
 
 export type VariantShellProps = {
   audioState: AudioStateEvent | null;
-  continuousAutoScrollRef: MutableRefObject<boolean>;
-  continuousTimelineRef: MutableRefObject<ScrollView | null>;
-  continuousUserInteractedRef: MutableRefObject<boolean>;
+  autoScrollRef: MutableRefObject<boolean>;
   live: LiveTranslationController;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
   onPrimaryAction: () => void;
   onSwapLanguages: () => void;
-  onToggleTranslationMode: (mode: TranslationMode) => void;
-  translationMode: TranslationMode;
+  timelineRef: MutableRefObject<ScrollView | null>;
+  userInteractedRef: MutableRefObject<boolean>;
   viewModel: HomeViewModel;
 };
 

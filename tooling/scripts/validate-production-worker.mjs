@@ -40,8 +40,7 @@ assert(readiness.response.status === 200, `/ready must return 200; got ${readine
 assert(readiness.json?.ok === true, "/ready ok must be true");
 assert(Array.isArray(readiness.json?.missing?.required), "/ready missing.required must be an array");
 assert(readiness.json?.missing?.required?.length === 0, "/ready must have no missing required config");
-assert(readiness.json?.providers?.deepgram_stt === "configured", "/ready Deepgram provider must be configured");
-assert(readiness.json?.providers?.openrouter_translation === "configured", "/ready OpenRouter provider must be configured");
+assert(readiness.json?.providers?.realtime_translation === "configured", "/ready realtime translation provider must be configured");
 assert(readiness.json?.providers?.report_webhook === "configured", "/ready report triage must be configured");
 
 for (const path of ["/privacy", "/terms", "/support"]) {
