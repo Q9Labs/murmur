@@ -32,6 +32,7 @@ All notable changes to Murmur are documented here.
 - Made the Expo Router entrypoint route-only and moved the screen controller into mobile source.
 - Updated Metro workspace resolution and excluded test files from application bundles.
 - Send exact PCM frame bytes to upstream realtime services when frames are views over larger buffers.
+- Kept live production validation aligned with the current hosted legal-page date.
 
 ### Removed
 
