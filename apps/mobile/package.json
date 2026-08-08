@@ -16,7 +16,7 @@
     "expo": "~54.0.36",
     "expo-constants": "~18.0.12",
     "expo-file-system": "~19.0.23",
-    "expo-linking": "~8.0.12",
+    "expo-linking": "~57.0.5",
     "expo-network": "~8.0.8",
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",
