@@ -210,16 +210,6 @@ export async function deleteReportDurable(params: {
   })) as { deleted: boolean };
 }
 
-export async function getSessionDurable(params: {
-  app_session_id: string;
-  namespace?: DurableObjectNamespace;
-}): Promise<SessionRecord | null> {
-  return (await callRateLimiter(params.namespace, {
-    action: "get_session",
-    app_session_id: params.app_session_id,
-  })) as SessionRecord | null;
-}
-
 export async function getAppAttestDeviceDurable(params: {
   key_id: string;
   namespace?: DurableObjectNamespace;

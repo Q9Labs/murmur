@@ -1,5 +1,8 @@
 {
   "clone_groups": [
-    "apps/mobile/src/home/variants/preference.test.ts:3-25|apps/mobile/src/lib/installIdentity.test.ts:9-34"
+    "apps/mobile/src/home/variants/preference.test.ts:3-25|apps/mobile/src/lib/installIdentity.test.ts:9-34",
+    "apps/mobile/src/home/variants/preference.test.ts:3-9|apps/mobile/src/lib/localStorage.test.ts:3-9",
+    "apps/worker/src/sockets/realtime.test.ts:164-182|apps/worker/src/sockets/realtime.test.ts:274-291",
+    "apps/worker/src/sockets/realtime.test.ts:190-209|apps/worker/src/sockets/realtime.test.ts:273-290"
   ]
 }

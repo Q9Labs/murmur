@@ -1,5 +1,5 @@
 export const realtimeConnectionTimeoutMs = 15_000;
-export const sessionExpirySafetyMs = 2_000;
+const sessionExpirySafetyMs = 2_000;
 
 export function getGracefulSessionStopDelay(
   expiresAtMs: number,

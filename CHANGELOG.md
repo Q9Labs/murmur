@@ -25,7 +25,7 @@ All notable changes to Murmur are documented here.
 - Moved pnpm overrides into the workspace configuration and refreshed vulnerable transitive packages to their patched releases.
 - Updated Expo to the SDK 54 patch required by Expo Doctor.
 - Replaced private store-operation ledgers with a minimal machine-readable readiness record.
-- Updated vulnerable transitive `undici` versions through scoped pnpm overrides.
+- Updated vulnerable transitive dependencies through scoped pnpm overrides, with a time-limited exception for two unpatched Metro `image-size` advisories.
 - Repositioned the English App Store and Google Play listings around live translated captions for tours and talks, with a Gulf-first growth and ASO strategy.
 - Reframed the iOS and Android screenshot sets around live-caption value, tours and talks, language choice, and accountless privacy using verified app captures.
 - Colocated Expo, Cloudflare Worker, native module, release, and store assets with their owning applications.
