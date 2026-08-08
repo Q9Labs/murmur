@@ -28,7 +28,7 @@ Translated PCM16 playback + source/translated captions
 
 The app-facing transport keeps OpenAI wire details out of mobile code. Mobile code must not import OpenAI event names, credentials, models, or session configuration. The Worker owns the single OpenAI Realtime adapter. There is no alternate adapter, service fallback, or provider-selection path.
 
-The active adapter uses OpenAI `gpt-realtime-translate` at `/v2/realtime/translations`.
+The active adapter uses OpenAI `gpt-realtime-translate` at `/v1/realtime/translations`.
 
 ## Session creation
 
