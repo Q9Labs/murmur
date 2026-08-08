@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
+const screenshotRedesignPending = existsSync(
+  join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
+);
 const failures = [];
 
 const assert = (condition, message) => {
@@ -65,18 +68,6 @@ for (const relativePath of [
   "brand/murmur-logo-2026-05-20.png",
   "google-play/app-icon-512.png",
   "google-play/feature-graphic.svg",
-  "screenshots/android/android-home-1080x2400.png",
-  "screenshots/android/android-launch-1080x2400.png",
-  "screenshots/android/android-listening-1080x2400.png",
-  "screenshots/android-captures/android-arabic-caption.png",
-  "screenshots/android-captures/android-direction.png",
-  "screenshots/android-captures/android-french-caption.png",
-  "screenshots/android-captures/android-welcome.png",
-  "screenshots/ios/ios-caption.png",
-  "screenshots/ios/ios-direction.png",
-  "screenshots/ios/ios-ready.png",
-  "screenshots/ios/ios-source-picker.png",
-  "screenshots/ios/ios-welcome.png",
 ]) {
   assert(
     existsSync(join(mobileRoot, "store-assets", "source", relativePath)),
@@ -84,27 +75,37 @@ for (const relativePath of [
   );
 }
 
-for (const relativePath of [
-  "store-assets/generated/social/instagram/02-conference-talk-story.png",
-  "store-assets/generated/social/instagram/04-how-murmur-works-story.png",
-]) {
-  assertImage(relativePath, 1080, 1920);
+if (!screenshotRedesignPending) {
+  for (const relativePath of [
+    "store-assets/generated/social/instagram/02-conference-talk-story.png",
+    "store-assets/generated/social/instagram/04-how-murmur-works-story.png",
+  ]) {
+    assertImage(relativePath, 1080, 1920);
+  }
 }
 
 for (const locale of ["en-US", "en-GB"]) {
   assertImage(`fastlane/metadata/android/${locale}/images/featureGraphic/feature-graphic.png`, 1024, 500);
 
   const screenshotDir = join(mobileRoot, "fastlane", "metadata", "android", locale, "images", "phoneScreenshots");
-  assert(existsSync(screenshotDir), `${locale} phone screenshot directory must exist`);
+  if (!screenshotRedesignPending) {
+    assert(existsSync(screenshotDir), `${locale} phone screenshot directory must exist`);
+  }
   if (!existsSync(screenshotDir)) {
     continue;
   }
 
   const screenshots = readdirSync(screenshotDir).filter((fileName) => /\.png$/i.test(fileName)).sort();
-  assert(screenshots.length === 5, `${locale} must include the current 5 phone screenshots; got ${screenshots.length}`);
+  if (!screenshotRedesignPending) {
+    assert(screenshots.length === 5, `${locale} must include the current 5 phone screenshots; got ${screenshots.length}`);
+  }
   for (const screenshot of screenshots) {
     assertPlayPhoneScreenshot(`fastlane/metadata/android/${locale}/images/phoneScreenshots/${screenshot}`);
   }
+}
+
+if (screenshotRedesignPending) {
+  console.log("Store screenshot asset validation skipped while the screenshot redesign is pending.");
 }
 
 if (failures.length > 0) {

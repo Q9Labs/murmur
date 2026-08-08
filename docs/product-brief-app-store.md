@@ -108,13 +108,9 @@ Sources: `apps/mobile/fastlane/metadata/en-US/keywords.txt`, `apps/mobile/fastla
 
 ### Existing assets
 
-- iOS metadata contains seven screenshots under `apps/mobile/fastlane/metadata/en-US/screenshots/`.
-- Google Play metadata contains five phone screenshots and a 1024×500 feature graphic for both `en-US` and `en-GB` under `apps/mobile/fastlane/metadata/android/`.
-- Source captures exist under `apps/mobile/store-assets/source/screenshots/ios/` and `android-captures/`, with generated abstract compositions under `apps/mobile/store-assets/source/store-screenshot-compositions/`.
+- The previous iOS and Google Play screenshot sets, source captures, compositions, and screenshot-derived social assets were removed while the screenshot redesign is pending. See `apps/mobile/store-assets/SCREENSHOTS_PENDING_REDESIGN.md`.
+- A 1024×500 Google Play feature graphic remains under `apps/mobile/fastlane/metadata/android/`.
 - Source branding includes an app icon, Google Play icon, feature-graphic SVG, and dated logo concepts under `apps/mobile/store-assets/source/brand/` and `source/google-play/`.
-- Generated 1080×1920 social assets exist under `apps/mobile/store-assets/generated/social/instagram/`.
-
-The asset notes say the current screenshot sets pair verified app captures with generated abstract compositions, and explicitly warn that a longer live-caption capture is still a future capture pass. Sources: `apps/mobile/fastlane/metadata/en-US/screenshots.md`, `apps/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/README.md`, `apps/mobile/store-assets/generated/social/instagram/README.md`.
 
 ## 8. Likely category and search keywords
 

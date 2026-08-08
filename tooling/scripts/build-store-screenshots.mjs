@@ -16,6 +16,16 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
+const screenshotRedesignMarkerPath = join(
+  mobileRoot,
+  "store-assets",
+  "SCREENSHOTS_PENDING_REDESIGN.md",
+);
+if (existsSync(screenshotRedesignMarkerPath)) {
+  console.error("Store screenshot generation is paused while the screenshot redesign is pending.");
+  process.exit(1);
+}
+
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "murmur-store-screenshots-"));
 
 const screenshotSets = [
