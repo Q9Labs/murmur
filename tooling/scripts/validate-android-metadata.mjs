@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
 const metadataDir = join(mobileRoot, "fastlane", "metadata", "android");
+const screenshotRedesignPending = existsSync(
+  join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
+);
 const locales = ["en-US", "en-GB"];
 const failures = [];
 
@@ -72,13 +75,17 @@ for (const locale of locales) {
   }
 
   const screenshotDir = join(localeDir, "images", "phoneScreenshots");
-  assert(existsSync(screenshotDir), `${locale} phone screenshots directory must exist`);
+  if (!screenshotRedesignPending) {
+    assert(existsSync(screenshotDir), `${locale} phone screenshots directory must exist`);
+  }
   if (existsSync(screenshotDir)) {
     const screenshots = readdirSync(screenshotDir)
       .filter((fileName) => /\.png$/i.test(fileName))
       .sort();
-    assert(screenshots.length >= 2, `${locale} must include at least 2 phone screenshots`);
-    assert(screenshots.length <= 8, `${locale} must include no more than 8 phone screenshots`);
+    if (!screenshotRedesignPending) {
+      assert(screenshots.length >= 2, `${locale} must include at least 2 phone screenshots`);
+      assert(screenshots.length <= 8, `${locale} must include no more than 8 phone screenshots`);
+    }
     for (const screenshot of screenshots) {
       const screenshotPath = join(screenshotDir, screenshot);
       const { width, height } = pngSize(screenshotPath);
@@ -88,6 +95,10 @@ for (const locale of locales) {
       );
     }
   }
+}
+
+if (screenshotRedesignPending) {
+  console.log("Android screenshot validation skipped while the screenshot redesign is pending.");
 }
 
 const usDescription = read("en-US", "full_description.txt");

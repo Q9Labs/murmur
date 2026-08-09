@@ -37,7 +37,7 @@ The product is deliberately one-directional. The spec excludes bidirectional con
 - **Start, stop, cancel, reconnect, and limits:** users can start and stop sessions, cancel active capture/playback, and the runtime has transport-recovery paths. The Worker enforces active-session, session-duration, per-install, span-length, concurrency, and per-minute translation limits. Sources: `apps/mobile/src/home/homeScreen.tsx`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `apps/worker/src/limits.ts`.
 - **In-app translation reporting:** users can report inaccurate, harmful/offensive, wrong-language, speech, or other issues; text snapshots are optional. Sources: `apps/mobile/src/home/diagnosticsModal.tsx`, `apps/mobile/src/lib/providers/reportTranslation.ts`, `apps/worker/src/routes/report.ts`.
 - **Accountless privacy controls:** there is no login or profile; the app offers **Reset Murmur Identity** and **Delete Local Data**. Sources: `apps/mobile/src/home/settingsModals.tsx`, `apps/mobile/src/lib/installIdentity.ts`, `apps/mobile/src/lib/engagement.ts`.
-- **Secondary UX/features:** four selectable UI styles, session diagnostics with latency data and copy/download/share actions, an in-app Murmur share action, and a native rating request after qualifying successful sessions. Sources: `apps/mobile/src/home/experience.tsx`, `apps/mobile/src/home/settingsModals.tsx`, `apps/mobile/src/home/diagnosticsModal.tsx`, `apps/mobile/src/lib/shareMurmur.ts`, `apps/mobile/src/lib/engagement.ts`, `CHANGELOG.md`.
+- **Secondary UX/features:** the Bloom UI direction, session diagnostics with latency data and copy/download/share actions, an in-app Murmur share action, and a native rating request after qualifying successful sessions. Sources: `apps/mobile/src/home/experience.tsx`, `apps/mobile/src/home/diagnosticsModal.tsx`, `apps/mobile/src/lib/shareMurmur.ts`, `apps/mobile/src/lib/engagement.ts`.
 
 ### Planned, experimental, or not yet safe to describe as shipped
 
@@ -108,13 +108,9 @@ Sources: `apps/mobile/fastlane/metadata/en-US/keywords.txt`, `apps/mobile/fastla
 
 ### Existing assets
 
-- iOS metadata contains seven screenshots under `apps/mobile/fastlane/metadata/en-US/screenshots/`.
-- Google Play metadata contains five phone screenshots and a 1024×500 feature graphic for both `en-US` and `en-GB` under `apps/mobile/fastlane/metadata/android/`.
-- Source captures exist under `apps/mobile/store-assets/source/screenshots/ios/` and `android-captures/`, with generated abstract compositions under `apps/mobile/store-assets/source/store-screenshot-compositions/`.
+- The previous iOS and Google Play screenshot sets, source captures, compositions, and screenshot-derived social assets were removed while the screenshot redesign is pending. See `apps/mobile/store-assets/SCREENSHOTS_PENDING_REDESIGN.md`.
+- A 1024×500 Google Play feature graphic remains under `apps/mobile/fastlane/metadata/android/`.
 - Source branding includes an app icon, Google Play icon, feature-graphic SVG, and dated logo concepts under `apps/mobile/store-assets/source/brand/` and `source/google-play/`.
-- Generated 1080×1920 social assets exist under `apps/mobile/store-assets/generated/social/instagram/`.
-
-The asset notes say the current screenshot sets pair verified app captures with generated abstract compositions, and explicitly warn that a longer live-caption capture is still a future capture pass. Sources: `apps/mobile/fastlane/metadata/en-US/screenshots.md`, `apps/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/README.md`, `apps/mobile/store-assets/generated/social/instagram/README.md`.
 
 ## 8. Likely category and search keywords
 

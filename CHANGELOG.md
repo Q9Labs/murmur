@@ -40,3 +40,4 @@ All notable changes to Murmur are documented here.
 - Tracked coverage output, local paths, operational session records, stale store audits, and unreferenced design prototypes.
 - Obsolete token-grant client code and its unused backend wrapper.
 - Duplicate store screenshots, unused image-generation helpers, stale service paths, and unused runtime exports.
+- Old APK/AAB build artifacts and all screenshot-derived store and social assets pending redesign.

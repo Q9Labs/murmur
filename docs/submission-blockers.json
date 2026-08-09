@@ -5,8 +5,11 @@
     "ios_bundle_id": "com.q9labsai.murmur",
     "version": "1.1.0"
   },
-  "last_updated": "2026-07-11",
-  "status": "submission_ready",
+  "last_updated": "2026-08-08",
+  "status": "not_submission_ready",
+  "readiness_notes": [
+    "Store screenshots are intentionally absent while the screenshot redesign is pending."
+  ],
   "policy_sources_checked": [
     {
       "name": "Apple App Review Guidelines",
