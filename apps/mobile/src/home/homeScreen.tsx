@@ -30,8 +30,7 @@ import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "./components";
 import { HomeExperience } from "./experience";
 import { OnboardingScreen } from "./onboardingScreen";
-import { deleteStoredUiVariant, getStoredUiVariant, setStoredUiVariant } from "./variants/preference";
-import type { UiVariant } from "./variants/types";
+import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 
 export default function HomeScreen(): ReactNode {
@@ -44,10 +43,8 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
-  const [uiVariant, setUiVariant] = useState<UiVariant>("console");
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
-  const uiVariantSelectionRef = useRef(false);
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
@@ -99,18 +96,6 @@ export default function HomeScreen(): ReactNode {
         if (acknowledged) {
           setOnboardingStep("done");
         }
-      }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    void getStoredUiVariant().then((storedVariant) => {
-      if (mounted && storedVariant && !uiVariantSelectionRef.current) {
-        setUiVariant(storedVariant);
       }
     });
     return () => {
@@ -191,12 +176,6 @@ export default function HomeScreen(): ReactNode {
     await live.start();
   }
 
-  function selectUiVariant(variant: UiVariant): void {
-    uiVariantSelectionRef.current = true;
-    setUiVariant(variant);
-    void setStoredUiVariant(variant);
-  }
-
   function swapLanguages(): void {
     if (sourceLanguageCode === autoSourceLanguageCode) {
       return;
@@ -224,7 +203,6 @@ export default function HomeScreen(): ReactNode {
         step={onboardingStep}
         targetLanguageCode={targetLanguageCode}
         targetLanguageDisplayName={viewModel.targetLanguage.display_name}
-        uiVariant={uiVariant}
       />
     );
   }
@@ -242,15 +220,12 @@ export default function HomeScreen(): ReactNode {
       onDeleteLocalData={() => void deleteLocalData(setSettingsMessage, live.cancel, () => {
         setPrivacyAcknowledged(false);
         setPrivacyConsentChecked(false);
-        uiVariantSelectionRef.current = true;
-        setUiVariant("console");
       })}
       onOpenDiagnostics={() => setDiagnosticsOpen(true)}
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
       onPrimaryAction={() => void handlePrimaryAction()}
       onResetIdentity={() => void resetIdentity(setSettingsMessage)}
-      onSelectUiVariant={selectUiVariant}
       onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       pickerMode={pickerMode}
@@ -261,7 +236,6 @@ export default function HomeScreen(): ReactNode {
       sourceLanguageCode={sourceLanguageCode}
       targetLanguageCode={targetLanguageCode}
       timelineRef={timelineRef}
-      uiVariant={uiVariant}
       userInteractedRef={userInteractedRef}
       viewModel={viewModel}
     />
@@ -296,8 +270,8 @@ async function deleteLocalData(
 ): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
-  await deleteEngagementState();
   await deleteStoredUiVariant();
+  await deleteEngagementState();
   onDeleted();
-  setMessage("Local Murmur data deleted. Privacy acknowledgement, install id, app style, and rating eligibility were cleared.");
+  setMessage("Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.");
 }

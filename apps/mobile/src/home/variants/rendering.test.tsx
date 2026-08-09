@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "../viewModel";
-import { FieldConsoleShell } from "./fieldConsole";
 import { OnboardingFlow, type OnboardingText, type OnboardingTheme } from "./onboardingFlow";
 import { timelineScrollHandlers } from "./shared";
 import type { VariantOnboardingProps, VariantShellProps } from "./types";
@@ -183,41 +182,6 @@ function onboardingProps(step: VariantOnboardingProps["step"]): VariantOnboardin
 beforeEach(() => {
   harness.controls.length = 0;
   harness.scheme = "dark";
-});
-
-describe("Field Console variant", () => {
-  it("renders controls and wires language and settings actions", () => {
-    const props = shellProps({ hasTimeline: false, isLive: false });
-
-    const markup = render(<FieldConsoleShell {...props} />);
-
-    expect(markup).toContain("MURMUR");
-    expect(markup).toContain("The session log starts");
-    expect(markup).toContain("LISTEN");
-    expect(markup).toContain("Report received: receipt-");
-
-    trigger("Open settings");
-    trigger("Change spoken language");
-    trigger("Change translation language");
-    trigger("Reverse translation languages");
-    expect(props.onOpenSettings).toHaveBeenCalledOnce();
-    expect(props.onOpenPicker).toHaveBeenCalledWith("source");
-    expect(props.onOpenPicker).toHaveBeenCalledWith("target");
-    expect(props.onSwapLanguages).toHaveBeenCalledOnce();
-  });
-
-  it("renders committed, translating, and tentative entries", () => {
-    const props = shellProps({ hasTimeline: true, isLive: true });
-
-    const markup = render(<FieldConsoleShell {...props} />);
-
-    expect(markup).toContain("09:04:07");
-    expect(markup).toContain("مرحبا");
-    expect(markup).toContain("TRANSLATING");
-    expect(markup).toContain("LISTENING");
-    expect(markup).toContain("tentative caption");
-    expect(markup).toContain("STOP");
-  });
 });
 
 describe("shared variant onboarding flow", () => {

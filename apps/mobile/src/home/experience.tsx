@@ -8,18 +8,12 @@ import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
 import { SettingsModal } from "./settingsModals";
 import type { PickerMode } from "./types";
-import { AuraShell } from "./variants/aura";
 import { BloomShell } from "./variants/bloom";
-import { ClassicShell } from "./variants/classic";
-import { FieldConsoleShell } from "./variants/fieldConsole";
 import type { UiVariant, VariantShellProps } from "./variants/types";
 import type { HomeViewModel } from "./viewModel";
 
 const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
-  aura: AuraShell,
   bloom: BloomShell,
-  classic: ClassicShell,
-  console: FieldConsoleShell,
 };
 
 export function HomeExperience(props: {
@@ -37,7 +31,6 @@ export function HomeExperience(props: {
   onOpenSettings: () => void;
   onPrimaryAction: () => void;
   onResetIdentity: () => void;
-  onSelectUiVariant: (variant: UiVariant) => void;
   onShare: () => void;
   onSwapLanguages: () => void;
   pickerMode: PickerMode;
@@ -48,11 +41,10 @@ export function HomeExperience(props: {
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   timelineRef: MutableRefObject<ScrollView | null>;
-  uiVariant: UiVariant;
   userInteractedRef: MutableRefObject<boolean>;
   viewModel: HomeViewModel;
 }): ReactNode {
-  const Shell = variantShells[props.uiVariant];
+  const Shell = variantShells.bloom;
   return (
     <>
       <Shell
@@ -81,11 +73,9 @@ export function HomeExperience(props: {
         onDeleteLocalData={props.onDeleteLocalData}
         onOpenDiagnostics={props.onOpenDiagnostics}
         onResetIdentity={props.onResetIdentity}
-        onSelectUiVariant={props.onSelectUiVariant}
         onShare={props.onShare}
         open={props.settingsOpen}
         settingsMessage={props.settingsMessage}
-        uiVariant={props.uiVariant}
       />
       <DiagnosticsModal
         audioState={props.audioState}

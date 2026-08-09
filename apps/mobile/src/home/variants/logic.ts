@@ -3,7 +3,7 @@ import type { NativeScrollEvent } from "react-native";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { UiVariant } from "./types";
 
-const uiVariants = ["aura", "bloom", "classic", "console"] as const;
+const uiVariants = ["bloom"] as const;
 
 export function isUiVariant(value: unknown): value is UiVariant {
   return typeof value === "string" && (uiVariants as readonly string[]).includes(value);

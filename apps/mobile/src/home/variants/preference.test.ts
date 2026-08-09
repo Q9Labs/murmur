@@ -36,9 +36,9 @@ describe("ui variant preference", () => {
   });
 
   it("persists the selection natively", async () => {
-    await setStoredUiVariant("console");
+    await setStoredUiVariant("bloom");
 
-    expect(secureStore.setItemAsync).toHaveBeenCalledWith("murmur_ui_variant_v1", "console");
+    expect(secureStore.setItemAsync).toHaveBeenCalledWith("murmur_ui_variant_v1", "bloom");
   });
 
   it("removes the native selection with local data", async () => {
@@ -57,8 +57,8 @@ describe("ui variant preference", () => {
     };
     Object.assign(globalThis, { localStorage: webStorage });
 
-    await setStoredUiVariant("aura");
-    await expect(getStoredUiVariant()).resolves.toBe("aura");
+    await setStoredUiVariant("bloom");
+    await expect(getStoredUiVariant()).resolves.toBe("bloom");
     expect(secureStore.setItemAsync).not.toHaveBeenCalled();
 
     await deleteStoredUiVariant();

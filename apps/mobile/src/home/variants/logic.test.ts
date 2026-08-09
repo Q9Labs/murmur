@@ -26,14 +26,12 @@ function committedSpan(params: { createdAtMs: number; updatedAtMs: number }): Tr
 }
 
 describe("isUiVariant", () => {
-  it("accepts every known variant", () => {
-    for (const variant of ["aura", "bloom", "classic", "console"]) {
-      expect(isUiVariant(variant)).toBe(true);
-    }
+  it("accepts Bloom as the available variant", () => {
+    expect(isUiVariant("bloom")).toBe(true);
   });
 
-  it("rejects unknown and non-string values", () => {
-    expect(isUiVariant("neon")).toBe(false);
+  it("rejects removed and non-string values", () => {
+    expect(isUiVariant("aura")).toBe(false);
     expect(isUiVariant(null)).toBe(false);
     expect(isUiVariant(3)).toBe(false);
   });

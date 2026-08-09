@@ -6,14 +6,7 @@ import type { LiveTranslationController } from "../../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "../types";
 import type { HomeViewModel } from "../viewModel";
 
-export type UiVariant = "aura" | "bloom" | "classic" | "console";
-
-export const uiVariantOptions = [
-  { detail: "Precision console with live signal readouts.", id: "console", label: "Field Console" },
-  { detail: "Words floating in a field of drifting light.", id: "aura", label: "Aura" },
-  { detail: "A calm shape that breathes while you speak.", id: "bloom", label: "Bloom" },
-  { detail: "The original Murmur look.", id: "classic", label: "Classic" },
-] as const satisfies readonly { detail: string; id: UiVariant; label: string }[];
+export type UiVariant = "bloom";
 
 export type VariantShellProps = {
   audioState: AudioStateEvent | null;

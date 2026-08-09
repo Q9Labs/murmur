@@ -6,17 +6,11 @@ import {
   type OnboardingStep,
   type PickerMode,
 } from "./components";
-import { AuraOnboarding } from "./variants/aura/onboarding";
 import { BloomOnboarding } from "./variants/bloom/onboarding";
-import { ClassicOnboarding } from "./variants/classic";
-import { ConsoleOnboarding } from "./variants/fieldConsole/onboarding";
 import type { UiVariant, VariantOnboardingProps } from "./variants/types";
 
 const onboardingShells: Record<UiVariant, ComponentType<VariantOnboardingProps>> = {
-  aura: AuraOnboarding,
   bloom: BloomOnboarding,
-  classic: ClassicOnboarding,
-  console: ConsoleOnboarding,
 };
 
 export function OnboardingScreen({
@@ -36,7 +30,6 @@ export function OnboardingScreen({
   pickerMode,
   setSourceLanguageCode,
   setTargetLanguageCode,
-  uiVariant,
 }: {
   canStart: boolean;
   onContinue: () => void;
@@ -54,10 +47,8 @@ export function OnboardingScreen({
   step: OnboardingStep;
   targetLanguageCode: LanguageCode;
   targetLanguageDisplayName: string;
-  uiVariant: UiVariant;
 }): ReactNode {
-  const OnboardingShell = onboardingShells[uiVariant];
-
+  const OnboardingShell = onboardingShells.bloom;
   return (
     <>
       <OnboardingShell
