@@ -8,44 +8,65 @@ const bloomColors = {
   plum: "#3A2E3F",
   soft: "#8D8494",
   teal: "#2FB9A5",
+  violet: "#8662E6",
 } as const;
 
 export const styles = StyleSheet.create({
-  blobBody: {
-    backgroundColor: bloomColors.coral,
-    borderBottomLeftRadius: 86,
-    borderBottomRightRadius: 62,
-    borderTopLeftRadius: 92,
-    borderTopRightRadius: 70,
-    height: 168,
-    width: 176,
-  },
-  blobDot: {
-    backgroundColor: bloomColors.coral,
+  bloomBand: {
     borderRadius: 999,
-    height: 16,
-    width: 16,
-  },
-  blobDotWrap: {
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  blobHalo: {
-    backgroundColor: bloomColors.gold,
-    borderBottomLeftRadius: 74,
-    borderBottomRightRadius: 104,
-    borderTopLeftRadius: 84,
-    borderTopRightRadius: 96,
-    height: 200,
-    opacity: 0.4,
+    height: 14,
     position: "absolute",
-    width: 206,
   },
-  blobWrap: {
+  bloomBandCoral: {
+    backgroundColor: bloomColors.coral,
+    top: 10,
+    transform: [{ rotate: "-7deg" }],
+    width: 78,
+  },
+  bloomBandGold: {
+    backgroundColor: bloomColors.gold,
+    top: 34,
+    transform: [{ rotate: "-5deg" }],
+    width: 100,
+  },
+  bloomBandTeal: {
+    backgroundColor: bloomColors.teal,
+    top: 22,
+    transform: [{ rotate: "5deg" }],
+    width: 122,
+  },
+  bloomBandViolet: {
+    backgroundColor: bloomColors.violet,
+    top: 46,
+    transform: [{ rotate: "7deg" }],
+    width: 72,
+  },
+  bloomBands: {
+    alignItems: "center",
+    height: 70,
+    justifyContent: "center",
+    width: 132,
+  },
+  bloomSide: {
+    borderRadius: 999,
+    height: 18,
+    position: "absolute",
+    width: 5,
+  },
+  bloomSideLeft: {
+    backgroundColor: bloomColors.coral,
+    left: 8,
+    top: 34,
+  },
+  bloomSideRight: {
+    backgroundColor: bloomColors.violet,
+    right: 8,
+    top: 36,
+  },
+  bloomWrap: {
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 8,
-    paddingTop: 18,
+    minHeight: 104,
   },
   checkbox: {
     alignItems: "center",
@@ -69,12 +90,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 10,
+    paddingHorizontal: 22,
+    paddingTop: 8,
   },
   chromeButtonText: {
     color: bloomColors.soft,
-    fontSize: 22,
+    fontSize: 20,
     letterSpacing: 2,
     lineHeight: 24,
   },
@@ -86,9 +107,9 @@ export const styles = StyleSheet.create({
   },
   controlColumn: {
     alignItems: "center",
-    gap: 12,
-    paddingBottom: 16,
-    paddingTop: 12,
+    gap: 14,
+    paddingBottom: 18,
+    paddingTop: 14,
   },
   copy: {
     color: bloomColors.soft,
@@ -114,30 +135,26 @@ export const styles = StyleSheet.create({
   languageRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: 14,
+    minHeight: 28,
   },
   languageText: {
     color: bloomColors.plum,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
   },
   listenPill: {
     alignItems: "center",
     backgroundColor: bloomColors.coral,
     borderRadius: 999,
-    elevation: 6,
-    minHeight: 58,
-    minWidth: 200,
+    minHeight: 54,
+    minWidth: 176,
     justifyContent: "center",
-    paddingHorizontal: 36,
-    shadowColor: bloomColors.coral,
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
+    paddingHorizontal: 32,
   },
   listenPillText: {
     color: bloomColors.cream,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
   },
   modeTab: {
@@ -157,9 +174,9 @@ export const styles = StyleSheet.create({
   },
   onboardingBody: {
     flex: 1,
-    gap: 18,
+    gap: 16,
     justifyContent: "center",
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
   },
   onboardingFooter: {
     alignItems: "center",
@@ -197,31 +214,53 @@ export const styles = StyleSheet.create({
   },
   sourceText: {
     color: bloomColors.soft,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 23,
   },
-  stage: {
-    flexGrow: 1,
-    gap: 14,
+  signalBar: {
+    borderRadius: 999,
+    height: 12,
+    width: 4,
+  },
+  signalBarCoral: {
+    backgroundColor: bloomColors.coral,
+  },
+  signalBarGold: {
+    backgroundColor: bloomColors.gold,
+    height: 18,
+  },
+  signalBarTeal: {
+    backgroundColor: bloomColors.teal,
+    height: 16,
+  },
+  signalBarViolet: {
+    backgroundColor: bloomColors.violet,
+    height: 10,
+  },
+  signalWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 4,
     justifyContent: "center",
-    paddingHorizontal: 28,
+    minHeight: 28,
+    paddingTop: 6,
   },
   swapText: {
     color: bloomColors.teal,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "700",
   },
   timelineContent: {
     gap: 18,
-    paddingBottom: 20,
-    paddingHorizontal: 28,
-    paddingTop: 8,
+    paddingBottom: 24,
+    paddingHorizontal: 30,
+    paddingTop: 12,
   },
   timelineTranslation: {
     color: bloomColors.plum,
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "700",
-    lineHeight: 31,
+    lineHeight: 36,
   },
   title: {
     color: bloomColors.plum,
@@ -232,16 +271,20 @@ export const styles = StyleSheet.create({
   translationPartial: {
     opacity: 0.5,
   },
-  translationText: {
-    color: bloomColors.plum,
-    fontSize: 32,
-    fontWeight: "800",
-    lineHeight: 42,
-    textAlign: "center",
-  },
   wordmark: {
     color: bloomColors.plum,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  brandMark: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  brandLogo: {
+    borderRadius: 10,
+    height: 30,
+    width: 30,
   },
 });

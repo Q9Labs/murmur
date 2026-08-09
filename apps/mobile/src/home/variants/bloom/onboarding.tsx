@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { ScrollView, StatusBar, Text, View } from "react-native";
+import { ScrollView, StatusBar, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OnboardingFlow, type OnboardingTheme, type OnboardingText } from "../onboardingFlow";
 import type { VariantOnboardingProps } from "../types";
-import { BreathingBlob } from "./index";
+import { BrandMark, BreathingBlob } from "./index";
 import { styles } from "./styles";
 
 const bloomTheme: OnboardingTheme = {
@@ -43,7 +43,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.chrome}>
-        <Text style={styles.wordmark}>Murmur</Text>
+        <BrandMark />
       </View>
       <ScrollView alwaysBounceVertical={false} contentContainerStyle={onboardingScroll}>
         <OnboardingFlow

@@ -6,6 +6,7 @@ All notable changes to Murmur are documented here.
 
 ### Added
 
+- Six focused landing and live-translation design studies built around the new Murmur brand mark.
 - OpenAI Realtime Translation through an app-facing Worker WebSocket, including source transcripts, translated transcripts, and translated audio.
 - Public contribution, security, conduct, licensing, and repository templates.
 - Automated integration checks for tests, static analysis, secret scanning, and dependency review.
@@ -19,6 +20,8 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Replaced the mobile, web, splash, and Google Play brand assets with the layered speech-wave mark.
+- Aligned the Bloom welcome and live-translation screens with the new warm, minimal brand system.
 - Unified live translation into one streaming experience and moved capture/playback to 24 kHz PCM16.
 - Reworked the README and deployment documentation for reproducible public development.
 - Restored Gitleaks' built-in detectors, pinned CI dependencies to immutable revisions, and replaced the licensed organization-only scanning action with the official Gitleaks CLI container.
