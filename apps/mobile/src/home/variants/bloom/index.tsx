@@ -24,7 +24,6 @@ export function BloomShell(props: VariantShellProps): ReactNode {
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" />
       <BloomChrome onOpenSettings={props.onOpenSettings} />
-      <LiveStatus isLive={viewModel.isLive} />
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
@@ -45,7 +44,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           pressedStyle={styles.pressed}
           startLabel="Listen"
           stopLabel="Stop"
-          style={[styles.listenPill, viewModel.isLive && styles.stopPill]}
+          style={styles.listenPill}
           textStyle={styles.listenPillText}
         />
       </View>
@@ -112,69 +111,24 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
   );
 }
 
-function LiveStatus({ isLive }: { isLive: boolean }): ReactNode {
-  const reducedMotion = useReducedMotion();
-  const pulse = usePulse(isLive && !reducedMotion, reducedMotion, 1800);
-  const dotScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] });
-  const label = isLive ? "Listening now" : "Ready to listen";
-
-  return (
-    <View
-      accessible
-      accessibilityLabel={`Status: ${label}`}
-      accessibilityRole="text"
-      style={styles.liveStatus}
-    >
-      <Animated.View
-        style={[
-          styles.liveStatusDot,
-          isLive ? styles.liveStatusDotLive : styles.liveStatusDotReady,
-          { transform: [{ scale: dotScale }] },
-        ]}
-      />
-      <Text style={styles.liveStatusText}>{label}</Text>
-    </View>
-  );
-}
-
-function ListeningSignal({ isLive }: { isLive: boolean }): ReactNode {
-  const scale = useBreathScale(isLive, false);
-
-  return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={styles.signalWrap}
-    >
-      <Animated.View style={[styles.signalBar, styles.signalBarCoral, { transform: [{ scaleY: scale }] }]} />
-      <Animated.View style={[styles.signalBar, styles.signalBarTeal, { transform: [{ scaleY: scale }] }]} />
-      <Animated.View style={[styles.signalBar, styles.signalBarGold, { transform: [{ scaleY: scale }] }]} />
-      <Animated.View style={[styles.signalBar, styles.signalBarViolet, { transform: [{ scaleY: scale }] }]} />
-    </View>
-  );
-}
-
 function TranslationStage(props: VariantShellProps): ReactNode {
   return (
     <View style={styles.flexFill}>
-      <View style={styles.captionSurface}>
-        <ListeningSignal isLive={props.viewModel.isLive} />
-        <SpanTimeline
-          contentStyle={styles.timelineContent}
-          autoScrollRef={props.autoScrollRef}
-          live={props.live}
-          style={styles.flexFill}
-          textStyles={{
-            partial: styles.translationPartial,
-            rtl: styles.rtlText,
-            source: styles.sourceText,
-            translation: styles.timelineTranslation,
-          }}
-          timelineRef={props.timelineRef}
-          userInteractedRef={props.userInteractedRef}
-          viewModel={props.viewModel}
-        />
-      </View>
+      <SpanTimeline
+        contentStyle={styles.timelineContent}
+        autoScrollRef={props.autoScrollRef}
+        live={props.live}
+        style={styles.flexFill}
+        textStyles={{
+          partial: styles.translationPartial,
+          rtl: styles.rtlText,
+          source: styles.sourceText,
+          translation: styles.timelineTranslation,
+        }}
+        timelineRef={props.timelineRef}
+        userInteractedRef={props.userInteractedRef}
+        viewModel={props.viewModel}
+      />
     </View>
   );
 }

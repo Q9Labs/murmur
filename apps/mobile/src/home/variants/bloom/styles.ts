@@ -38,16 +38,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  captionSurface: {
-    backgroundColor: bloomColors.surface,
-    borderColor: bloomColors.hairline,
-    borderRadius: 28,
-    borderWidth: 1,
-    flex: 1,
-    marginHorizontal: 18,
-    marginTop: 12,
-    overflow: "hidden",
-  },
   consentRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -56,13 +46,10 @@ export const styles = StyleSheet.create({
   },
   controlColumn: {
     alignItems: "stretch",
-    backgroundColor: bloomColors.surface,
-    borderTopColor: bloomColors.hairline,
-    borderTopWidth: 1,
-    gap: 12,
-    paddingBottom: 18,
+    gap: 14,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 12,
   },
   copy: {
     color: bloomColors.soft,
@@ -110,9 +97,6 @@ export const styles = StyleSheet.create({
     color: bloomColors.cream,
     fontSize: 17,
     fontWeight: "800",
-  },
-  stopPill: {
-    backgroundColor: bloomColors.coral,
   },
   modeTab: {
     color: bloomColors.soft,
@@ -177,13 +161,9 @@ export const styles = StyleSheet.create({
   },
   settingsButton: {
     alignItems: "center",
-    backgroundColor: bloomColors.surface,
-    borderColor: bloomColors.hairline,
-    borderRadius: 21,
-    borderWidth: 1,
-    height: 42,
+    height: 44,
     justifyContent: "center",
-    width: 42,
+    width: 44,
   },
   settingsGlyph: {
     color: bloomColors.plum,
@@ -208,34 +188,6 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
   },
-  signalBar: {
-    borderRadius: 999,
-    height: 12,
-    width: 4,
-  },
-  signalBarCoral: {
-    backgroundColor: bloomColors.coral,
-  },
-  signalBarGold: {
-    backgroundColor: bloomColors.gold,
-    height: 18,
-  },
-  signalBarTeal: {
-    backgroundColor: bloomColors.teal,
-    height: 16,
-  },
-  signalBarViolet: {
-    backgroundColor: bloomColors.violet,
-    height: 10,
-  },
-  signalWrap: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 4,
-    justifyContent: "center",
-    minHeight: 28,
-    paddingTop: 6,
-  },
   swapText: {
     color: bloomColors.teal,
     fontSize: 18,
@@ -243,16 +195,16 @@ export const styles = StyleSheet.create({
   },
   timelineContent: {
     flexGrow: 1,
-    gap: 22,
-    paddingBottom: 24,
-    paddingHorizontal: 26,
-    paddingTop: 16,
+    gap: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 30,
+    paddingTop: 52,
   },
   timelineTranslation: {
     color: bloomColors.plum,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
-    lineHeight: 39,
+    lineHeight: 42,
   },
   title: {
     color: bloomColors.plum,
@@ -324,29 +276,5 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 224,
-  },
-  liveStatus: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  liveStatusDot: {
-    borderRadius: 999,
-    height: 8,
-    width: 8,
-  },
-  liveStatusDotLive: {
-    backgroundColor: bloomColors.coral,
-  },
-  liveStatusDotReady: {
-    backgroundColor: bloomColors.teal,
-  },
-  liveStatusText: {
-    color: bloomColors.soft,
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.2,
   },
 });
