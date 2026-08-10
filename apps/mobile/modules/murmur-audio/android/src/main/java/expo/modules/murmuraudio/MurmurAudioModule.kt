@@ -11,6 +11,7 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AudioEffect
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
@@ -53,6 +54,13 @@ class MurmurAudioModule : Module() {
   private val playbackShortWrites = AtomicInteger(0)
   @Volatile private var lastCaptureFrameAtMs: Long? = null
   @Volatile private var lastCaptureFrameRms: Double? = null
+  @Volatile private var lastEchoCancelerState: Map<String, Boolean>? = null
+  @Volatile private var lastGainControlState: Map<String, Boolean>? = null
+  @Volatile private var lastNoiseSuppressorState: Map<String, Boolean>? = null
+  @Volatile private var lastOutputRoute = "unknown"
+  @Volatile private var lastPlaybackChunkRms: Double? = null
+  @Volatile private var lastPlaybackWriteCompletedAtMs: Long? = null
+  @Volatile private var lastPlaybackUnderrunCount = 0
   private var audioGenerationId = 0
   private var playbackQueuedMs = 0
   private var playbackEndsAtMs = 0L
@@ -116,6 +124,10 @@ class MurmurAudioModule : Module() {
       throw SecurityException("RECORD_AUDIO permission is not granted")
     }
 
+    if (playbackActive) {
+      clearPlaybackSync("capture_restart")
+    }
+
     val minBuffer = max(
       AudioRecord.getMinBufferSize(
         MURMUR_SAMPLE_RATE,
@@ -155,6 +167,13 @@ class MurmurAudioModule : Module() {
     playbackShortWrites.set(0)
     lastCaptureFrameAtMs = null
     lastCaptureFrameRms = null
+    lastEchoCancelerState = null
+    lastGainControlState = null
+    lastNoiseSuppressorState = null
+    lastOutputRoute = "unknown"
+    lastPlaybackChunkRms = null
+    lastPlaybackWriteCompletedAtMs = null
+    lastPlaybackUnderrunCount = 0
     recorder = record
     enableAudioEffects(record.audioSessionId)
     try {
@@ -245,24 +264,31 @@ class MurmurAudioModule : Module() {
     if (!playbackActive) startPlaybackSync()
     playbackChunksReceived.incrementAndGet()
     playbackBytesRequested.addAndGet(data.size.toLong())
-    val queuedMs = data.size / 2 * 1000 / MURMUR_SAMPLE_RATE
-    playbackQueuedMs += queuedMs
-    val written = audioTrack?.write(data, 0, data.size) ?: 0
-    if (written < 0) {
-      playbackWriteErrors.incrementAndGet()
-      droppedFrames.incrementAndGet()
-    } else {
+    val track = audioTrack ?: throw IllegalStateException("AudioTrack is not available")
+    var totalWritten = 0
+    while (totalWritten < data.size) {
+      val written = track.write(data, totalWritten, data.size - totalWritten)
+      if (written <= 0) {
+        playbackWriteErrors.incrementAndGet()
+        clearPlaybackSync("playback_write_failed")
+        throw IllegalStateException("AudioTrack write failed: $written")
+      }
       playbackBytesWritten.addAndGet(written.toLong())
-      if (written < data.size) {
+      totalWritten += written
+      if (totalWritten < data.size) {
         playbackShortWrites.incrementAndGet()
       }
     }
+    val queuedMs = totalWritten / 2 * 1000 / MURMUR_SAMPLE_RATE
+    lastPlaybackChunkRms = rms(data)
+    lastPlaybackWriteCompletedAtMs = System.currentTimeMillis()
     schedulePlaybackIdle(queuedMs)
     emitState("playback_enqueued")
   }
 
   private fun clearPlaybackSync(reason: String) {
     playbackIdleGeneration += 1
+    rememberPlaybackState()
     try {
       audioTrack?.pause()
       audioTrack?.flush()
@@ -291,6 +317,7 @@ class MurmurAudioModule : Module() {
   }
 
   private fun finishPlaybackSync(reason: String) {
+    rememberPlaybackState()
     try {
       audioTrack?.pause()
       audioTrack?.flush()
@@ -317,6 +344,18 @@ class MurmurAudioModule : Module() {
   }
 
   private fun releaseAudioEffects() {
+    lastEchoCancelerState = currentAudioEffectState(
+      AcousticEchoCanceler.isAvailable(),
+      echoCanceler
+    )
+    lastNoiseSuppressorState = currentAudioEffectState(
+      NoiseSuppressor.isAvailable(),
+      noiseSuppressor
+    )
+    lastGainControlState = currentAudioEffectState(
+      AutomaticGainControl.isAvailable(),
+      gainControl
+    )
     echoCanceler?.release()
     noiseSuppressor?.release()
     gainControl?.release()
@@ -372,34 +411,36 @@ class MurmurAudioModule : Module() {
     val context = appContext.reactContext
     val audioManager = context?.getSystemService(AudioManager::class.java)
     return mapOf(
-      "acoustic_echo_canceler" to audioEffectState(
+      "acoustic_echo_canceler" to currentAudioEffectState(
         AcousticEchoCanceler.isAvailable(),
-        echoCanceler?.enabled,
-        echoCanceler?.hasControl()
+        echoCanceler,
+        lastEchoCancelerState
       ),
       "audio_mode" to audioManager?.mode,
       "audio_source" to "voice_recognition",
-      "automatic_gain_control" to audioEffectState(
+      "automatic_gain_control" to currentAudioEffectState(
         AutomaticGainControl.isAvailable(),
-        gainControl?.enabled,
-        gainControl?.hasControl()
+        gainControl,
+        lastGainControlState
       ),
       "capture_bytes_emitted_native" to captureBytesEmitted.get(),
       "capture_frames_emitted_native" to captureFramesEmitted.get(),
       "capture_read_errors" to captureReadErrors.get(),
       "last_capture_frame_at_ms" to lastCaptureFrameAtMs,
       "last_capture_frame_rms" to lastCaptureFrameRms,
-      "noise_suppressor" to audioEffectState(
+      "last_playback_chunk_rms" to lastPlaybackChunkRms,
+      "last_playback_write_completed_at_ms" to lastPlaybackWriteCompletedAtMs,
+      "noise_suppressor" to currentAudioEffectState(
         NoiseSuppressor.isAvailable(),
-        noiseSuppressor?.enabled,
-        noiseSuppressor?.hasControl()
+        noiseSuppressor,
+        lastNoiseSuppressorState
       ),
-      "output_route" to outputRoute(audioTrack?.routedDevice),
+      "output_route" to (audioTrack?.let { outputRoute(it.routedDevice) } ?: lastOutputRoute),
       "playback_bytes_requested" to playbackBytesRequested.get(),
       "playback_bytes_written" to playbackBytesWritten.get(),
       "playback_chunks_received" to playbackChunksReceived.get(),
       "playback_short_writes" to playbackShortWrites.get(),
-      "playback_underrun_count" to (audioTrack?.underrunCount ?: 0),
+      "playback_underrun_count" to (audioTrack?.underrunCount ?: lastPlaybackUnderrunCount),
       "playback_usage" to "media",
       "playback_write_errors" to playbackWriteErrors.get(),
       "sdk_int" to Build.VERSION.SDK_INT
@@ -416,6 +457,22 @@ class MurmurAudioModule : Module() {
     "enabled" to (enabled ?: false),
     "has_control" to (hasControl ?: false)
   )
+
+  private fun currentAudioEffectState(
+    available: Boolean,
+    effect: AudioEffect?,
+    previous: Map<String, Boolean>? = null
+  ): Map<String, Boolean> = if (effect == null) {
+    previous ?: audioEffectState(available, null, null)
+  } else {
+    audioEffectState(available, effect.enabled, effect.hasControl())
+  }
+
+  private fun rememberPlaybackState() {
+    val track = audioTrack ?: return
+    lastOutputRoute = outputRoute(track.routedDevice)
+    lastPlaybackUnderrunCount = track.underrunCount
+  }
 
   private fun outputRoute(device: AudioDeviceInfo?): String = when (device?.type) {
     AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "built_in_earpiece"

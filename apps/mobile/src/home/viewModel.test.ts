@@ -13,6 +13,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     diagnostics_snapshot: {
       capture: createAudioCaptureDiagnosticsTracker().snapshot(),
       runtime: {
+        playback_enabled: true,
         realtime_socket_open: false,
         source_char_count: 0,
         translated_char_count: 0,
@@ -20,6 +21,16 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
       transport: createEmptyRealtimeTransportDiagnostics(),
     },
     error: null,
+    getDiagnosticsSnapshot: () => ({
+      capture: createAudioCaptureDiagnosticsTracker().snapshot(),
+      runtime: {
+        playback_enabled: true,
+        realtime_socket_open: false,
+        source_char_count: 0,
+        translated_char_count: 0,
+      },
+      transport: createEmptyRealtimeTransportDiagnostics(),
+    }),
     latency_report: {},
     latency_samples: [],
     report_error: null,

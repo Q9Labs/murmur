@@ -45,7 +45,7 @@ export function DiagnosticsModal({
   targetLanguageCode: LanguageCode;
 }): ReactNode {
   const [diagnosticsMessage, setDiagnosticsMessage] = useState<string | null>(null);
-  const reportParams = buildDiagnosticsReportParams({
+  const getReportParams = () => buildDiagnosticsReportParams({
     audioState,
     latestProviderRoute,
     live,
@@ -61,8 +61,8 @@ export function DiagnosticsModal({
         <DiagnosticsMetrics audioState={audioState} live={live} />
         <DiagnosticsLatency live={live} />
         <DiagnosticActions
+          getReportParams={getReportParams}
           hasReport={hasReport}
-          reportParams={reportParams}
           setDiagnosticsMessage={setDiagnosticsMessage}
         />
         {diagnosticsMessage ? <Text style={styles.diagnosticsMessage}>{diagnosticsMessage}</Text> : null}
@@ -91,7 +91,7 @@ function buildDiagnosticsReportParams({
     appSessionId: live.session.identity.app_session_id,
     audioState,
     debugLog: live.debug_log,
-    diagnosticsSnapshot: live.diagnostics_snapshot,
+    diagnosticsSnapshot: live.getDiagnosticsSnapshot(),
     error: live.error,
     networkType,
     providerRoute: latestProviderRoute,
@@ -136,12 +136,12 @@ function formatBooleanState(active: boolean | undefined): string {
 }
 
 function DiagnosticActions({
+  getReportParams,
   hasReport,
-  reportParams,
   setDiagnosticsMessage,
 }: {
+  getReportParams: () => ReturnType<typeof buildDiagnosticsReportParams>;
   hasReport: boolean;
-  reportParams: ReturnType<typeof buildDiagnosticsReportParams>;
   setDiagnosticsMessage: (message: string | null) => void;
 }): ReactNode {
   return (
@@ -150,7 +150,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void copyDiagnosticsReport(reportParams).then(() => {
+          void copyDiagnosticsReport(getReportParams()).then(() => {
             setDiagnosticsMessage("Diagnostics copied.");
           })
         }
@@ -162,7 +162,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void downloadDiagnosticsReport(reportParams)
+          void downloadDiagnosticsReport(getReportParams())
             .then((result) => {
               setDiagnosticsMessage(getDownloadMessage(result));
             })
@@ -178,7 +178,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void shareLatencyReport(reportParams)
+          void shareLatencyReport(getReportParams())
             .then((result) => {
               setDiagnosticsMessage(result === "native_file" ? "Diagnostics file shared." : "Diagnostics shared.");
             })

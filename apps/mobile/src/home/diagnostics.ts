@@ -59,6 +59,9 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
         input_chunks_sent: params.diagnosticsSnapshot.transport.input_chunks_sent,
         input_chunks_received_by_worker:
           params.diagnosticsSnapshot.transport.worker_audio_chunks_received,
+        output_audio_chunks_skipped_playback_disabled:
+          params.diagnosticsSnapshot.transport.output_audio_chunks_skipped_playback_disabled,
+        playback_enabled: params.diagnosticsSnapshot.runtime.playback_enabled,
         output_playback_enqueue_failures:
           params.diagnosticsSnapshot.transport.output_playback_enqueue_failures,
         realtime_socket_open: params.diagnosticsSnapshot.runtime.realtime_socket_open,

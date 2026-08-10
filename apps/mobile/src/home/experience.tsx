@@ -17,14 +17,17 @@ const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
 };
 
 export function HomeExperience(props: {
+  audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
   autoScrollRef: MutableRefObject<boolean>;
   diagnosticsOpen: boolean;
+  developerToolsEnabled: boolean;
   live: LiveTranslationController;
   networkType: string;
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
   onCloseSettings: () => void;
+  onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onDeleteLocalData: () => void;
   onOpenDiagnostics: () => void;
   onOpenPicker: (mode: PickerMode) => void;
@@ -68,8 +71,11 @@ export function HomeExperience(props: {
         targetLanguageCode={props.targetLanguageCode}
       />
       <SettingsModal
+        audioPlaybackEnabled={props.audioPlaybackEnabled}
+        developerToolsEnabled={props.developerToolsEnabled}
         live={props.live}
         onClose={props.onCloseSettings}
+        onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onDeleteLocalData={props.onDeleteLocalData}
         onOpenDiagnostics={props.onOpenDiagnostics}
         onResetIdentity={props.onResetIdentity}
@@ -77,17 +83,19 @@ export function HomeExperience(props: {
         open={props.settingsOpen}
         settingsMessage={props.settingsMessage}
       />
-      <DiagnosticsModal
-        audioState={props.audioState}
-        latestProviderRoute={props.viewModel.latestProviderRoute}
-        live={props.live}
-        networkType={props.networkType}
-        onClose={props.onCloseDiagnostics}
-        open={props.diagnosticsOpen}
-        sourceLanguageCode={props.sourceLanguageCode}
-        targetLanguage={props.viewModel.targetLanguage}
-        targetLanguageCode={props.targetLanguageCode}
-      />
+      {props.developerToolsEnabled ? (
+        <DiagnosticsModal
+          audioState={props.audioState}
+          latestProviderRoute={props.viewModel.latestProviderRoute}
+          live={props.live}
+          networkType={props.networkType}
+          onClose={props.onCloseDiagnostics}
+          open={props.diagnosticsOpen}
+          sourceLanguageCode={props.sourceLanguageCode}
+          targetLanguage={props.viewModel.targetLanguage}
+          targetLanguageCode={props.targetLanguageCode}
+        />
+      ) : null}
     </>
   );
 }

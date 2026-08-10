@@ -14,11 +14,12 @@ export {
 
 export type RealtimeTranslationClientEvent =
   | RealtimeServerEvent
+  | { kind: "playback_error" }
   | { kind: "transport_closed" }
   | { kind: "transport_error" };
 
 export type RealtimeTranslationClient = {
-  close: (reason?: string) => void;
+  close: (reason?: string) => Promise<void>;
   connect: () => void;
   finish: () => void;
   getDiagnostics: () => RealtimeTransportDiagnostics;
@@ -27,9 +28,12 @@ export type RealtimeTranslationClient = {
 
 export function createRealtimeTranslationClient(options: {
   onEvent: (event: RealtimeTranslationClientEvent) => void;
+  shouldPlayAudio?: () => boolean;
   url: string;
 }): RealtimeTranslationClient {
   let socket: WebSocket | null = null;
+  let acceptingMessages = true;
+  let receiveQueue = Promise.resolve();
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
   let inputBufferedBytes = 0;
   const diagnostics = createEmptyRealtimeTransportDiagnostics();
@@ -95,9 +99,10 @@ export function createRealtimeTranslationClient(options: {
   }
 
   return {
-    close(reason = "client_close"): void {
+    async close(reason = "client_close"): Promise<void> {
       const activeSocket = socket;
       socket = null;
+      acceptingMessages = false;
       inputBufferedBytes = 0;
       diagnostics.input_buffered_bytes = 0;
       if (
@@ -106,20 +111,34 @@ export function createRealtimeTranslationClient(options: {
       ) {
         activeSocket.close(1000, reason);
       }
+      await receiveQueue;
     },
     connect(): void {
       if (socket) {
         return;
       }
+      acceptingMessages = true;
       const nextSocket = new WebSocket(options.url);
       nextSocket.binaryType = "arraybuffer";
       nextSocket.onopen = () => {
         diagnostics.socket_opened_at_ms = Date.now();
       };
       nextSocket.onmessage = (event) => {
-        void receive(event.data, diagnostics, (serverEvent) => {
-          recordServerEvent(serverEvent);
-          options.onEvent(serverEvent);
+        receiveQueue = receiveQueue.then(async () => {
+          if (!acceptingMessages) {
+            diagnostics.messages_skipped_client_closed += 1;
+            return;
+          }
+          await receive(
+            event.data,
+            diagnostics,
+            options.shouldPlayAudio,
+            () => options.onEvent({ kind: "playback_error" }),
+            (serverEvent) => {
+              recordServerEvent(serverEvent);
+              options.onEvent(serverEvent);
+            },
+          );
         }).catch(() => {
           diagnostics.socket_transport_errors += 1;
           options.onEvent({ kind: "transport_error" });
@@ -132,7 +151,7 @@ export function createRealtimeTranslationClient(options: {
       nextSocket.onclose = () => {
         diagnostics.socket_closed_at_ms = Date.now();
         socket = null;
-        options.onEvent({ kind: "transport_closed" });
+        void receiveQueue.then(() => options.onEvent({ kind: "transport_closed" }));
       };
       socket = nextSocket;
     },
@@ -274,6 +293,8 @@ function parseSessionError(parsed: Record<string, unknown>): RealtimeServerEvent
 async function receive(
   data: unknown,
   diagnostics: RealtimeTransportDiagnostics,
+  shouldPlayAudio: (() => boolean) | undefined,
+  onPlaybackError: () => void,
   onEvent: (event: RealtimeServerEvent) => void,
 ): Promise<void> {
   const audio = await readAudio(data);
@@ -281,13 +302,17 @@ async function receive(
     diagnostics.output_audio_chunks_received += 1;
     diagnostics.output_audio_bytes_received += audio.byteLength;
     diagnostics.last_output_audio_received_at_ms = Date.now();
+    if (shouldPlayAudio?.() === false) {
+      diagnostics.output_audio_chunks_skipped_playback_disabled += 1;
+      return;
+    }
     try {
       await MurmurAudioModule.enqueuePcm16(audio);
       diagnostics.output_playback_enqueues += 1;
       diagnostics.last_output_audio_enqueued_at_ms = Date.now();
-    } catch (error) {
+    } catch {
       diagnostics.output_playback_enqueue_failures += 1;
-      throw error;
+      onPlaybackError();
     }
     return;
   }

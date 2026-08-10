@@ -9,6 +9,7 @@ import type { AudioCaptureDiagnostics } from "./audioDiagnostics";
 
 export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
+  playback_enabled: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
 };
@@ -39,6 +40,7 @@ export function createLiveTranslationCompletion(params: {
 export type LiveTranslationDiagnosticsSnapshot = {
   capture: AudioCaptureDiagnostics;
   runtime: {
+    playback_enabled: boolean;
     realtime_socket_open: boolean;
     source_char_count: number;
     translated_char_count: number;
@@ -62,6 +64,7 @@ export type LiveTranslationState = {
 
 export type LiveTranslationController = LiveTranslationState & {
   cancel: () => Promise<void>;
+  getDiagnosticsSnapshot: () => LiveTranslationDiagnosticsSnapshot;
   reportSpan: (
     span: TranslationSpan,
     category: ReportTranslationCategory,

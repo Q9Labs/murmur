@@ -19,8 +19,10 @@ export type RealtimeTransportDiagnostics = {
   last_provider_translation_event_id: string | null;
   last_worker_ack_at_ms: number | null;
   last_worker_received_at_ms: number | null;
+  messages_skipped_client_closed: number;
   output_audio_bytes_received: number;
   output_audio_chunks_received: number;
+  output_audio_chunks_skipped_playback_disabled: number;
   output_playback_enqueue_failures: number;
   output_playback_enqueues: number;
   provider_source_delta_count: number;
@@ -65,8 +67,10 @@ export function createEmptyRealtimeTransportDiagnostics(): RealtimeTransportDiag
     last_provider_translation_event_id: null,
     last_worker_ack_at_ms: null,
     last_worker_received_at_ms: null,
+    messages_skipped_client_closed: 0,
     output_audio_bytes_received: 0,
     output_audio_chunks_received: 0,
+    output_audio_chunks_skipped_playback_disabled: 0,
     output_playback_enqueue_failures: 0,
     output_playback_enqueues: 0,
     provider_source_delta_count: 0,

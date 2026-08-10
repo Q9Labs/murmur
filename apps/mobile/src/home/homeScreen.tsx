@@ -28,6 +28,11 @@ import { requestMurmurReview } from "../lib/requestReview";
 import { shareMurmur } from "../lib/shareMurmur";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "./components";
+import {
+  deleteStoredAudioPlaybackEnabled,
+  getStoredAudioPlaybackEnabled,
+  setStoredAudioPlaybackEnabled,
+} from "./audioPlaybackPreference";
 import { HomeExperience } from "./experience";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
@@ -43,6 +48,7 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
   const timelineRef = useRef<ScrollView | null>(null);
@@ -58,6 +64,7 @@ export default function HomeScreen(): ReactNode {
 
   const live = useLiveTranslation({
     acquisition,
+    playback_enabled: audioPlaybackEnabled,
     source_language: sourceLanguageCode,
     target_language: targetLanguageCode,
   });
@@ -96,6 +103,18 @@ export default function HomeScreen(): ReactNode {
         if (acknowledged) {
           setOnboardingStep("done");
         }
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void getStoredAudioPlaybackEnabled().then((enabled) => {
+      if (mounted) {
+        setAudioPlaybackEnabled(enabled);
       }
     });
     return () => {
@@ -211,18 +230,33 @@ export default function HomeScreen(): ReactNode {
 
   return (
     <HomeExperience
+      audioPlaybackEnabled={audioPlaybackEnabled}
       audioState={audioState}
       autoScrollRef={autoScrollRef}
       diagnosticsOpen={diagnosticsOpen}
+      developerToolsEnabled={__DEV__}
       live={live}
       networkType={networkType}
       onCloseDiagnostics={() => setDiagnosticsOpen(false)}
       onClosePicker={() => setPickerMode(null)}
       onCloseSettings={() => setSettingsOpen(false)}
-      onDeleteLocalData={() => void deleteLocalData(setSettingsMessage, live.cancel, () => {
-        setPrivacyAcknowledged(false);
-        setPrivacyConsentChecked(false);
-      })}
+      onAudioPlaybackEnabledChange={(enabled) => {
+        setAudioPlaybackEnabled(enabled);
+        setSettingsMessage(null);
+        void setStoredAudioPlaybackEnabled(enabled).catch(() => {
+          setAudioPlaybackEnabled(!enabled);
+          setSettingsMessage("Could not save the audio setting. Please try again.");
+        });
+      }}
+      onDeleteLocalData={() => void deleteLocalData(
+        setSettingsMessage,
+        live.cancel,
+        () => {
+          setAudioPlaybackEnabled(true);
+          setPrivacyAcknowledged(false);
+          setPrivacyConsentChecked(false);
+        },
+      )}
       onOpenDiagnostics={() => setDiagnosticsOpen(true)}
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
@@ -285,6 +319,7 @@ async function deleteLocalData(
 ): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
+  await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
   onDeleted();

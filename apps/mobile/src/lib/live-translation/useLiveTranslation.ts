@@ -80,10 +80,19 @@ export function useLiveTranslation(
     createEmptyRealtimeTransportDiagnostics(),
   );
   const playbackActiveRef = useRef(false);
+  const playbackEnabledRef = useRef(params.playback_enabled);
+  const lastAudioStateRef = useRef<AudioStateEvent | null>(null);
 
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  useEffect(() => {
+    playbackEnabledRef.current = params.playback_enabled;
+    if (!params.playback_enabled) {
+      void MurmurAudioModule.clearPlayback("playback_disabled");
+    }
+  }, [params.playback_enabled]);
 
   useEffect(() => {
     if (!canStartSession(sessionRef.current.state)) {
@@ -111,7 +120,15 @@ export function useLiveTranslation(
     const subscription = MurmurAudioModule.addListener(
       "onAudioState",
       (state: AudioStateEvent) => {
-        playbackActiveRef.current = state.playback_active;
+        const current = lastAudioStateRef.current;
+        const generationOrder = current
+          ? Math.sign(state.audio_generation_id - current.audio_generation_id)
+          : 1;
+        const eventOrder = current ? Math.sign(state.event_seq - current.event_seq) : 1;
+        if ((generationOrder || eventOrder) >= 0) {
+          lastAudioStateRef.current = state;
+          playbackActiveRef.current = state.playback_active;
+        }
       },
     );
     return () => subscription.remove();
@@ -121,9 +138,12 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
-    clientRef.current?.close("hook_unmount");
-    void MurmurAudioModule.stopCapture("hook_unmount");
-    void MurmurAudioModule.clearPlayback("hook_unmount");
+    const client = clientRef.current;
+    clientRef.current = null;
+    void Promise.all([
+      client?.close("hook_unmount"),
+      MurmurAudioModule.stopCapture("hook_unmount"),
+    ]).then(() => MurmurAudioModule.clearPlayback("hook_unmount"));
   }, []);
 
   function transition(state: SessionState): void {
@@ -255,6 +275,7 @@ export function useLiveTranslation(
       onEvent: (event) => {
         void receiveRealtimeEvent(event);
       },
+      shouldPlayAudio: () => playbackEnabledRef.current,
       url: response.realtime_ws_url,
     });
     clientRef.current = client;
@@ -331,10 +352,20 @@ export function useLiveTranslation(
       transition("network_degraded");
       return;
     }
+    if (event.kind === "playback_error") {
+      recordDebug(
+        "audio.playback_error",
+        "Translated audio playback failed; captions remain live",
+        "error",
+      );
+      await MurmurAudioModule.clearPlayback("playback_error");
+      return;
+    }
     if (
       event.kind === "transport_closed" &&
       sessionRef.current.state !== "ended" &&
-      sessionRef.current.state !== "failed"
+      sessionRef.current.state !== "failed" &&
+      sessionRef.current.state !== "cancelling"
     ) {
       await finishSession(
         sessionRef.current.state === "stopping" ? "ended" : "failed",
@@ -386,8 +417,7 @@ export function useLiveTranslation(
     clearConnectionDeadline(connectDeadlineRef);
     transition("cancelling");
     const appSessionId = sessionRef.current.identity.app_session_id;
-    preserveClientDiagnostics();
-    clientRef.current?.close("user_cancel");
+    const client = clientRef.current;
     clientRef.current = null;
     completionResolveRef.current?.(undefined);
     completionResolveRef.current = null;
@@ -395,7 +425,11 @@ export function useLiveTranslation(
     sessionStartedAtRef.current = null;
     captureStartedAtRef.current = null;
     await Promise.all([
+      client?.close("user_cancel"),
       MurmurAudioModule.stopCapture("user_cancel"),
+    ]);
+    preserveClientDiagnostics(client);
+    await Promise.all([
       MurmurAudioModule.clearPlayback("user_cancel"),
       closeWorkerSession(appSessionId, "cancel"),
     ]);
@@ -413,9 +447,10 @@ export function useLiveTranslation(
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     const appSessionId = sessionRef.current.identity.app_session_id;
-    preserveClientDiagnostics();
-    clientRef.current?.close("session_complete");
+    const client = clientRef.current;
     clientRef.current = null;
+    await client?.close("session_complete");
+    preserveClientDiagnostics(client);
     await MurmurAudioModule.stopCapture("session_complete");
     if (state === "failed") {
       await MurmurAudioModule.clearPlayback("session_failed");
@@ -469,20 +504,26 @@ export function useLiveTranslation(
     setReportReceiptId(response.report_id);
   }
 
-  const span = spans[0];
-  const diagnosticsSnapshot = {
-    capture: captureDiagnosticsRef.current.snapshot(),
-    runtime: {
-      realtime_socket_open: session.state === "live" || session.state === "stopping",
-      source_char_count: span?.source_caption.length ?? 0,
-      translated_char_count: span?.translated_caption.length ?? 0,
-    },
-    transport: clientRef.current?.getDiagnostics() ?? lastTransportDiagnosticsRef.current,
-  };
+  function getDiagnosticsSnapshot(): LiveTranslationController["diagnostics_snapshot"] {
+    const currentSpan = spanRef.current;
+    return {
+      capture: captureDiagnosticsRef.current.snapshot(),
+      runtime: {
+        playback_enabled: playbackEnabledRef.current,
+        realtime_socket_open:
+          sessionRef.current.state === "live" || sessionRef.current.state === "stopping",
+        source_char_count: currentSpan?.source_caption.length ?? 0,
+        translated_char_count: currentSpan?.translated_caption.length ?? 0,
+      },
+      transport: clientRef.current?.getDiagnostics() ?? lastTransportDiagnosticsRef.current,
+    };
+  }
 
-  function preserveClientDiagnostics(): void {
-    if (clientRef.current) {
-      lastTransportDiagnosticsRef.current = clientRef.current.getDiagnostics();
+  const diagnosticsSnapshot = getDiagnosticsSnapshot();
+
+  function preserveClientDiagnostics(client = clientRef.current): void {
+    if (client) {
+      lastTransportDiagnosticsRef.current = client.getDiagnostics();
     }
   }
 
@@ -491,6 +532,7 @@ export function useLiveTranslation(
     debug_log: debugLog,
     diagnostics_snapshot: diagnosticsSnapshot,
     error,
+    getDiagnosticsSnapshot,
     latency_report: summarizeLatency(latencySamples),
     latency_samples: latencySamples,
     report_error: reportError,
