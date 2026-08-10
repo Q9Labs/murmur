@@ -13,6 +13,8 @@ import { normalizePreviewScreen } from "./preview";
 
 describe("preview route", () => {
   it("selects only supported deterministic screens", () => {
+    expect(normalizePreviewScreen("picker")).toBe("picker");
+    expect(normalizePreviewScreen("settings")).toBe("settings");
     expect(normalizePreviewScreen("translation")).toBe("translation");
     expect(normalizePreviewScreen(["welcome"])).toBe("welcome");
     expect(normalizePreviewScreen("unknown")).toBe("welcome");

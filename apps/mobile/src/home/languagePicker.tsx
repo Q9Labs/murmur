@@ -87,17 +87,25 @@ function LanguagePickerModal({
   }, [mode]);
 
   return (
-    <ModalSheet onClose={onClose} open={mode !== null} title={mode === "source" ? "I will speak" : "Translate into"}>
+    <ModalSheet onClose={onClose} open={mode !== null} title={mode === "source" ? "Speak in" : "Translate to"}>
       <TextInput
+        accessibilityLabel="Search languages"
         autoCapitalize="none"
         autoCorrect={false}
+        clearButtonMode="while-editing"
         onChangeText={setQuery}
-        placeholder="Search languages"
-        placeholderTextColor="#8E8A82"
+        placeholder="Search"
+        placeholderTextColor="#8D8494"
+        returnKeyType="search"
         style={styles.searchInput}
         value={query}
       />
-      <ScrollView contentContainerStyle={styles.languageList}>
+      <ScrollView
+        contentContainerStyle={styles.languageList}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <AutoDetectOption onSelect={onSelect} selected={selected} visible={showAutoDetect} />
         {filteredLanguages.map((language) => {
           const isSelected = language.app_code === selected;
@@ -105,20 +113,24 @@ function LanguagePickerModal({
           return (
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ disabled: isDisabled, selected: isSelected }}
               disabled={isDisabled}
               key={language.app_code}
               onPress={() => onSelect(language.app_code)}
               style={({ pressed }) => [
                 styles.languageOption,
                 isSelected && styles.languageOptionSelected,
-                (pressed || isDisabled) && styles.pressed,
+                isDisabled && styles.languageOptionDisabled,
+                pressed && styles.pressed,
               ]}
             >
-              <View>
+              <View style={styles.languageOptionCopy}>
                 <Text style={styles.languageOptionName}>{language.display_name}</Text>
                 <Text style={styles.languageOptionNative}>{language.native_name}</Text>
               </View>
-              <Text style={styles.languageOptionCheck}>{isSelected ? "Selected" : ""}</Text>
+              <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
+                {isSelected ? "✓" : ""}
+              </Text>
             </Pressable>
           );
         })}
@@ -142,6 +154,7 @@ function AutoDetectOption({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: selected === autoSourceLanguageCode }}
       onPress={() => onSelect(autoSourceLanguageCode)}
       style={({ pressed }) => [
         styles.languageOption,
@@ -149,12 +162,12 @@ function AutoDetectOption({
         pressed && styles.pressed,
       ]}
     >
-      <View>
+      <View style={styles.languageOptionCopy}>
         <Text style={styles.languageOptionName}>Auto detect</Text>
         <Text style={styles.languageOptionNative}>Live multilingual source</Text>
       </View>
-      <Text style={styles.languageOptionCheck}>
-        {selected === autoSourceLanguageCode ? "Selected" : ""}
+      <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
+        {selected === autoSourceLanguageCode ? "✓" : ""}
       </Text>
     </Pressable>
   );

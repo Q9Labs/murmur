@@ -21,6 +21,7 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Redesigned the native bottom sheets and language picker, with always-visible audio and settings controls on the translation screen.
 - Batched Realtime Translation input into provider-aligned 200 ms chunks and added end-to-end capture, Worker receipt, provider, playback, and Android audio-effect diagnostics.
 - Polished the native Bloom experience with calmer motion, translation-first captions, and a fixed language/action dock.
 - Replaced the mobile, web, splash, and Google Play brand assets with the layered speech-wave mark.

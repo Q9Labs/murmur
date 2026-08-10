@@ -19,5 +19,9 @@ export default function PreviewRoute(): ReactNode {
 
 export function normalizePreviewScreen(screen: PreviewParams["screen"]): PreviewScreen {
   const requestedScreen = Array.isArray(screen) ? screen[0] : screen;
-  return requestedScreen === "translation" ? "translation" : "welcome";
+  return requestedScreen === "picker" ||
+    requestedScreen === "settings" ||
+    requestedScreen === "translation"
+    ? requestedScreen
+    : "welcome";
 }

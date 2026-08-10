@@ -31,6 +31,12 @@ describe("Worker URL config", () => {
 
 describe("UI preview config", () => {
   it("accepts only the deterministic development preview screens", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "picker");
+    expect(getUiPreviewScreen()).toBe("picker");
+
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "settings");
+    expect(getUiPreviewScreen()).toBe("settings");
+
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "translation");
     expect(getUiPreviewScreen()).toBe("translation");
 

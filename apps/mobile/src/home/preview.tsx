@@ -1,7 +1,7 @@
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { TranslationSession, TranslationSpan } from "@murmur/protocol/session";
 import type { ReportTranslationCategory } from "@murmur/protocol/transport/types";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
@@ -9,6 +9,8 @@ import type { ScrollView } from "react-native";
 import type { LiveTranslationController } from "../lib/live-translation/types";
 import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
 import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
+import { LanguagePickerController } from "./languagePicker";
+import { SettingsModal } from "./settingsModals";
 import { buildHomeViewModel } from "./viewModel";
 import { BloomOnboarding } from "./variants/bloom/onboarding";
 import { BloomShell } from "./variants/bloom";
@@ -25,6 +27,7 @@ const previewLive: LiveTranslationController = {
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
     runtime: {
+      playback_enabled: true,
       realtime_socket_open: false,
       source_char_count: previewSourceCaption.length,
       translated_char_count: previewTranslation.length,
@@ -32,6 +35,7 @@ const previewLive: LiveTranslationController = {
     transport: createEmptyRealtimeTransportDiagnostics(),
   },
   error: null,
+  getDiagnosticsSnapshot: () => previewLive.diagnostics_snapshot,
   latency_report: {},
   latency_samples: [],
   report_error: null,
@@ -74,12 +78,62 @@ const previewLive: LiveTranslationController = {
   tentative_source_caption: "",
 };
 
+const previewSettingsLive: LiveTranslationController = {
+  ...previewLive,
+  status: "idle",
+};
+
 const noop = (): void => undefined;
 
-export type PreviewScreen = "translation" | "welcome";
+export type PreviewScreen = "picker" | "settings" | "translation" | "welcome";
 
 export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
+  if (screen === "picker") {
+    return <PickerPreview />;
+  }
+  if (screen === "settings") {
+    return <SettingsPreview />;
+  }
   return screen === "translation" ? <TranslationPreview /> : <WelcomePreview />;
+}
+
+function PickerPreview(): ReactNode {
+  const [sourceLanguageCode, setSourceLanguageCode] =
+    useState<SourceLanguageCode>(previewSourceLanguage);
+  const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>(previewTargetLanguage);
+
+  return (
+    <>
+      <TranslationPreview />
+      <LanguagePickerController
+        mode="target"
+        onClose={noop}
+        setSourceLanguageCode={setSourceLanguageCode}
+        setTargetLanguageCode={setTargetLanguageCode}
+        sourceLanguageCode={sourceLanguageCode}
+        targetLanguageCode={targetLanguageCode}
+      />
+    </>
+  );
+}
+
+function SettingsPreview(): ReactNode {
+  return (
+    <>
+      <TranslationPreview />
+      <SettingsModal
+        developerToolsEnabled={false}
+        live={previewSettingsLive}
+        onClose={noop}
+        onDeleteLocalData={noop}
+        onOpenDiagnostics={noop}
+        onResetIdentity={noop}
+        onShare={noop}
+        open
+        settingsMessage={null}
+      />
+    </>
+  );
 }
 
 function WelcomePreview(): ReactNode {
@@ -113,9 +167,11 @@ function TranslationPreview(): ReactNode {
     [],
   );
   const props: VariantShellProps = {
+    audioPlaybackEnabled: true,
     audioState: null,
     autoScrollRef,
     live: previewLive,
+    onAudioPlaybackEnabledChange: noop,
     onOpenPicker: noop,
     onOpenSettings: noop,
     onPrimaryAction: noop,

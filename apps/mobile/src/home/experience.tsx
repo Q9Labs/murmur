@@ -51,9 +51,11 @@ export function HomeExperience(props: {
   return (
     <>
       <Shell
+        audioPlaybackEnabled={props.audioPlaybackEnabled}
         audioState={props.audioState}
         autoScrollRef={props.autoScrollRef}
         live={props.live}
+        onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onOpenPicker={props.onOpenPicker}
         onOpenSettings={props.onOpenSettings}
         onPrimaryAction={props.onPrimaryAction}
@@ -71,11 +73,9 @@ export function HomeExperience(props: {
         targetLanguageCode={props.targetLanguageCode}
       />
       <SettingsModal
-        audioPlaybackEnabled={props.audioPlaybackEnabled}
         developerToolsEnabled={props.developerToolsEnabled}
         live={props.live}
         onClose={props.onCloseSettings}
-        onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onDeleteLocalData={props.onDeleteLocalData}
         onOpenDiagnostics={props.onOpenDiagnostics}
         onResetIdentity={props.onResetIdentity}

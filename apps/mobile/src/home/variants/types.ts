@@ -9,9 +9,11 @@ import type { HomeViewModel } from "../viewModel";
 export type UiVariant = "bloom";
 
 export type VariantShellProps = {
+  audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
   autoScrollRef: MutableRefObject<boolean>;
   live: LiveTranslationController;
+  onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
   onPrimaryAction: () => void;

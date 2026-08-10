@@ -23,7 +23,11 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" />
-      <BloomChrome onOpenSettings={props.onOpenSettings} />
+      <BloomChrome
+        audioPlaybackEnabled={props.audioPlaybackEnabled}
+        onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
+        onOpenSettings={props.onOpenSettings}
+      />
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
@@ -61,18 +65,60 @@ export function BrandMark(): ReactNode {
   );
 }
 
-function BloomChrome({ onOpenSettings }: { onOpenSettings: () => void }): ReactNode {
+function BloomChrome({
+  audioPlaybackEnabled,
+  onAudioPlaybackEnabledChange,
+  onOpenSettings,
+}: {
+  audioPlaybackEnabled: boolean;
+  onAudioPlaybackEnabledChange: (enabled: boolean) => void;
+  onOpenSettings: () => void;
+}): ReactNode {
   return (
     <View style={styles.chrome}>
       <BrandMark />
-      <Pressable
-        accessibilityLabel="Open settings"
-        accessibilityRole="button"
-        onPress={onOpenSettings}
-        style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
-      >
-        <Text style={styles.settingsGlyph}>···</Text>
-      </Pressable>
+      <View style={styles.chromeActions}>
+        <Pressable
+          accessibilityLabel={
+            audioPlaybackEnabled ? "Turn translated audio off" : "Turn translated audio on"
+          }
+          accessibilityRole="switch"
+          accessibilityState={{ checked: audioPlaybackEnabled }}
+          onPress={() => onAudioPlaybackEnabledChange(!audioPlaybackEnabled)}
+          style={({ pressed }) => [
+            styles.chromeButton,
+            audioPlaybackEnabled && styles.chromeButtonActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <SpeakerIcon enabled={audioPlaybackEnabled} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Open settings"
+          accessibilityRole="button"
+          onPress={onOpenSettings}
+          style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
+        >
+          <Text accessibilityElementsHidden style={styles.settingsGlyph}>⚙︎</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function SpeakerIcon({ enabled }: { enabled: boolean }): ReactNode {
+  return (
+    <View accessibilityElementsHidden style={styles.speakerIcon}>
+      <View style={styles.speakerBody} />
+      <View style={styles.speakerCone} />
+      {enabled ? (
+        <>
+          <View style={styles.speakerWaveSmall} />
+          <View style={styles.speakerWaveLarge} />
+        </>
+      ) : (
+        <View style={styles.speakerSlash} />
+      )}
     </View>
   );
 }

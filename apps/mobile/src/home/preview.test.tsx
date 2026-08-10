@@ -4,7 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 // cspell:ignore cada ciudad cuando diferente entiendes siente
 const harness = vi.hoisted(() => ({
   onboardingProps: null as Record<string, unknown> | null,
+  pickerProps: null as Record<string, unknown> | null,
+  settingsProps: null as Record<string, unknown> | null,
   shellProps: null as Record<string, unknown> | null,
+}));
+
+vi.mock("./languagePicker", () => ({
+  LanguagePickerController: (props: Record<string, unknown>) => {
+    harness.pickerProps = props;
+    return null;
+  },
+}));
+
+vi.mock("./settingsModals", () => ({
+  SettingsModal: (props: Record<string, unknown>) => {
+    harness.settingsProps = props;
+    return null;
+  },
 }));
 
 vi.mock("./variants/bloom", () => ({
@@ -24,6 +40,27 @@ vi.mock("./variants/bloom/onboarding", () => ({
 import { BloomPreview } from "./preview";
 
 describe("Bloom preview", () => {
+  it("opens the target-language picker over the translation screen", () => {
+    renderToStaticMarkup(<BloomPreview screen="picker" />);
+
+    expect(harness.pickerProps).toMatchObject({
+      mode: "target",
+      sourceLanguageCode: "en",
+      targetLanguageCode: "es",
+    });
+  });
+
+  it("opens settings over the translation screen", () => {
+    renderToStaticMarkup(<BloomPreview screen="settings" />);
+
+    expect(harness.settingsProps).toMatchObject({
+      developerToolsEnabled: false,
+      live: { status: "idle" },
+      open: true,
+      settingsMessage: null,
+    });
+  });
+
   it("renders the real welcome flow with stable setup copy", () => {
     renderToStaticMarkup(<BloomPreview screen="welcome" />);
 
