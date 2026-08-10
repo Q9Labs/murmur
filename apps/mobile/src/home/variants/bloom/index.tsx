@@ -1,3 +1,4 @@
+import { Settings as SettingsIcon } from "lucide-react-native";
 import { useRef, type ReactNode } from "react";
 import {
   Animated,
@@ -13,6 +14,7 @@ import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
 import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
+import { TranslatedAudioControl } from "./audioControl";
 import { styles } from "./styles";
 
 const brandLogo = require("../../../../assets/images/icon.png");
@@ -78,47 +80,19 @@ function BloomChrome({
     <View style={styles.chrome}>
       <BrandMark />
       <View style={styles.chromeActions}>
-        <Pressable
-          accessibilityLabel={
-            audioPlaybackEnabled ? "Turn translated audio off" : "Turn translated audio on"
-          }
-          accessibilityRole="switch"
-          accessibilityState={{ checked: audioPlaybackEnabled }}
-          onPress={() => onAudioPlaybackEnabledChange(!audioPlaybackEnabled)}
-          style={({ pressed }) => [
-            styles.chromeButton,
-            audioPlaybackEnabled && styles.chromeButtonActive,
-            pressed && styles.pressed,
-          ]}
-        >
-          <SpeakerIcon enabled={audioPlaybackEnabled} />
-        </Pressable>
+        <TranslatedAudioControl
+          enabled={audioPlaybackEnabled}
+          onChange={onAudioPlaybackEnabledChange}
+        />
         <Pressable
           accessibilityLabel="Open settings"
           accessibilityRole="button"
           onPress={onOpenSettings}
           style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
         >
-          <Text accessibilityElementsHidden style={styles.settingsGlyph}>⚙︎</Text>
+          <SettingsIcon color="#3A2E3F" size={20} strokeWidth={2} />
         </Pressable>
       </View>
-    </View>
-  );
-}
-
-function SpeakerIcon({ enabled }: { enabled: boolean }): ReactNode {
-  return (
-    <View accessibilityElementsHidden style={styles.speakerIcon}>
-      <View style={styles.speakerBody} />
-      <View style={styles.speakerCone} />
-      {enabled ? (
-        <>
-          <View style={styles.speakerWaveSmall} />
-          <View style={styles.speakerWaveLarge} />
-        </>
-      ) : (
-        <View style={styles.speakerSlash} />
-      )}
     </View>
   );
 }
