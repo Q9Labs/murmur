@@ -45,6 +45,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
       <View style={styles.chrome}>
         <BrandMark />
       </View>
+      <OnboardingProgress step={props.step} />
       <ScrollView alwaysBounceVertical={false} contentContainerStyle={onboardingScroll}>
         <OnboardingFlow
           {...props}
@@ -58,3 +59,23 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
 }
 
 const onboardingScroll = { flexGrow: 1 } as const;
+
+function OnboardingProgress({ step }: { step: VariantOnboardingProps["step"] }): ReactNode {
+  const stepIndex = step === "welcome" ? 0 : step === "privacy" ? 1 : 2;
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Setup step ${stepIndex + 1} of 3`}
+      accessibilityRole="text"
+      style={styles.progressRow}
+    >
+      {[0, 1, 2].map((index) => (
+        <View
+          key={index}
+          style={[styles.progressDot, index === stepIndex && styles.progressDotActive]}
+        />
+      ))}
+    </View>
+  );
+}

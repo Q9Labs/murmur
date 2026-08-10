@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   Animated,
   Image,
+  Pressable,
   StatusBar,
   Text,
   View,
@@ -10,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
 import { SpanTimeline, StatusMessages } from "../shared";
-import { PrimaryAction, SettingsChrome, TextLanguageRow } from "../sharedControls";
+import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { styles } from "./styles";
 
@@ -22,13 +23,8 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" />
-      <SettingsChrome
-        buttonTextStyle={styles.chromeButtonText}
-        containerStyle={styles.chrome}
-        onOpenSettings={props.onOpenSettings}
-        pressedStyle={styles.pressed}
-        rightSlot={<BrandMark />}
-      />
+      <BloomChrome onOpenSettings={props.onOpenSettings} />
+      <LiveStatus isLive={viewModel.isLive} />
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
@@ -49,7 +45,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           pressedStyle={styles.pressed}
           startLabel="Listen"
           stopLabel="Stop"
-          style={styles.listenPill}
+          style={[styles.listenPill, viewModel.isLive && styles.stopPill]}
           textStyle={styles.listenPillText}
         />
       </View>
@@ -66,12 +62,29 @@ export function BrandMark(): ReactNode {
   );
 }
 
+function BloomChrome({ onOpenSettings }: { onOpenSettings: () => void }): ReactNode {
+  return (
+    <View style={styles.chrome}>
+      <BrandMark />
+      <Pressable
+        accessibilityLabel="Open settings"
+        accessibilityRole="button"
+        onPress={onOpenSettings}
+        style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
+      >
+        <Text style={styles.settingsGlyph}>···</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function useBreathScale(isLive: boolean, animateWhenIdle = true): ReturnType<typeof Animated.add> {
   const reducedMotion = useReducedMotion();
   const pulse = usePulse((isLive || animateWhenIdle) && !reducedMotion, reducedMotion, isLive ? 2400 : 4800);
   const micLevel = useMicLevel(isLive);
   const sway = Animated.add(Animated.multiply(pulse, 0.05), Animated.multiply(micLevel, 0.16));
-  return Animated.add(new Animated.Value(1), sway);
+  const baseScale = useRef(new Animated.Value(1)).current;
+  return Animated.add(baseScale, sway);
 }
 
 export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
@@ -84,16 +97,42 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={styles.bloomWrap}
+      style={styles.heroWrap}
     >
-      <Animated.View style={[styles.bloomBands, { transform: [{ rotate: tilt }, { scale }] }]}>
-        <View style={[styles.bloomBand, styles.bloomBandCoral]} />
-        <View style={[styles.bloomBand, styles.bloomBandTeal]} />
-        <View style={[styles.bloomBand, styles.bloomBandGold]} />
-        <View style={[styles.bloomBand, styles.bloomBandViolet]} />
+      <Animated.View style={[styles.heroFrame, { transform: [{ rotate: tilt }, { scale }] }]}>
+        <Image accessibilityIgnoresInvertColors source={brandLogo} style={styles.heroLogo} />
       </Animated.View>
-      <View style={[styles.bloomSide, styles.bloomSideLeft]} />
-      <View style={[styles.bloomSide, styles.bloomSideRight]} />
+      <View style={styles.heroAccentRow}>
+        <View style={[styles.heroAccent, styles.heroAccentCoral]} />
+        <View style={[styles.heroAccent, styles.heroAccentTeal]} />
+        <View style={[styles.heroAccent, styles.heroAccentGold]} />
+        <View style={[styles.heroAccent, styles.heroAccentViolet]} />
+      </View>
+    </View>
+  );
+}
+
+function LiveStatus({ isLive }: { isLive: boolean }): ReactNode {
+  const reducedMotion = useReducedMotion();
+  const pulse = usePulse(isLive && !reducedMotion, reducedMotion, 1800);
+  const dotScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] });
+  const label = isLive ? "Listening now" : "Ready to listen";
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Status: ${label}`}
+      accessibilityRole="text"
+      style={styles.liveStatus}
+    >
+      <Animated.View
+        style={[
+          styles.liveStatusDot,
+          isLive ? styles.liveStatusDotLive : styles.liveStatusDotReady,
+          { transform: [{ scale: dotScale }] },
+        ]}
+      />
+      <Text style={styles.liveStatusText}>{label}</Text>
     </View>
   );
 }
@@ -118,22 +157,24 @@ function ListeningSignal({ isLive }: { isLive: boolean }): ReactNode {
 function TranslationStage(props: VariantShellProps): ReactNode {
   return (
     <View style={styles.flexFill}>
-      <ListeningSignal isLive={props.viewModel.isLive} />
-      <SpanTimeline
-        contentStyle={styles.timelineContent}
-        autoScrollRef={props.autoScrollRef}
-        live={props.live}
-        style={styles.flexFill}
-        textStyles={{
-          partial: styles.translationPartial,
-          rtl: styles.rtlText,
-          source: styles.sourceText,
-          translation: styles.timelineTranslation,
-        }}
-        timelineRef={props.timelineRef}
-        userInteractedRef={props.userInteractedRef}
-        viewModel={props.viewModel}
-      />
+      <View style={styles.captionSurface}>
+        <ListeningSignal isLive={props.viewModel.isLive} />
+        <SpanTimeline
+          contentStyle={styles.timelineContent}
+          autoScrollRef={props.autoScrollRef}
+          live={props.live}
+          style={styles.flexFill}
+          textStyles={{
+            partial: styles.translationPartial,
+            rtl: styles.rtlText,
+            source: styles.sourceText,
+            translation: styles.timelineTranslation,
+          }}
+          timelineRef={props.timelineRef}
+          userInteractedRef={props.userInteractedRef}
+          viewModel={props.viewModel}
+        />
+      </View>
     </View>
   );
 }

@@ -6,6 +6,7 @@ All notable changes to Murmur are documented here.
 
 ### Added
 
+- Deterministic development previews and new iPhone source captures for the polished welcome and live-translation screens.
 - Six focused landing and live-translation design studies built around the new Murmur brand mark.
 - OpenAI Realtime Translation through an app-facing Worker WebSocket, including source transcripts, translated transcripts, and translated audio.
 - Public contribution, security, conduct, licensing, and repository templates.
@@ -20,6 +21,7 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Polished the native Bloom experience with calmer motion, translation-first captions, and a fixed language/action dock.
 - Replaced the mobile, web, splash, and Google Play brand assets with the layered speech-wave mark.
 - Aligned the Bloom welcome and live-translation screens with the new warm, minimal brand system.
 - Unified live translation into one streaming experience and moved capture/playback to 24 kHz PCM16.
