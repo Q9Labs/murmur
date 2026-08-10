@@ -320,14 +320,23 @@ function findPlaceholder(compositionPath) {
     { encoding: "utf8" },
   );
   if (result.status !== 0) {
-    throw new Error(`Could not locate product placeholder in ${compositionPath}: ${result.stderr.trim()}`);
+    throw new Error(`Could not locate product placeholder in ${compositionPath}: ${commandError(result)}`);
   }
-  const match = result.stdout.trim().match(/^(\d+)x(\d+)\+(\d+)\+(\d+)$/);
+  const output = commandOutput(result);
+  const match = output.match(/^(\d+)x(\d+)\+(\d+)\+(\d+)$/);
   if (!match) {
-    throw new Error(`Could not parse product placeholder bounds for ${compositionPath}: ${result.stdout.trim()}`);
+    throw new Error(`Could not parse product placeholder bounds for ${compositionPath}: ${output}`);
   }
   const [, width, height, x, y] = match;
   return { height: Number(height), width: Number(width), x: Number(x), y: Number(y) };
+}
+
+function commandError(result) {
+  return String(result.stderr ?? result.error?.message ?? "unknown error").trim();
+}
+
+function commandOutput(result) {
+  return String(result.stdout ?? "").trim();
 }
 
 function readPngSize(filePath) {

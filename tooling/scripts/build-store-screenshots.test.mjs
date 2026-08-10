@@ -1,13 +1,16 @@
+// cspell:ignore magick
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
 import { dirname, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { findPlaceholder, readPngSize, screenshotSets } from "./build-store-screenshots.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
+const hasImageMagick = spawnSync("magick", ["-version"], { stdio: "ignore" }).status === 0;
 
 test("Option B mappings use the published screenshot names and mirrored Android set", () => {
   const [ios, android] = screenshotSets;
@@ -41,7 +44,7 @@ test("Option B mappings use the published screenshot names and mirrored Android 
   assert.equal(android.height, 1920);
 });
 
-test("green placeholder detection handles every Option B composition", () => {
+test("green placeholder detection handles every Option B composition", { skip: !hasImageMagick }, () => {
   for (const set of screenshotSets) {
     for (const [composition] of set.screenshots) {
       const compositionPath = join(mobileRoot, set.compositionDirectory, composition);
