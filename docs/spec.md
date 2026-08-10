@@ -69,7 +69,7 @@ After opening `realtime_ws_url`, the app sends raw binary 24 kHz mono PCM16 fram
 { "kind": "close_session" }
 ```
 
-The Worker sends translated PCM16 as binary messages. The app plays it by default, but the user can turn translated audio off in Settings and keep live source and translated captions. JSON messages use this union:
+The Worker sends translated PCM16 as binary messages. The app plays it by default, but the user can turn translated audio off from the translation screen and keep live source and translated captions. JSON messages use this union:
 
 ```text
 session_opened      { provider_metadata }
