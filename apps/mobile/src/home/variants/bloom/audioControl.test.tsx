@@ -35,7 +35,9 @@ vi.mock("lucide-react-native", () => ({
   VolumeX: () => <span>volume-off</span>,
 }));
 
-vi.mock("./styles", () => ({ styles: {} }));
+vi.mock("./styles", () => ({
+  useBloomStyles: () => ({ colors: { primary: "#3A2E3F" }, styles: {} }),
+}));
 
 import { TranslatedAudioControl } from "./audioControl";
 

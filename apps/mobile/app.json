@@ -5,6 +5,7 @@
     "slug": "murmur",
     "version": "1.1.0",
     "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
     "scheme": "murmur",
     "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
@@ -12,6 +13,16 @@
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
       "buildNumber": "9",
       "supportsTablet": false,
+      "splash": {
+        "backgroundColor": "#F8F4ED",
+        "dark": {
+          "backgroundColor": "#171319",
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain"
+        },
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain"
+      },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Murmur needs microphone access to stream speech for live translation.",
         "UIBackgroundModes": [
@@ -90,6 +101,16 @@
         "android.permission.VIBRATE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
+      "splash": {
+        "backgroundColor": "#F8F4ED",
+        "dark": {
+          "backgroundColor": "#171319",
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain"
+        },
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain"
+      },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -107,6 +128,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-system-ui",
       "./plugins/withAndroidReleaseSigning"
     ],
     "splash": {

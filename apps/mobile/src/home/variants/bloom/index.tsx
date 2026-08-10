@@ -15,16 +15,17 @@ import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { TranslatedAudioControl } from "./audioControl";
-import { styles } from "./styles";
+import { useBloomStyles } from "./styles";
 
 const brandLogo = require("../../../../assets/images/icon.png");
 
 export function BloomShell(props: VariantShellProps): ReactNode {
   const { live, viewModel } = props;
+  const { colors, styles } = useBloomStyles();
 
   return (
     <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <BloomChrome
         audioPlaybackEnabled={props.audioPlaybackEnabled}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
@@ -59,6 +60,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
 }
 
 export function BrandMark(): ReactNode {
+  const { styles } = useBloomStyles();
   return (
     <View accessible accessibilityLabel="Murmur" accessibilityRole="image" style={styles.brandMark}>
       <Image accessibilityIgnoresInvertColors source={brandLogo} style={styles.brandLogo} />
@@ -76,6 +78,7 @@ function BloomChrome({
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onOpenSettings: () => void;
 }): ReactNode {
+  const { colors, styles } = useBloomStyles();
   return (
     <View style={styles.chrome}>
       <BrandMark />
@@ -90,7 +93,7 @@ function BloomChrome({
           onPress={onOpenSettings}
           style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
         >
-          <SettingsIcon color="#3A2E3F" size={20} strokeWidth={2} />
+          <SettingsIcon color={colors.primary} size={20} strokeWidth={2} />
         </Pressable>
       </View>
     </View>
@@ -107,6 +110,7 @@ function useBreathScale(isLive: boolean, animateWhenIdle = true): ReturnType<typ
 }
 
 export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
+  const { styles } = useBloomStyles();
   const reducedMotion = useReducedMotion();
   const pulse = usePulse(!reducedMotion, reducedMotion, 5200);
   const scale = useBreathScale(isLive);
@@ -132,6 +136,7 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
 }
 
 function TranslationStage(props: VariantShellProps): ReactNode {
+  const { styles } = useBloomStyles();
   return (
     <View style={styles.flexFill}>
       <SpanTimeline

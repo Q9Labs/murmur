@@ -15,7 +15,15 @@ vi.mock("./modalSheet", () => ({
     open ? <section>{children}</section> : null,
 }));
 
-vi.mock("./styles", () => ({ styles: {} }));
+vi.mock("./sheetStyles", () => ({
+  useSheetStyles: () => ({ colors: { muted: "#8D8494" }, styles: {} }),
+}));
+
+vi.mock("expo-linking", () => ({ openURL: vi.fn() }));
+
+vi.mock("lucide-react-native", () => ({
+  ChevronRight: () => <span>chevron</span>,
+}));
 
 import { SettingsModal } from "./settingsModals";
 
@@ -40,6 +48,9 @@ describe("settings sheet", () => {
     const markup = renderSettings(false);
 
     expect(markup).toContain("Share Murmur");
+    expect(markup).toContain("Privacy policy");
+    expect(markup).toContain("Terms of use");
+    expect(markup).toContain("Support &amp; data requests");
     expect(markup).toContain("Delete local data");
     expect(markup).not.toContain("Session diagnostics");
     expect(markup).not.toContain("Reset accountless identity");

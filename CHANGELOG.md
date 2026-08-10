@@ -6,6 +6,8 @@ All notable changes to Murmur are documented here.
 
 ### Added
 
+- System-aware dark mode across the Bloom screens, shared sheets, language picker, native splash, and store source captures.
+- Three no-human store screenshot direction studies for the redesigned App Store and Google Play sets.
 - Deterministic development previews and new iPhone source captures for the polished welcome and live-translation screens.
 - Six focused landing and live-translation design studies built around the new Murmur brand mark.
 - OpenAI Realtime Translation through an app-facing Worker WebSocket, including source transcripts, translated transcripts, and translated audio.
@@ -21,6 +23,7 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Added direct Privacy, Terms, Support, and local-data controls to the native Settings sheet.
 - Replaced the temporary translation-header glyphs with crisp Lucide volume and settings icons.
 - Redesigned the native bottom sheets and language picker, with always-visible audio and settings controls on the translation screen.
 - Batched Realtime Translation input into provider-aligned 200 ms chunks and added end-to-end capture, Worker receipt, provider, playback, and Android audio-effect diagnostics.

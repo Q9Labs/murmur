@@ -9,7 +9,7 @@ import {
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
 import { ModalSheet } from "./modalSheet";
-import { styles } from "./styles";
+import { useSheetStyles } from "./sheetStyles";
 import type { PickerMode } from "./types";
 
 type LanguagePickerControllerProps = {
@@ -71,6 +71,7 @@ function LanguagePickerModal({
   onSelect: (language: SourceLanguageCode) => void;
   selected: SourceLanguageCode;
 }): ReactNode {
+  const { colors, styles } = useSheetStyles();
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredLanguages = languageRegistry.filter((language) => {
@@ -95,7 +96,7 @@ function LanguagePickerModal({
         clearButtonMode="while-editing"
         onChangeText={setQuery}
         placeholder="Search"
-        placeholderTextColor="#8D8494"
+        placeholderTextColor={colors.muted}
         returnKeyType="search"
         style={styles.searchInput}
         value={query}
@@ -148,6 +149,7 @@ function AutoDetectOption({
   selected: SourceLanguageCode;
   visible: boolean;
 }): ReactNode {
+  const { styles } = useSheetStyles();
   if (!visible) {
     return null;
   }

@@ -1,9 +1,17 @@
+import * as Linking from "expo-linking";
+import { ChevronRight } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { ModalSheet } from "./modalSheet";
-import { styles } from "./styles";
+import { useSheetStyles } from "./sheetStyles";
+
+const legalUrls = {
+  privacy: "https://murmur.q9labs.ai/privacy",
+  support: "https://murmur.q9labs.ai/support",
+  terms: "https://murmur.q9labs.ai/terms",
+} as const;
 
 export function SettingsModal(props: {
   developerToolsEnabled: boolean;
@@ -16,12 +24,26 @@ export function SettingsModal(props: {
   open: boolean;
   settingsMessage: string | null;
 }): ReactNode {
+  const { styles } = useSheetStyles();
   const disabled = props.live.status === "live";
   return (
     <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
       <View style={styles.settingsList}>
         <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
-        <SettingsAction disabled={disabled} label="Delete local data" onPress={props.onDeleteLocalData} />
+        <SettingsAction
+          label="Privacy policy"
+          onPress={() => void Linking.openURL(legalUrls.privacy)}
+        />
+        <SettingsAction label="Terms of use" onPress={() => void Linking.openURL(legalUrls.terms)} />
+        <SettingsAction
+          label="Support & data requests"
+          onPress={() => void Linking.openURL(legalUrls.support)}
+        />
+        <SettingsAction
+          disabled={disabled}
+          label="Delete local data"
+          onPress={props.onDeleteLocalData}
+        />
         {props.developerToolsEnabled ? (
           <>
             <SettingsAction label="Session diagnostics" onPress={props.onOpenDiagnostics} />
@@ -43,6 +65,7 @@ function SettingsAction(props: {
   label: string;
   onPress: () => void;
 }): ReactNode {
+  const { colors, styles } = useSheetStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -54,7 +77,7 @@ function SettingsAction(props: {
       ]}
     >
       <Text style={styles.settingsActionText}>{props.label}</Text>
-      <Text accessibilityElementsHidden style={styles.settingsChevron}>›</Text>
+      <ChevronRight color={colors.muted} size={20} strokeWidth={2} />
     </Pressable>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { X } from "lucide-react-native";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -10,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { styles } from "./styles";
+import { useSheetStyles } from "./sheetStyles";
 
 export function ModalSheet({
   children,
@@ -25,6 +26,7 @@ export function ModalSheet({
   scroll?: boolean;
   title: string;
 }): ReactNode {
+  const { styles } = useSheetStyles();
   return (
     <Modal
       animationType="slide"
@@ -68,6 +70,7 @@ export function ModalSheet({
 const sheetContent = { paddingBottom: 24 } as const;
 
 function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: string }): ReactNode {
+  const { colors, styles } = useSheetStyles();
   return (
     <View style={styles.sheetHeader}>
       <Text style={styles.sheetTitle}>{title}</Text>
@@ -78,7 +81,7 @@ function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: stri
         onPress={onClose}
         style={({ pressed }) => [styles.sheetDone, pressed && styles.pressed]}
       >
-        <Text style={styles.sheetDoneText}>×</Text>
+        <X color={colors.primary} size={20} strokeWidth={2} />
       </Pressable>
     </View>
   );

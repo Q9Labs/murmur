@@ -5,24 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { OnboardingFlow, type OnboardingTheme, type OnboardingText } from "../onboardingFlow";
 import type { VariantOnboardingProps } from "../types";
 import { BrandMark, BreathingBlob } from "./index";
-import { styles } from "./styles";
-
-const bloomTheme: OnboardingTheme = {
-  body: styles.onboardingBody,
-  buttonStyle: styles.listenPill,
-  buttonTextStyle: styles.listenPillText,
-  checkbox: styles.checkbox,
-  checkboxChecked: styles.checkboxChecked,
-  checkboxMark: styles.checkboxMark,
-  consentRow: styles.consentRow,
-  copy: styles.copy,
-  eyebrow: styles.eyebrow,
-  footer: styles.onboardingFooter,
-  pressed: styles.pressed,
-  setupRow: styles.setupRow,
-  setupValue: styles.setupValue,
-  title: styles.title,
-};
+import { useBloomStyles } from "./styles";
 
 const bloomText: OnboardingText = {
   agreeLabel: "Agree and Continue",
@@ -39,9 +22,27 @@ const bloomText: OnboardingText = {
 };
 
 export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
+  const { colors, styles } = useBloomStyles();
+  const bloomTheme: OnboardingTheme = {
+    body: styles.onboardingBody,
+    buttonStyle: styles.listenPill,
+    buttonTextStyle: styles.listenPillText,
+    checkbox: styles.checkbox,
+    checkboxChecked: styles.checkboxChecked,
+    checkboxMark: styles.checkboxMark,
+    consentRow: styles.consentRow,
+    copy: styles.copy,
+    eyebrow: styles.eyebrow,
+    footer: styles.onboardingFooter,
+    pressed: styles.pressed,
+    setupRow: styles.setupRow,
+    setupValue: styles.setupValue,
+    title: styles.title,
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <View style={styles.chrome}>
         <BrandMark />
       </View>
@@ -61,6 +62,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
 const onboardingScroll = { flexGrow: 1 } as const;
 
 function OnboardingProgress({ step }: { step: VariantOnboardingProps["step"] }): ReactNode {
+  const { styles } = useBloomStyles();
   const stepIndex = step === "welcome" ? 0 : step === "privacy" ? 1 : 2;
 
   return (
