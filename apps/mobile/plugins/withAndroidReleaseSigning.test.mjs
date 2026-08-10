@@ -39,6 +39,12 @@ describe("withAndroidReleaseSigning", () => {
     expect(patched).toContain("signingConfig signingConfigs.release");
     expect(patched).toContain("Missing Android release signing credentials");
     expect(patched).toContain("minifyEnabled false");
+    expect(patched).toMatch(
+      /buildTypes\s*\{\s*debug\s*\{\s*signingConfig signingConfigs\.debug\s*\}/,
+    );
+    expect(patched).toMatch(
+      /buildTypes[\s\S]*?release\s*\{\s*if \(hasReleaseSigning\) \{\s*signingConfig signingConfigs\.release/,
+    );
   });
 
   it("is idempotent once the Murmur signing guard is present", () => {

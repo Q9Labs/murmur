@@ -58,7 +58,7 @@ function addReleaseSigning(source) {
   }
 
   next = next.replace(
-    /(release\s*\{[\s\S]*?)^\s*signingConfig signingConfigs\.debug\s*$/m,
+    /(buildTypes\s*\{[\s\S]*?\brelease\s*\{[\s\S]*?)^\s*signingConfig signingConfigs\.debug\s*$/m,
     `$1${releaseBuildSigningBlock}`,
   );
   if (!next.includes("Missing Android release signing credentials")) {
