@@ -1,1 +1,1 @@
-Rebuilds live translation on OpenAI Realtime Translation for streaming source captions, translated captions, and translated speech in one experience.
+Adds a polished light and dark design, clearer live captions, improved language selection, optional translated audio, and direct privacy, terms, support, and local-data controls.

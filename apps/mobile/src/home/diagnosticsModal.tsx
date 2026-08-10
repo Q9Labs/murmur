@@ -7,21 +7,10 @@ import { formatLatencyPercentiles } from "../lib/latency";
 import type { LanguageCode, LanguageDefinition, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
-import type { ReportTranslationCategory } from "@murmur/protocol/transport/types";
 import { copyDiagnosticsReport, downloadDiagnosticsReport, shareLatencyReport } from "./diagnostics";
 import { ModalSheet } from "./modalSheet";
+import { TranslationReportActions } from "./reportTranslation";
 import { styles } from "./styles";
-
-const reportActions = [
-  { category: "inaccurate", label: "Inaccurate" },
-  { category: "wrong_language", label: "Wrong language" },
-  { category: "offensive_harmful", label: "Harmful" },
-  { category: "speech_issue", label: "Speech" },
-  { category: "other", label: "Other" },
-] as const satisfies readonly {
-  category: ReportTranslationCategory;
-  label: string;
-}[];
 
 export function DiagnosticsModal({
   audioState,
@@ -45,7 +34,7 @@ export function DiagnosticsModal({
   targetLanguageCode: LanguageCode;
 }): ReactNode {
   const [diagnosticsMessage, setDiagnosticsMessage] = useState<string | null>(null);
-  const reportParams = buildDiagnosticsReportParams({
+  const getReportParams = () => buildDiagnosticsReportParams({
     audioState,
     latestProviderRoute,
     live,
@@ -61,8 +50,8 @@ export function DiagnosticsModal({
         <DiagnosticsMetrics audioState={audioState} live={live} />
         <DiagnosticsLatency live={live} />
         <DiagnosticActions
+          getReportParams={getReportParams}
           hasReport={hasReport}
-          reportParams={reportParams}
           setDiagnosticsMessage={setDiagnosticsMessage}
         />
         {diagnosticsMessage ? <Text style={styles.diagnosticsMessage}>{diagnosticsMessage}</Text> : null}
@@ -91,7 +80,7 @@ function buildDiagnosticsReportParams({
     appSessionId: live.session.identity.app_session_id,
     audioState,
     debugLog: live.debug_log,
-    diagnosticsSnapshot: live.diagnostics_snapshot,
+    diagnosticsSnapshot: live.getDiagnosticsSnapshot(),
     error: live.error,
     networkType,
     providerRoute: latestProviderRoute,
@@ -136,12 +125,12 @@ function formatBooleanState(active: boolean | undefined): string {
 }
 
 function DiagnosticActions({
+  getReportParams,
   hasReport,
-  reportParams,
   setDiagnosticsMessage,
 }: {
+  getReportParams: () => ReturnType<typeof buildDiagnosticsReportParams>;
   hasReport: boolean;
-  reportParams: ReturnType<typeof buildDiagnosticsReportParams>;
   setDiagnosticsMessage: (message: string | null) => void;
 }): ReactNode {
   return (
@@ -150,7 +139,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void copyDiagnosticsReport(reportParams).then(() => {
+          void copyDiagnosticsReport(getReportParams()).then(() => {
             setDiagnosticsMessage("Diagnostics copied.");
           })
         }
@@ -162,7 +151,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void downloadDiagnosticsReport(reportParams)
+          void downloadDiagnosticsReport(getReportParams())
             .then((result) => {
               setDiagnosticsMessage(getDownloadMessage(result));
             })
@@ -178,7 +167,7 @@ function DiagnosticActions({
         accessibilityRole="button"
         disabled={!hasReport}
         onPress={() =>
-          void shareLatencyReport(reportParams)
+          void shareLatencyReport(getReportParams())
             .then((result) => {
               setDiagnosticsMessage(result === "native_file" ? "Diagnostics file shared." : "Diagnostics shared.");
             })
@@ -249,39 +238,13 @@ function DiagnosticSpanRow({
       <Text style={[styles.spanTranslation, targetLanguage.rtl && styles.rtlText]}>
         {getDiagnosticSpanTranslationText(span)}
       </Text>
-      <ReportActions live={live} span={span} />
+      <TranslationReportActions live={live} span={span} />
     </View>
   );
 }
 
 function getDiagnosticSpanTranslationText(span: TranslationSpan): string {
   return span.committed_translated_caption || span.partial_translated_caption || span.status;
-}
-
-function ReportActions({
-  live,
-  span,
-}: {
-  live: LiveTranslationController;
-  span: TranslationSpan;
-}): ReactNode {
-  if (span.status !== "committed") {
-    return null;
-  }
-  return (
-    <View style={styles.reportRow}>
-      {reportActions.map((action) => (
-        <Pressable
-          accessibilityRole="button"
-          key={action.category}
-          onPress={() => void live.reportSpan(span, action.category)}
-          style={styles.reportButton}
-        >
-          <Text style={styles.reportButtonText}>{action.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
 }
 
 function Metric({ label, value }: { label: string; value: string }): ReactNode {

@@ -37,7 +37,7 @@ const requiredPrivacyTypes = [
 assert(appConfig.name === "Murmur", `app name must be Murmur; got ${appConfig.name}`);
 assert(appConfig.owner === "q9labs", `Expo owner must be q9labs; got ${appConfig.owner}`);
 assert(appConfig.slug === "murmur", `Expo slug must be murmur; got ${appConfig.slug}`);
-assert(appConfig.version === "1.1.0", `app version must be 1.1.0 for this release; got ${appConfig.version}`);
+assert(appConfig.version === "1.2.0", `app version must be 1.2.0 for this release; got ${appConfig.version}`);
 assert(appConfig.orientation === "portrait", `orientation must be portrait; got ${appConfig.orientation}`);
 assert(appConfig.scheme === "murmur", `scheme must be murmur; got ${appConfig.scheme}`);
 assert(appConfig.icon === "./assets/images/icon.png", "app icon path must use the validated icon asset");
@@ -97,7 +97,7 @@ assert(
     "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
   "Android store URL must target Murmur's Google Play listing",
 );
-assert(appConfig.android?.versionCode === 3, `Android versionCode must be 3 for the v1.1.0 testing upload; got ${appConfig.android?.versionCode}`);
+assert(appConfig.android?.versionCode === 4, `Android versionCode must be 4 for the v1.2.0 release; got ${appConfig.android?.versionCode}`);
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
 const requiredAndroidPermissions = [
@@ -132,7 +132,7 @@ assert(productionBuild?.distribution === "store", "EAS production build must use
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
-assert(easConfig.submit?.production?.android?.track === "beta", "EAS Android submit track should target beta/open testing for this rollout");
+assert(easConfig.submit?.production?.android?.track === "production", "EAS Android submit track should target production for this release");
 
 if (failures.length > 0) {
   console.error("App config validation failed:");

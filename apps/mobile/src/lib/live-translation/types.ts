@@ -4,9 +4,12 @@ import type { ReportTranslationCategory } from "@murmur/protocol/transport/types
 import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 
 import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
+import type { RealtimeTransportDiagnostics } from "../providers/realtimeTranslation";
+import type { AudioCaptureDiagnostics } from "./audioDiagnostics";
 
 export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
+  playback_enabled: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
 };
@@ -35,11 +38,14 @@ export function createLiveTranslationCompletion(params: {
 }
 
 export type LiveTranslationDiagnosticsSnapshot = {
+  capture: AudioCaptureDiagnostics;
   runtime: {
+    playback_enabled: boolean;
     realtime_socket_open: boolean;
     source_char_count: number;
     translated_char_count: number;
   };
+  transport: RealtimeTransportDiagnostics;
 };
 
 export type LiveTranslationState = {
@@ -58,6 +64,7 @@ export type LiveTranslationState = {
 
 export type LiveTranslationController = LiveTranslationState & {
   cancel: () => Promise<void>;
+  getDiagnosticsSnapshot: () => LiveTranslationDiagnosticsSnapshot;
   reportSpan: (
     span: TranslationSpan,
     category: ReportTranslationCategory,

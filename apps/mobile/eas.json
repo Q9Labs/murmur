@@ -30,7 +30,7 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "autoIncrement": true,
+      "autoIncrement": false,
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai"
@@ -44,7 +44,8 @@
   "submit": {
     "production": {
       "android": {
-        "track": "beta"
+        "releaseStatus": "completed",
+        "track": "production"
       },
       "ios": {
         "ascAppId": "6756962206"

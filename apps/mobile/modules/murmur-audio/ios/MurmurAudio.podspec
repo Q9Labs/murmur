@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name           = 'MurmurAudio'
-  s.version        = '1.1.0'
+  s.version        = '1.2.0'
   s.summary        = 'Native audio capture for Murmur live translation'
   s.description    = 'Captures microphone audio for Murmur through an Expo local module.'
   s.author         = 'Q9Labs'

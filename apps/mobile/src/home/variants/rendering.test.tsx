@@ -141,6 +141,7 @@ function shellProps(params: {
   });
 
   return {
+    audioPlaybackEnabled: true,
     audioState: {
       audio_generation_id: 1,
       capture_active: params.isLive,
@@ -154,6 +155,7 @@ function shellProps(params: {
     },
     autoScrollRef: { current: true },
     live: liveState as VariantShellProps["live"],
+    onAudioPlaybackEnabledChange: vi.fn(),
     onOpenPicker: vi.fn(),
     onOpenSettings: vi.fn(),
     onPrimaryAction: vi.fn(),

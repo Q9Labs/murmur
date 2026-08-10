@@ -4,8 +4,15 @@ All notable changes to Murmur are documented here.
 
 ## Unreleased
 
+## 1.2.0 - 2026-08-10
+
 ### Added
 
+- System-aware dark mode across the Bloom screens, shared sheets, language picker, native splash, and store source captures.
+- Three no-human store screenshot direction studies for the redesigned App Store and Google Play sets.
+- A complete Option B store screenshot set built from verified native iOS and Android captures.
+- Deterministic development previews and new iPhone source captures for the polished welcome and live-translation screens.
+- Six focused landing and live-translation design studies built around the new Murmur brand mark.
 - OpenAI Realtime Translation through an app-facing Worker WebSocket, including source transcripts, translated transcripts, and translated audio.
 - Public contribution, security, conduct, licensing, and repository templates.
 - Automated integration checks for tests, static analysis, secret scanning, and dependency review.
@@ -19,6 +26,13 @@ All notable changes to Murmur are documented here.
 
 ### Changed
 
+- Added direct Privacy, Terms, Support, and local-data controls to the native Settings sheet.
+- Replaced the temporary translation-header glyphs with crisp Lucide volume and settings icons.
+- Redesigned the native bottom sheets and language picker, with always-visible audio and settings controls on the translation screen.
+- Batched Realtime Translation input into provider-aligned 200 ms chunks and added end-to-end capture, Worker receipt, provider, playback, and Android audio-effect diagnostics.
+- Polished the native Bloom experience with calmer motion, translation-first captions, and a fixed language/action dock.
+- Replaced the mobile, web, splash, and Google Play brand assets with the layered speech-wave mark.
+- Aligned the Bloom welcome and live-translation screens with the new warm, minimal brand system.
 - Unified live translation into one streaming experience and moved capture/playback to 24 kHz PCM16.
 - Reworked the README and deployment documentation for reproducible public development.
 - Restored Gitleaks' built-in detectors, pinned CI dependencies to immutable revisions, and replaced the licensed organization-only scanning action with the official Gitleaks CLI container.

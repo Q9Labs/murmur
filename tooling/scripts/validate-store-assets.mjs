@@ -1,59 +1,32 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  androidScreenshotSpec,
+  comparePngDirectories,
+  createFailureCollector,
+  validatePngDirectory,
+  validatePngFile,
+} from "./store-screenshot-validation.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
 const screenshotRedesignPending = existsSync(
   join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
 );
-const failures = [];
-
-const assert = (condition, message) => {
-  if (!condition) {
-    failures.push(message);
-  }
-};
-
-const readPng = (relativePath) => {
-  const filePath = join(mobileRoot, relativePath);
-  assert(existsSync(filePath), `${relativePath} must exist`);
-  if (!existsSync(filePath)) {
-    return { hasAlpha: "unknown", height: 0, width: 0 };
-  }
-
-  const png = readFileSync(filePath);
-  const signature = "89504e470d0a1a0a";
-  assert(png.subarray(0, 8).toString("hex") === signature, `${relativePath} must be a PNG`);
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
-  const colorType = png[25];
-  const hasAlpha = colorType === 4 || colorType === 6 || png.includes(Buffer.from("tRNS")) ? "yes" : "no";
-  return { hasAlpha, height, width };
-};
+const { assert, failures } = createFailureCollector();
 
 const assertImage = (relativePath, expectedWidth, expectedHeight, { allowAlpha = false } = {}) => {
-  const image = readPng(relativePath);
-  assert(
-    image.width === expectedWidth && image.height === expectedHeight,
-    `${relativePath} must be ${expectedWidth}x${expectedHeight}; got ${image.width}x${image.height}`,
-  );
-  if (!allowAlpha) {
-    assert(image.hasAlpha === "no", `${relativePath} must not have alpha; got hasAlpha=${image.hasAlpha}`);
-  }
-};
-
-const assertPlayPhoneScreenshot = (relativePath) => {
-  const image = readPng(relativePath);
-  const shortSide = Math.min(image.width, image.height);
-  const longSide = Math.max(image.width, image.height);
-
-  assert(shortSide >= 320, `${relativePath} short side must be at least 320px; got ${shortSide}`);
-  assert(longSide <= 3840, `${relativePath} long side must be no more than 3840px; got ${longSide}`);
-  assert(longSide / shortSide <= 2, `${relativePath} aspect ratio must be 2:1 or less; got ${longSide}:${shortSide}`);
-  assert(image.height > image.width, `${relativePath} must be a portrait phone screenshot; got ${image.width}x${image.height}`);
+  const validation = validatePngFile({
+    expectedHeight: expectedHeight,
+    expectedWidth,
+    filePath: join(mobileRoot, relativePath),
+    label: relativePath,
+    requireOpaque: !allowAlpha,
+  });
+  failures.push(...validation.failures);
 };
 
 for (const relativePath of [
@@ -75,33 +48,35 @@ for (const relativePath of [
   );
 }
 
-if (!screenshotRedesignPending) {
-  for (const relativePath of [
-    "store-assets/generated/social/instagram/02-conference-talk-story.png",
-    "store-assets/generated/social/instagram/04-how-murmur-works-story.png",
-  ]) {
-    assertImage(relativePath, 1080, 1920);
-  }
-}
-
 for (const locale of ["en-US", "en-GB"]) {
   assertImage(`fastlane/metadata/android/${locale}/images/featureGraphic/feature-graphic.png`, 1024, 500);
 
   const screenshotDir = join(mobileRoot, "fastlane", "metadata", "android", locale, "images", "phoneScreenshots");
-  if (!screenshotRedesignPending) {
-    assert(existsSync(screenshotDir), `${locale} phone screenshot directory must exist`);
-  }
-  if (!existsSync(screenshotDir)) {
-    continue;
-  }
+  const screenshotValidation = validatePngDirectory({
+    directory: screenshotDir,
+    expectedCount: screenshotRedesignPending ? undefined : androidScreenshotSpec.count,
+    expectedHeight: screenshotRedesignPending ? undefined : androidScreenshotSpec.height,
+    expectedWidth: screenshotRedesignPending ? undefined : androidScreenshotSpec.width,
+    directoryLabel: `${locale} phone screenshots`,
+    fileLabelPrefix: `fastlane/metadata/android/${locale}/images/phoneScreenshots/`,
+    label: locale,
+    playLimits: true,
+    requireDirectory: !screenshotRedesignPending,
+    requireOpaque: !screenshotRedesignPending,
+    requireRgb: !screenshotRedesignPending,
+  });
+  failures.push(...screenshotValidation.failures);
+}
 
-  const screenshots = readdirSync(screenshotDir).filter((fileName) => /\.png$/i.test(fileName)).sort();
-  if (!screenshotRedesignPending) {
-    assert(screenshots.length === 5, `${locale} must include the current 5 phone screenshots; got ${screenshots.length}`);
-  }
-  for (const screenshot of screenshots) {
-    assertPlayPhoneScreenshot(`fastlane/metadata/android/${locale}/images/phoneScreenshots/${screenshot}`);
-  }
+if (!screenshotRedesignPending) {
+  failures.push(
+    ...comparePngDirectories({
+      leftDirectory: join(mobileRoot, "fastlane", "metadata", "android", "en-US", "images", "phoneScreenshots"),
+      leftLabel: "en-US Play",
+      rightDirectory: join(mobileRoot, "fastlane", "metadata", "android", "en-GB", "images", "phoneScreenshots"),
+      rightLabel: "en-GB Play",
+    }),
+  );
 }
 
 if (screenshotRedesignPending) {

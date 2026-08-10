@@ -30,6 +30,8 @@ type AppStyles = {
   languageList: ViewStyle;
   languageOption: ViewStyle;
   languageOptionCheck: TextStyle;
+  languageOptionCopy: ViewStyle;
+  languageOptionDisabled: ViewStyle;
   languageOptionName: TextStyle;
   languageOptionNative: TextStyle;
   languageOptionSelected: ViewStyle;
@@ -116,9 +118,12 @@ type AppStyles = {
   setupTitle: TextStyle;
   setupValue: TextStyle;
   sheet: ViewStyle;
+  sheetDismissArea: ViewStyle;
   sheetDone: ViewStyle;
   sheetDoneText: TextStyle;
+  sheetHandle: ViewStyle;
   sheetHeader: ViewStyle;
+  sheetKeyboard: ViewStyle;
   sheetTitle: TextStyle;
   sourceText: TextStyle;
   spanRow: ViewStyle;
@@ -371,35 +376,47 @@ export const styles = StyleSheet.create<AppStyles>({
     fontWeight: "700",
   },
   languageList: {
-    gap: 8,
+    paddingTop: 8,
     paddingBottom: 28,
   },
   languageOption: {
     alignItems: "center",
-    borderBottomColor: "#E7E2DA",
+    borderBottomColor: "rgba(58, 46, 63, 0.10)",
     borderBottomWidth: 1,
     flexDirection: "row",
+    gap: 14,
     justifyContent: "space-between",
-    minHeight: 64,
+    minHeight: 68,
+    paddingHorizontal: 12,
   },
   languageOptionCheck: {
-    color: "#126B45",
-    fontSize: 13,
-    fontWeight: "800",
+    color: "#2FB9A5",
+    fontSize: 20,
+    fontWeight: "900",
+    minWidth: 24,
+    textAlign: "center",
+  },
+  languageOptionCopy: {
+    flex: 1,
+  },
+  languageOptionDisabled: {
+    opacity: 0.34,
   },
   languageOptionName: {
-    color: "#191714",
-    fontSize: 18,
+    color: "#3A2E3F",
+    fontSize: 17,
     fontWeight: "800",
   },
   languageOptionNative: {
-    color: "#716B63",
+    color: "#8D8494",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 3,
   },
   languageOptionSelected: {
-    borderBottomColor: "#151515",
+    backgroundColor: "rgba(47, 185, 165, 0.08)",
+    borderBottomColor: "rgba(47, 185, 165, 0.24)",
+    borderRadius: 16,
   },
   languageStrip: {
     alignItems: "center",
@@ -508,7 +525,7 @@ export const styles = StyleSheet.create<AppStyles>({
     color: "#FFFFFF",
   },
   modalScrim: {
-    backgroundColor: "rgba(0,0,0,0.22)",
+    backgroundColor: "rgba(35, 27, 38, 0.34)",
     flex: 1,
     justifyContent: "flex-end",
   },
@@ -792,39 +809,42 @@ export const styles = StyleSheet.create<AppStyles>({
     flex: 1,
   },
   searchInput: {
-    backgroundColor: "#F3EFE8",
-    borderRadius: 14,
-    color: "#161412",
-    fontSize: 17,
-    fontWeight: "700",
-    minHeight: 50,
+    backgroundColor: "rgba(58, 46, 63, 0.06)",
+    borderColor: "rgba(58, 46, 63, 0.08)",
+    borderRadius: 16,
+    borderWidth: 1,
+    color: "#3A2E3F",
+    fontSize: 16,
+    fontWeight: "600",
+    minHeight: 52,
     paddingHorizontal: 16,
   },
   settingsAction: {
     alignItems: "center",
-    borderBottomColor: "#E7E2DA",
+    borderBottomColor: "rgba(58, 46, 63, 0.10)",
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    minHeight: 58,
+    minHeight: 62,
+    paddingHorizontal: 4,
   },
   settingsActionText: {
-    color: "#191714",
-    fontSize: 17,
-    fontWeight: "800",
+    color: "#3A2E3F",
+    fontSize: 16,
+    fontWeight: "700",
   },
   settingsChevron: {
-    color: "#8A847B",
-    fontSize: 24,
-    fontWeight: "700",
+    color: "#8D8494",
+    fontSize: 26,
+    fontWeight: "500",
   },
   settingsList: {
-    marginTop: 8,
+    marginTop: 2,
   },
   settingsMessage: {
-    color: "#4D4740",
+    color: "#8D8494",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 16,
   },
   setupButton: {
@@ -885,32 +905,59 @@ export const styles = StyleSheet.create<AppStyles>({
     marginTop: 5,
   },
   sheet: {
-    backgroundColor: "#FCFFFD",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "86%",
+    backgroundColor: "#FFFDF9",
+    borderColor: "rgba(58, 46, 63, 0.10)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    borderWidth: 1,
+    maxHeight: "88%",
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 10,
+    shadowColor: "#231B26",
+    shadowOffset: { height: -8, width: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+  },
+  sheetDismissArea: {
+    ...StyleSheet.absoluteFillObject,
   },
   sheetDone: {
-    minHeight: 40,
+    alignItems: "center",
+    backgroundColor: "rgba(58, 46, 63, 0.07)",
+    borderRadius: 18,
+    height: 36,
     justifyContent: "center",
+    width: 36,
   },
   sheetDoneText: {
-    color: "#126B45",
-    fontSize: 16,
-    fontWeight: "900",
+    color: "#3A2E3F",
+    fontSize: 24,
+    fontWeight: "600",
+    lineHeight: 26,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    backgroundColor: "rgba(58, 46, 63, 0.18)",
+    borderRadius: 999,
+    height: 5,
+    marginBottom: 12,
+    width: 42,
   },
   sheetHeader: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 16,
+  },
+  sheetKeyboard: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
   sheetTitle: {
-    color: "#111111",
-    fontSize: 24,
-    fontWeight: "900",
+    color: "#3A2E3F",
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
   sourceText: {
     color: "#77736C",

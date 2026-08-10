@@ -71,13 +71,28 @@ export function parseTranslationOutput(data: unknown): OpenAITranslationOutput {
     return { kind: "ignored" };
   }
   if (parsed.type === "session.input_transcript.delta" && typeof parsed.delta === "string") {
-    return { kind: "event", event: { delta: parsed.delta, kind: "source_delta" } };
+    return {
+      kind: "event",
+      event: transcriptEvent("source_delta", parsed),
+    };
   }
   if (parsed.type === "session.output_transcript.delta" && typeof parsed.delta === "string") {
-    return { kind: "event", event: { delta: parsed.delta, kind: "translation_delta" } };
+    return {
+      kind: "event",
+      event: transcriptEvent("translation_delta", parsed),
+    };
   }
   if (parsed.type === "session.output_audio.delta" && typeof parsed.delta === "string") {
     return { kind: "audio", pcm16: decodeBase64(parsed.delta) };
+  }
+  if (parsed.type === "session.created" || parsed.type === "session.updated") {
+    return {
+      kind: "event",
+      event: providerSessionConfig(
+        parsed.type === "session.created" ? "created" : "updated",
+        parsed.session,
+      ),
+    };
   }
   if (parsed.type === "session.closed") {
     return { kind: "event", event: { kind: "session_closed" } };
@@ -93,6 +108,41 @@ export function parseTranslationOutput(data: unknown): OpenAITranslationOutput {
     };
   }
   return { kind: "ignored" };
+}
+
+function providerSessionConfig(
+  phase: "created" | "updated",
+  value: unknown,
+): Extract<RealtimeServerEvent, { kind: "provider_session_config" }> {
+  return {
+    input_noise_reduction: nestedShortString(value, ["audio", "input", "noise_reduction", "type"]),
+    kind: "provider_session_config",
+    output_language: nestedShortString(value, ["audio", "output", "language"]),
+    phase,
+    provider_session_id: nestedShortString(value, ["id"]),
+    transcription_model: nestedShortString(value, ["audio", "input", "transcription", "model"]),
+  };
+}
+
+function transcriptEvent(
+  kind: "source_delta" | "translation_delta",
+  parsed: Record<string, unknown>,
+): Extract<RealtimeServerEvent, { kind: "source_delta" | "translation_delta" }> {
+  const event: Extract<RealtimeServerEvent, { kind: "source_delta" | "translation_delta" }> = {
+    delta: parsed.delta as string,
+    kind,
+  };
+  if (
+    typeof parsed.elapsed_ms === "number" &&
+    Number.isFinite(parsed.elapsed_ms) &&
+    parsed.elapsed_ms >= 0
+  ) {
+    event.provider_elapsed_ms = parsed.elapsed_ms;
+  }
+  if (typeof parsed.event_id === "string" && parsed.event_id.length <= 512) {
+    event.provider_event_id = parsed.event_id;
+  }
+  return event;
 }
 
 function toOpenAILanguage(language: LanguageCode): string {
@@ -131,6 +181,28 @@ function parseJson(value: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function shortString(value: unknown): string | null {
+  return typeof value === "string" && value.length <= 512 ? value : null;
+}
+
+function nestedShortString(value: unknown, keys: string[]): string | null {
+  let current = value;
+  for (const key of keys) {
+    const parent = record(current);
+    if (!parent) {
+      return null;
+    }
+    current = parent[key];
+  }
+  return shortString(current);
 }
 
 function encodeBase64(data: ArrayBuffer): string {
