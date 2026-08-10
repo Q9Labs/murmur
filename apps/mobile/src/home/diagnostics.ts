@@ -1,5 +1,6 @@
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import Constants from "expo-constants";
 import { Platform, Share } from "react-native";
 
 import type { AudioStateEvent } from "../../modules/murmur-audio";
@@ -51,8 +52,15 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
       summary: {
         audio_capture_active: params.audioState?.capture_active ?? null,
         audio_playback_active: params.audioState?.playback_active ?? null,
+        capture_frames_received_by_js:
+          params.diagnosticsSnapshot.capture.frames_received_by_js,
         debug_log_count: params.debugLog.length,
         error: params.error,
+        input_chunks_sent: params.diagnosticsSnapshot.transport.input_chunks_sent,
+        input_chunks_received_by_worker:
+          params.diagnosticsSnapshot.transport.worker_audio_chunks_received,
+        output_playback_enqueue_failures:
+          params.diagnosticsSnapshot.transport.output_playback_enqueue_failures,
         realtime_socket_open: params.diagnosticsSnapshot.runtime.realtime_socket_open,
         source_char_count: params.diagnosticsSnapshot.runtime.source_char_count,
         span_count: params.spans.length,
@@ -60,8 +68,12 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
         status: params.status,
         translated_char_count: params.diagnosticsSnapshot.runtime.translated_char_count,
       },
+      app: {
+        build_version: Constants.nativeBuildVersion ?? null,
+        version: Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? null,
+      },
       audio_state: toDiagnosticJson(params.audioState),
-      runtime: toDiagnosticJson(params.diagnosticsSnapshot),
+      live_translation: toDiagnosticJson(params.diagnosticsSnapshot),
       session: toDiagnosticJson(params.session),
       spans: params.spans.map((span) => toDiagnosticJson(span)),
     },

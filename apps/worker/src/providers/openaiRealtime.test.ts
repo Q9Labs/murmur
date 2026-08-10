@@ -43,7 +43,17 @@ describe("OpenAI realtime translation adapter", () => {
     expect(parseTranslationOutput(JSON.stringify({
       type: "session.input_transcript.delta",
       delta: "hello",
-    }))).toEqual({ kind: "event", event: { delta: "hello", kind: "source_delta" } });
+      elapsed_ms: 1_200,
+      event_id: "event_source",
+    }))).toEqual({
+      kind: "event",
+      event: {
+        delta: "hello",
+        kind: "source_delta",
+        provider_elapsed_ms: 1_200,
+        provider_event_id: "event_source",
+      },
+    });
     expect(parseTranslationOutput(JSON.stringify({
       type: "session.output_transcript.delta",
       delta: "مرحبا",
@@ -71,8 +81,34 @@ describe("OpenAI realtime translation adapter", () => {
 
   it("ignores malformed and unrelated provider messages", () => {
     expect(parseTranslationOutput("not-json")).toEqual({ kind: "ignored" });
-    expect(parseTranslationOutput(JSON.stringify({ type: "session.created" }))).toEqual({
+    expect(parseTranslationOutput(JSON.stringify({ type: "rate_limits.updated" }))).toEqual({
       kind: "ignored",
+    });
+  });
+
+  it("sanitizes the effective provider session configuration", () => {
+    expect(parseTranslationOutput(JSON.stringify({
+      type: "session.updated",
+      session: {
+        id: "session_openai",
+        audio: {
+          input: {
+            noise_reduction: { type: "near_field" },
+            transcription: { model: "gpt-realtime-whisper" },
+          },
+          output: { language: "ar" },
+        },
+      },
+    }))).toEqual({
+      kind: "event",
+      event: {
+        input_noise_reduction: "near_field",
+        kind: "provider_session_config",
+        output_language: "ar",
+        phase: "updated",
+        provider_session_id: "session_openai",
+        transcription_model: "gpt-realtime-whisper",
+      },
     });
   });
 });

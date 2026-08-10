@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
@@ -21,6 +23,8 @@ import com.google.android.play.core.integrity.IntegrityTokenRequest
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -37,8 +41,18 @@ class MurmurAudioModule : Module() {
   private var echoCanceler: AcousticEchoCanceler? = null
   private var noiseSuppressor: NoiseSuppressor? = null
   private var gainControl: AutomaticGainControl? = null
-  private var droppedFrames = 0
-  private var eventSeq = 0
+  private val droppedFrames = AtomicInteger(0)
+  private val eventSeq = AtomicInteger(0)
+  private val captureReadErrors = AtomicInteger(0)
+  private val captureFramesEmitted = AtomicLong(0)
+  private val captureBytesEmitted = AtomicLong(0)
+  private val playbackChunksReceived = AtomicLong(0)
+  private val playbackBytesRequested = AtomicLong(0)
+  private val playbackBytesWritten = AtomicLong(0)
+  private val playbackWriteErrors = AtomicInteger(0)
+  private val playbackShortWrites = AtomicInteger(0)
+  @Volatile private var lastCaptureFrameAtMs: Long? = null
+  @Volatile private var lastCaptureFrameRms: Double? = null
   private var audioGenerationId = 0
   private var playbackQueuedMs = 0
   private var playbackEndsAtMs = 0L
@@ -130,7 +144,17 @@ class MurmurAudioModule : Module() {
 
     startForegroundCaptureService()
     audioGenerationId += 1
-    droppedFrames = 0
+    droppedFrames.set(0)
+    captureReadErrors.set(0)
+    captureFramesEmitted.set(0)
+    captureBytesEmitted.set(0)
+    playbackChunksReceived.set(0)
+    playbackBytesRequested.set(0)
+    playbackBytesWritten.set(0)
+    playbackWriteErrors.set(0)
+    playbackShortWrites.set(0)
+    lastCaptureFrameAtMs = null
+    lastCaptureFrameRms = null
     recorder = record
     enableAudioEffects(record.audioSessionId)
     try {
@@ -156,7 +180,8 @@ class MurmurAudioModule : Module() {
         if (read > 0) {
           offset += read
         } else {
-          droppedFrames += 1
+          captureReadErrors.incrementAndGet()
+          droppedFrames.incrementAndGet()
           break
         }
       }
@@ -218,11 +243,19 @@ class MurmurAudioModule : Module() {
   private fun enqueuePcm16(data: ByteArray) {
     if (data.isEmpty()) return
     if (!playbackActive) startPlaybackSync()
+    playbackChunksReceived.incrementAndGet()
+    playbackBytesRequested.addAndGet(data.size.toLong())
     val queuedMs = data.size / 2 * 1000 / MURMUR_SAMPLE_RATE
     playbackQueuedMs += queuedMs
     val written = audioTrack?.write(data, 0, data.size) ?: 0
     if (written < 0) {
-      droppedFrames += 1
+      playbackWriteErrors.incrementAndGet()
+      droppedFrames.incrementAndGet()
+    } else {
+      playbackBytesWritten.addAndGet(written.toLong())
+      if (written < data.size) {
+        playbackShortWrites.incrementAndGet()
+      }
     }
     schedulePlaybackIdle(queuedMs)
     emitState("playback_enqueued")
@@ -293,6 +326,12 @@ class MurmurAudioModule : Module() {
   }
 
   private fun emitFrame(data: ByteArray) {
+    val frameAtMs = System.currentTimeMillis()
+    val frameRms = rms(data)
+    captureFramesEmitted.incrementAndGet()
+    captureBytesEmitted.addAndGet(data.size.toLong())
+    lastCaptureFrameAtMs = frameAtMs
+    lastCaptureFrameRms = frameRms
     sendEvent(
       "onAudioFrame",
       mapOf(
@@ -300,9 +339,9 @@ class MurmurAudioModule : Module() {
         "data" to data,
         "duration_ms" to MURMUR_FRAME_DURATION_MS,
         "event_seq" to nextEventSeq(),
-        "rms" to rms(data),
+        "rms" to frameRms,
         "sample_rate" to MURMUR_SAMPLE_RATE,
-        "timestamp_ms" to System.currentTimeMillis()
+        "timestamp_ms" to frameAtMs
       )
     )
   }
@@ -313,9 +352,10 @@ class MurmurAudioModule : Module() {
 
   private fun statePayload(reason: String): Map<String, Any> =
     mapOf(
+      "android" to androidDiagnostics(),
       "audio_generation_id" to audioGenerationId,
       "capture_active" to captureActive,
-      "dropped_frames" to droppedFrames,
+      "dropped_frames" to droppedFrames.get(),
       "event_seq" to nextEventSeq(),
       "playback_active" to playbackActive,
       "playback_queued_ms" to playbackQueuedMs,
@@ -325,8 +365,69 @@ class MurmurAudioModule : Module() {
     )
 
   private fun nextEventSeq(): Int {
-    eventSeq += 1
-    return eventSeq
+    return eventSeq.incrementAndGet()
+  }
+
+  private fun androidDiagnostics(): Map<String, Any?> {
+    val context = appContext.reactContext
+    val audioManager = context?.getSystemService(AudioManager::class.java)
+    return mapOf(
+      "acoustic_echo_canceler" to audioEffectState(
+        AcousticEchoCanceler.isAvailable(),
+        echoCanceler?.enabled,
+        echoCanceler?.hasControl()
+      ),
+      "audio_mode" to audioManager?.mode,
+      "audio_source" to "voice_recognition",
+      "automatic_gain_control" to audioEffectState(
+        AutomaticGainControl.isAvailable(),
+        gainControl?.enabled,
+        gainControl?.hasControl()
+      ),
+      "capture_bytes_emitted_native" to captureBytesEmitted.get(),
+      "capture_frames_emitted_native" to captureFramesEmitted.get(),
+      "capture_read_errors" to captureReadErrors.get(),
+      "last_capture_frame_at_ms" to lastCaptureFrameAtMs,
+      "last_capture_frame_rms" to lastCaptureFrameRms,
+      "noise_suppressor" to audioEffectState(
+        NoiseSuppressor.isAvailable(),
+        noiseSuppressor?.enabled,
+        noiseSuppressor?.hasControl()
+      ),
+      "output_route" to outputRoute(audioTrack?.routedDevice),
+      "playback_bytes_requested" to playbackBytesRequested.get(),
+      "playback_bytes_written" to playbackBytesWritten.get(),
+      "playback_chunks_received" to playbackChunksReceived.get(),
+      "playback_short_writes" to playbackShortWrites.get(),
+      "playback_underrun_count" to (audioTrack?.underrunCount ?: 0),
+      "playback_usage" to "media",
+      "playback_write_errors" to playbackWriteErrors.get(),
+      "sdk_int" to Build.VERSION.SDK_INT
+    )
+  }
+
+  private fun audioEffectState(
+    available: Boolean,
+    enabled: Boolean?,
+    hasControl: Boolean?
+  ): Map<String, Boolean> = mapOf(
+    "available" to available,
+    "created" to (enabled != null),
+    "enabled" to (enabled ?: false),
+    "has_control" to (hasControl ?: false)
+  )
+
+  private fun outputRoute(device: AudioDeviceInfo?): String = when (device?.type) {
+    AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "built_in_earpiece"
+    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "built_in_speaker"
+    AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "bluetooth_a2dp"
+    AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "bluetooth_sco"
+    AudioDeviceInfo.TYPE_USB_DEVICE -> "usb_device"
+    AudioDeviceInfo.TYPE_USB_HEADSET -> "usb_headset"
+    AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "wired_headphones"
+    AudioDeviceInfo.TYPE_WIRED_HEADSET -> "wired_headset"
+    null -> "unknown"
+    else -> "type_${device.type}"
   }
 
   private fun hasRecordAudioPermission(): Boolean {

@@ -17,9 +17,11 @@ class MockWebSocket {
   static OPEN = 1;
   static instances: MockWebSocket[] = [];
   binaryType = "";
+  bufferedAmount = 0;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
   onmessage: ((event: { data: unknown }) => void) | null = null;
+  onopen: (() => void) | null = null;
   readyState = MockWebSocket.OPEN;
   sent: unknown[] = [];
 
@@ -59,6 +61,31 @@ describe("RealtimeTranslationClient", () => {
     ]);
   });
 
+  it("batches ten 20 ms PCM frames into one 200 ms chunk", () => {
+    const client = createRealtimeTranslationClient({
+      onEvent: vi.fn(),
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    for (let index = 0; index < 10; index += 1) {
+      client.sendAudio(new Uint8Array(960).fill(index));
+    }
+
+    const socket = MockWebSocket.instances[0];
+    expect(socket?.sent).toHaveLength(1);
+    expect(socket?.sent[0]).toBeInstanceOf(Uint8Array);
+    expect((socket?.sent[0] as Uint8Array).byteLength).toBe(9_600);
+    expect(client.getDiagnostics()).toMatchObject({
+      input_buffered_bytes: 0,
+      input_bytes_received: 9_600,
+      input_bytes_sent: 9_600,
+      input_chunk_target_bytes: 9_600,
+      input_chunks_sent: 1,
+      input_frames_received: 10,
+      input_partial_chunks_sent: 0,
+    });
+  });
+
   it("plays translated PCM and emits normalized transcript events", async () => {
     const onEvent = vi.fn();
     const client = createRealtimeTranslationClient({
@@ -69,12 +96,40 @@ describe("RealtimeTranslationClient", () => {
     const socket = MockWebSocket.instances[0];
     socket?.onmessage?.({ data: new Uint8Array([3, 4]).buffer });
     socket?.onmessage?.({
-      data: JSON.stringify({ delta: "hello", kind: "source_delta" }),
+      data: JSON.stringify({
+        delta: "hello",
+        kind: "source_delta",
+        provider_elapsed_ms: 1_200,
+        provider_event_id: "event_source",
+      }),
+    });
+    socket?.onmessage?.({
+      data: JSON.stringify({
+        bytes_received: 9_600,
+        chunk_seq: 1,
+        kind: "input_audio_ack",
+        worker_received_at_ms: 2_000,
+      }),
     });
     await vi.waitFor(() => {
       expect(MurmurAudioModule.enqueuePcm16).toHaveBeenCalledWith(new Uint8Array([3, 4]));
     });
-    expect(onEvent).toHaveBeenCalledWith({ delta: "hello", kind: "source_delta" });
+    expect(onEvent).toHaveBeenCalledWith({
+      delta: "hello",
+      kind: "source_delta",
+      provider_elapsed_ms: 1_200,
+      provider_event_id: "event_source",
+    });
+    expect(client.getDiagnostics()).toMatchObject({
+      last_provider_source_elapsed_ms: 1_200,
+      last_provider_source_event_id: "event_source",
+      output_audio_bytes_received: 2,
+      output_audio_chunks_received: 1,
+      output_playback_enqueues: 1,
+      provider_source_delta_count: 1,
+      worker_audio_bytes_received: 9_600,
+      worker_audio_chunks_received: 1,
+    });
   });
 
   it("rejects malformed server events", () => {

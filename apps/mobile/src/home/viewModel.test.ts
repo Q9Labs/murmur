@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
+import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
+import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
 import { createSession, createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "./viewModel";
 
@@ -9,11 +11,13 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     cancel: async () => undefined,
     debug_log: [],
     diagnostics_snapshot: {
+      capture: createAudioCaptureDiagnosticsTracker().snapshot(),
       runtime: {
         realtime_socket_open: false,
         source_char_count: 0,
         translated_char_count: 0,
       },
+      transport: createEmptyRealtimeTransportDiagnostics(),
     },
     error: null,
     latency_report: {},

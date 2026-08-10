@@ -149,13 +149,26 @@ function bindClientEvents(
   upstream: WorkerWebSocket,
   finishSessionRecord: () => void,
 ): void {
+  let inputChunkSeq = 0;
+  let inputBytesReceived = 0;
+  const forwardAudio = (audio: ArrayBuffer): void => {
+    upstream.send(createInputAudioMessage(audio));
+    inputChunkSeq += 1;
+    inputBytesReceived += audio.byteLength;
+    send(client, {
+      bytes_received: inputBytesReceived,
+      chunk_seq: inputChunkSeq,
+      kind: "input_audio_ack",
+      worker_received_at_ms: Date.now(),
+    });
+  };
   client.addEventListener("message", (event: MessageEvent) => {
     if (event.data instanceof ArrayBuffer) {
       if (!isAcceptedAudioFrame(event.data.byteLength)) {
         sendSessionError(client, "audio_frame_too_large", false);
         return;
       }
-      upstream.send(createInputAudioMessage(event.data));
+      forwardAudio(event.data);
       return;
     }
     if (event.data instanceof Blob) {
@@ -165,7 +178,7 @@ function bindClientEvents(
       }
       void event.data.arrayBuffer().then((audio) => {
         if (upstream.readyState === WebSocket.OPEN) {
-          upstream.send(createInputAudioMessage(audio));
+          forwardAudio(audio);
         }
       });
       return;

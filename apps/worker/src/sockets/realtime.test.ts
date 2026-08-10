@@ -57,6 +57,7 @@ describe("app-facing realtime socket", () => {
 
   it("bounds binary audio frames", () => {
     expect(isAcceptedAudioFrame(960)).toBe(true);
+    expect(isAcceptedAudioFrame(9_600)).toBe(true);
     expect(isAcceptedAudioFrame(64 * 1024)).toBe(true);
     expect(isAcceptedAudioFrame(0)).toBe(false);
     expect(isAcceptedAudioFrame(64 * 1024 + 1)).toBe(false);
@@ -234,6 +235,8 @@ describe("app-facing realtime socket", () => {
       audio: "AQID",
       type: "session.input_audio_buffer.append",
     });
+    expect(client.sent.map(String).join(" ")).toContain("input_audio_ack");
+    expect(client.sent.map(String).join(" ")).toContain('"bytes_received":3');
 
     client.dispatchEvent(new MessageEvent("message", {
       data: new ArrayBuffer(64 * 1024 + 1),

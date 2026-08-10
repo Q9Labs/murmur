@@ -10,10 +10,11 @@ import type {
   ReportTranslationCategory,
   RealtimeServerEvent,
 } from "@murmur/protocol/transport/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import MurmurAudioModule, {
   type AudioFrameEvent,
+  type AudioStateEvent,
 } from "../../../modules/murmur-audio";
 import { getOrCreateInstallId } from "../installIdentity";
 import {
@@ -22,9 +23,11 @@ import {
   summarizeLatency,
 } from "../latency";
 import {
+  createEmptyRealtimeTransportDiagnostics,
   createRealtimeTranslationClient,
   type RealtimeTranslationClient,
   type RealtimeTranslationClientEvent,
+  type RealtimeTransportDiagnostics,
 } from "../providers/realtimeTranslation";
 import { reportTranslation } from "../providers/reportTranslation";
 import {
@@ -43,6 +46,7 @@ import {
   createWorkerSession,
   requestMicrophonePermission,
 } from "./workerApi";
+import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
 
 const maxDebugEntries = 200;
 const sessionCloseTimeoutMs = 5_000;
@@ -71,6 +75,11 @@ export function useLiveTranslation(
   const finishingRef = useRef(false);
   const completionPromiseRef = useRef<Promise<LiveTranslationCompletion | undefined> | null>(null);
   const completionResolveRef = useRef<((completion: LiveTranslationCompletion | undefined) => void) | null>(null);
+  const captureDiagnosticsRef = useRef(createAudioCaptureDiagnosticsTracker());
+  const lastTransportDiagnosticsRef = useRef<RealtimeTransportDiagnostics>(
+    createEmptyRealtimeTransportDiagnostics(),
+  );
+  const playbackActiveRef = useRef(false);
 
   useEffect(() => {
     sessionRef.current = session;
@@ -89,9 +98,20 @@ export function useLiveTranslation(
     const subscription = MurmurAudioModule.addListener(
       "onAudioFrame",
       (frame: AudioFrameEvent) => {
+        captureDiagnosticsRef.current.recordFrame(frame, playbackActiveRef.current);
         if (sessionRef.current.state === "live") {
           clientRef.current?.sendAudio(frame.data);
         }
+      },
+    );
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const subscription = MurmurAudioModule.addListener(
+      "onAudioState",
+      (state: AudioStateEvent) => {
+        playbackActiveRef.current = state.playback_active;
       },
     );
     return () => subscription.remove();
@@ -186,6 +206,9 @@ export function useLiveTranslation(
     spanRef.current = null;
     firstSourceReceivedRef.current = false;
     firstTranslationReceivedRef.current = false;
+    captureDiagnosticsRef.current.reset();
+    lastTransportDiagnosticsRef.current = createEmptyRealtimeTransportDiagnostics();
+    playbackActiveRef.current = false;
     resetCompletionWaiter();
     transition("requesting_mic_permission");
     if (!(await requestMicrophonePermission())) {
@@ -290,6 +313,9 @@ export function useLiveTranslation(
       applyTranscriptDelta(event);
       return;
     }
+    if (event.kind === "input_audio_ack" || event.kind === "provider_session_config") {
+      return;
+    }
     if (event.kind === "session_closed") {
       await finishSession("ended");
       return;
@@ -360,6 +386,7 @@ export function useLiveTranslation(
     clearConnectionDeadline(connectDeadlineRef);
     transition("cancelling");
     const appSessionId = sessionRef.current.identity.app_session_id;
+    preserveClientDiagnostics();
     clientRef.current?.close("user_cancel");
     clientRef.current = null;
     completionResolveRef.current?.(undefined);
@@ -386,6 +413,7 @@ export function useLiveTranslation(
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     const appSessionId = sessionRef.current.identity.app_session_id;
+    preserveClientDiagnostics();
     clientRef.current?.close("session_complete");
     clientRef.current = null;
     await MurmurAudioModule.stopCapture("session_complete");
@@ -441,16 +469,22 @@ export function useLiveTranslation(
     setReportReceiptId(response.report_id);
   }
 
-  const diagnosticsSnapshot = useMemo(() => {
-    const span = spans[0];
-    return {
-      runtime: {
-        realtime_socket_open: session.state === "live" || session.state === "stopping",
-        source_char_count: span?.source_caption.length ?? 0,
-        translated_char_count: span?.translated_caption.length ?? 0,
-      },
-    };
-  }, [session.state, spans]);
+  const span = spans[0];
+  const diagnosticsSnapshot = {
+    capture: captureDiagnosticsRef.current.snapshot(),
+    runtime: {
+      realtime_socket_open: session.state === "live" || session.state === "stopping",
+      source_char_count: span?.source_caption.length ?? 0,
+      translated_char_count: span?.translated_caption.length ?? 0,
+    },
+    transport: clientRef.current?.getDiagnostics() ?? lastTransportDiagnosticsRef.current,
+  };
+
+  function preserveClientDiagnostics(): void {
+    if (clientRef.current) {
+      lastTransportDiagnosticsRef.current = clientRef.current.getDiagnostics();
+    }
+  }
 
   return {
     cancel,

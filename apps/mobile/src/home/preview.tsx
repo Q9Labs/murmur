@@ -7,6 +7,8 @@ import type { ScrollView } from "react-native";
 
 // cspell:ignore cada ciudad cuando diferente entiendes siente
 import type { LiveTranslationController } from "../lib/live-translation/types";
+import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
+import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
 import { buildHomeViewModel } from "./viewModel";
 import { BloomOnboarding } from "./variants/bloom/onboarding";
 import { BloomShell } from "./variants/bloom";
@@ -21,11 +23,13 @@ const previewLive: LiveTranslationController = {
   cancel: async () => undefined,
   debug_log: [],
   diagnostics_snapshot: {
+    capture: createAudioCaptureDiagnosticsTracker().snapshot(),
     runtime: {
       realtime_socket_open: false,
       source_char_count: previewSourceCaption.length,
       translated_char_count: previewTranslation.length,
     },
+    transport: createEmptyRealtimeTransportDiagnostics(),
   },
   error: null,
   latency_report: {},

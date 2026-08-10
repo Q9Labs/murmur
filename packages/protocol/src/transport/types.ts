@@ -22,10 +22,28 @@ export type RealtimeServerEvent =
   | {
       delta: string;
       kind: "source_delta";
+      provider_elapsed_ms?: number;
+      provider_event_id?: string;
     }
   | {
       delta: string;
       kind: "translation_delta";
+      provider_elapsed_ms?: number;
+      provider_event_id?: string;
+    }
+  | {
+      bytes_received: number;
+      chunk_seq: number;
+      kind: "input_audio_ack";
+      worker_received_at_ms: number;
+    }
+  | {
+      input_noise_reduction: string | null;
+      kind: "provider_session_config";
+      output_language: string | null;
+      phase: "created" | "updated";
+      provider_session_id: string | null;
+      transcription_model: string | null;
     }
   | {
       kind: "session_closed";

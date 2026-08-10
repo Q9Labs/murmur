@@ -106,10 +106,12 @@ export default function HomeScreen(): ReactNode {
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
       "onAudioState",
-      (nextState: AudioStateEvent) => setAudioState(nextState),
+      (nextState: AudioStateEvent) => {
+        setAudioState((current) => newestAudioState(current, nextState));
+      },
     );
     void MurmurAudioModule.getAudioState().then((nextState) => {
-      setAudioState(nextState as AudioStateEvent);
+      setAudioState((current) => newestAudioState(current, nextState as AudioStateEvent));
     });
     return () => subscription.remove();
   }, []);
@@ -240,6 +242,19 @@ export default function HomeScreen(): ReactNode {
       viewModel={viewModel}
     />
   );
+}
+
+function newestAudioState(
+  current: AudioStateEvent | null,
+  next: AudioStateEvent,
+): AudioStateEvent {
+  if (!current) {
+    return next;
+  }
+  const generationOrder = Math.sign(next.audio_generation_id - current.audio_generation_id);
+  const eventOrder = Math.sign(next.event_seq - current.event_seq);
+  const order = generationOrder || eventOrder;
+  return order >= 0 ? next : current;
 }
 
 async function resetIdentity(setMessage: (message: string | null) => void): Promise<void> {
