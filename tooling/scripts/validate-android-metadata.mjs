@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  androidScreenshotSpec,
+  comparePngDirectories,
+  createFailureCollector,
+  validatePngDirectory,
+  validatePngFile,
+} from "./store-screenshot-validation.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
@@ -11,13 +18,7 @@ const screenshotRedesignPending = existsSync(
   join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
 );
 const locales = ["en-US", "en-GB"];
-const failures = [];
-
-const assert = (condition, message) => {
-  if (!condition) {
-    failures.push(message);
-  }
-};
+const { assert, failures } = createFailureCollector();
 
 const read = (locale, relativePath) =>
   readFileSync(join(metadataDir, locale, relativePath), "utf8").trim();
@@ -25,20 +26,6 @@ const read = (locale, relativePath) =>
 const assertLength = (label, value, max) => {
   assert(value.length > 0, `${label} must not be empty`);
   assert(value.length <= max, `${label} must be <= ${max} chars; got ${value.length}`);
-};
-
-const pngSize = (filePath) => {
-  const buffer = readFileSync(filePath);
-  const signature = buffer.subarray(0, 8).toString("hex");
-  assert(signature === "89504e470d0a1a0a", `${filePath} must be a PNG`);
-  if (signature !== "89504e470d0a1a0a") {
-    return { width: 0, height: 0 };
-  }
-
-  return {
-    width: buffer.readUInt32BE(16),
-    height: buffer.readUInt32BE(20),
-  };
 };
 
 for (const locale of locales) {
@@ -68,33 +55,29 @@ for (const locale of locales) {
   assert(/AI output can be incomplete or inaccurate/i.test(combinedCopy), `${locale} Play metadata must disclose AI output limits`);
 
   const featureGraphicPath = join(localeDir, "images", "featureGraphic", "feature-graphic.png");
-  assert(existsSync(featureGraphicPath), `${locale} feature graphic must exist`);
-  if (existsSync(featureGraphicPath)) {
-    const { width, height } = pngSize(featureGraphicPath);
-    assert(width === 1024 && height === 500, `${locale} feature graphic must be 1024x500; got ${width}x${height}`);
-  }
+  const featureGraphicValidation = validatePngFile({
+    expectedHeight: 500,
+    expectedWidth: 1024,
+    filePath: featureGraphicPath,
+    label: `${locale} feature graphic`,
+  });
+  failures.push(...featureGraphicValidation.failures);
 
   const screenshotDir = join(localeDir, "images", "phoneScreenshots");
-  if (!screenshotRedesignPending) {
-    assert(existsSync(screenshotDir), `${locale} phone screenshots directory must exist`);
-  }
-  if (existsSync(screenshotDir)) {
-    const screenshots = readdirSync(screenshotDir)
-      .filter((fileName) => /\.png$/i.test(fileName))
-      .sort();
-    if (!screenshotRedesignPending) {
-      assert(screenshots.length >= 2, `${locale} must include at least 2 phone screenshots`);
-      assert(screenshots.length <= 8, `${locale} must include no more than 8 phone screenshots`);
-    }
-    for (const screenshot of screenshots) {
-      const screenshotPath = join(screenshotDir, screenshot);
-      const { width, height } = pngSize(screenshotPath);
-      assert(
-        Math.min(width, height) >= 320,
-        `${locale} ${screenshot} min dimension must be at least 320px; got ${width}x${height}`,
-      );
-    }
-  }
+  const screenshotValidation = validatePngDirectory({
+    directory: screenshotDir,
+    expectedCount: screenshotRedesignPending ? undefined : androidScreenshotSpec.count,
+    expectedHeight: screenshotRedesignPending ? undefined : androidScreenshotSpec.height,
+    expectedWidth: screenshotRedesignPending ? undefined : androidScreenshotSpec.width,
+    directoryLabel: `${locale} phone screenshots`,
+    label: locale,
+    minDimension: true,
+    playLimits: !screenshotRedesignPending,
+    requireDirectory: !screenshotRedesignPending,
+    requireOpaque: !screenshotRedesignPending,
+    requireRgb: !screenshotRedesignPending,
+  });
+  failures.push(...screenshotValidation.failures);
 }
 
 if (screenshotRedesignPending) {
@@ -104,6 +87,17 @@ if (screenshotRedesignPending) {
 const usDescription = read("en-US", "full_description.txt");
 const gbDescription = read("en-GB", "full_description.txt");
 assert(usDescription === gbDescription, "en-US and en-GB Play full descriptions must stay mirrored for V1");
+
+if (!screenshotRedesignPending) {
+  failures.push(
+    ...comparePngDirectories({
+      leftDirectory: join(metadataDir, "en-US", "images", "phoneScreenshots"),
+      leftLabel: "en-US Play",
+      rightDirectory: join(metadataDir, "en-GB", "images", "phoneScreenshots"),
+      rightLabel: "en-GB Play",
+    }),
+  );
+}
 
 if (failures.length > 0) {
   console.error("Android metadata validation failed:");

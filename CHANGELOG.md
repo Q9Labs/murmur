@@ -4,10 +4,13 @@ All notable changes to Murmur are documented here.
 
 ## Unreleased
 
+## 1.2.0 - 2026-08-10
+
 ### Added
 
 - System-aware dark mode across the Bloom screens, shared sheets, language picker, native splash, and store source captures.
 - Three no-human store screenshot direction studies for the redesigned App Store and Google Play sets.
+- A complete Option B store screenshot set built from verified native iOS and Android captures.
 - Deterministic development previews and new iPhone source captures for the polished welcome and live-translation screens.
 - Six focused landing and live-translation design studies built around the new Murmur brand mark.
 - OpenAI Realtime Translation through an app-facing Worker WebSocket, including source transcripts, translated transcripts, and translated audio.

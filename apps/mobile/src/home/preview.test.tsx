@@ -50,6 +50,16 @@ describe("Bloom preview", () => {
     });
   });
 
+  it("opens the source-language picker over the translation screen", () => {
+    renderToStaticMarkup(<BloomPreview screen="source-picker" />);
+
+    expect(harness.pickerProps).toMatchObject({
+      mode: "source",
+      sourceLanguageCode: "en",
+      targetLanguageCode: "es",
+    });
+  });
+
   it("opens settings over the translation screen", () => {
     renderToStaticMarkup(<BloomPreview screen="settings" />);
 
@@ -71,6 +81,28 @@ describe("Bloom preview", () => {
     });
   });
 
+  it("renders the privacy onboarding step with consent unchecked", () => {
+    renderToStaticMarkup(<BloomPreview screen="privacy" />);
+
+    expect(harness.onboardingProps).toMatchObject({
+      privacyConsentChecked: false,
+      sourceLanguage: "English",
+      step: "privacy",
+      targetLanguage: "Spanish",
+    });
+  });
+
+  it("renders the language setup onboarding step with a start-ready pair", () => {
+    renderToStaticMarkup(<BloomPreview screen="languages" />);
+
+    expect(harness.onboardingProps).toMatchObject({
+      canStart: true,
+      sourceLanguage: "English",
+      step: "languages",
+      targetLanguage: "Spanish",
+    });
+  });
+
   it("renders a committed English-to-Spanish live translation", () => {
     renderToStaticMarkup(<BloomPreview screen="translation" />);
 
@@ -82,6 +114,14 @@ describe("Bloom preview", () => {
     expect(live.spans[0]).toMatchObject({
       source_caption: "The city feels different when you understand every voice.",
       translated_caption: "La ciudad se siente diferente cuando entiendes cada voz.",
+    });
+  });
+
+  it("renders the live translation with translated audio disabled", () => {
+    renderToStaticMarkup(<BloomPreview screen="translation-muted" />);
+
+    expect(harness.shellProps).toMatchObject({
+      audioPlaybackEnabled: false,
     });
   });
 });

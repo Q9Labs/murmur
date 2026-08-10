@@ -1,23 +1,25 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createFailureCollector, validatePngDirectory } from "./store-screenshot-validation.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
 const metadataDir = join(mobileRoot, "fastlane", "metadata", "en-US");
+const screenshotRedesignPending = existsSync(
+  join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
+);
+const screenshotDir = join(metadataDir, "screenshots");
+const iosScreenshotWidth = 1320;
+const iosScreenshotHeight = 2868;
+const iosScreenshotCount = 7;
 
 const read = (relativePath) =>
   readFileSync(join(metadataDir, relativePath), "utf8").trim();
 
-const failures = [];
-
-const assert = (condition, message) => {
-  if (!condition) {
-    failures.push(message);
-  }
-};
+const { assert, failures } = createFailureCollector();
 
 const assertLength = (label, value, max) => {
   assert(value.length > 0, `${label} must not be empty`);
@@ -70,6 +72,23 @@ assert(
   /no account/i.test(reviewNotes),
   "Review notes must state that no account is required",
 );
+
+if (!screenshotRedesignPending) {
+  const screenshotValidation = validatePngDirectory({
+    directory: screenshotDir,
+    expectedCount: iosScreenshotCount,
+    expectedHeight: iosScreenshotHeight,
+    expectedWidth: iosScreenshotWidth,
+    directoryLabel: "en-US App Store screenshots",
+    label: "en-US",
+    requireDirectory: true,
+    requireOpaque: true,
+    screenshotLabel: "App Store screenshots",
+  });
+  failures.push(...screenshotValidation.failures);
+} else {
+  console.log("iOS screenshot validation skipped while the screenshot redesign is pending.");
+}
 
 if (failures.length > 0) {
   console.error("iOS metadata validation failed:");

@@ -3,12 +3,12 @@
     "name": "Murmur",
     "android_package": "com.q9labsai.murmur",
     "ios_bundle_id": "com.q9labsai.murmur",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
-  "last_updated": "2026-08-08",
-  "status": "not_submission_ready",
+  "last_updated": "2026-08-10",
+  "status": "submission_ready",
   "readiness_notes": [
-    "Store screenshots are intentionally absent while the screenshot redesign is pending."
+    "Option B store screenshots passed local iOS, Android, opacity, dimension, and locale-mirroring validation."
   ],
   "policy_sources_checked": [
     {

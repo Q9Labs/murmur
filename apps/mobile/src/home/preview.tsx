@@ -85,19 +85,36 @@ const previewSettingsLive: LiveTranslationController = {
 
 const noop = (): void => undefined;
 
-export type PreviewScreen = "picker" | "settings" | "translation" | "welcome";
+export type PreviewScreen =
+  | "languages"
+  | "picker"
+  | "privacy"
+  | "settings"
+  | "source-picker"
+  | "translation"
+  | "translation-muted"
+  | "welcome";
 
 export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
-  if (screen === "picker") {
-    return <PickerPreview />;
+  if (screen === "picker" || screen === "source-picker") {
+    return <PickerPreview mode={screen === "source-picker" ? "source" : "target"} />;
   }
   if (screen === "settings") {
     return <SettingsPreview />;
   }
-  return screen === "translation" ? <TranslationPreview /> : <WelcomePreview />;
+  if (screen === "privacy" || screen === "languages") {
+    return <OnboardingPreview step={screen} />;
+  }
+  return screen === "translation-muted" ? (
+    <TranslationPreview audioPlaybackEnabled={false} />
+  ) : screen === "translation" ? (
+    <TranslationPreview />
+  ) : (
+    <WelcomePreview />
+  );
 }
 
-function PickerPreview(): ReactNode {
+function PickerPreview({ mode }: { mode: "source" | "target" }): ReactNode {
   const [sourceLanguageCode, setSourceLanguageCode] =
     useState<SourceLanguageCode>(previewSourceLanguage);
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>(previewTargetLanguage);
@@ -106,7 +123,7 @@ function PickerPreview(): ReactNode {
     <>
       <TranslationPreview />
       <LanguagePickerController
-        mode="target"
+        mode={mode}
         onClose={noop}
         setSourceLanguageCode={setSourceLanguageCode}
         setTargetLanguageCode={setTargetLanguageCode}
@@ -136,6 +153,23 @@ function SettingsPreview(): ReactNode {
   );
 }
 
+function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNode {
+  const props: VariantOnboardingProps = {
+    canStart: true,
+    onContinue: noop,
+    onOpenPicker: noop,
+    onPrivacyAgree: noop,
+    onStart: noop,
+    onTogglePrivacyConsent: noop,
+    privacyConsentChecked: false,
+    sourceLanguage: "English",
+    step,
+    targetLanguage: "Spanish",
+  };
+
+  return <BloomOnboarding {...props} />;
+}
+
 function WelcomePreview(): ReactNode {
   const props: VariantOnboardingProps = {
     canStart: true,
@@ -153,7 +187,9 @@ function WelcomePreview(): ReactNode {
   return <BloomOnboarding {...props} />;
 }
 
-function TranslationPreview(): ReactNode {
+function TranslationPreview(
+  { audioPlaybackEnabled = true }: { audioPlaybackEnabled?: boolean } = {},
+): ReactNode {
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
@@ -167,7 +203,7 @@ function TranslationPreview(): ReactNode {
     [],
   );
   const props: VariantShellProps = {
-    audioPlaybackEnabled: true,
+    audioPlaybackEnabled,
     audioState: null,
     autoScrollRef,
     live: previewLive,

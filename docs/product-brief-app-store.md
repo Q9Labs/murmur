@@ -6,7 +6,7 @@ Scope: factual research from the current repository state on 2026-08-01. This is
 
 ## 1. App name, IDs, platforms, and tech stack
 
-- **Name:** Murmur. The app config and store title use `Murmur`; the current version is `1.1.0`. Sources: `apps/mobile/app.json`, `apps/mobile/fastlane/metadata/en-US/name.txt`, `package.json`.
+- **Name:** Murmur. The app config and store title use `Murmur`; the current version is `1.2.0`. Sources: `apps/mobile/app.json`, `apps/mobile/fastlane/metadata/en-US/name.txt`, `package.json`.
 - **iOS:** bundle ID `com.q9labsai.murmur`; App Store app ID `6756962206`. iPad support is explicitly disabled. Source: `apps/mobile/app.json`.
 - **Android:** package ID `com.q9labsai.murmur`; Google Play URL is present; current Android version code is `3`. Sources: `apps/mobile/app.json`, `apps/mobile/eas.json`.
 - **Platforms it actually targets:** iOS and Android have store build profiles, submission metadata, store URLs, and platform-specific permissions/assets. Expo web support and a browser audio module exist in code, but no web store target or web product listing was found. Sources: `apps/mobile/eas.json`, `apps/mobile/fastlane/`, `apps/mobile/modules/murmur-audio/src/MurmurAudioModule.web.ts`.

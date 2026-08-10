@@ -1,7 +1,7 @@
 {
   "name": "murmur",
   "description": "A privacy-conscious, one-way live translation app built with Expo and Cloudflare Workers.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -44,11 +44,12 @@
     "store:config": "node tooling/scripts/validate-app-config.mjs",
     "store:blockers": "node tooling/scripts/validate-submission-blockers.mjs",
     "store:metadata": "node tooling/scripts/validate-ios-metadata.mjs && node tooling/scripts/validate-android-metadata.mjs && node tooling/scripts/validate-store-assets.mjs",
+    "store:screenshots:test": "node --test tooling/scripts/build-store-screenshots.test.mjs",
     "store:preflight": "pnpm test && pnpm store:secrets && pnpm store:config && pnpm audit --audit-level moderate && pnpm react:doctor && pnpm store:metadata && (cd apps/mobile && fastlane ios validate_app_store_submission && fastlane android validate_play_submission)",
     "store:submission-readiness": "pnpm store:preflight && pnpm store:live",
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
-    "unit": "pnpm --filter \"@murmur/*\" run unit",
+    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test",
     "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
     "coverage": "pnpm run test:coverage",
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit"
