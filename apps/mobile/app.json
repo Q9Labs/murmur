@@ -17,7 +17,7 @@
         "backgroundColor": "#F8F4ED",
         "dark": {
           "backgroundColor": "#171319",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-dark.png",
           "resizeMode": "contain"
         },
         "image": "./assets/images/splash-icon.png",
@@ -105,7 +105,7 @@
         "backgroundColor": "#F8F4ED",
         "dark": {
           "backgroundColor": "#171319",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-dark.png",
           "resizeMode": "contain"
         },
         "image": "./assets/images/splash-icon.png",

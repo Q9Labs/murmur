@@ -7,21 +7,10 @@ import { formatLatencyPercentiles } from "../lib/latency";
 import type { LanguageCode, LanguageDefinition, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
-import type { ReportTranslationCategory } from "@murmur/protocol/transport/types";
 import { copyDiagnosticsReport, downloadDiagnosticsReport, shareLatencyReport } from "./diagnostics";
 import { ModalSheet } from "./modalSheet";
+import { TranslationReportActions } from "./reportTranslation";
 import { styles } from "./styles";
-
-const reportActions = [
-  { category: "inaccurate", label: "Inaccurate" },
-  { category: "wrong_language", label: "Wrong language" },
-  { category: "offensive_harmful", label: "Harmful" },
-  { category: "speech_issue", label: "Speech" },
-  { category: "other", label: "Other" },
-] as const satisfies readonly {
-  category: ReportTranslationCategory;
-  label: string;
-}[];
 
 export function DiagnosticsModal({
   audioState,
@@ -249,39 +238,13 @@ function DiagnosticSpanRow({
       <Text style={[styles.spanTranslation, targetLanguage.rtl && styles.rtlText]}>
         {getDiagnosticSpanTranslationText(span)}
       </Text>
-      <ReportActions live={live} span={span} />
+      <TranslationReportActions live={live} span={span} />
     </View>
   );
 }
 
 function getDiagnosticSpanTranslationText(span: TranslationSpan): string {
   return span.committed_translated_caption || span.partial_translated_caption || span.status;
-}
-
-function ReportActions({
-  live,
-  span,
-}: {
-  live: LiveTranslationController;
-  span: TranslationSpan;
-}): ReactNode {
-  if (span.status !== "committed") {
-    return null;
-  }
-  return (
-    <View style={styles.reportRow}>
-      {reportActions.map((action) => (
-        <Pressable
-          accessibilityRole="button"
-          key={action.category}
-          onPress={() => void live.reportSpan(span, action.category)}
-          style={styles.reportButton}
-        >
-          <Text style={styles.reportButtonText}>{action.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
 }
 
 function Metric({ label, value }: { label: string; value: string }): ReactNode {

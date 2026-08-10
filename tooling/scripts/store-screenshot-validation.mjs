@@ -1,9 +1,30 @@
 #!/usr/bin/env node
+// cspell:ignore CRC IDAT IHDR IEND PLTE Idat Ihdr Iend Plte idat iend
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const pngSignature = Buffer.from("89504e470d0a1a0a", "hex");
+const maxPngChunkLength = 0x7fffffff;
+const pngChunkCrcTable = new Uint32Array(256);
+const pngCriticalChunkTypes = new Set(["IHDR", "PLTE", "IDAT", "IEND"]);
+const pngChunkTypePattern = /^[A-Za-z][A-Za-z][A-Z][A-Za-z]$/;
+
+for (let index = 0; index < pngChunkCrcTable.length; index += 1) {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  pngChunkCrcTable[index] = value >>> 0;
+}
+
+const pngBitDepthsByColorType = new Map([
+  [0, new Set([1, 2, 4, 8, 16])],
+  [2, new Set([8, 16])],
+  [3, new Set([1, 2, 4, 8])],
+  [4, new Set([8, 16])],
+  [6, new Set([8, 16])],
+]);
 
 export const androidScreenshotSpec = Object.freeze({
   count: 5,
@@ -29,35 +50,239 @@ const emptyImage = (exists = false) => ({
   width: 0,
 });
 
-const hasPngChunk = (buffer, chunkType) => {
-  let offset = 8;
-  while (offset + 12 <= buffer.length) {
-    const chunkLength = buffer.readUInt32BE(offset);
-    const chunkEnd = offset + 12 + chunkLength;
-    if (chunkEnd > buffer.length) {
+const crc32 = (buffer, start, end) => {
+  let crc = 0xffffffff;
+  for (let index = start; index < end; index += 1) {
+    crc = pngChunkCrcTable[(crc ^ buffer[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+};
+
+const invalidPng = (buffer) => ({
+  ...emptyImage(true),
+  buffer,
+});
+
+const hasPngSignature = (buffer) =>
+  buffer.length >= pngSignature.length && buffer.subarray(0, 8).equals(pngSignature);
+
+const isSupportedChunkType = (chunkType) =>
+  chunkType[0] === chunkType[0].toLowerCase() || pngCriticalChunkTypes.has(chunkType);
+
+const hasValidPngChunkType = (chunkType) =>
+  pngChunkTypePattern.test(chunkType) && isSupportedChunkType(chunkType);
+
+const hasPngChunkLength = (buffer, offset, length) =>
+  length <= maxPngChunkLength && length <= buffer.length - offset - 12;
+
+const readPngChunkHeader = (buffer, offset) => {
+  if (buffer.length - offset < 12) {
+    return null;
+  }
+
+  const length = buffer.readUInt32BE(offset);
+  if (!hasPngChunkLength(buffer, offset, length)) {
+    return null;
+  }
+
+  const typeOffset = offset + 4;
+  const type = buffer.toString("latin1", typeOffset, typeOffset + 4);
+  if (!hasValidPngChunkType(type)) {
+    return null;
+  }
+
+  const dataOffset = offset + 8;
+  const crcOffset = dataOffset + length;
+  return {
+    length,
+    crcOffset,
+    dataOffset,
+    typeOffset,
+    type,
+  };
+};
+
+const hasValidPngChunkCrc = (buffer, chunk) =>
+  buffer.readUInt32BE(chunk.crcOffset) === crc32(buffer, chunk.typeOffset, chunk.crcOffset);
+
+const readPngChunk = (buffer, offset) => {
+  const header = readPngChunkHeader(buffer, offset);
+  if (!header || !hasValidPngChunkCrc(buffer, header)) {
+    return null;
+  }
+  return {
+    data: buffer.subarray(header.dataOffset, header.crcOffset),
+    end: header.crcOffset + 4,
+    length: header.length,
+    type: header.type,
+  };
+};
+
+const createPngState = () => ({
+  colorType: null,
+  hasTransparency: false,
+  height: 0,
+  sawIdat: false,
+  sawIend: false,
+  sawIhdr: false,
+  sawPlte: false,
+  width: 0,
+});
+
+const hasValidPngDimension = (dimension) => dimension > 0 && dimension <= maxPngChunkLength;
+
+const hasValidPngDimensions = (width, height) =>
+  [width, height].every(hasValidPngDimension);
+
+const hasValidPngMethods = (compressionMethod, filterMethod, interlaceMethod) =>
+  compressionMethod === 0 && filterMethod === 0 && interlaceMethod <= 1;
+
+const hasValidPngBitDepth = (colorType, bitDepth) => {
+  const bitDepths = pngBitDepthsByColorType.get(colorType);
+  return bitDepths ? bitDepths.has(bitDepth) : false;
+};
+
+const hasValidPngIhdr = (width, height, bitDepth, colorType, compressionMethod, filterMethod, interlaceMethod) =>
+  hasValidPngDimensions(width, height) &&
+  hasValidPngBitDepth(colorType, bitDepth) &&
+  hasValidPngMethods(compressionMethod, filterMethod, interlaceMethod);
+
+const readIhdrMetadata = (chunk) => {
+  if (chunk.length !== 13) {
+    return null;
+  }
+
+  const width = chunk.data.readUInt32BE(0);
+  const height = chunk.data.readUInt32BE(4);
+  const bitDepth = chunk.data[8];
+  const colorType = chunk.data[9];
+  const compressionMethod = chunk.data[10];
+  const filterMethod = chunk.data[11];
+  const interlaceMethod = chunk.data[12];
+  if (!hasValidPngIhdr(width, height, bitDepth, colorType, compressionMethod, filterMethod, interlaceMethod)) {
+    return null;
+  }
+
+  return { colorType, height, width };
+};
+
+const applyIhdrChunk = (chunk, state) => {
+  if (state.sawIhdr) {
+    return false;
+  }
+  const metadata = readIhdrMetadata(chunk);
+  if (!metadata) {
+    return false;
+  }
+  Object.assign(state, metadata, { sawIhdr: true });
+  return true;
+};
+
+const applyPlteChunk = (chunk, state) => {
+  if (!hasValidPngPalette(chunk, state)) {
+    return false;
+  }
+  state.sawPlte = true;
+  return true;
+};
+
+const applyIdatChunk = (chunk, state) => {
+  if (chunk.length === 0) {
+    return false;
+  }
+  state.sawIdat = true;
+  return true;
+};
+
+const applyIendChunk = (chunk, state) => {
+  if (chunk.length !== 0) {
+    return false;
+  }
+  if (!hasCompletePngImageData(state)) {
+    return false;
+  }
+  state.sawIend = true;
+  return true;
+};
+
+const pngChunkHandlers = new Map([
+  ["IHDR", applyIhdrChunk],
+  ["PLTE", applyPlteChunk],
+  ["IDAT", applyIdatChunk],
+  ["IEND", applyIendChunk],
+  ["tRNS", (_chunk, state) => {
+    state.hasTransparency = true;
+    return true;
+  }],
+]);
+
+const applyPngChunk = (chunk, state) =>
+  pngChunkHandlers.get(chunk.type)?.(chunk, state) ?? true;
+
+const isAllowedPngChunkPosition = (chunk, state) =>
+  !state.sawIend && (state.sawIhdr || chunk.type === "IHDR");
+
+const hasCompletePngImageData = (state) =>
+  state.sawIdat && (state.colorType !== 3 || state.sawPlte);
+
+const hasValidPngPalette = (chunk, state) =>
+  [
+    !state.sawPlte,
+    !state.sawIdat,
+    chunk.length > 0,
+    chunk.length % 3 === 0,
+    chunk.length <= 768,
+  ].every(Boolean);
+
+const isCompletePng = (state) =>
+  [state.sawIhdr, hasCompletePngImageData(state), state.sawIend].every(Boolean);
+
+const imageFromPngState = (buffer, state) => ({
+  buffer,
+  colorType: state.colorType,
+  exists: true,
+  hasAlpha: state.colorType === 4 || state.colorType === 6 || state.hasTransparency ? "yes" : "no",
+  height: state.height,
+  isPng: true,
+  width: state.width,
+});
+
+const hasInvalidPngChunk = (chunk, state) => {
+  if (!chunk) {
+    return true;
+  }
+  if (!isAllowedPngChunkPosition(chunk, state)) {
+    return true;
+  }
+  return !applyPngChunk(chunk, state);
+};
+
+const parsePngChunks = (buffer, state) => {
+  let offset = pngSignature.length;
+  while (offset < buffer.length) {
+    const chunk = readPngChunk(buffer, offset);
+    if (hasInvalidPngChunk(chunk, state)) {
       return false;
     }
-    if (buffer.subarray(offset + 4, offset + 8).toString("ascii") === chunkType) {
-      return true;
-    }
-    offset = chunkEnd;
+    offset = chunk.end;
   }
-  return false;
+  return true;
 };
-const isPng = (buffer) => buffer.length >= 26 && buffer.subarray(0, 8).equals(pngSignature);
 
-const imageFromPng = (buffer) => {
-  const colorType = buffer[25];
-  const hasAlpha = colorType === 4 || colorType === 6 || hasPngChunk(buffer, "tRNS") ? "yes" : "no";
-  return {
-    buffer,
-    colorType,
-    exists: true,
-    hasAlpha,
-    height: buffer.readUInt32BE(20),
-    isPng: true,
-    width: buffer.readUInt32BE(16),
-  };
+const parsePng = (buffer) => {
+  if (!hasPngSignature(buffer)) {
+    return invalidPng(buffer);
+  }
+
+  const state = createPngState();
+  if (!parsePngChunks(buffer, state)) {
+    return invalidPng(buffer);
+  }
+
+  if (!isCompletePng(state)) {
+    return invalidPng(buffer);
+  }
+  return imageFromPngState(buffer, state);
 };
 const inspectPng = (filePath) => {
   if (!existsSync(filePath)) {
@@ -65,7 +290,7 @@ const inspectPng = (filePath) => {
   }
 
   const buffer = readFileSync(filePath);
-  return isPng(buffer) ? imageFromPng(buffer) : { ...emptyImage(true), buffer };
+  return parsePng(buffer);
 };
 const listPngFiles = (directory) => {
   if (!existsSync(directory)) {

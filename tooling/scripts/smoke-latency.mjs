@@ -3,8 +3,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
 const workerUrl = process.env.MURMUR_WORKER_URL ?? "https://murmur.q9labs.ai";
 const sourceLanguage = process.env.MURMUR_SOURCE_LANGUAGE ?? "en";
@@ -13,65 +14,111 @@ const spokenText = process.env.MURMUR_SMOKE_TEXT ?? "Hello. How are you today?";
 const speechVoice = process.env.MURMUR_SAY_VOICE ?? "Samantha";
 const echoText = process.env.MURMUR_SMOKE_ECHO_TEXT;
 const echoVoice = process.env.MURMUR_SMOKE_ECHO_VOICE ?? "Majed";
-const pcm = echoText
-  ? mixPcm16(synthesizePcm(spokenText, speechVoice), synthesizePcm(echoText, echoVoice), 2_000, 0.45)
-  : synthesizePcm(spokenText, speechVoice);
 
-const sessionStartedAt = Date.now();
-const sessionResponse = await fetch(`${workerUrl}/v2/session`, {
-  body: JSON.stringify({
-    app_install_id: `synthetic_latency_${Date.now()}`,
-    device_integrity: { available: false, platform: "synthetic", reason: "latency_smoke" },
-    source_language: sourceLanguage,
-    target_language: targetLanguage,
-  }),
-  headers: { "Content-Type": "application/json" },
-  method: "POST",
-});
-const session = await sessionResponse.json();
-if (!sessionResponse.ok) {
-  throw new Error(`session_http_${sessionResponse.status}:${JSON.stringify(session)}`);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runSmoke();
 }
-const sessionCreatedAt = Date.now();
 
-const socketStartedAt = Date.now();
-const socket = new WebSocket(session.realtime_ws_url);
-const resultPromise = collectResult(socket);
-const sessionOpenedPromise = waitForSessionOpened(socket);
-await waitForOpen(socket);
-const socketOpenedAt = Date.now();
-await sessionOpenedPromise;
-const audioStartedAt = Date.now();
-const inputChunksSent = await streamPcm(socket, pcm);
-const audioFinishedAt = Date.now();
-socket.send(JSON.stringify({ kind: "close_session" }));
-const result = await resultPromise;
+async function runSmoke() {
+  const pcm = createSmokePcm();
+  const sessionStartedAt = Date.now();
+  const session = await createSession();
+  const sessionCreatedAt = Date.now();
 
-await fetch(`${workerUrl}/v2/session/${session.app_session_id}/stop`, {
-  body: JSON.stringify({ reason: "smoke_done" }),
-  headers: { "Content-Type": "application/json" },
-  method: "POST",
-}).catch(() => null);
+  const socketStartedAt = Date.now();
+  const socket = new WebSocket(session.realtime_ws_url);
+  const resultPromise = collectResult(socket);
+  const sessionOpenedPromise = waitForSessionOpened(socket);
+  await waitForOpen(socket);
+  const socketOpenedAt = Date.now();
+  await sessionOpenedPromise;
+  const audioStartedAt = Date.now();
+  const inputChunksSent = await streamPcm(socket, pcm);
+  const audioFinishedAt = Date.now();
+  socket.send(JSON.stringify({ kind: "close_session" }));
+  const result = await resultPromise;
 
-console.log("Murmur realtime translation smoke");
-console.log(`worker: ${workerUrl}`);
-console.log(`language_pair: ${sourceLanguage}->${targetLanguage}`);
-console.log(`session_create: ${sessionCreatedAt - sessionStartedAt}ms`);
-console.log(`socket_open: ${socketOpenedAt - socketStartedAt}ms`);
-console.log(`first_source_transcript: ${formatMs(result.firstSourceAt - audioStartedAt)}`);
-console.log(`first_translated_transcript: ${formatMs(result.firstTranslationAt - audioStartedAt)}`);
-console.log(`input_chunks_sent: ${inputChunksSent}`);
-console.log(`input_chunks_received_by_worker: ${result.inputChunksReceived}`);
-console.log(`input_bytes_received_by_worker: ${result.inputBytesReceived}`);
-console.log(`last_source_elapsed_ms: ${result.lastSourceElapsedMs ?? "n/a"}`);
-console.log(`last_translation_elapsed_ms: ${result.lastTranslationElapsedMs ?? "n/a"}`);
-console.log(`translated_audio_chunks: ${result.audioChunks}`);
-console.log(`translated_audio_bytes: ${result.audioBytes}`);
-console.log(`translated_audio_started_before_input_finished: ${
-  result.firstAudioAt > 0 && result.firstAudioAt < audioFinishedAt
-}`);
-console.log(`source: ${result.source}`);
-console.log(`translation: ${result.translation}`);
+  await stopSession(session.app_session_id);
+  logSmokeResult({
+    audioFinishedAt,
+    audioStartedAt,
+    inputChunksSent,
+    result,
+    sessionCreatedAt,
+    sessionStartedAt,
+    socketOpenedAt,
+    socketStartedAt,
+  });
+}
+
+function createSmokePcm() {
+  if (!echoText) {
+    return synthesizePcm(spokenText, speechVoice);
+  }
+  return mixPcm16(
+    synthesizePcm(spokenText, speechVoice),
+    synthesizePcm(echoText, echoVoice),
+    2_000,
+    0.45,
+  );
+}
+
+async function createSession() {
+  const sessionResponse = await fetch(`${workerUrl}/v2/session`, {
+    body: JSON.stringify({
+      app_install_id: `synthetic_latency_${Date.now()}`,
+      device_integrity: { available: false, platform: "synthetic", reason: "latency_smoke" },
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+    }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  const session = await sessionResponse.json();
+  if (!sessionResponse.ok) {
+    throw new Error(`session_http_${sessionResponse.status}:${JSON.stringify(session)}`);
+  }
+  return session;
+}
+
+async function stopSession(sessionId) {
+  await fetch(`${workerUrl}/v2/session/${sessionId}/stop`, {
+    body: JSON.stringify({ reason: "smoke_done" }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  }).catch(() => null);
+}
+
+function logSmokeResult({
+  audioFinishedAt,
+  audioStartedAt,
+  inputChunksSent,
+  result,
+  sessionCreatedAt,
+  sessionStartedAt,
+  socketOpenedAt,
+  socketStartedAt,
+}) {
+  console.log("Murmur realtime translation smoke");
+  console.log(`worker: ${workerUrl}`);
+  console.log(`language_pair: ${sourceLanguage}->${targetLanguage}`);
+  console.log(`session_create: ${sessionCreatedAt - sessionStartedAt}ms`);
+  console.log(`socket_open: ${socketOpenedAt - socketStartedAt}ms`);
+  console.log(`first_source_transcript: ${formatMs(result.firstSourceAt - audioStartedAt)}`);
+  console.log(`first_translated_transcript: ${formatMs(result.firstTranslationAt - audioStartedAt)}`);
+  console.log(`input_chunks_sent: ${inputChunksSent}`);
+  console.log(`input_chunks_received_by_worker: ${result.inputChunksReceived}`);
+  console.log(`input_bytes_received_by_worker: ${result.inputBytesReceived}`);
+  console.log(`last_source_elapsed_ms: ${result.lastSourceElapsedMs ?? "n/a"}`);
+  console.log(`last_translation_elapsed_ms: ${result.lastTranslationElapsedMs ?? "n/a"}`);
+  console.log(`translated_audio_chunks: ${result.audioChunks}`);
+  console.log(`translated_audio_bytes: ${result.audioBytes}`);
+  console.log(`translated_audio_started_before_input_finished: ${
+    result.firstAudioAt > 0 && result.firstAudioAt < audioFinishedAt
+  }`);
+  console.log(`source: ${result.source}`);
+  console.log(`translation: ${result.translation}`);
+}
 
 function collectResult(socket) {
   return new Promise((resolve, reject) => {
@@ -88,26 +135,65 @@ function collectResult(socket) {
       source: "",
       translation: "",
     };
-    const timeout = setTimeout(() => reject(new Error("realtime_translation_timeout")), 45_000);
+    let settled = false;
+    let messageQueue = Promise.resolve();
+    const timeout = setTimeout(() => rejectResult(new Error("realtime_translation_timeout")), 45_000);
+    const context = { reject: rejectResult, resolve: resolveResult, socket, state };
+
     socket.addEventListener("message", (event) => {
-      void collectResultMessage({ event, reject, resolve, socket, state, timeout });
+      messageQueue = messageQueue
+        .then(() => {
+          if (!settled) {
+            return collectResultMessage({ event, ...context });
+          }
+          return undefined;
+        })
+        .catch(rejectResult);
     });
     socket.addEventListener("error", () => {
-      clearTimeout(timeout);
-      reject(new Error("realtime_socket_error"));
+      rejectResult(new Error("realtime_socket_error"));
     });
+
+    function rejectResult(error) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    }
+
+    function resolveResult(result) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      socket.close(1000, "smoke_done");
+      resolve(result);
+    }
   });
 }
 
 async function collectResultMessage(context) {
-  if (typeof context.event.data !== "string") {
-    context.state.firstAudioAt ||= Date.now();
-    context.state.audioBytes += await byteLength(context.event.data);
-    context.state.audioChunks += 1;
+  if (typeof context.event.data === "string") {
+    return collectTextResultMessage(context);
+  }
+  return collectAudioResultMessage(context);
+}
+
+async function collectAudioResultMessage(context) {
+  context.state.firstAudioAt ||= Date.now();
+  context.state.audioBytes += await byteLength(context.event.data);
+  context.state.audioChunks += 1;
+}
+
+function collectTextResultMessage(context) {
+  const message = safeJson(context.event.data);
+  if (!message) {
     return;
   }
-  const message = safeJson(context.event.data);
-  if (!message || finishResultSession(context, message)) {
+  if (finishResultSession(context, message)) {
     return;
   }
   updateResultState(context.state, message);
@@ -115,13 +201,10 @@ async function collectResultMessage(context) {
 
 function finishResultSession(context, message) {
   if (message.kind === "session_error") {
-    clearTimeout(context.timeout);
     context.reject(new Error(`realtime_${message.code}`));
     return true;
   }
   if (message.kind === "session_closed") {
-    clearTimeout(context.timeout);
-    context.socket.close(1000, "smoke_done");
     context.resolve(context.state);
     return true;
   }
@@ -239,12 +322,28 @@ function parseWavPcm(buffer) {
 }
 
 async function byteLength(data) {
-  if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+  const directLength = directByteLength(data);
+  if (directLength !== null) {
+    return directLength;
+  }
+  return blobByteLength(data);
+}
+
+function directByteLength(data) {
+  if (data instanceof ArrayBuffer) {
     return data.byteLength;
   }
-  return data && typeof data.arrayBuffer === "function"
-    ? (await data.arrayBuffer()).byteLength
-    : 0;
+  if (ArrayBuffer.isView(data)) {
+    return data.byteLength;
+  }
+  return null;
+}
+
+async function blobByteLength(data) {
+  if (!data || typeof data.arrayBuffer !== "function") {
+    return 0;
+  }
+  return (await data.arrayBuffer()).byteLength;
 }
 
 function safeJson(value) {
@@ -258,3 +357,5 @@ function safeJson(value) {
 function formatMs(value) {
   return value > 0 ? `${value}ms` : "n/a";
 }
+
+export { collectResult };

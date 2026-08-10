@@ -3,12 +3,9 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
+import reactNativeTestHarness from "./reactNativeTestHarness";
 
-vi.mock("react-native", () => ({
-  Pressable: ({ children }: { children?: ReactNode }) => <button>{children}</button>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  View: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-}));
+vi.mock("react-native", () => reactNativeTestHarness);
 
 vi.mock("./modalSheet", () => ({
   ModalSheet: ({ children, open }: { children?: ReactNode; open: boolean }) =>
@@ -52,14 +49,16 @@ describe("settings sheet", () => {
     expect(markup).toContain("Terms of use");
     expect(markup).toContain("Support &amp; data requests");
     expect(markup).toContain("Delete local data");
+    expect(markup).toContain("Report translation");
+    expect(markup).toContain("Reset Murmur Identity");
     expect(markup).not.toContain("Session diagnostics");
-    expect(markup).not.toContain("Reset accountless identity");
   });
 
   it("shows internal controls in developer builds", () => {
     const markup = renderSettings(true);
 
     expect(markup).toContain("Session diagnostics");
-    expect(markup).toContain("Reset accountless identity");
+    expect(markup).toContain("Reset Murmur Identity");
+    expect(markup).not.toContain("Report translation");
   });
 });

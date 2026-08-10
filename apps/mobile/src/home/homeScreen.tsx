@@ -38,6 +38,138 @@ import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 
+const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
+const localDataDeletedMessage =
+  "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.";
+const localDataDeleteError = "Could not delete local data. Please try again.";
+
+type AudioPlaybackPreferenceController = ReturnType<
+  typeof createAudioPlaybackPreferenceController
+>;
+
+export function createAudioPlaybackPreferenceController(options: {
+  getStored: () => Promise<boolean>;
+  onEnabledChange: (enabled: boolean) => void;
+  onMessage: (message: string | null) => void;
+  setStored: (enabled: boolean) => Promise<void>;
+}): {
+  deleteLocalData: (operation: () => Promise<void>, onDeleted: () => void) => Promise<void>;
+  dispose: () => void;
+  restore: () => Promise<void>;
+  setEnabled: (enabled: boolean) => Promise<void>;
+  waitForRestore: () => Promise<void>;
+} {
+  let active = true;
+  let currentEnabled = true;
+  let persistedEnabled = true;
+  let userInteracted = false;
+  let requestVersion = 0;
+  let restoreVersion = 0;
+  let operationQueue = Promise.resolve();
+  let restorePromise = Promise.resolve();
+
+  function isCurrent(version: number): boolean {
+    return active && requestVersion === version;
+  }
+
+  function applyEnabled(enabled: boolean): void {
+    currentEnabled = enabled;
+    options.onEnabledChange(enabled);
+  }
+
+  function enqueue(operation: () => Promise<void>): Promise<void> {
+    const next = operationQueue.catch(() => undefined).then(operation);
+    operationQueue = next.catch(() => undefined);
+    return next;
+  }
+
+  function restore(): Promise<void> {
+    active = true;
+    const version = requestVersion;
+    const restoreRequest = ++restoreVersion;
+    restorePromise = Promise.resolve()
+      .then(() => options.getStored())
+      .then((enabled) => {
+        if (
+          active &&
+          restoreVersion === restoreRequest &&
+          !userInteracted &&
+          requestVersion === version
+        ) {
+          persistedEnabled = enabled;
+          applyEnabled(enabled);
+        }
+      })
+      .catch(() => undefined);
+    return restorePromise;
+  }
+
+  function setEnabled(enabled: boolean): Promise<void> {
+    if (!active) {
+      return Promise.resolve();
+    }
+    userInteracted = true;
+    const version = ++requestVersion;
+    applyEnabled(enabled);
+    options.onMessage(null);
+    return enqueue(async () => {
+      try {
+        await options.setStored(enabled);
+        persistedEnabled = enabled;
+      } catch {
+        if (isCurrent(version) && currentEnabled === enabled) {
+          applyEnabled(persistedEnabled);
+          options.onMessage(audioPlaybackSaveError);
+        }
+      }
+    }).catch(() => undefined);
+  }
+
+  function deleteLocalData(
+    operation: () => Promise<void>,
+    onDeleted: () => void,
+  ): Promise<void> {
+    if (!active) {
+      return Promise.resolve();
+    }
+    userInteracted = true;
+    const version = ++requestVersion;
+    options.onMessage(null);
+    return enqueue(async () => {
+      await operation();
+      persistedEnabled = true;
+      if (!isCurrent(version)) {
+        return;
+      }
+      applyEnabled(true);
+      onDeleted();
+      options.onMessage(localDataDeletedMessage);
+    }).catch(() => {
+      if (isCurrent(version)) {
+        options.onMessage(localDataDeleteError);
+      }
+    });
+  }
+
+  function waitForRestore(): Promise<void> {
+    return restorePromise;
+  }
+
+  function dispose(): void {
+    active = false;
+    requestVersion += 1;
+    restoreVersion += 1;
+  }
+
+  return {
+    deleteLocalData,
+    dispose,
+    restore,
+    setEnabled,
+    waitForRestore,
+  };
+}
+
 export default function HomeScreen(): ReactNode {
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
@@ -54,6 +186,16 @@ export default function HomeScreen(): ReactNode {
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
+  const audioPreferenceControllerRef = useRef<AudioPlaybackPreferenceController | null>(null);
+  if (!audioPreferenceControllerRef.current) {
+    audioPreferenceControllerRef.current = createAudioPlaybackPreferenceController({
+      getStored: getStoredAudioPlaybackEnabled,
+      onEnabledChange: setAudioPlaybackEnabled,
+      onMessage: setSettingsMessage,
+      setStored: setStoredAudioPlaybackEnabled,
+    });
+  }
+  const audioPreferenceController = audioPreferenceControllerRef.current;
 
   const incomingUrl = Linking.useURL();
   const incomingAcquisition = useMemo(
@@ -111,16 +253,9 @@ export default function HomeScreen(): ReactNode {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    void getStoredAudioPlaybackEnabled().then((enabled) => {
-      if (mounted) {
-        setAudioPlaybackEnabled(enabled);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    void audioPreferenceController.restore();
+    return () => audioPreferenceController.dispose();
+  }, [audioPreferenceController]);
 
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
@@ -175,6 +310,11 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    await startLiveTranslation();
+  }
+
+  async function startLiveTranslation(): Promise<void> {
+    await audioPreferenceController.waitForRestore();
     await live.start();
   }
 
@@ -194,7 +334,7 @@ export default function HomeScreen(): ReactNode {
       setOnboardingStep("privacy");
       return;
     }
-    await live.start();
+    await startLiveTranslation();
   }
 
   function swapLanguages(): void {
@@ -241,22 +381,17 @@ export default function HomeScreen(): ReactNode {
       onClosePicker={() => setPickerMode(null)}
       onCloseSettings={() => setSettingsOpen(false)}
       onAudioPlaybackEnabledChange={(enabled) => {
-        setAudioPlaybackEnabled(enabled);
-        setSettingsMessage(null);
-        void setStoredAudioPlaybackEnabled(enabled).catch(() => {
-          setAudioPlaybackEnabled(!enabled);
-          setSettingsMessage("Could not save the audio setting. Please try again.");
-        });
+        void audioPreferenceController.setEnabled(enabled);
       }}
-      onDeleteLocalData={() => void deleteLocalData(
-        setSettingsMessage,
-        live.cancel,
-        () => {
-          setAudioPlaybackEnabled(true);
-          setPrivacyAcknowledged(false);
-          setPrivacyConsentChecked(false);
-        },
-      )}
+      onDeleteLocalData={() => {
+        void audioPreferenceController.deleteLocalData(
+          () => deleteLocalData(live.cancel),
+          () => {
+            setPrivacyAcknowledged(false);
+            setPrivacyConsentChecked(false);
+          },
+        );
+      }}
       onOpenDiagnostics={() => setDiagnosticsOpen(true)}
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
@@ -312,16 +447,10 @@ async function handleCompletedSessionEngagement(
   }
 }
 
-async function deleteLocalData(
-  setMessage: (message: string | null) => void,
-  cancel: () => Promise<void>,
-  onDeleted: () => void,
-): Promise<void> {
+async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
-  onDeleted();
-  setMessage("Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.");
 }

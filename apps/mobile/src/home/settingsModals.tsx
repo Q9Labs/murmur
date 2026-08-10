@@ -44,16 +44,15 @@ export function SettingsModal(props: {
           label="Delete local data"
           onPress={props.onDeleteLocalData}
         />
-        {props.developerToolsEnabled ? (
-          <>
-            <SettingsAction label="Session diagnostics" onPress={props.onOpenDiagnostics} />
-            <SettingsAction
-              disabled={disabled}
-              label="Reset accountless identity"
-              onPress={props.onResetIdentity}
-            />
-          </>
-        ) : null}
+        <SettingsAction
+          label={props.developerToolsEnabled ? "Session diagnostics" : "Report translation"}
+          onPress={props.onOpenDiagnostics}
+        />
+        <SettingsAction
+          disabled={disabled}
+          label="Reset Murmur Identity"
+          onPress={props.onResetIdentity}
+        />
       </View>
       {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
     </ModalSheet>
