@@ -11,6 +11,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  uiContentDirectionStyle,
+  uiTextDirectionStyle,
+  useUiLocale,
+} from "../i18n/runtime";
 import { useSheetStyles } from "./sheetStyles";
 
 export function ModalSheet({
@@ -27,6 +32,7 @@ export function ModalSheet({
   title: string;
 }): ReactNode {
   const { styles } = useSheetStyles();
+  const { direction, locale, t } = useUiLocale();
   return (
     <Modal
       animationType="slide"
@@ -36,9 +42,9 @@ export function ModalSheet({
       transparent
       visible={open}
     >
-      <View style={styles.modalScrim}>
+      <View style={[styles.modalScrim, uiContentDirectionStyle(locale)]}>
         <Pressable
-          accessibilityLabel="Close sheet"
+          accessibilityLabel={t("accessibility.closeSheet")}
           accessibilityRole="button"
           onPress={onClose}
           style={styles.sheetDismissArea}
@@ -46,9 +52,9 @@ export function ModalSheet({
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           pointerEvents="box-none"
-          style={styles.sheetKeyboard}
+          style={[styles.sheetKeyboard, uiContentDirectionStyle(direction)]}
         >
-          <SafeAreaView edges={["bottom"]} style={styles.sheet}>
+          <SafeAreaView edges={["bottom"]} style={[styles.sheet, uiContentDirectionStyle(direction)]}>
             <View accessibilityElementsHidden style={styles.sheetHandle} />
             <ModalSheetHeader onClose={onClose} title={title} />
             {scroll ? (
@@ -71,11 +77,12 @@ const sheetContent = { paddingBottom: 24 } as const;
 
 function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: string }): ReactNode {
   const { colors, styles } = useSheetStyles();
+  const { direction, t } = useUiLocale();
   return (
     <View style={styles.sheetHeader}>
-      <Text style={styles.sheetTitle}>{title}</Text>
+      <Text style={[styles.sheetTitle, uiTextDirectionStyle(direction)]}>{title}</Text>
       <Pressable
-        accessibilityLabel="Close"
+        accessibilityLabel={t("accessibility.close")}
         accessibilityRole="button"
         hitSlop={8}
         onPress={onClose}

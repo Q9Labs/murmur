@@ -170,6 +170,10 @@ function createBloomStyles(theme: MurmurTheme) {
       textAlign: "right",
       writingDirection: "rtl",
     },
+    ltrText: {
+      textAlign: "left",
+      writingDirection: "ltr",
+    },
     screen: {
       backgroundColor: theme.background,
       flex: 1,

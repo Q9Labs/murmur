@@ -1,31 +1,35 @@
-export function formatLiveError(error: string): string {
+import { createTranslator, type Translate } from "../i18n/runtime";
+
+const fallbackTranslate = createTranslator("en");
+
+export function formatLiveError(error: string, translate: Translate = fallbackTranslate): string {
   if (error.startsWith("provider_unconfigured")) {
-    return "Live translation is not connected yet. Please try again after setup is complete.";
+    return translate("error.providerUnconfigured");
   }
   if (error.startsWith("provider_unavailable")) {
-    return "Live translation provider is unavailable. Please try again.";
+    return translate("error.providerUnavailable");
   }
   if (error === "worker_session_network_error" || error.startsWith("worker_session_http_")) {
-    return "Could not reach Murmur translation service. Check your connection and try again.";
+    return translate("error.workerUnavailable");
   }
   if (error === "microphone_permission_denied") {
-    return "Microphone access is required to translate speech.";
+    return translate("error.microphonePermission");
   }
   if (error === "microphone_start_failed") {
-    return "Could not start the microphone. Please try again.";
+    return translate("error.microphoneStart");
   }
   if (error === "realtime_transport_error") {
-    return `Translation connection was interrupted. Please try again. (${error})`;
+    return translate("error.transport", { error });
   }
   if (error.startsWith("realtime_")) {
-    return `Live translation failed. Please try again. (${error})`;
+    return translate("error.realtimeFailure", { error });
   }
-  return `Live translation is unavailable. Please try again. (${error})`;
+  return translate("error.unavailable", { error });
 }
 
-export function formatReportError(error: string): string {
+export function formatReportError(error: string, translate: Translate = fallbackTranslate): string {
   if (error === "report_rate_limited") {
-    return "Too many reports were sent from this session. Please try again later.";
+    return translate("error.reportRateLimited");
   }
-  return "Could not send the report. Please try again.";
+  return translate("error.reportFailed");
 }

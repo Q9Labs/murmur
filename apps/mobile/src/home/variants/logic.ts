@@ -1,6 +1,7 @@
 import type { NativeScrollEvent } from "react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
+import type { Translate } from "../../i18n/runtime";
 import type { UiVariant } from "./types";
 
 const uiVariants = ["bloom"] as const;
@@ -60,10 +61,12 @@ export function formatClockTime(timestampMs: number): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-export function timelineTranslationText(span: TranslationSpan): string {
+export function timelineTranslationText(span: TranslationSpan, translate?: Translate): string {
   return span.committed_translated_caption ||
     span.partial_translated_caption ||
-    (span.status === "failed" ? "Translation failed" : "Translating...");
+    (span.status === "failed"
+      ? translate?.("home.translationFailed") ?? "Translation failed"
+      : translate?.("home.translating") ?? "Translating...");
 }
 
 export function isPartialSpan(span: TranslationSpan): boolean {

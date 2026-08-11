@@ -8,6 +8,7 @@ import {
   type LanguageCode,
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
+import { uiTextDirectionStyle, useUiLocale } from "../i18n/runtime";
 import { ModalSheet } from "./modalSheet";
 import { useSheetStyles } from "./sheetStyles";
 import type { PickerMode } from "./types";
@@ -72,14 +73,17 @@ function LanguagePickerModal({
   selected: SourceLanguageCode;
 }): ReactNode {
   const { colors, styles } = useSheetStyles();
+  const { direction, t } = useUiLocale();
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredLanguages = languageRegistry.filter((language) => {
     const haystack = `${language.display_name} ${language.native_name}`.toLowerCase();
     return haystack.includes(normalizedQuery);
   });
-  const showAutoDetect =
-    mode === "source" && `auto detect automatic source language`.includes(normalizedQuery);
+  const showAutoDetect = mode === "source" && [
+    t("languagePicker.autoDetect"),
+    t("languagePicker.liveMultilingualSource"),
+  ].join(" ").toLowerCase().includes(normalizedQuery);
 
   useEffect(() => {
     if (mode) {
@@ -88,17 +92,21 @@ function LanguagePickerModal({
   }, [mode]);
 
   return (
-    <ModalSheet onClose={onClose} open={mode !== null} title={mode === "source" ? "Speak in" : "Translate to"}>
+    <ModalSheet
+      onClose={onClose}
+      open={mode !== null}
+      title={mode === "source" ? t("languagePicker.speakIn") : t("languagePicker.translateTo")}
+    >
       <TextInput
-        accessibilityLabel="Search languages"
+        accessibilityLabel={t("accessibility.searchLanguages")}
         autoCapitalize="none"
         autoCorrect={false}
         clearButtonMode="while-editing"
         onChangeText={setQuery}
-        placeholder="Search"
+        placeholder={t("languagePicker.search")}
         placeholderTextColor={colors.muted}
         returnKeyType="search"
-        style={styles.searchInput}
+        style={[styles.searchInput, uiTextDirectionStyle(direction)]}
         value={query}
       />
       <ScrollView
@@ -126,8 +134,14 @@ function LanguagePickerModal({
               ]}
             >
               <View style={styles.languageOptionCopy}>
-                <Text style={styles.languageOptionName}>{language.display_name}</Text>
-                <Text style={styles.languageOptionNative}>{language.native_name}</Text>
+                <Text style={[styles.languageOptionName, uiTextDirectionStyle(direction)]}>
+                  {language.display_name}
+                </Text>
+                <Text
+                  style={[styles.languageOptionNative, uiTextDirectionStyle(language.rtl ? "rtl" : "ltr")]}
+                >
+                  {language.native_name}
+                </Text>
               </View>
               <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
                 {isSelected ? "✓" : ""}
@@ -150,6 +164,7 @@ function AutoDetectOption({
   visible: boolean;
 }): ReactNode {
   const { styles } = useSheetStyles();
+  const { direction, t } = useUiLocale();
   if (!visible) {
     return null;
   }
@@ -165,8 +180,12 @@ function AutoDetectOption({
       ]}
     >
       <View style={styles.languageOptionCopy}>
-        <Text style={styles.languageOptionName}>Auto detect</Text>
-        <Text style={styles.languageOptionNative}>Live multilingual source</Text>
+        <Text style={[styles.languageOptionName, uiTextDirectionStyle(direction)]}>
+          {t("languagePicker.autoDetect")}
+        </Text>
+        <Text style={[styles.languageOptionNative, uiTextDirectionStyle(direction)]}>
+          {t("languagePicker.liveMultilingualSource")}
+        </Text>
       </View>
       <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
         {selected === autoSourceLanguageCode ? "✓" : ""}

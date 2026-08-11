@@ -1,51 +1,63 @@
-export function getStatusText(status: string, error: string | null): string {
+import { createTranslator, type Translate } from "../i18n/runtime";
+
+const fallbackTranslate = createTranslator("en");
+
+export function getStatusText(
+  status: string,
+  error: string | null,
+  translate: Translate = fallbackTranslate,
+): string {
   const directStatus = directStatusText[status];
   if (directStatus) {
-    return directStatus;
+    return translate(directStatus);
   }
   if (error) {
-    return getErrorStatusText(error);
+    return getErrorStatusText(error, translate);
   }
   if (status === "creating_session" || status.startsWith("connecting")) {
-    return "Connecting";
+    return translate("status.connecting");
   }
-  return "Ready";
+  return translate("status.ready");
 }
 
-export function getHealthText(status: string, error: string | null): string {
+export function getHealthText(
+  status: string,
+  error: string | null,
+  translate: Translate = fallbackTranslate,
+): string {
   if (error === "realtime_transport_error" || status === "network_degraded") {
-    return "Degraded";
+    return translate("status.degraded");
   }
   if (status === "recovering") {
-    return "Recovering";
+    return translate("status.recovering");
   }
   if (status === "transport_disconnected") {
-    return "Disconnected";
+    return translate("status.disconnected");
   }
   if (status === "live") {
-    return "OK";
+    return translate("status.ok");
   }
   if (
     status === "connecting_realtime" ||
     status === "creating_session"
   ) {
-    return "Connecting";
+    return translate("status.connecting");
   }
-  return "Ready";
+  return translate("status.ready");
 }
 
-const directStatusText: Record<string, string> = {
-  ended: "Ended",
-  live: "Health OK",
-  network_degraded: "Network degraded",
-  recovering: "Recovering",
-  requesting_mic_permission: "Microphone",
-  transport_disconnected: "Disconnected",
+const directStatusText: Record<string, Parameters<Translate>[0]> = {
+  ended: "status.ended",
+  live: "status.healthOk",
+  network_degraded: "status.networkDegraded",
+  recovering: "status.recovering",
+  requesting_mic_permission: "status.microphone",
+  transport_disconnected: "status.disconnected",
 };
 
-function getErrorStatusText(error: string): string {
+function getErrorStatusText(error: string, translate: Translate): string {
   if (error === "realtime_transport_error") {
-    return "Network degraded";
+    return translate("status.networkDegraded");
   }
-  return "Needs setup";
+  return translate("status.needsSetup");
 }

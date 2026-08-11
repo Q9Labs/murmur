@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { uiContentDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
 import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
@@ -22,9 +23,10 @@ const brandLogo = require("../../../../assets/images/icon.png");
 export function BloomShell(props: VariantShellProps): ReactNode {
   const { live, viewModel } = props;
   const { colors, styles } = useBloomStyles();
+  const { locale, t } = useUiLocale();
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={[styles.screen, uiContentDirectionStyle(locale)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <BloomChrome
         audioPlaybackEnabled={props.audioPlaybackEnabled}
@@ -49,8 +51,8 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel="Listen"
-          stopLabel="Stop"
+          startLabel={t("home.listen")}
+          stopLabel={t("home.stop")}
           style={styles.listenPill}
           textStyle={styles.listenPillText}
         />
@@ -61,8 +63,14 @@ export function BloomShell(props: VariantShellProps): ReactNode {
 
 export function BrandMark(): ReactNode {
   const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
   return (
-    <View accessible accessibilityLabel="Murmur" accessibilityRole="image" style={styles.brandMark}>
+    <View
+      accessible
+      accessibilityLabel={t("accessibility.murmurBrand")}
+      accessibilityRole="image"
+      style={styles.brandMark}
+    >
       <Image accessibilityIgnoresInvertColors source={brandLogo} style={styles.brandLogo} />
       <Text style={styles.wordmark}>Murmur</Text>
     </View>
@@ -79,6 +87,7 @@ function BloomChrome({
   onOpenSettings: () => void;
 }): ReactNode {
   const { colors, styles } = useBloomStyles();
+  const { t } = useUiLocale();
   return (
     <View style={styles.chrome}>
       <BrandMark />
@@ -88,7 +97,7 @@ function BloomChrome({
           onChange={onAudioPlaybackEnabledChange}
         />
         <Pressable
-          accessibilityLabel="Open settings"
+          accessibilityLabel={t("accessibility.openSettings")}
           accessibilityRole="button"
           onPress={onOpenSettings}
           style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
@@ -145,6 +154,7 @@ function TranslationStage(props: VariantShellProps): ReactNode {
         live={props.live}
         style={styles.flexFill}
         textStyles={{
+          ltr: styles.ltrText,
           partial: styles.translationPartial,
           rtl: styles.rtlText,
           source: styles.sourceText,

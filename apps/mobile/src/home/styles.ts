@@ -129,6 +129,7 @@ type AppStyles = {
   spanRow: ViewStyle;
   spanSource: TextStyle;
   spanTranslation: TextStyle;
+  ltrText: TextStyle;
   speechIndicator: ViewStyle;
   status: TextStyle;
   statusCluster: ViewStyle;
@@ -803,6 +804,10 @@ export const styles = StyleSheet.create<AppStyles>({
   rtlText: {
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  ltrText: {
+    textAlign: "left",
+    writingDirection: "ltr",
   },
   screen: {
     backgroundColor: "#F4FFF9",

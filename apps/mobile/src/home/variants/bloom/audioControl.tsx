@@ -2,6 +2,7 @@ import { Volume2, VolumeX } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 
+import { useUiLocale } from "../../../i18n/runtime";
 import { useBloomStyles } from "./styles";
 
 export function TranslatedAudioControl({
@@ -12,9 +13,10 @@ export function TranslatedAudioControl({
   onChange: (enabled: boolean) => void;
 }): ReactNode {
   const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
   return (
     <Pressable
-      accessibilityLabel={enabled ? "Turn translated audio off" : "Turn translated audio on"}
+      accessibilityLabel={enabled ? t("audio.turnTranslatedOff") : t("audio.turnTranslatedOn")}
       accessibilityRole="switch"
       accessibilityState={{ checked: enabled }}
       onPress={() => onChange(!enabled)}

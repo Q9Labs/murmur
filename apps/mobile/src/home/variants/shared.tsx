@@ -11,7 +11,9 @@ import {
 } from "react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
+import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
 import { formatLiveError, formatReportError } from "../errorCopy";
+import { styles as homeStyles } from "../styles";
 import {
   hasVisibleTimeline,
   isPartialSpan,
@@ -21,11 +23,11 @@ import {
 } from "./logic";
 import type { VariantShellProps } from "./types";
 
-function visibleLiveError(live: VariantShellProps["live"]): string | null {
+function visibleLiveError(live: VariantShellProps["live"], translate: Translate): string | null {
   if (!live.error || live.error === "microphone_permission_denied") {
     return null;
   }
-  return formatLiveError(live.error);
+  return formatLiveError(live.error, translate);
 }
 
 export function StatusMessages({
@@ -37,14 +39,21 @@ export function StatusMessages({
   live: VariantShellProps["live"];
   receiptStyle: StyleProp<TextStyle>;
 }): ReactNode {
-  const liveError = visibleLiveError(live);
+  const { direction, t } = useUiLocale();
+  const liveError = visibleLiveError(live, t);
 
   return (
     <>
-      {liveError ? <Text style={errorStyle}>{liveError}</Text> : null}
-      {live.report_error ? <Text style={errorStyle}>{formatReportError(live.report_error)}</Text> : null}
+      {liveError ? <Text style={[errorStyle, uiTextDirectionStyle(direction)]}>{liveError}</Text> : null}
+      {live.report_error ? (
+        <Text style={[errorStyle, uiTextDirectionStyle(direction)]}>
+          {formatReportError(live.report_error, t)}
+        </Text>
+      ) : null}
       {live.report_receipt_id ? (
-        <Text style={receiptStyle}>Report received: {live.report_receipt_id.slice(0, 8)}</Text>
+        <Text style={[receiptStyle, uiTextDirectionStyle(direction)]}>
+          {t("home.reportReceived", { receiptId: live.report_receipt_id.slice(0, 8) })}
+        </Text>
       ) : null}
     </>
   );
@@ -74,13 +83,12 @@ export function timelineScrollHandlers(refs: TimelineScrollRefs): {
   };
 }
 
-function timelineEmptyText(isLive: boolean): string {
-  return isLive
-    ? "Listening. The conversation will appear here."
-    : "The conversation appears here once you start.";
+function timelineEmptyText(isLive: boolean, translate: Translate): string {
+  return isLive ? translate("home.timelineListening") : translate("home.timelineEmpty");
 }
 
 export type TimelineTextStyles = {
+  ltr?: StyleProp<TextStyle>;
   partial: StyleProp<TextStyle>;
   rtl: StyleProp<TextStyle>;
   source: StyleProp<TextStyle>;
@@ -101,6 +109,7 @@ export function SpanTimeline({
   textStyles: TimelineTextStyles;
   viewModel: VariantShellProps["viewModel"];
 }): ReactNode {
+  const { direction, t } = useUiLocale();
   const sourceRtl = Boolean(viewModel.sourceLanguage?.rtl);
   const visibleSpans = live.spans.filter((span) => !shouldHideSpan(span));
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
@@ -115,7 +124,9 @@ export function SpanTimeline({
       {...timelineScrollHandlers(refs)}
     >
       {!hasTimeline ? (
-        <Text style={textStyles.source}>{timelineEmptyText(viewModel.isLive)}</Text>
+        <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
+          {timelineEmptyText(viewModel.isLive, t)}
+        </Text>
       ) : null}
       {visibleSpans.map((span) => (
         <SpanRow
@@ -123,6 +134,7 @@ export function SpanTimeline({
           sourceRtl={sourceRtl}
           span={span}
           targetRtl={viewModel.targetLanguage.rtl}
+          translate={t}
           textStyles={textStyles}
         />
       ))}
@@ -142,18 +154,24 @@ function TentativeCaption({
   text: string;
   textStyles: TimelineTextStyles;
 }): ReactNode {
-  return <Text style={[textStyles.source, sourceRtl && textStyles.rtl]}>{text}</Text>;
+  return (
+    <Text style={[textStyles.source, sourceRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText]}>
+      {text}
+    </Text>
+  );
 }
 
 function SpanRow({
   sourceRtl,
   span,
   targetRtl,
+  translate,
   textStyles,
 }: {
   sourceRtl: boolean;
   span: TranslationSpan;
   targetRtl: boolean;
+  translate: Translate;
   textStyles: TimelineTextStyles;
 }): ReactNode {
   return (
@@ -162,12 +180,14 @@ function SpanRow({
         style={[
           textStyles.translation,
           isPartialSpan(span) && textStyles.partial,
-          targetRtl && textStyles.rtl,
+          targetRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText,
         ]}
       >
-        {timelineTranslationText(span)}
+        {timelineTranslationText(span, translate)}
       </Text>
-      <Text style={[textStyles.source, sourceRtl && textStyles.rtl]}>{span.source_caption}</Text>
+      <Text style={[textStyles.source, sourceRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText]}>
+        {span.source_caption}
+      </Text>
     </View>
   );
 }

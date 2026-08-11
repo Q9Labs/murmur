@@ -6,12 +6,15 @@ import {
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
 import { canStartSession, type TranslationSpan } from "@murmur/protocol/session";
+import { createTranslator, type Translate } from "../i18n/runtime";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
   getHealthText,
   getStatusText,
 } from "./statusLabels";
+
+const fallbackTranslate = createTranslator("en");
 
 export type HomeViewModel = {
   canChangeLanguages: boolean;
@@ -38,7 +41,9 @@ export function buildHomeViewModel(params: {
   live: Pick<LiveTranslationController, "error" | "spans" | "status" | "tentative_source_caption">;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
+  translate?: Translate;
 }): HomeViewModel {
+  const translate = params.translate ?? fallbackTranslate;
   const sourceLanguage = getSourceLanguage(params.sourceLanguageCode);
   const targetLanguage = getLanguage(params.targetLanguageCode);
   const latestTranslation = findLatestTranslation(params.live.spans);
@@ -60,7 +65,7 @@ export function buildHomeViewModel(params: {
     pendingCount: countPendingSpans(params.live.spans),
     hasSourceText,
     hasTranslatedText,
-    healthText: getHealthText(params.live.status, params.live.error),
+    healthText: getHealthText(params.live.status, params.live.error, translate),
     isLive,
     latestProviderRoute: getLatestProviderRoute(params.live.spans) ?? "openai:gpt-realtime-translate",
     latestSourceCaption,
@@ -71,16 +76,18 @@ export function buildHomeViewModel(params: {
       hasTranslatedText,
       isLive,
       latestTranslationText,
+      translate,
     }),
     secondaryCanvasText: buildSecondaryCanvasText({
       error: params.live.error,
       hasSourceText,
       isLive,
       latestSourceCaption,
+      translate,
     }),
     sourceLanguage,
-    sourceLanguageDisplayName: sourceLanguage?.display_name ?? "Auto detect",
-    statusText: getStatusText(params.live.status, params.live.error),
+    sourceLanguageDisplayName: sourceLanguage?.display_name ?? translate("home.autoDetect"),
+    statusText: getStatusText(params.live.status, params.live.error, translate),
     targetLanguage,
   };
 }
@@ -136,17 +143,18 @@ function buildPrimaryCanvasText(params: {
   hasTranslatedText: boolean;
   isLive: boolean;
   latestTranslationText: string;
+  translate: Translate;
 }): string {
   if (params.hasTranslatedText) {
     return params.latestTranslationText;
   }
   if (params.isLive) {
-    return "Listening";
+    return params.translate("home.listening");
   }
   if (params.error === "microphone_permission_denied") {
-    return "Microphone access needed";
+    return params.translate("home.microphoneAccessNeeded");
   }
-  return "Ready to translate";
+  return params.translate("home.readyToTranslate");
 }
 
 function buildSecondaryCanvasText(params: {
@@ -154,15 +162,16 @@ function buildSecondaryCanvasText(params: {
   hasSourceText: boolean;
   isLive: boolean;
   latestSourceCaption: string;
+  translate: Translate;
 }): string {
   if (params.hasSourceText) {
     return params.latestSourceCaption;
   }
   if (params.isLive) {
-    return "Speak now. Captions will appear here.";
+    return params.translate("home.speakNowCaptions");
   }
   if (params.error === "microphone_permission_denied") {
-    return "Allow microphone access to start listening.";
+    return params.translate("home.allowMicrophone");
   }
-  return "Choose a direction, then tap Listen.";
+  return params.translate("home.chooseDirection");
 }

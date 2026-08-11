@@ -3,8 +3,14 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { AudioStateEvent } from "../../modules/murmur-audio";
+import {
+  formatUiNumber,
+  uiTextDirectionStyle,
+  useUiLocale,
+} from "../i18n/runtime";
+import type { Translate } from "../i18n/runtime";
 import { formatLatencyPercentiles } from "../lib/latency";
-import type { LanguageCode, LanguageDefinition, SourceLanguageCode } from "@murmur/protocol/languages";
+import { getLanguage, type LanguageCode, type LanguageDefinition, type SourceLanguageCode } from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { copyDiagnosticsReport, downloadDiagnosticsReport, shareLatencyReport } from "./diagnostics";
@@ -34,6 +40,7 @@ export function DiagnosticsModal({
   targetLanguageCode: LanguageCode;
 }): ReactNode {
   const [diagnosticsMessage, setDiagnosticsMessage] = useState<string | null>(null);
+  const { direction, locale, t } = useUiLocale();
   const getReportParams = () => buildDiagnosticsReportParams({
     audioState,
     latestProviderRoute,
@@ -45,17 +52,29 @@ export function DiagnosticsModal({
   const hasReport = live.latency_samples.length > 0 || live.debug_log.length > 0 || live.spans.length > 0;
 
   return (
-    <ModalSheet onClose={onClose} open={open} title="Diagnostics">
+    <ModalSheet onClose={onClose} open={open} title={t("diagnostics.title")}>
       <ScrollView contentContainerStyle={styles.diagnosticsContent}>
-        <DiagnosticsMetrics audioState={audioState} live={live} />
-        <DiagnosticsLatency live={live} />
+        <DiagnosticsMetrics audioState={audioState} direction={direction} live={live} locale={locale} translate={t} />
+        <DiagnosticsLatency direction={direction} live={live} translate={t} />
         <DiagnosticActions
+          direction={direction}
           getReportParams={getReportParams}
           hasReport={hasReport}
           setDiagnosticsMessage={setDiagnosticsMessage}
+          translate={t}
         />
-        {diagnosticsMessage ? <Text style={styles.diagnosticsMessage}>{diagnosticsMessage}</Text> : null}
-        <DiagnosticsTimeline live={live} targetLanguage={targetLanguage} />
+        {diagnosticsMessage ? (
+          <Text style={[styles.diagnosticsMessage, uiTextDirectionStyle(direction)]}>
+            {diagnosticsMessage}
+          </Text>
+        ) : null}
+        <DiagnosticsTimeline
+          direction={direction}
+          live={live}
+          sourceLanguageCode={sourceLanguageCode}
+          targetLanguage={targetLanguage}
+          translate={t}
+        />
       </ScrollView>
     </ModalSheet>
   );
@@ -93,45 +112,70 @@ function buildDiagnosticsReportParams({
   };
 }
 
-function getDownloadMessage(result: string): string {
+function getDownloadMessage(result: string, translate: Translate): string {
   if (result === "web_downloaded") {
-    return "Diagnostics downloaded.";
+    return translate("diagnostics.downloaded");
   }
   if (result === "native_shared") {
-    return "Diagnostics file ready to share.";
+    return translate("diagnostics.fileReadyToShare");
   }
-  return "Diagnostics file could not be prepared.";
+  return translate("diagnostics.fileCouldNotPrepare");
 }
 
 function DiagnosticsMetrics({
   audioState,
+  direction,
   live,
+  locale,
+  translate,
 }: {
   audioState: AudioStateEvent | null;
+  direction: "ltr" | "rtl";
   live: LiveTranslationController;
+  locale: "en" | "ar";
+  translate: Translate;
 }): ReactNode {
   return (
     <View style={styles.metricsRow}>
-      <Metric label="Session" value={live.status} />
-      <Metric label="Spans" value={String(live.spans.length)} />
-      <Metric label="Mic" value={formatBooleanState(audioState?.capture_active)} />
-      <Metric label="Speech" value={formatBooleanState(audioState?.playback_active)} />
+      <Metric direction={direction} label={translate("diagnostics.session")} value={live.status} valueDirection="ltr" />
+      <Metric
+        direction={direction}
+        label={translate("diagnostics.spans")}
+        value={formatUiNumber(live.spans.length, locale)}
+        valueDirection={direction}
+      />
+      <Metric
+        direction={direction}
+        label={translate("diagnostics.mic")}
+        value={formatBooleanState(audioState?.capture_active, translate)}
+        valueDirection={direction}
+      />
+      <Metric
+        direction={direction}
+        label={translate("diagnostics.speech")}
+        value={formatBooleanState(audioState?.playback_active, translate)}
+        valueDirection={direction}
+      />
     </View>
   );
 }
 
-function formatBooleanState(active: boolean | undefined): string {
-  return active ? "on" : "off";
+function formatBooleanState(active: boolean | undefined, translate: Translate): string {
+  return active ? translate("diagnostics.on") : translate("diagnostics.off");
 }
 
 function DiagnosticActions({
+  direction,
   getReportParams,
   hasReport,
   setDiagnosticsMessage,
+  translate,
 }: {
+  direction: "ltr" | "rtl";
   getReportParams: () => ReturnType<typeof buildDiagnosticsReportParams>;
   hasReport: boolean;
   setDiagnosticsMessage: (message: string | null) => void;
+  translate: Translate;
 }): ReactNode {
   return (
     <View style={styles.diagnosticActions}>
@@ -140,12 +184,14 @@ function DiagnosticActions({
         disabled={!hasReport}
         onPress={() =>
           void copyDiagnosticsReport(getReportParams()).then(() => {
-            setDiagnosticsMessage("Diagnostics copied.");
+            setDiagnosticsMessage(translate("diagnostics.copied"));
           })
         }
         style={[styles.diagnosticButton, !hasReport && styles.pressed]}
       >
-        <Text style={styles.diagnosticButtonText}>Copy report</Text>
+        <Text style={[styles.diagnosticButtonText, uiTextDirectionStyle(direction)]}>
+          {translate("diagnostics.copyReport")}
+        </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -153,15 +199,17 @@ function DiagnosticActions({
         onPress={() =>
           void downloadDiagnosticsReport(getReportParams())
             .then((result) => {
-              setDiagnosticsMessage(getDownloadMessage(result));
+              setDiagnosticsMessage(getDownloadMessage(result, translate));
             })
             .catch(() => {
-              setDiagnosticsMessage("Diagnostics file could not be prepared.");
+              setDiagnosticsMessage(translate("diagnostics.fileCouldNotPrepare"));
             })
         }
         style={[styles.diagnosticButtonSecondary, !hasReport && styles.pressed]}
       >
-        <Text style={styles.diagnosticButtonTextSecondary}>Download .txt</Text>
+        <Text style={[styles.diagnosticButtonTextSecondary, uiTextDirectionStyle(direction)]}>
+          {translate("diagnostics.downloadText")}
+        </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -169,29 +217,45 @@ function DiagnosticActions({
         onPress={() =>
           void shareLatencyReport(getReportParams())
             .then((result) => {
-              setDiagnosticsMessage(result === "native_file" ? "Diagnostics file shared." : "Diagnostics shared.");
+              setDiagnosticsMessage(
+                result === "native_file"
+                  ? translate("diagnostics.fileShared")
+                  : translate("diagnostics.shared"),
+              );
             })
             .catch(() => {
-              setDiagnosticsMessage("Diagnostics could not be shared.");
+              setDiagnosticsMessage(translate("diagnostics.couldNotShare"));
             })
         }
         style={[styles.diagnosticButtonSecondary, !hasReport && styles.pressed]}
       >
-        <Text style={styles.diagnosticButtonTextSecondary}>Share</Text>
+        <Text style={[styles.diagnosticButtonTextSecondary, uiTextDirectionStyle(direction)]}>
+          {translate("diagnostics.share")}
+        </Text>
       </Pressable>
     </View>
   );
 }
 
-function DiagnosticsLatency({ live }: { live: LiveTranslationController }): ReactNode {
+function DiagnosticsLatency({
+  direction,
+  live,
+  translate,
+}: {
+  direction: "ltr" | "rtl";
+  live: LiveTranslationController;
+  translate: Translate;
+}): ReactNode {
   return (
     <>
       <LatencyRow
-        label="First source transcript"
+        direction={direction}
+        label={translate("diagnostics.firstSourceTranscript")}
         value={formatLatencyPercentiles(live.latency_report.first_source_transcript)}
       />
       <LatencyRow
-        label="First translated transcript"
+        direction={direction}
+        label={translate("diagnostics.firstTranslatedTranscript")}
         value={formatLatencyPercentiles(live.latency_report.first_translated_transcript)}
       />
     </>
@@ -199,22 +263,32 @@ function DiagnosticsLatency({ live }: { live: LiveTranslationController }): Reac
 }
 
 function DiagnosticsTimeline({
+  direction,
   live,
+  sourceLanguageCode,
   targetLanguage,
+  translate,
 }: {
+  direction: "ltr" | "rtl";
   live: LiveTranslationController;
+  sourceLanguageCode: SourceLanguageCode;
   targetLanguage: LanguageDefinition;
+  translate: Translate;
 }): ReactNode {
+  const sourceLanguage = sourceLanguageCode === "auto" ? null : getLanguage(sourceLanguageCode);
   return (
     <View style={styles.timeline}>
       {live.spans.length === 0 ? (
-        <Text style={styles.timelineEmpty}>No spans yet</Text>
+        <Text style={[styles.timelineEmpty, uiTextDirectionStyle(direction)]}>
+          {translate("diagnostics.noSpans")}
+        </Text>
       ) : (
         [...live.spans].reverse().map((span) => (
           <DiagnosticSpanRow
             key={`${span.span_id}-${span.revision}`}
             live={live}
             span={span}
+            sourceRtl={Boolean(sourceLanguage?.rtl)}
             targetLanguage={targetLanguage}
           />
         ))
@@ -225,17 +299,19 @@ function DiagnosticsTimeline({
 
 function DiagnosticSpanRow({
   live,
+  sourceRtl,
   span,
   targetLanguage,
 }: {
   live: LiveTranslationController;
+  sourceRtl: boolean;
   span: TranslationSpan;
   targetLanguage: LanguageDefinition;
 }): ReactNode {
   return (
     <View style={styles.spanRow}>
-      <Text style={styles.spanSource}>{span.source_caption}</Text>
-      <Text style={[styles.spanTranslation, targetLanguage.rtl && styles.rtlText]}>
+      <Text style={[styles.spanSource, sourceRtl ? styles.rtlText : styles.ltrText]}>{span.source_caption}</Text>
+      <Text style={[styles.spanTranslation, targetLanguage.rtl ? styles.rtlText : styles.ltrText]}>
         {getDiagnosticSpanTranslationText(span)}
       </Text>
       <TranslationReportActions live={live} span={span} />
@@ -247,22 +323,31 @@ function getDiagnosticSpanTranslationText(span: TranslationSpan): string {
   return span.committed_translated_caption || span.partial_translated_caption || span.status;
 }
 
-function Metric({ label, value }: { label: string; value: string }): ReactNode {
+function Metric({ direction, label, value, valueDirection }: {
+  direction: "ltr" | "rtl";
+  label: string;
+  value: string;
+  valueDirection: "ltr" | "rtl";
+}): ReactNode {
   return (
     <View style={styles.metric}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue} numberOfLines={1}>
+      <Text style={[styles.metricLabel, uiTextDirectionStyle(direction)]}>{label}</Text>
+      <Text style={[styles.metricValue, uiTextDirectionStyle(valueDirection)]} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
-function LatencyRow({ label, value }: { label: string; value: string }): ReactNode {
+function LatencyRow({ direction, label, value }: {
+  direction: "ltr" | "rtl";
+  label: string;
+  value: string;
+}): ReactNode {
   return (
     <View style={styles.latencyRow}>
-      <Text style={styles.latencyLabel}>{label}</Text>
-      <Text style={styles.latencyValue}>{value}</Text>
+      <Text style={[styles.latencyLabel, uiTextDirectionStyle(direction)]}>{label}</Text>
+      <Text style={[styles.latencyValue, uiTextDirectionStyle("ltr")]}>{value}</Text>
     </View>
   );
 }
