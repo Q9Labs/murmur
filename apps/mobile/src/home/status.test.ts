@@ -38,6 +38,7 @@ describe("home status helpers", () => {
     expect(getStatusText("idle", "realtime_invalid_api_key")).toBe("Service unavailable");
     expect(getStatusText("idle", "microphone_permission_denied")).toBe("Microphone access needed");
     expect(getStatusText("requesting_mic_permission", null)).toBe("Checking microphone");
+    expect(getStatusText("requesting_audio_permission", null)).toBe("Audio access");
     expect(getStatusText("requesting_mic_permission", null, "checking_device")).toBe(
       "Checking device",
     );
@@ -60,6 +61,9 @@ describe("home status helpers", () => {
     expect(formatLiveError("realtime_provider_quota_exhausted")).toContain("temporarily exhausted");
     expect(formatLiveError("realtime_provider_rate_limited")).toContain("busy");
     expect(formatLiveError("realtime_allowance_exhausted")).toContain("Get more time");
+    expect(formatLiveError("device_playback_permission_denied")).toContain("screen-sharing");
+    expect(formatLiveError("device_playback_capture_revoked")).toContain("stopped");
+    expect(formatLiveError("device_playback_capture_stopped")).toContain("ended");
     expect(isAllowanceExhaustedError("realtime_allowance_exhausted")).toBe(true);
     expect(formatLiveError("unknown_code")).toContain("unknown_code");
 

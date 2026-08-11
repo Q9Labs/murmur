@@ -26,6 +26,18 @@ export function formatLiveError(error: string): string {
   if (error === "microphone_start_failed") {
     return "Could not start the microphone. Please try again.";
   }
+  if (error === "device_playback_permission_denied") {
+    return "Phone audio needs audio recording and screen-sharing access. Murmur does not use the microphone in this mode.";
+  }
+  if (error === "device_playback_start_failed") {
+    return "Could not start phone audio capture. The playing app may block capture.";
+  }
+  if (error === "device_playback_capture_revoked") {
+    return "Phone audio capture stopped. Tap Listen to approve a new session.";
+  }
+  if (error === "device_playback_capture_stopped") {
+    return "Phone audio capture ended. Return to Murmur and tap Listen to start again.";
+  }
   if (error === "realtime_transport_error") {
     return `Translation connection was interrupted. Please try again. (${error})`;
   }

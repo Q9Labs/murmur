@@ -2,15 +2,19 @@
 
 ## Product
 
-Murmur is a guest-first, one-way live translator. The app creates a durable guest account automatically. A user chooses the spoken and translated languages, taps Listen, and receives:
+Murmur is a guest-first, one-way live translator. The app creates a durable guest account automatically. A user chooses the spoken and translated languages, selects an available audio source, taps Listen, and receives:
 
 - a live source transcript;
 - a live translated transcript;
-- translated speech.
+- translated speech in Microphone mode.
 
 There is one session experience. Listening continues until the user stops, cancels, the configured session limit is reached, or the transport fails.
 
-Murmur does not save microphone audio or transcript history by default. Reports may include transcript snapshots only when a user explicitly opts in.
+Murmur does not save microphone audio, supported Android device-playback audio, or transcript history by default. Reports may include transcript snapshots only when a user explicitly opts in.
+
+Microphone is available on every supported platform. Phone audio is available on Android 10 and later. It captures eligible `media`, `game`, and `unknown` playback only after Android grants audio-recording and MediaProjection access for that session. The playing app can block capture. Murmur excludes its own UID, disables translated speech, and does not mix microphone input into Phone audio.
+
+When Android grants display-over-other-apps access, Phone audio shows the current translation in a draggable native overlay. Denying overlay access does not block capture; captions remain available in Murmur. The foreground notification and Android's projection indicator remain visible for the session and can stop capture.
 
 Each account receives 30 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
 
@@ -110,7 +114,7 @@ The lifecycle is:
 
 ```text
 idle
-  -> requesting_mic_permission
+  -> requesting_audio_permission
   -> creating_session
   -> connecting_realtime
   -> live

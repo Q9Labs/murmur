@@ -1,7 +1,10 @@
 import type { MutableRefObject } from "react";
 import type { ScrollView } from "react-native";
 
-import type { AudioStateEvent } from "../../../modules/murmur-audio";
+import type {
+  AudioCaptureSource,
+  AudioStateEvent,
+} from "../../../modules/murmur-audio";
 import type { LiveTranslationController } from "../../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "../types";
 import type { HomeViewModel } from "../viewModel";
@@ -9,11 +12,15 @@ import type { HomeViewModel } from "../viewModel";
 export type UiVariant = "bloom";
 
 export type VariantShellProps = {
+  audioPlaybackAvailable: boolean;
   audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
   autoScrollRef: MutableRefObject<boolean>;
+  captureSource: AudioCaptureSource;
+  devicePlaybackSupported: boolean;
   live: LiveTranslationController;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
+  onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenAccountBilling: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
@@ -26,7 +33,10 @@ export type VariantShellProps = {
 
 export type VariantOnboardingProps = {
   canStart: boolean;
+  captureSource: AudioCaptureSource;
+  devicePlaybackSupported: boolean;
   onContinue: () => void;
+  onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenPicker: (mode: PickerMode) => void;
   onPrivacyAgree: () => void;
   onStart: () => void;

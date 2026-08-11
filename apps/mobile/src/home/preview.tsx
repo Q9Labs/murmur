@@ -59,6 +59,7 @@ const previewLive: LiveTranslationController = {
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
     runtime: {
+      capture_source: "microphone",
       playback_enabled: true,
       realtime_socket_open: false,
       source_char_count: previewSourceCaption.length,
@@ -244,11 +245,15 @@ function TranslationPreview(
     [],
   );
   const props: VariantShellProps = {
+    audioPlaybackAvailable: true,
     audioPlaybackEnabled,
     audioState: null,
     autoScrollRef,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     live: previewLive,
     onAudioPlaybackEnabledChange: noop,
+    onCaptureSourceChange: noop,
     onOpenAccountBilling: noop,
     onOpenPicker: noop,
     onOpenSettings: noop,

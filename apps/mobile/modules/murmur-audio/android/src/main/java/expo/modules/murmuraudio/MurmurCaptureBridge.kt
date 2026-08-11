@@ -52,8 +52,10 @@ internal object MurmurCaptureBridge {
     listener?.onServiceCaptureError(source, reason, error)
   }
 
-  fun stopCapture(reason: String) {
-    service?.requestStop(reason)
+  fun stopCapture(reason: String): Boolean {
+    val captureService = service ?: return false
+    captureService.requestStop(reason)
+    return true
   }
 
   fun updateOverlayCaption(caption: String, rtl: Boolean): Map<String, Any?> {

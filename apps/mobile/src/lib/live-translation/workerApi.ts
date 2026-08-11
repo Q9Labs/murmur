@@ -5,6 +5,7 @@ import type {
 import { PermissionsAndroid, Platform } from "react-native";
 
 import MurmurAudioModule, {
+  type AudioCaptureSource,
   type DeviceIntegrityPayload,
 } from "../../../modules/murmur-audio";
 import type { AcquisitionContext } from "@murmur/protocol/acquisition";
@@ -19,6 +20,22 @@ export async function requestMicrophonePermission(): Promise<boolean> {
     return result === PermissionsAndroid.RESULTS.GRANTED;
   }
   return MurmurAudioModule.requestMicrophonePermission();
+}
+
+export async function requestCapturePermission(source: AudioCaptureSource): Promise<boolean> {
+  if (source === "microphone") {
+    return requestMicrophonePermission();
+  }
+  if (Platform.OS !== "android") {
+    return false;
+  }
+  const recordAudioPermission = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+  );
+  if (recordAudioPermission !== PermissionsAndroid.RESULTS.GRANTED) {
+    return false;
+  }
+  return MurmurAudioModule.requestDevicePlaybackPermission();
 }
 
 export async function createWorkerSession(body: {

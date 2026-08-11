@@ -4,7 +4,7 @@ import type { ComponentType, MutableRefObject, ReactNode } from "react";
 import { Text, View } from "react-native";
 import type { ScrollView } from "react-native";
 
-import type { AudioStateEvent } from "../../modules/murmur-audio";
+import type { AudioCaptureSource, AudioStateEvent } from "../../modules/murmur-audio";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
@@ -23,17 +23,21 @@ const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
 
 export function HomeExperience(props: {
   anonymousAnalyticsEnabled: boolean;
+  audioPlaybackAvailable: boolean;
   audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
   autoScrollRef: MutableRefObject<boolean>;
   diagnosticsOpen: boolean;
   developerToolsEnabled: boolean;
+  captureSource: AudioCaptureSource;
+  devicePlaybackSupported: boolean;
   live: LiveTranslationController;
   networkType: string;
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
   onCloseSettings: () => void;
   onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
+  onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onOpenAccountBilling: () => void;
   onDeleteLocalData: () => void;
@@ -61,11 +65,15 @@ export function HomeExperience(props: {
   return (
     <>
       <Shell
+        audioPlaybackAvailable={props.audioPlaybackAvailable}
         audioPlaybackEnabled={props.audioPlaybackEnabled}
         audioState={props.audioState}
         autoScrollRef={props.autoScrollRef}
+        captureSource={props.captureSource}
+        devicePlaybackSupported={props.devicePlaybackSupported}
         live={props.live}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
+        onCaptureSourceChange={props.onCaptureSourceChange}
         onOpenAccountBilling={props.onOpenAccountBilling}
         onOpenPicker={props.onOpenPicker}
         onOpenSettings={props.onOpenSettings}

@@ -18,6 +18,7 @@ Made for listening, not conversation
 - Committed captions stay ordered on screen as speech is recognized.
 - Auto-detect the speaker's language, or pick it yourself.
 - Optional translated speech when you'd rather listen than read.
+- On supported Android phones, Phone audio translates eligible media playing in another app and can show captions in a draggable bubble.
 
 13 languages
 English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
@@ -35,7 +36,7 @@ Built for real rooms
 - Diagnostics with live latency numbers if you're curious.
 - Four caption styles, and a share action for moments worth keeping.
 
-Murmur needs an internet connection and a microphone — that's it. The next talk, tour, or class in another language doesn't have to be background noise.
+Murmur needs an internet connection. Microphone mode needs microphone access. Android Phone audio also needs audio-recording and screen-sharing approval for each session, but does not record the microphone in that mode. The next talk, tour, or class in another language doesn't have to be background noise.
 
 ## Apple App Store subtitle
 Live captions in 13 languages
@@ -72,10 +73,10 @@ Built for real rooms:
 - Automatic reconnect when the connection blips.
 - Diagnostics with live latency numbers, four caption styles, and a share action.
 
-Murmur needs an internet connection and a microphone — that's it.
+Murmur needs an internet connection and microphone access on iPhone.
 
 ## Google testing instructions
-A guest account is created automatically. Grant microphone permission, pick a target language, and tap Listen while someone speaks. Use Account & Billing to test a Google Play sandbox purchase or Restore Purchases, then confirm the server-verified balance updates. An internet connection is required.
+A guest account is created automatically. For Microphone, grant microphone permission, pick a target language, and tap Listen while someone speaks. For Phone audio on Android 10 or later, choose Phone audio, allow display over other apps if you want the caption bubble, tap Listen, approve audio recording and screen sharing, then play eligible media in another app. Some protected media blocks capture. Use Account & Billing to test a Google Play sandbox purchase or Restore Purchases, then confirm the server-verified balance updates. An internet connection is required.
 
 ## Apple review notes
 A guest account is created automatically. Microphone audio is used only during an active Listen session and is not retained by default. To test billing, open Account & Billing, complete an Apple sandbox purchase or Restore Purchases, and confirm the server-verified balance updates.

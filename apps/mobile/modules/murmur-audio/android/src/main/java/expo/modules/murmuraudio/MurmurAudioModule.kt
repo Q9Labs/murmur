@@ -37,8 +37,8 @@ import kotlin.math.sqrt
 private const val MURMUR_SAMPLE_RATE = 24_000
 private const val MURMUR_FRAME_BYTES = 960
 private const val MURMUR_FRAME_DURATION_MS = 20
-private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 91_401
-private const val OVERLAY_PERMISSION_REQUEST_CODE = 91_402
+private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 41_271
+private const val OVERLAY_PERMISSION_REQUEST_CODE = 41_272
 
 class MurmurAudioModule : Module(), MurmurCaptureListener {
   @Volatile private var captureActive = false
@@ -161,9 +161,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       pendingOverlayPermission?.resolve(false)
       pendingOverlayPermission = null
       projectionResultData = null
-      MurmurCaptureBridge.detach(this@MurmurAudioModule)
       stopCaptureSync("module_destroy")
       clearPlaybackSync("module_destroy")
+      MurmurCaptureBridge.detach(this@MurmurAudioModule)
     }
   }
 
@@ -216,10 +216,10 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     projectionResultData = null
     projectionResultCode = Activity.RESULT_CANCELED
     pendingCaptureStart = promise
-    resetCaptureDiagnostics(source)
+    resetCaptureDiagnostics(CAPTURE_SOURCE_DEVICE_PLAYBACK)
     try {
       startForegroundCaptureService(
-        source,
+        CAPTURE_SOURCE_DEVICE_PLAYBACK,
         projectionCode,
         projectionData
       )
@@ -227,7 +227,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         if (pendingCaptureStart === promise) {
           pendingCaptureStart = null
           captureActive = false
-          MurmurCaptureBridge.stopCapture("capture_start_timeout")
+          stopForegroundCaptureService("capture_start_timeout")
           promise.reject("E_CAPTURE_START_TIMEOUT", "Device playback capture did not start", null)
           emitState("capture_start_timeout")
         }
@@ -278,7 +278,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       releaseAudioEffects()
       recorder = null
       record.release()
-      stopForegroundCaptureService()
+      stopForegroundCaptureService("capture_start_failed")
       throw error
     }
   }
@@ -340,7 +340,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       pendingCaptureStart?.reject("E_CAPTURE_STOPPED", "Capture stopped before startup completed", null)
       pendingCaptureStart = null
       captureActive = false
-      MurmurCaptureBridge.stopCapture(reason)
+      stopForegroundCaptureService(reason)
       emitState(reason)
       return
     }
@@ -354,7 +354,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     recorder?.release()
     recorder = null
     releaseAudioEffects()
-    stopForegroundCaptureService()
+    stopForegroundCaptureService(reason)
     emitState(reason)
   }
 
@@ -656,12 +656,13 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     context.startService(intent)
   }
 
-  private fun stopForegroundCaptureService() {
+  private fun stopForegroundCaptureService(reason: String = "capture_stop") {
     val context = appContext.reactContext ?: return
-    if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
-      MurmurCaptureBridge.stopCapture("capture_stop")
+    val serviceWillStopItself = captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK &&
+      MurmurCaptureBridge.stopCapture(reason)
+    if (!serviceWillStopItself) {
+      context.stopService(Intent(context, MurmurForegroundService::class.java))
     }
-    context.stopService(Intent(context, MurmurForegroundService::class.java))
   }
 
   private fun captureCapabilities(): Map<String, Boolean> {

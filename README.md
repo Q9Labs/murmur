@@ -1,6 +1,6 @@
 # Murmur
 
-Murmur is a privacy-conscious, one-way live translation app. While you speak, it streams source captions, translated captions, and translated speech.
+Murmur is a privacy-conscious, one-way live translation app. It translates microphone speech on supported platforms and eligible media playback on Android 10 and later, with live source and translated captions plus optional translated speech in Microphone mode.
 
 The mobile client is built with Expo and React Native. A Cloudflare Worker keeps OpenAI credentials off devices and adapts the app-facing protocol to OpenAI's Realtime Translation API.
 

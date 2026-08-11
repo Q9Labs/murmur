@@ -16,6 +16,7 @@ public class MurmurAudioModule: Module {
   private var converter: AVAudioConverter?
   private var captureBuffer = Data()
   private var captureActive = false
+  private var captureSource = "microphone"
   private var playbackActive = false
   private var playbackQueuedMs = 0
   private var playbackGeneration = 0
@@ -39,18 +40,39 @@ public class MurmurAudioModule: Module {
       }
     }
 
+    AsyncFunction("getCaptureCapabilities") {
+      return [
+        "device_playback_supported": false,
+        "floating_overlay_supported": false,
+        "microphone_supported": true,
+        "overlay_permission_granted": false
+      ]
+    }
+
+    AsyncFunction("requestDevicePlaybackPermission") {
+      return false
+    }
+
+    AsyncFunction("requestOverlayPermission") {
+      return false
+    }
+
     AsyncFunction("getAudioState") {
       return self.statePayload(reason: "get_audio_state")
     }
 
-    AsyncFunction("startCapture") {
-      try self.startCaptureSync()
+    AsyncFunction("startCapture") { (source: String) in
+      try self.startCaptureSync(source: source)
       return self.statePayload(reason: "capture_started")
     }.runOnQueue(.main)
 
     AsyncFunction("stopCapture") { (reason: String?) in
       self.stopCaptureSync(reason: reason ?? "stop_capture")
       return self.statePayload(reason: reason ?? "stop_capture")
+    }.runOnQueue(.main)
+
+    AsyncFunction("updateOverlayCaption") { (_: String, _: Bool) in
+      return self.statePayload(reason: "overlay_unavailable")
     }.runOnQueue(.main)
 
     AsyncFunction("startPlayback") {
@@ -82,10 +104,18 @@ public class MurmurAudioModule: Module {
     }
   }
 
-  private func startCaptureSync() throws {
+  private func startCaptureSync(source: String) throws {
     if captureActive {
       return
     }
+    guard source == "microphone" else {
+      throw NSError(
+        domain: "MurmurAudio",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Device playback capture is unavailable on this iOS version"]
+      )
+    }
+    captureSource = source
 
     audioGenerationId += 1
     droppedFrames = 0
@@ -378,6 +408,7 @@ public class MurmurAudioModule: Module {
   private func emitFrame(data: Data) {
     let payload = [
       "audio_generation_id": audioGenerationId,
+      "capture_source": captureSource,
       "data": data,
       "duration_ms": murmurFrameDurationMs,
       "event_seq": nextEventSeq(),
@@ -402,6 +433,7 @@ public class MurmurAudioModule: Module {
     return [
       "audio_generation_id": audioGenerationId,
       "capture_active": captureActive,
+      "capture_source": captureSource,
       "dropped_frames": droppedFrames,
       "event_seq": nextEventSeq(),
       "playback_active": playbackActive,

@@ -21,6 +21,8 @@ BUILT FOR READABLE LIVE TRANSLATION
 • Source and target language controls
 • In-app reporting for translation issues
 
-Murmur needs an internet connection and a microphone — that's it.
+Choose Microphone for nearby speech or Device Audio on supported Android phones to translate eligible media playing in another app. Device Audio can show translated captions in a draggable bubble when you allow display over other apps. Some apps and protected media block playback capture.
+
+Murmur needs an internet connection. Android requires audio-recording access for both capture modes and screen-sharing approval for each Device Audio session; Murmur does not record the microphone in Device Audio mode.
 
 Murmur uses OpenAI Realtime for speech recognition, translation, and translated speech. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.

@@ -3,6 +3,7 @@ import type { LanguageCode, SourceLanguageCode } from "./languages";
 export type SessionState =
   | "idle"
   | "requesting_mic_permission"
+  | "requesting_audio_permission"
   | "checking_device"
   | "creating_session"
   | "connecting_realtime"
@@ -88,6 +89,7 @@ export function canStartSession(status: SessionState): boolean {
 export function isActiveOrRecoveringSession(status: SessionState): boolean {
   return [
     "requesting_mic_permission",
+    "requesting_audio_permission",
     "checking_device",
     "creating_session",
     "connecting_realtime",

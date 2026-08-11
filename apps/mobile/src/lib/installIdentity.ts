@@ -7,7 +7,8 @@ import {
 const installIdKey = "murmur_install_id";
 const freeAllowanceIdKey = "murmur_free_allowance_id";
 const legacyPrivacyAcknowledgementKey = "murmur_privacy_acknowledged_v1";
-const privacyAcknowledgementKey = "murmur_third_party_ai_consent_v2";
+const legacyThirdPartyAiConsentKey = "murmur_third_party_ai_consent_v2";
+const privacyAcknowledgementKey = "murmur_third_party_ai_consent_v3";
 let installIdCreation: Promise<string> | null = null;
 let freeAllowanceIdCreation: Promise<string> | null = null;
 
@@ -75,6 +76,7 @@ export async function deleteLocalMurmurData(): Promise<void> {
   await deleteLocalValue(installIdKey);
   await deleteLocalValue(freeAllowanceIdKey);
   await deleteLocalValue(legacyPrivacyAcknowledgementKey);
+  await deleteLocalValue(legacyThirdPartyAiConsentKey);
   await deleteLocalValue(privacyAcknowledgementKey);
 }
 

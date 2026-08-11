@@ -18,6 +18,7 @@ import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { TranslatedAudioControl } from "./audioControl";
+import { CaptureSourceControl } from "./captureSourceControl";
 import { useBloomStyles } from "./styles";
 
 const brandLogo = require("../../../../assets/images/icon.png");
@@ -56,6 +57,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <BloomChrome
+        audioPlaybackAvailable={props.audioPlaybackAvailable}
         audioPlaybackEnabled={props.audioPlaybackEnabled}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onOpenSettings={props.onOpenSettings}
@@ -73,6 +75,12 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
           {viewModel.statusText}
         </Text>
+        <CaptureSourceControl
+          devicePlaybackSupported={props.devicePlaybackSupported}
+          disabled={!viewModel.canChangeLanguages}
+          onChange={props.onCaptureSourceChange}
+          source={props.captureSource}
+        />
         <TextLanguageRow
           containerStyle={styles.languageRow}
           onOpenPicker={props.onOpenPicker}
@@ -113,10 +121,12 @@ export function BrandMark(): ReactNode {
 }
 
 function BloomChrome({
+  audioPlaybackAvailable,
   audioPlaybackEnabled,
   onAudioPlaybackEnabledChange,
   onOpenSettings,
 }: {
+  audioPlaybackAvailable: boolean;
   audioPlaybackEnabled: boolean;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onOpenSettings: () => void;
@@ -127,6 +137,7 @@ function BloomChrome({
       <BrandMark />
       <View style={styles.chromeActions}>
         <TranslatedAudioControl
+          disabled={!audioPlaybackAvailable}
           enabled={audioPlaybackEnabled}
           onChange={onAudioPlaybackEnabledChange}
         />

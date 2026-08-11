@@ -80,9 +80,10 @@ describe("install identity storage", () => {
       setItem: vi.fn((key: string, value: string) => {
         storedValues.set(key, value);
       }),
-      } satisfies TestWebStorage,
+    } satisfies TestWebStorage,
     });
 
+    storedValues.set("murmur_third_party_ai_consent_v2", "true");
     expect(await hasAcknowledgedPrivacyDisclosure()).toBe(false);
     await acknowledgePrivacyDisclosure();
     expect(await hasAcknowledgedPrivacyDisclosure()).toBe(true);
@@ -97,5 +98,6 @@ describe("install identity storage", () => {
     expect(storedValues.has("murmur_install_id")).toBe(false);
     expect(storedValues.has("murmur_free_allowance_id")).toBe(false);
     expect(storedValues.has("murmur_third_party_ai_consent_v2")).toBe(false);
+    expect(storedValues.has("murmur_third_party_ai_consent_v3")).toBe(false);
   });
 });

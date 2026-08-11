@@ -21,6 +21,7 @@ internal class MurmurOverlayController(private val context: Context) {
   private val windowManager = context.getSystemService(WindowManager::class.java)
   @Volatile private var visible = false
   @Volatile private var currentCaption = ""
+  @Volatile private var dismissedForSession = false
   private var rootView: View? = null
   private var captionView: TextView? = null
   private var windowParams: WindowManager.LayoutParams? = null
@@ -30,7 +31,12 @@ internal class MurmurOverlayController(private val context: Context) {
       mainHandler.post(::show)
       return
     }
-    if (visible || !hasPermission(context)) {
+    dismissedForSession = false
+    showIfAllowed()
+  }
+
+  private fun showIfAllowed() {
+    if (visible || dismissedForSession || !hasPermission(context)) {
       return
     }
 
@@ -74,24 +80,24 @@ internal class MurmurOverlayController(private val context: Context) {
     captionView = null
     windowParams = null
     currentCaption = ""
+    dismissedForSession = false
     visible = false
   }
 
   fun updateCaption(caption: String, rtl: Boolean) {
-    val boundedCaption = caption.trim().take(MAX_CAPTION_LENGTH)
+    val boundedCaption = caption.trim().takeLast(MAX_CAPTION_LENGTH)
     currentCaption = boundedCaption
     if (Looper.myLooper() != Looper.getMainLooper()) {
       mainHandler.post { updateCaption(boundedCaption, rtl) }
       return
     }
     if (!visible) {
-      show()
+      showIfAllowed()
     }
     val captionTextView = captionView ?: return
-    captionTextView.text = boundedCaption
-    val direction = if (rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
-    captionTextView.layoutDirection = direction
-    captionTextView.textDirection = direction
+    captionTextView.text = boundedCaption.ifEmpty { EMPTY_CAPTION }
+    captionTextView.layoutDirection = if (rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+    captionTextView.textDirection = if (rtl) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_LTR
     captionTextView.gravity = if (rtl) Gravity.END else Gravity.START
   }
 
@@ -102,6 +108,7 @@ internal class MurmurOverlayController(private val context: Context) {
   )
 
   companion object {
+    private const val EMPTY_CAPTION = "Listening for phone audio…"
     private const val MAX_CAPTION_LENGTH = 240
 
     fun hasPermission(context: Context): Boolean {
@@ -110,7 +117,7 @@ internal class MurmurOverlayController(private val context: Context) {
   }
 
   private fun createView(): View {
-    val background = GradientDrawable().apply {
+    val bubbleBackground = GradientDrawable().apply {
       setColor(Color.rgb(24, 24, 27))
       cornerRadius = dp(16).toFloat()
       setStroke(dp(1), Color.rgb(108, 108, 116))
@@ -118,7 +125,7 @@ internal class MurmurOverlayController(private val context: Context) {
     val container = LinearLayout(context).apply {
       orientation = LinearLayout.VERTICAL
       setPadding(dp(16), dp(10), dp(12), dp(12))
-      background = background
+      background = bubbleBackground
       elevation = dp(8).toFloat()
     }
     val header = LinearLayout(context).apply {
@@ -127,6 +134,7 @@ internal class MurmurOverlayController(private val context: Context) {
     }
     val label = TextView(context).apply {
       text = "Murmur"
+      contentDescription = "Move live captions"
       setTextColor(Color.rgb(255, 206, 84))
       textSize = 13f
       setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -141,7 +149,7 @@ internal class MurmurOverlayController(private val context: Context) {
       isClickable = true
       layoutParams = LinearLayout.LayoutParams(dp(32), dp(32))
     }
-    dismiss.setOnClickListener { hide() }
+    dismiss.setOnClickListener { dismissForSession() }
     header.addView(label)
     header.addView(dismiss)
 
@@ -152,7 +160,8 @@ internal class MurmurOverlayController(private val context: Context) {
       ellipsize = TextUtils.TruncateAt.END
       setLineSpacing(0f, 1.08f)
       gravity = Gravity.START
-      text = currentCaption
+      text = currentCaption.ifEmpty { EMPTY_CAPTION }
+      accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
       layoutParams = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -161,8 +170,27 @@ internal class MurmurOverlayController(private val context: Context) {
     captionView = caption
     container.addView(header)
     container.addView(caption)
-    container.setOnTouchListener(DragTouchListener())
+    label.setOnTouchListener(DragTouchListener())
     return container
+  }
+
+  private fun dismissForSession() {
+    dismissedForSession = true
+    removeView()
+  }
+
+  private fun removeView() {
+    val root = rootView
+    if (root != null) {
+      try {
+        windowManager.removeView(root)
+      } catch (_: IllegalArgumentException) {
+      }
+    }
+    rootView = null
+    captionView = null
+    windowParams = null
+    visible = false
   }
 
   private inner class DragTouchListener : View.OnTouchListener {
@@ -184,10 +212,15 @@ internal class MurmurOverlayController(private val context: Context) {
         MotionEvent.ACTION_MOVE -> {
           params.x = startX + (event.rawX - downX).toInt()
           params.y = startY + (event.rawY - downY).toInt()
+          val overlay = rootView ?: return false
           try {
-            windowManager.updateViewLayout(view, params)
+            windowManager.updateViewLayout(overlay, params)
           } catch (_: IllegalArgumentException) {
           }
+          return true
+        }
+        MotionEvent.ACTION_UP -> {
+          view.performClick()
           return true
         }
       }
