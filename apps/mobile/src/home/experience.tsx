@@ -111,10 +111,10 @@ export function HomeExperience(props: {
           live={props.live}
           onClose={props.onCloseDiagnostics}
           open={props.diagnosticsOpen}
-          sourceLanguageRtl={
+          sourceLanguageDirection={
             props.sourceLanguageCode === autoSourceLanguageCode
-              ? false
-              : getLanguage(props.sourceLanguageCode).rtl
+              ? "auto"
+              : getLanguage(props.sourceLanguageCode).rtl ? "rtl" : "ltr"
           }
           targetLanguageRtl={props.viewModel.targetLanguage.rtl}
         />
@@ -127,13 +127,13 @@ export function TranslationReportModal({
   live,
   onClose,
   open,
-  sourceLanguageRtl,
+  sourceLanguageDirection,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
   onClose: () => void;
   open: boolean;
-  sourceLanguageRtl: boolean;
+  sourceLanguageDirection: "auto" | "ltr" | "rtl";
   targetLanguageRtl: boolean;
 }): ReactNode {
   const { direction, t } = useUiLocale();
@@ -152,7 +152,7 @@ export function TranslationReportModal({
               key={`${span.span_id}-${span.revision}`}
               live={live}
               span={span}
-              sourceLanguageRtl={sourceLanguageRtl}
+              sourceLanguageDirection={sourceLanguageDirection}
               targetLanguageRtl={targetLanguageRtl}
             />
           ))
@@ -164,18 +164,23 @@ export function TranslationReportModal({
 
 function ReportSpanRow({
   live,
-  sourceLanguageRtl,
+  sourceLanguageDirection,
   span,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
-  sourceLanguageRtl: boolean;
+  sourceLanguageDirection: "auto" | "ltr" | "rtl";
   span: TranslationSpan;
   targetLanguageRtl: boolean;
 }): ReactNode {
   return (
     <View style={styles.spanRow}>
-      <Text style={[styles.spanSource, sourceLanguageRtl ? styles.rtlText : styles.ltrText]}>
+      <Text style={[
+        styles.spanSource,
+        sourceLanguageDirection === "auto"
+          ? styles.autoText
+          : sourceLanguageDirection === "rtl" ? styles.rtlText : styles.ltrText,
+      ]}>
         {span.source_caption}
       </Text>
       <Text style={[styles.spanTranslation, targetLanguageRtl ? styles.rtlText : styles.ltrText]}>

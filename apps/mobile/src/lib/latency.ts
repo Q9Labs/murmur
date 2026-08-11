@@ -81,17 +81,26 @@ export function summarizeLatency(samples: LatencySample[]): LatencyReport {
 
 export function formatLatencyPercentiles(
   percentiles: LatencyPercentiles | null | undefined,
-  formatNumber: (value: number) => string = String,
+  options: {
+    formatCount?: (count: string) => string;
+    formatNumber?: (value: number) => string;
+    formatPercentile?: (percentile: string, value: string | null) => string;
+    unavailable?: string;
+  } = {},
 ): string {
   if (!percentiles || percentiles.count === 0) {
-    return "n/a";
+    return options.unavailable ?? "n/a";
   }
 
+  const formatNumber = options.formatNumber ?? String;
+  const formatCount = options.formatCount ?? ((count: string) => `n=${count}`);
+  const formatPercentile = options.formatPercentile ?? ((percentile: string, value: string | null) =>
+    value === null ? `p${percentile} n/a` : `p${percentile} ${value}ms`);
   return [
-    `n=${formatNumber(percentiles.count)}`,
-    `p50 ${formatLatencyValue(percentiles.p50_ms, formatNumber)}`,
-    `p90 ${formatLatencyValue(percentiles.p90_ms, formatNumber)}`,
-    `p95 ${formatLatencyValue(percentiles.p95_ms, formatNumber)}`,
+    formatCount(formatNumber(percentiles.count)),
+    formatPercentile(formatNumber(50), formatLatencyValue(percentiles.p50_ms, formatNumber)),
+    formatPercentile(formatNumber(90), formatLatencyValue(percentiles.p90_ms, formatNumber)),
+    formatPercentile(formatNumber(95), formatLatencyValue(percentiles.p95_ms, formatNumber)),
   ].join(" / ");
 }
 
@@ -161,6 +170,9 @@ export function formatLatencyEvidenceReport(report: LatencyEvidenceReport): stri
   return lines.join("\n");
 }
 
-function formatLatencyValue(value: number | null, formatNumber: (value: number) => string): string {
-  return typeof value === "number" ? `${formatNumber(Math.round(value))}ms` : "n/a";
+function formatLatencyValue(
+  value: number | null,
+  formatNumber: (value: number) => string,
+): string | null {
+  return typeof value === "number" ? formatNumber(Math.round(value)) : null;
 }

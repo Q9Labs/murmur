@@ -103,6 +103,10 @@ export const enCatalog = {
   "diagnostics.firstSourceTranscript": "First source transcript",
   "diagnostics.firstTranslatedTranscript": "First translated transcript",
   "diagnostics.noSpans": "No spans yet",
+  "diagnostics.latencyUnavailable": "n/a",
+  "diagnostics.latencyCount": "n={count}",
+  "diagnostics.latencyPercentile": "p{percentile} {value}ms",
+  "diagnostics.latencyPercentileUnavailable": "p{percentile} n/a",
 
   "status.ended": "Ended",
   "status.healthOk": "Health OK",
@@ -236,6 +240,10 @@ export const arCatalog: { [Key in MessageKey]: string } = {
   "diagnostics.firstSourceTranscript": "أول نص من المصدر",
   "diagnostics.firstTranslatedTranscript": "أول نص مترجم",
   "diagnostics.noSpans": "لا توجد مقاطع بعد",
+  "diagnostics.latencyUnavailable": "غير متاح",
+  "diagnostics.latencyCount": "العدد={count}",
+  "diagnostics.latencyPercentile": "المئين {percentile}: {value} مللي ثانية",
+  "diagnostics.latencyPercentileUnavailable": "المئين {percentile}: غير متاح",
 
   "status.ended": "انتهت",
   "status.healthOk": "الحالة سليمة",

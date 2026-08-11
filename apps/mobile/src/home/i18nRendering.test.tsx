@@ -18,6 +18,7 @@ vi.mock("react-native", () => ({
 
 vi.mock("./styles", () => ({
   styles: {
+    autoText: { textAlign: "auto", writingDirection: "auto" },
     ltrText: { textAlign: "left", writingDirection: "ltr" },
     rtlText: { textAlign: "right", writingDirection: "rtl" },
   },
@@ -81,5 +82,24 @@ describe("Arabic UI rendering", () => {
     );
 
     expect(markup).toContain("ستظهر المحادثة هنا بعد البدء.");
+  });
+
+  it("lets auto-detected source text derive its direction from content", () => {
+    const span = {
+      ...createSpan("مرحبًا"),
+      committed_translated_caption: "Hello",
+      status: "committed" as const,
+    };
+
+    renderTimeline(
+      { spans: [span], tentative_source_caption: "" },
+      { isLive: false, sourceLanguage: null, targetLanguage: { rtl: false } },
+    );
+
+    expect(capturedText.find(({ children }) => children === "مرحبًا")?.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ textAlign: "auto", writingDirection: "auto" }),
+      ]),
+    );
   });
 });

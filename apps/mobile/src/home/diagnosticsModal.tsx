@@ -255,7 +255,7 @@ function DiagnosticsLatency({
         label={translate("diagnostics.firstSourceTranscript")}
         value={formatLatencyPercentiles(
           live.latency_report.first_source_transcript,
-          (value) => formatUiNumber(value, locale),
+          latencyDisplayOptions(locale, translate),
         )}
       />
       <LatencyRow
@@ -263,11 +263,22 @@ function DiagnosticsLatency({
         label={translate("diagnostics.firstTranslatedTranscript")}
         value={formatLatencyPercentiles(
           live.latency_report.first_translated_transcript,
-          (value) => formatUiNumber(value, locale),
+          latencyDisplayOptions(locale, translate),
         )}
       />
     </>
   );
+}
+
+function latencyDisplayOptions(locale: "en" | "ar", translate: Translate) {
+  return {
+    formatCount: (count: string) => translate("diagnostics.latencyCount", { count }),
+    formatNumber: (value: number) => formatUiNumber(value, locale),
+    formatPercentile: (percentile: string, value: string | null) => value === null
+      ? translate("diagnostics.latencyPercentileUnavailable", { percentile })
+      : translate("diagnostics.latencyPercentile", { percentile, value }),
+    unavailable: translate("diagnostics.latencyUnavailable"),
+  };
 }
 
 function DiagnosticsTimeline({
@@ -283,7 +294,9 @@ function DiagnosticsTimeline({
   targetLanguage: LanguageDefinition;
   translate: Translate;
 }): ReactNode {
-  const sourceLanguage = sourceLanguageCode === "auto" ? null : getLanguage(sourceLanguageCode);
+  const sourceDirection = sourceLanguageCode === "auto"
+    ? "auto"
+    : getLanguage(sourceLanguageCode).rtl ? "rtl" : "ltr";
   return (
     <View style={styles.timeline}>
       {live.spans.length === 0 ? (
@@ -296,7 +309,7 @@ function DiagnosticsTimeline({
             key={`${span.span_id}-${span.revision}`}
             live={live}
             span={span}
-            sourceRtl={Boolean(sourceLanguage?.rtl)}
+            sourceDirection={sourceDirection}
             targetLanguage={targetLanguage}
           />
         ))
@@ -307,18 +320,25 @@ function DiagnosticsTimeline({
 
 function DiagnosticSpanRow({
   live,
-  sourceRtl,
+  sourceDirection,
   span,
   targetLanguage,
 }: {
   live: LiveTranslationController;
-  sourceRtl: boolean;
+  sourceDirection: "auto" | "ltr" | "rtl";
   span: TranslationSpan;
   targetLanguage: LanguageDefinition;
 }): ReactNode {
   return (
     <View style={styles.spanRow}>
-      <Text style={[styles.spanSource, sourceRtl ? styles.rtlText : styles.ltrText]}>{span.source_caption}</Text>
+      <Text style={[
+        styles.spanSource,
+        sourceDirection === "auto"
+          ? styles.autoText
+          : sourceDirection === "rtl" ? styles.rtlText : styles.ltrText,
+      ]}>
+        {span.source_caption}
+      </Text>
       <Text style={[styles.spanTranslation, targetLanguage.rtl ? styles.rtlText : styles.ltrText]}>
         {getDiagnosticSpanTranslationText(span)}
       </Text>

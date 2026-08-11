@@ -51,9 +51,18 @@ describe("latency percentiles", () => {
     expect(
       formatLatencyPercentiles(
         { count: 2, p50_ms: 120, p90_ms: 240, p95_ms: 300 },
-        (value) => arabicDigits.format(value),
+        {
+          formatCount: (count) => `العدد=${count}`,
+          formatNumber: (value) => arabicDigits.format(value),
+          formatPercentile: (percentile, value) =>
+            `المئين ${percentile}: ${value ?? "غير متاح"}${value ? " مللي ثانية" : ""}`,
+          unavailable: "غير متاح",
+        },
       ),
-    ).toBe("n=٢ / p50 ١٢٠ms / p90 ٢٤٠ms / p95 ٣٠٠ms");
+    ).toBe(
+      "العدد=٢ / المئين ٥٠: ١٢٠ مللي ثانية / المئين ٩٠: ٢٤٠ مللي ثانية / المئين ٩٥: ٣٠٠ مللي ثانية",
+    );
+    expect(formatLatencyPercentiles(undefined, { unavailable: "غير متاح" })).toBe("غير متاح");
   });
 
   it("builds an exportable evidence report with run metadata", () => {

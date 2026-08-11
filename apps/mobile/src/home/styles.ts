@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 import type { ImageStyle, TextStyle, ViewStyle } from "react-native";
 
 type AppStyles = {
+  autoText: TextStyle;
   appChrome: ViewStyle;
   bottomDock: ViewStyle;
   brandMini: ViewStyle;
@@ -161,6 +162,10 @@ type AppStyles = {
 };
 
 export const styles = StyleSheet.create<AppStyles>({
+  autoText: {
+    textAlign: "auto",
+    writingDirection: "auto",
+  },
   appChrome: {
     alignItems: "center",
     flexDirection: "row",

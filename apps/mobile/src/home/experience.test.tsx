@@ -18,6 +18,7 @@ vi.mock("./settingsModals", () => ({ SettingsModal: () => null }));
 vi.mock("./styles", () => ({
   styles: {
     ltrText: {},
+    autoText: {},
     reportButton: {},
     reportButtonText: {},
     reportRow: {},
@@ -68,7 +69,7 @@ describe("production translation reporting", () => {
         live={live}
         onClose={vi.fn()}
         open
-        sourceLanguageRtl={false}
+        sourceLanguageDirection="ltr"
         targetLanguageRtl={false}
       />,
     );
@@ -103,7 +104,7 @@ describe("production translation reporting", () => {
           live={live}
           onClose={vi.fn()}
           open
-          sourceLanguageRtl={false}
+          sourceLanguageDirection="ltr"
           targetLanguageRtl={false}
         />,
       ),

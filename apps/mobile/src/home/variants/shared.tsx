@@ -110,7 +110,9 @@ export function SpanTimeline({
   viewModel: VariantShellProps["viewModel"];
 }): ReactNode {
   const { direction, t } = useUiLocale();
-  const sourceRtl = Boolean(viewModel.sourceLanguage?.rtl);
+  const sourceDirection = viewModel.sourceLanguage
+    ? viewModel.sourceLanguage.rtl ? "rtl" : "ltr"
+    : "auto";
   const visibleSpans = live.spans.filter((span) => !shouldHideSpan(span));
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
 
@@ -131,7 +133,7 @@ export function SpanTimeline({
       {visibleSpans.map((span) => (
         <SpanRow
           key={`${span.span_id}:${span.revision}`}
-          sourceRtl={sourceRtl}
+          sourceDirection={sourceDirection}
           span={span}
           targetRtl={viewModel.targetLanguage.rtl}
           translate={t}
@@ -139,36 +141,40 @@ export function SpanTimeline({
         />
       ))}
       {live.tentative_source_caption.trim() ? (
-        <TentativeCaption sourceRtl={sourceRtl} text={live.tentative_source_caption} textStyles={textStyles} />
+        <TentativeCaption
+          sourceDirection={sourceDirection}
+          text={live.tentative_source_caption}
+          textStyles={textStyles}
+        />
       ) : null}
     </ScrollView>
   );
 }
 
 function TentativeCaption({
-  sourceRtl,
+  sourceDirection,
   text,
   textStyles,
 }: {
-  sourceRtl: boolean;
+  sourceDirection: "auto" | "ltr" | "rtl";
   text: string;
   textStyles: TimelineTextStyles;
 }): ReactNode {
   return (
-    <Text style={[textStyles.source, sourceRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText]}>
+    <Text style={[textStyles.source, sourceTextStyle(sourceDirection, textStyles)]}>
       {text}
     </Text>
   );
 }
 
 function SpanRow({
-  sourceRtl,
+  sourceDirection,
   span,
   targetRtl,
   translate,
   textStyles,
 }: {
-  sourceRtl: boolean;
+  sourceDirection: "auto" | "ltr" | "rtl";
   span: TranslationSpan;
   targetRtl: boolean;
   translate: Translate;
@@ -185,9 +191,19 @@ function SpanRow({
       >
         {timelineTranslationText(span, translate)}
       </Text>
-      <Text style={[textStyles.source, sourceRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText]}>
+      <Text style={[textStyles.source, sourceTextStyle(sourceDirection, textStyles)]}>
         {span.source_caption}
       </Text>
     </View>
   );
+}
+
+function sourceTextStyle(
+  direction: "auto" | "ltr" | "rtl",
+  textStyles: TimelineTextStyles,
+): StyleProp<TextStyle> {
+  if (direction === "auto") {
+    return homeStyles.autoText;
+  }
+  return direction === "rtl" ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText;
 }
