@@ -367,7 +367,7 @@ function Metric({ direction, label, value, valueDirection }: {
   );
 }
 
-function LatencyRow({ direction, label, value }: {
+export function LatencyRow({ direction, label, value }: {
   direction: "ltr" | "rtl";
   label: string;
   value: string;
@@ -375,7 +375,7 @@ function LatencyRow({ direction, label, value }: {
   return (
     <View style={styles.latencyRow}>
       <Text style={[styles.latencyLabel, uiTextDirectionStyle(direction)]}>{label}</Text>
-      <Text style={[styles.latencyValue, uiTextDirectionStyle("ltr")]}>{value}</Text>
+      <Text style={[styles.latencyValue, uiTextDirectionStyle(direction)]}>{value}</Text>
     </View>
   );
 }
