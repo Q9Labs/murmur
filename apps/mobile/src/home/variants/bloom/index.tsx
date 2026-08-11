@@ -34,6 +34,9 @@ export function BloomShell(props: VariantShellProps): ReactNode {
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
+        <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
+          {viewModel.statusText}
+        </Text>
         <TextLanguageRow
           containerStyle={styles.languageRow}
           onOpenPicker={props.onOpenPicker}

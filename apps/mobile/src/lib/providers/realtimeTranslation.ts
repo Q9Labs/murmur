@@ -124,11 +124,11 @@ export function createRealtimeTranslationClient(options: {
         diagnostics.socket_opened_at_ms = Date.now();
       };
       nextSocket.onmessage = (event) => {
+        if (!acceptingMessages) {
+          diagnostics.messages_skipped_client_closed += 1;
+          return;
+        }
         receiveQueue = receiveQueue.then(async () => {
-          if (!acceptingMessages) {
-            diagnostics.messages_skipped_client_closed += 1;
-            return;
-          }
           await receive(
             event.data,
             diagnostics,

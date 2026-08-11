@@ -19,6 +19,26 @@ OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
 GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
 GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
 
+[env.development]
+name = "murmur-worker-development"
+workers_dev = true
+
+[[env.development.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimitDurableObject"
+
+[[env.development.migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[env.development.vars]
+APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_ENVIRONMENT = "development"
+MURMUR_ENV = "development"
+OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
+GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
+
 [env.production]
 name = "murmur-worker-production"
 workers_dev = true

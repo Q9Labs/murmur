@@ -32,7 +32,15 @@ describe("home status helpers", () => {
     expect(getStatusText("live", null)).toBe("Health OK");
     expect(getStatusText("recovering", null)).toBe("Recovering");
     expect(getStatusText("idle", "realtime_transport_error")).toBe("Network degraded");
-    expect(getStatusText("requesting_mic_permission", null)).toBe("Microphone");
+    expect(getStatusText("requesting_mic_permission", null)).toBe("Checking microphone");
+    expect(getStatusText("requesting_mic_permission", null, "checking_device")).toBe(
+      "Checking device",
+    );
+    expect(getStatusText("checking_device", null)).toBe("Checking device");
+    expect(getStatusText("creating_session", null)).toBe("Starting AI");
+    expect(getStatusText("connecting_realtime", null)).toBe("Starting AI");
+    expect(getStatusText("idle", null, "checking_microphone")).toBe("Checking microphone");
+    expect(getStatusText("idle", null, "checking_device")).toBe("Checking device");
 
     expect(getHealthText("live", null)).toBe("OK");
     expect(getHealthText("network_degraded", null)).toBe("Degraded");

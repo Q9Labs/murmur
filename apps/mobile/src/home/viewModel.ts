@@ -35,7 +35,10 @@ export type HomeViewModel = {
 };
 
 export function buildHomeViewModel(params: {
-  live: Pick<LiveTranslationController, "error" | "spans" | "status" | "tentative_source_caption">;
+  live: Pick<
+    LiveTranslationController,
+    "error" | "preparation_status" | "spans" | "status" | "tentative_source_caption"
+  >;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
 }): HomeViewModel {
@@ -80,7 +83,11 @@ export function buildHomeViewModel(params: {
     }),
     sourceLanguage,
     sourceLanguageDisplayName: sourceLanguage?.display_name ?? "Auto detect",
-    statusText: getStatusText(params.live.status, params.live.error),
+    statusText: getStatusText(
+      params.live.status,
+      params.live.error,
+      params.live.preparation_status,
+    ),
     targetLanguage,
   };
 }

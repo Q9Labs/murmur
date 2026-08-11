@@ -46,18 +46,8 @@ export class RateLimitDurableObject {
   private handle(body: DurableLimitRequest, state: DurableLimitState): unknown {
     const adapter = createMemoryAdapter(state);
     switch (body.action) {
-      case "can_create_session":
-        return adapter.canCreateSession({
-          config: defaultRateLimits,
-          hashed_install_id: body.hashed_install_id,
-          now_ms: body.now_ms,
-        });
       case "create_session_record":
-        return adapter.createSessionRecord({
-          app_session_id: body.app_session_id,
-          hashed_install_id: body.hashed_install_id,
-          now_ms: body.now_ms,
-        });
+        return createSessionRecord(body, adapter);
       case "close_session":
         adapter.closeSession(body.app_session_id, body.now_ms);
         return { ok: true };
@@ -102,6 +92,28 @@ export class RateLimitDurableObject {
   }
 }
 
+function createSessionRecord(
+  body: Extract<DurableLimitRequest, { action: "create_session_record" }>,
+  adapter: ReturnType<typeof createMemoryAdapter>,
+): LimitResult | SessionRecord {
+  if (body.enforce_limits) {
+    const limit = adapter.canCreateSession({
+      config: defaultRateLimits,
+      hashed_install_id: body.hashed_install_id,
+      now_ms: body.now_ms,
+    });
+    if (!limit.ok) {
+      return limit;
+    }
+  }
+  const record = adapter.createSessionRecord({
+    app_session_id: body.app_session_id,
+    hashed_install_id: body.hashed_install_id,
+    now_ms: body.now_ms,
+  });
+  return body.enforce_limits ? { ok: true } : record;
+}
+
 async function callRateLimiter(
   namespace: DurableObjectNamespace | undefined,
   body: DurableLimitRequest,
@@ -118,13 +130,16 @@ async function callRateLimiter(
   return response.json();
 }
 
-export async function canCreateSessionDurable(params: {
+export async function createSessionIfAllowedDurable(params: {
+  app_session_id: string;
   hashed_install_id: string;
   namespace?: DurableObjectNamespace;
   now_ms: number;
 }): Promise<LimitResult> {
   return (await callRateLimiter(params.namespace, {
-    action: "can_create_session",
+    action: "create_session_record",
+    app_session_id: params.app_session_id,
+    enforce_limits: true,
     hashed_install_id: params.hashed_install_id,
     now_ms: params.now_ms,
   })) as LimitResult;

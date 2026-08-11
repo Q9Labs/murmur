@@ -4,6 +4,15 @@ All notable changes to Murmur are documented here.
 
 ## Unreleased
 
+### Added
+
+- An isolated Cloudflare development Worker target for testing live translation without touching production.
+- Full Start and Stop timing spans, plus visible preparation progress while the app checks access and starts translation.
+
+### Changed
+
+- Prepared reusable session prerequisites when the translation screen opens, made Worker session admission atomic in one Durable Object call, silenced capture and playback promptly on Stop, and ran Worker closure beside the provider drain.
+
 ## 1.2.0 - 2026-08-10
 
 ### Added

@@ -14,10 +14,7 @@ import { json } from "../http/response";
 import { defaultRateLimits } from "../limits";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
-import {
-  canCreateSessionDurable,
-  createSessionRecordDurable,
-} from "../rateLimitDurableObject";
+import { createSessionIfAllowedDurable } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
 
 export async function createSession(request: Request, env: Env): Promise<Response> {
@@ -37,12 +34,15 @@ export async function createSession(request: Request, env: Env): Promise<Respons
   }
 
   const appSessionId = crypto.randomUUID();
-  await createSessionRecordDurable({
+  const limitResult = await createSessionIfAllowedDurable({
     app_session_id: appSessionId,
     hashed_install_id: authorized.hashedInstallId,
     namespace: env.RATE_LIMITER,
     now_ms: nowMs,
   });
+  if (!limitResult.ok) {
+    return json({ error: "rate_limited", code: limitResult.code }, 429);
+  }
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
     event: "session_created",
@@ -125,17 +125,6 @@ async function authorizeCreateSession(
     return {
       ok: false,
       response: json({ error: integrityResult.code }, integrityResult.status),
-    };
-  }
-  const limitResult = await canCreateSessionDurable({
-    hashed_install_id: hashedInstallId,
-    namespace: env.RATE_LIMITER,
-    now_ms: nowMs,
-  });
-  if (!limitResult.ok) {
-    return {
-      ok: false,
-      response: json({ error: "rate_limited", code: limitResult.code }, 429),
     };
   }
   return {

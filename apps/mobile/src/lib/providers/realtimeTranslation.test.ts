@@ -39,6 +39,16 @@ class MockWebSocket {
   }
 }
 
+function connectClientWithAudio(
+  options: Parameters<typeof createRealtimeTranslationClient>[0],
+) {
+  const client = createRealtimeTranslationClient(options);
+  client.connect();
+  const socket = MockWebSocket.instances[0];
+  socket?.onmessage?.({ data: new Uint8Array([3, 4]).buffer });
+  return { client, socket };
+}
+
 describe("RealtimeTranslationClient", () => {
   beforeEach(() => {
     MockWebSocket.instances = [];
@@ -88,13 +98,10 @@ describe("RealtimeTranslationClient", () => {
 
   it("plays translated PCM and emits normalized transcript events", async () => {
     const onEvent = vi.fn();
-    const client = createRealtimeTranslationClient({
+    const { client, socket } = connectClientWithAudio({
       onEvent,
       url: "wss://worker.test/v2/realtime",
     });
-    client.connect();
-    const socket = MockWebSocket.instances[0];
-    socket?.onmessage?.({ data: new Uint8Array([3, 4]).buffer });
     socket?.onmessage?.({
       data: JSON.stringify({
         delta: "hello",
@@ -134,14 +141,11 @@ describe("RealtimeTranslationClient", () => {
 
   it("keeps translated audio off while still receiving transcript events", async () => {
     const onEvent = vi.fn();
-    const client = createRealtimeTranslationClient({
+    const { client, socket } = connectClientWithAudio({
       onEvent,
       shouldPlayAudio: () => false,
       url: "wss://worker.test/v2/realtime",
     });
-    client.connect();
-    const socket = MockWebSocket.instances[0];
-    socket?.onmessage?.({ data: new Uint8Array([3, 4]).buffer });
     socket?.onmessage?.({
       data: JSON.stringify({ delta: "hello", kind: "translation_delta" }),
     });
@@ -240,6 +244,43 @@ describe("RealtimeTranslationClient", () => {
       [new Uint8Array([1])],
       [new Uint8Array([2])],
     ]);
+  });
+
+  it("drains provider messages received before client close", async () => {
+    let releaseAudio: (() => void) | undefined;
+    vi.mocked(MurmurAudioModule.enqueuePcm16).mockImplementationOnce(
+      () => new Promise<Record<string, unknown>>((resolve) => {
+        releaseAudio = () => resolve({});
+      }),
+    );
+    const onEvent = vi.fn();
+    const client = createRealtimeTranslationClient({
+      onEvent,
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    const socket = MockWebSocket.instances[0];
+    socket?.onmessage?.({ data: new Uint8Array([1]).buffer });
+    socket?.onmessage?.({
+      data: JSON.stringify({ delta: "final", kind: "translation_delta" }),
+    });
+
+    const closePromise = client.close("session_complete");
+    await vi.waitFor(() => {
+      expect(releaseAudio).toBeDefined();
+    });
+    expect(onEvent).not.toHaveBeenCalledWith({
+      delta: "final",
+      kind: "translation_delta",
+    });
+
+    releaseAudio?.();
+    await closePromise;
+
+    expect(onEvent).toHaveBeenCalledWith({
+      delta: "final",
+      kind: "translation_delta",
+    });
   });
 
   it("rejects malformed server events", () => {

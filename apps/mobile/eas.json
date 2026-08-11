@@ -10,6 +10,9 @@
       },
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-development.msbilal.workers.dev"
+      },
       "ios": {
         "simulator": false
       }

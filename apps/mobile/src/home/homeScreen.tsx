@@ -238,6 +238,12 @@ export default function HomeScreen(): ReactNode {
   }, [acquisition, live.status]);
 
   useEffect(() => {
+    if (privacyAcknowledged && onboardingStep === "done") {
+      void live.prepare();
+    }
+  }, [live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
     let mounted = true;
     void hasAcknowledgedPrivacyDisclosure().then((acknowledged) => {
       if (mounted) {
@@ -387,6 +393,7 @@ export default function HomeScreen(): ReactNode {
         void audioPreferenceController.deleteLocalData(
           () => deleteLocalData(live.cancel),
           () => {
+            live.invalidatePreparation();
             setPrivacyAcknowledged(false);
             setPrivacyConsentChecked(false);
           },
@@ -396,7 +403,7 @@ export default function HomeScreen(): ReactNode {
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
       onPrimaryAction={() => void handlePrimaryAction()}
-      onResetIdentity={() => void resetIdentity(setSettingsMessage)}
+      onResetIdentity={() => void resetIdentity(live, setSettingsMessage)}
       onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       pickerMode={pickerMode}
@@ -426,8 +433,13 @@ function newestAudioState(
   return order >= 0 ? next : current;
 }
 
-async function resetIdentity(setMessage: (message: string | null) => void): Promise<void> {
+async function resetIdentity(
+  live: Pick<ReturnType<typeof useLiveTranslation>, "invalidatePreparation" | "prepare">,
+  setMessage: (message: string | null) => void,
+): Promise<void> {
   await resetInstallId();
+  live.invalidatePreparation();
+  await live.prepare();
   setMessage("Accountless identity reset. The next session will use a fresh install id.");
 }
 

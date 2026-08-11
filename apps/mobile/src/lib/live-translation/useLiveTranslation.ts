@@ -10,7 +10,7 @@ import type {
   ReportTranslationCategory,
   RealtimeServerEvent,
 } from "@murmur/protocol/transport/types";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import MurmurAudioModule, {
   type AudioFrameEvent,
@@ -47,9 +47,25 @@ import {
   requestMicrophonePermission,
 } from "./workerApi";
 import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
+import {
+  createSessionPreparation,
+  type SessionPreparation,
+  type SessionPreparationStatus,
+} from "./sessionPreparation";
+import {
+  createSessionTimingTracker,
+  type ListenTimingStep,
+  type SessionTimingTracker,
+  type StopTimingStep,
+} from "./sessionTiming";
 
 const maxDebugEntries = 200;
 const sessionCloseTimeoutMs = 5_000;
+
+type LocalStopCleanup = {
+  capture: Promise<void>;
+  playback: Promise<void>;
+};
 
 export function useLiveTranslation(
   params: LiveTranslationParams,
@@ -61,6 +77,8 @@ export function useLiveTranslation(
   const [reportReceiptId, setReportReceiptId] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
   const [latencySamples, setLatencySamples] = useState<LatencySample[]>([]);
+  const [preparationStatus, setPreparationStatus] =
+    useState<SessionPreparationStatus>("idle");
   const sessionRef = useRef(session);
   const spanRef = useRef<TranslationSpan | null>(null);
   const clientRef = useRef<RealtimeTranslationClient | null>(null);
@@ -81,7 +99,20 @@ export function useLiveTranslation(
   );
   const playbackActiveRef = useRef(false);
   const playbackEnabledRef = useRef(params.playback_enabled);
+  const playbackSuppressedRef = useRef(false);
   const lastAudioStateRef = useRef<AudioStateEvent | null>(null);
+  const localStopCleanupRef = useRef<LocalStopCleanup | null>(null);
+  const workerClosePromiseRef = useRef<Promise<void> | null>(null);
+  const preparationRef = useRef<SessionPreparation | null>(null);
+  const timingRef = useRef<SessionTimingTracker | null>(null);
+  if (!preparationRef.current) {
+    preparationRef.current = createSessionPreparation({
+      getInstallId: getOrCreateInstallId,
+      onStatusChange: setPreparationStatus,
+      requestMicrophonePermission,
+    });
+  }
+  timingRef.current ??= createSessionTimingTracker();
 
   useEffect(() => {
     sessionRef.current = session;
@@ -138,6 +169,7 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    preparationRef.current?.dispose();
     const client = clientRef.current;
     clientRef.current = null;
     void Promise.all([
@@ -202,6 +234,28 @@ export function useLiveTranslation(
     ]);
   }
 
+  function appendLatencySample(sample: LatencySample | null): void {
+    if (sample) {
+      setLatencySamples((current) => [...current, sample]);
+    }
+  }
+
+  function recordListenTiming(step: ListenTimingStep, atMs?: number): void {
+    appendLatencySample(timingRef.current!.recordListen(step, atMs));
+  }
+
+  function recordStopTiming(step: StopTimingStep, atMs?: number): void {
+    appendLatencySample(timingRef.current!.recordStop(step, atMs));
+  }
+
+  const prepare = useCallback(async (): Promise<void> => {
+    await preparationRef.current!.prepare();
+  }, []);
+
+  const invalidatePreparation = useCallback((): void => {
+    preparationRef.current!.invalidateIdentity();
+  }, []);
+
   function updateSpan(update: (current: TranslationSpan) => TranslationSpan): void {
     const current = spanRef.current ?? createSpan();
     const next = update(current);
@@ -213,10 +267,12 @@ export function useLiveTranslation(
     if (!canStartSession(sessionRef.current.state)) {
       return;
     }
+    const listenTappedAtMs = Date.now();
+    timingRef.current!.beginListen(listenTappedAtMs);
     const freshSession = createSession(params);
     sessionRef.current = freshSession;
     setSession(freshSession);
-    sessionStartedAtRef.current = freshSession.created_at_ms;
+    sessionStartedAtRef.current = listenTappedAtMs;
     captureStartedAtRef.current = null;
     setLiveError(null);
     setReportError(null);
@@ -229,24 +285,40 @@ export function useLiveTranslation(
     captureDiagnosticsRef.current.reset();
     lastTransportDiagnosticsRef.current = createEmptyRealtimeTransportDiagnostics();
     playbackActiveRef.current = false;
+    playbackSuppressedRef.current = false;
+    localStopCleanupRef.current = null;
+    workerClosePromiseRef.current = null;
     resetCompletionWaiter();
     transition("requesting_mic_permission");
-    if (!(await requestMicrophonePermission())) {
+    const preparation = await preparationRef.current!.prepare();
+    if (preparation.microphone_granted) {
+      recordListenTiming("microphone_ready", preparation.microphone_ready_at_ms);
+    }
+    if (preparation.identity_ready_at_ms !== null) {
+      recordListenTiming("identity_ready", preparation.identity_ready_at_ms);
+    }
+    if (!preparation.microphone_granted) {
       setLiveError("microphone_permission_denied");
       transition("failed");
       return;
     }
+    if (!preparation.app_install_id) {
+      setLiveError("install_identity_failed");
+      transition("failed");
+      return;
+    }
 
-    transition("creating_session");
-    const appInstallId = await getOrCreateInstallId();
+    transition("checking_device");
     const deviceIntegrity = await collectDeviceIntegrity({
-      appInstallId,
+      appInstallId: preparation.app_install_id,
       sourceLanguage: params.source_language,
       targetLanguage: params.target_language,
     });
+    recordListenTiming("integrity_ready");
+    transition("creating_session");
     const response = await createWorkerSession({
       acquisition: params.acquisition,
-      app_install_id: appInstallId,
+      app_install_id: preparation.app_install_id,
       device_integrity: deviceIntegrity,
       source_language: params.source_language,
       target_language: params.target_language,
@@ -256,6 +328,7 @@ export function useLiveTranslation(
       transition("failed");
       return;
     }
+    recordListenTiming("worker_session_ready");
 
     setSession((current) => {
       const next = {
@@ -275,7 +348,8 @@ export function useLiveTranslation(
       onEvent: (event) => {
         void receiveRealtimeEvent(event);
       },
-      shouldPlayAudio: () => playbackEnabledRef.current,
+      shouldPlayAudio: () =>
+        playbackEnabledRef.current && !playbackSuppressedRef.current,
       url: response.realtime_ws_url,
     });
     clientRef.current = client;
@@ -307,12 +381,12 @@ export function useLiveTranslation(
   ): Promise<void> {
     if (event.kind === "session_opened") {
       clearConnectionDeadline(connectDeadlineRef);
+      recordListenTiming("realtime_provider_ready");
       updateSpan((span) => ({
         ...span,
         provider_metadata: event.provider_metadata,
         updated_at_ms: Date.now(),
       }));
-      captureStartedAtRef.current = Date.now();
       try {
         await MurmurAudioModule.startCapture();
       } catch {
@@ -320,16 +394,20 @@ export function useLiveTranslation(
         await finishSession("failed");
         return;
       }
+      captureStartedAtRef.current = Date.now();
+      recordListenTiming("capture_started", captureStartedAtRef.current);
       transition("live");
       recordDebug("realtime.opened", "Live translation connected");
       return;
     }
     if (event.kind === "source_delta") {
+      recordListenTiming("first_source");
       recordFirstLatency("first_source_transcript", firstSourceReceivedRef);
       applyTranscriptDelta(event);
       return;
     }
     if (event.kind === "translation_delta") {
+      recordListenTiming("first_translation");
       recordFirstLatency("first_translated_transcript", firstTranslationReceivedRef);
       applyTranscriptDelta(event);
       return;
@@ -399,15 +477,24 @@ export function useLiveTranslation(
       return undefined;
     }
     const completionPromise = getCompletionPromise();
+    timingRef.current!.beginStop();
+    playbackSuppressedRef.current = true;
     transition("stopping");
-    await MurmurAudioModule.stopCapture("user_stop");
-    clientRef.current?.finish();
+    const localCleanup = startLocalStopCleanup("user_stop");
+    try {
+      clientRef.current?.finish();
+    } catch {
+      recordDebug("realtime.finish_error", "Could not request a clean provider finish", "error");
+    }
+    recordStopTiming("close_requested");
+    void startWorkerSessionClose("user_stop");
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     closeTimerRef.current = setTimeout(() => {
       void finishSession("ended");
     }, sessionCloseTimeoutMs);
+    void Promise.all([localCleanup.capture, localCleanup.playback]);
     return completionPromise;
   }
 
@@ -415,6 +502,7 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    playbackSuppressedRef.current = true;
     transition("cancelling");
     const appSessionId = sessionRef.current.identity.app_session_id;
     const client = clientRef.current;
@@ -424,12 +512,14 @@ export function useLiveTranslation(
     completionPromiseRef.current = null;
     sessionStartedAtRef.current = null;
     captureStartedAtRef.current = null;
-    await Promise.all([
+    localStopCleanupRef.current = null;
+    workerClosePromiseRef.current = null;
+    await Promise.allSettled([
       client?.close("user_cancel"),
       MurmurAudioModule.stopCapture("user_cancel"),
     ]);
     preserveClientDiagnostics(client);
-    await Promise.all([
+    await Promise.allSettled([
       MurmurAudioModule.clearPlayback("user_cancel"),
       closeWorkerSession(appSessionId, "cancel"),
     ]);
@@ -446,15 +536,20 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
-    const appSessionId = sessionRef.current.identity.app_session_id;
     const client = clientRef.current;
     clientRef.current = null;
-    await client?.close("session_complete");
+    const localCleanup = localStopCleanupRef.current ?? startLocalStopCleanup("session_complete");
+    await client?.close("session_complete").catch(() => undefined);
     preserveClientDiagnostics(client);
-    await MurmurAudioModule.stopCapture("session_complete");
-    if (state === "failed") {
-      await MurmurAudioModule.clearPlayback("session_failed");
-    }
+    recordStopTiming("provider_client_closed");
+    await Promise.all([localCleanup.capture, localCleanup.playback]);
+    await settleCleanup(
+      "audio.final_clear_failed",
+      "Could not confirm translated audio was cleared",
+      () => MurmurAudioModule.clearPlayback(
+        state === "failed" ? "session_failed" : "session_complete",
+      ),
+    );
     let finalizedSpan: TranslationSpan | null = null;
     if (spanRef.current) {
       finalizedSpan = {
@@ -467,8 +562,9 @@ export function useLiveTranslation(
       spanRef.current = finalizedSpan;
       setSpans([finalizedSpan]);
     }
-    await closeWorkerSession(appSessionId, state);
+    await (workerClosePromiseRef.current ?? startWorkerSessionClose(state));
     transition(state);
+    recordStopTiming("ui_ended_start_enabled");
     const completion: LiveTranslationCompletion = createLiveTranslationCompletion({
       completed_at_ms: Date.now(),
       error: errorRef.current,
@@ -478,6 +574,47 @@ export function useLiveTranslation(
     });
     resolveCompletion(completion);
     return completion;
+  }
+
+  function startLocalStopCleanup(reason: string): LocalStopCleanup {
+    if (localStopCleanupRef.current) {
+      return localStopCleanupRef.current;
+    }
+    const capture = settleCleanup(
+      "audio.capture_stop_failed",
+      "Could not confirm microphone capture stopped",
+      () => MurmurAudioModule.stopCapture(reason),
+    ).then(() => recordStopTiming("capture_stopped"));
+    const playback = settleCleanup(
+      "audio.playback_clear_failed",
+      "Could not clear translated audio promptly",
+      () => MurmurAudioModule.clearPlayback(reason),
+    ).then(() => recordStopTiming("playback_cleared_silenced"));
+    const cleanup = { capture, playback };
+    localStopCleanupRef.current = cleanup;
+    return cleanup;
+  }
+
+  function startWorkerSessionClose(reason: string): Promise<void> {
+    workerClosePromiseRef.current ??= closeWorkerSession(
+      sessionRef.current.identity.app_session_id,
+      reason,
+    )
+      .catch(() => undefined)
+      .then(() => recordStopTiming("worker_session_close_completed"));
+    return workerClosePromiseRef.current;
+  }
+
+  async function settleCleanup(
+    debugName: string,
+    debugMessage: string,
+    operation: () => Promise<unknown>,
+  ): Promise<void> {
+    try {
+      await operation();
+    } catch {
+      recordDebug(debugName, debugMessage, "error");
+    }
   }
 
   async function reportSpan(
@@ -535,6 +672,9 @@ export function useLiveTranslation(
     getDiagnosticsSnapshot,
     latency_report: summarizeLatency(latencySamples),
     latency_samples: latencySamples,
+    invalidatePreparation,
+    preparation_status: preparationStatus,
+    prepare,
     report_error: reportError,
     report_receipt_id: reportReceiptId,
     reportSpan,

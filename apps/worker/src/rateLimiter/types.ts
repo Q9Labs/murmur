@@ -33,13 +33,9 @@ export type DurableLimitState = {
 
 export type DurableLimitRequest =
   | {
-      action: "can_create_session";
-      hashed_install_id: string;
-      now_ms: number;
-    }
-  | {
       action: "create_session_record";
       app_session_id: string;
+      enforce_limits?: boolean;
       hashed_install_id: string;
       now_ms: number;
     }

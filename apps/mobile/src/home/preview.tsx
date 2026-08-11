@@ -38,6 +38,9 @@ const previewLive: LiveTranslationController = {
   getDiagnosticsSnapshot: () => previewLive.diagnostics_snapshot,
   latency_report: {},
   latency_samples: [],
+  invalidatePreparation: noop,
+  preparation_status: "ready",
+  prepare: async () => undefined,
   report_error: null,
   report_receipt_id: null,
   reportSpan: async (
@@ -83,7 +86,7 @@ const previewSettingsLive: LiveTranslationController = {
   status: "idle",
 };
 
-const noop = (): void => undefined;
+function noop(): void {}
 
 export type PreviewScreen =
   | "languages"

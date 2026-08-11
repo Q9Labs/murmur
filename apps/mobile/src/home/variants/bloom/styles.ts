@@ -185,6 +185,12 @@ function createBloomStyles(theme: MurmurTheme) {
       fontSize: 24,
       fontWeight: "700",
     },
+    sessionStatus: {
+      color: theme.muted,
+      fontSize: 14,
+      fontWeight: "700",
+      textAlign: "center",
+    },
     sourceText: {
       color: theme.muted,
       fontSize: 15,
