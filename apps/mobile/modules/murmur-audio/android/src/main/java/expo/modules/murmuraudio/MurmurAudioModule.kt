@@ -1,6 +1,7 @@
 package expo.modules.murmuraudio
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
@@ -18,9 +19,13 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
+import android.net.Uri
+import android.media.projection.MediaProjectionManager
 import com.google.android.gms.tasks.Tasks
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.IntegrityTokenRequest
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.TimeUnit
@@ -32,8 +37,10 @@ import kotlin.math.sqrt
 private const val MURMUR_SAMPLE_RATE = 24_000
 private const val MURMUR_FRAME_BYTES = 960
 private const val MURMUR_FRAME_DURATION_MS = 20
+private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 91_401
+private const val OVERLAY_PERMISSION_REQUEST_CODE = 91_402
 
-class MurmurAudioModule : Module() {
+class MurmurAudioModule : Module(), MurmurCaptureListener {
   @Volatile private var captureActive = false
   @Volatile private var playbackActive = false
   private var recorder: AudioRecord? = null
@@ -66,22 +73,43 @@ class MurmurAudioModule : Module() {
   private var playbackEndsAtMs = 0L
   private var playbackIdleGeneration = 0
   private val mainHandler = Handler(Looper.getMainLooper())
+  @Volatile private var captureSource = CAPTURE_SOURCE_MICROPHONE
+  @Volatile private var projectionResultData: Intent? = null
+  @Volatile private var projectionResultCode = Activity.RESULT_CANCELED
+  @Volatile private var pendingProjectionPermission: Promise? = null
+  @Volatile private var pendingOverlayPermission: Promise? = null
+  @Volatile private var pendingCaptureStart: Promise? = null
 
   override fun definition() = ModuleDefinition {
     Name("MurmurAudio")
     Events("onAudioFrame", "onAudioState")
 
+    OnCreate {
+      MurmurCaptureBridge.attach(this@MurmurAudioModule)
+    }
+
     AsyncFunction("requestMicrophonePermission") {
       hasRecordAudioPermission()
+    }
+
+    AsyncFunction("getCaptureCapabilities") {
+      captureCapabilities()
+    }
+
+    AsyncFunction("requestDevicePlaybackPermission") { promise: Promise ->
+      requestDevicePlaybackPermission(promise)
+    }
+
+    AsyncFunction("requestOverlayPermission") { promise: Promise ->
+      requestOverlayPermission(promise)
     }
 
     AsyncFunction("getAudioState") {
       statePayload("get_audio_state")
     }
 
-    AsyncFunction("startCapture") {
-      startCaptureSync()
-      statePayload("capture_started")
+    AsyncFunction("startCapture") { source: String, promise: Promise ->
+      startCapture(source, promise)
     }
 
     AsyncFunction("stopCapture") { reason: String? ->
@@ -104,6 +132,10 @@ class MurmurAudioModule : Module() {
       statePayload(reason ?: "clear_playback")
     }
 
+    AsyncFunction("updateOverlayCaption") { caption: String, rtl: Boolean ->
+      MurmurCaptureBridge.updateOverlayCaption(caption, rtl)
+    }
+
     AsyncFunction("requestPlayIntegrityToken") { nonce: String ->
       requestPlayIntegrityTokenSync(nonce)
     }
@@ -112,22 +144,101 @@ class MurmurAudioModule : Module() {
       emitState("activity_background_preserved")
     }
 
+    OnActivityEntersForeground {
+      resolveOverlayPermissionIfReady()
+      emitState("activity_foreground")
+    }
+
+    OnActivityResult { _, payload ->
+      handleActivityResult(payload.requestCode, payload.resultCode, payload.data)
+    }
+
     OnDestroy {
+      pendingCaptureStart?.reject("E_CAPTURE_DESTROYED", "Audio module was destroyed", null)
+      pendingCaptureStart = null
+      pendingProjectionPermission?.resolve(false)
+      pendingProjectionPermission = null
+      pendingOverlayPermission?.resolve(false)
+      pendingOverlayPermission = null
+      projectionResultData = null
+      MurmurCaptureBridge.detach(this@MurmurAudioModule)
       stopCaptureSync("module_destroy")
       clearPlaybackSync("module_destroy")
     }
   }
 
-  private fun startCaptureSync() {
-    if (captureActive) return
-    if (!hasRecordAudioPermission()) {
-      throw SecurityException("RECORD_AUDIO permission is not granted")
+  private fun startCapture(source: String, promise: Promise) {
+    if (source != CAPTURE_SOURCE_MICROPHONE && source != CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+      throw IllegalArgumentException("Unknown capture source: $source")
     }
-
+    if (captureActive) {
+      promise.resolve(statePayload("capture_already_active"))
+      return
+    }
+    if (!hasRecordAudioPermission()) {
+      promise.reject("E_RECORD_AUDIO", "RECORD_AUDIO permission is not granted", null)
+      return
+    }
     if (playbackActive) {
       clearPlaybackSync("capture_restart")
     }
 
+    captureSource = source
+    if (source == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+      startDevicePlaybackCapture(promise)
+      return
+    }
+
+    try {
+      startMicrophoneCapture()
+      promise.resolve(statePayload("capture_started"))
+    } catch (error: Throwable) {
+      promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Microphone capture failed", error)
+    }
+  }
+
+  private fun startDevicePlaybackCapture(promise: Promise) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+      promise.reject("E_DEVICE_PLAYBACK_UNSUPPORTED", "Device playback capture requires Android 10", null)
+      return
+    }
+    val projectionData = projectionResultData
+    if (projectionData == null) {
+      promise.reject("E_DEVICE_PLAYBACK_PERMISSION", "Device playback permission is not granted", null)
+      return
+    }
+    if (pendingCaptureStart != null) {
+      promise.reject("E_CAPTURE_BUSY", "A capture start is already pending", null)
+      return
+    }
+
+    val projectionCode = projectionResultCode
+    projectionResultData = null
+    projectionResultCode = Activity.RESULT_CANCELED
+    pendingCaptureStart = promise
+    resetCaptureDiagnostics(source)
+    try {
+      startForegroundCaptureService(
+        source,
+        projectionCode,
+        projectionData
+      )
+      mainHandler.postDelayed({
+        if (pendingCaptureStart === promise) {
+          pendingCaptureStart = null
+          captureActive = false
+          MurmurCaptureBridge.stopCapture("capture_start_timeout")
+          promise.reject("E_CAPTURE_START_TIMEOUT", "Device playback capture did not start", null)
+          emitState("capture_start_timeout")
+        }
+      }, 10_000)
+    } catch (error: Throwable) {
+      pendingCaptureStart = null
+      promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Device playback capture failed", error)
+    }
+  }
+
+  private fun startMicrophoneCapture() {
     val minBuffer = max(
       AudioRecord.getMinBufferSize(
         MURMUR_SAMPLE_RATE,
@@ -154,7 +265,26 @@ class MurmurAudioModule : Module() {
       throw IllegalStateException("AudioRecord failed to initialize")
     }
 
-    startForegroundCaptureService()
+    resetCaptureDiagnostics(CAPTURE_SOURCE_MICROPHONE)
+    startForegroundCaptureService(CAPTURE_SOURCE_MICROPHONE)
+    recorder = record
+    enableAudioEffects(record.audioSessionId)
+    try {
+      record.startRecording()
+      captureActive = true
+      captureThread = Thread({ captureLoop(record) }, "murmur-audio-capture").also { it.start() }
+      emitState("capture_started")
+    } catch (error: RuntimeException) {
+      releaseAudioEffects()
+      recorder = null
+      record.release()
+      stopForegroundCaptureService()
+      throw error
+    }
+  }
+
+  private fun resetCaptureDiagnostics(source: String) {
+    captureSource = source
     audioGenerationId += 1
     droppedFrames.set(0)
     captureReadErrors.set(0)
@@ -174,20 +304,6 @@ class MurmurAudioModule : Module() {
     lastPlaybackChunkRms = null
     lastPlaybackWriteCompletedAtMs = null
     lastPlaybackUnderrunCount = 0
-    recorder = record
-    enableAudioEffects(record.audioSessionId)
-    try {
-      record.startRecording()
-      captureActive = true
-      captureThread = Thread({ captureLoop(record) }, "murmur-audio-capture").also { it.start() }
-      emitState("capture_started")
-    } catch (error: RuntimeException) {
-      releaseAudioEffects()
-      recorder = null
-      record.release()
-      stopForegroundCaptureService()
-      throw error
-    }
   }
 
   private fun captureLoop(record: AudioRecord) {
@@ -219,6 +335,15 @@ class MurmurAudioModule : Module() {
   }
 
   private fun stopCaptureSync(reason: String) {
+    if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+      projectionResultData = null
+      pendingCaptureStart?.reject("E_CAPTURE_STOPPED", "Capture stopped before startup completed", null)
+      pendingCaptureStart = null
+      captureActive = false
+      MurmurCaptureBridge.stopCapture(reason)
+      emitState(reason)
+      return
+    }
     captureActive = false
     try {
       recorder?.stop()
@@ -372,7 +497,7 @@ class MurmurAudioModule : Module() {
     gainControl = null
   }
 
-  private fun emitFrame(data: ByteArray) {
+  private fun emitFrame(data: ByteArray, source: String = captureSource) {
     val frameAtMs = System.currentTimeMillis()
     val frameRms = rms(data)
     captureFramesEmitted.incrementAndGet()
@@ -383,6 +508,7 @@ class MurmurAudioModule : Module() {
       "onAudioFrame",
       mapOf(
         "audio_generation_id" to audioGenerationId,
+        "capture_source" to source,
         "data" to data,
         "duration_ms" to MURMUR_FRAME_DURATION_MS,
         "event_seq" to nextEventSeq(),
@@ -402,6 +528,7 @@ class MurmurAudioModule : Module() {
       "android" to androidDiagnostics(),
       "audio_generation_id" to audioGenerationId,
       "capture_active" to captureActive,
+      "capture_source" to captureSource,
       "dropped_frames" to droppedFrames.get(),
       "event_seq" to nextEventSeq(),
       "playback_active" to playbackActive,
@@ -418,6 +545,7 @@ class MurmurAudioModule : Module() {
   private fun androidDiagnostics(): Map<String, Any?> {
     val context = appContext.reactContext
     val audioManager = context?.getSystemService(AudioManager::class.java)
+    val captureDiagnostics = context?.let { MurmurCaptureBridge.diagnostics(it) } ?: emptyMap()
     return mapOf(
       "acoustic_echo_canceler" to currentAudioEffectState(
         AcousticEchoCanceler.isAvailable(),
@@ -425,7 +553,11 @@ class MurmurAudioModule : Module() {
         lastEchoCancelerState
       ),
       "audio_mode" to audioManager?.mode,
-      "audio_source" to "voice_recognition",
+      "audio_source" to if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+        "audio_playback_capture"
+      } else {
+        "voice_recognition"
+      },
       "automatic_gain_control" to currentAudioEffectState(
         AutomaticGainControl.isAvailable(),
         gainControl,
@@ -451,6 +583,9 @@ class MurmurAudioModule : Module() {
       "playback_underrun_count" to (audioTrack?.underrunCount ?: lastPlaybackUnderrunCount),
       "playback_usage" to "media",
       "playback_write_errors" to playbackWriteErrors.get(),
+      "projection_active" to (captureDiagnostics["projection_active"] ?: false),
+      "overlay_visible" to (captureDiagnostics["overlay_visible"] ?: false),
+      "overlay_permission_granted" to (captureDiagnostics["overlay_permission_granted"] ?: false),
       "sdk_int" to Build.VERSION.SDK_INT
     )
   }
@@ -500,9 +635,20 @@ class MurmurAudioModule : Module() {
     return context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
   }
 
-  private fun startForegroundCaptureService() {
-    val context = appContext.reactContext ?: return
-    val intent = Intent(context, MurmurForegroundService::class.java)
+  private fun startForegroundCaptureService(
+    source: String,
+    projectionCode: Int = Activity.RESULT_CANCELED,
+    projectionData: Intent? = null
+  ) {
+    val context = appContext.reactContext
+      ?: throw IllegalStateException("React context is unavailable")
+    val intent = Intent(context, MurmurForegroundService::class.java).apply {
+      putExtra(MURMUR_CAPTURE_SOURCE_EXTRA, source)
+      if (source == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+        putExtra(MURMUR_CAPTURE_PROJECTION_CODE_EXTRA, projectionCode)
+        putExtra(MURMUR_CAPTURE_PROJECTION_DATA_EXTRA, projectionData)
+      }
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       context.startForegroundService(intent)
       return
@@ -512,7 +658,154 @@ class MurmurAudioModule : Module() {
 
   private fun stopForegroundCaptureService() {
     val context = appContext.reactContext ?: return
+    if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+      MurmurCaptureBridge.stopCapture("capture_stop")
+    }
     context.stopService(Intent(context, MurmurForegroundService::class.java))
+  }
+
+  private fun captureCapabilities(): Map<String, Boolean> {
+    val context = appContext.reactContext
+    val microphoneSupported = context?.packageManager?.hasSystemFeature(PackageManager.FEATURE_MICROPHONE) == true
+    val overlaySupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+    val overlayGranted = overlaySupported && context?.let { MurmurOverlayController.hasPermission(it) } == true
+    return mapOf(
+      "microphone_supported" to microphoneSupported,
+      "device_playback_supported" to (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q),
+      "floating_overlay_supported" to overlaySupported,
+      "overlay_permission_granted" to overlayGranted
+    )
+  }
+
+  private fun requestDevicePlaybackPermission(promise: Promise) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+      promise.resolve(false)
+      return
+    }
+    val activity = appContext.currentActivity
+    val context = appContext.reactContext
+    if (activity == null || context == null) {
+      promise.resolve(false)
+      return
+    }
+    val manager = context.getSystemService(MediaProjectionManager::class.java)
+    if (manager == null) {
+      promise.resolve(false)
+      return
+    }
+    pendingProjectionPermission?.resolve(false)
+    pendingProjectionPermission = promise
+    projectionResultData = null
+    projectionResultCode = Activity.RESULT_CANCELED
+    try {
+      activity.startActivityForResult(
+        manager.createScreenCaptureIntent(),
+        DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE
+      )
+    } catch (error: Throwable) {
+      pendingProjectionPermission = null
+      promise.reject("E_DEVICE_PLAYBACK_PERMISSION", error.message ?: "Unable to request device playback permission", error)
+    }
+  }
+
+  private fun requestOverlayPermission(promise: Promise) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      promise.resolve(false)
+      return
+    }
+    val context = appContext.reactContext
+    if (context == null) {
+      promise.resolve(false)
+      return
+    }
+    if (MurmurOverlayController.hasPermission(context)) {
+      promise.resolve(true)
+      return
+    }
+    val activity = appContext.currentActivity
+    if (activity == null) {
+      promise.resolve(false)
+      return
+    }
+    pendingOverlayPermission?.resolve(false)
+    pendingOverlayPermission = promise
+    try {
+      activity.startActivityForResult(
+        Intent(
+          Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+          Uri.parse("package:${context.packageName}")
+        ),
+        OVERLAY_PERMISSION_REQUEST_CODE
+      )
+    } catch (error: Throwable) {
+      pendingOverlayPermission = null
+      promise.reject("E_OVERLAY_PERMISSION", error.message ?: "Unable to request overlay permission", error)
+    }
+  }
+
+  private fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    when (requestCode) {
+      DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE -> {
+        val promise = pendingProjectionPermission
+        pendingProjectionPermission = null
+        if (resultCode == Activity.RESULT_OK && data != null) {
+          projectionResultCode = resultCode
+          projectionResultData = data
+          promise?.resolve(true)
+        } else {
+          projectionResultCode = Activity.RESULT_CANCELED
+          projectionResultData = null
+          promise?.resolve(false)
+        }
+      }
+      OVERLAY_PERMISSION_REQUEST_CODE -> {
+        resolveOverlayPermissionIfReady()
+      }
+    }
+  }
+
+  private fun resolveOverlayPermissionIfReady() {
+    val promise = pendingOverlayPermission ?: return
+    val context = appContext.reactContext ?: return
+    val granted = MurmurOverlayController.hasPermission(context)
+    pendingOverlayPermission = null
+    promise.resolve(granted)
+  }
+
+  override fun onServiceCaptureStarted(source: String) {
+    captureSource = source
+    captureActive = true
+    val promise = pendingCaptureStart
+    pendingCaptureStart = null
+    emitState("capture_started")
+    promise?.resolve(statePayload("capture_started"))
+  }
+
+  override fun onServiceCaptureFrame(source: String, data: ByteArray) {
+    if (!captureActive) return
+    emitFrame(data, source)
+  }
+
+  override fun onServiceCaptureStopped(source: String, reason: String) {
+    projectionResultData = null
+    captureActive = false
+    if (pendingCaptureStart != null) {
+      pendingCaptureStart?.reject("E_CAPTURE_START_FAILED", reason, null)
+      pendingCaptureStart = null
+    }
+    emitState(reason)
+  }
+
+  override fun onServiceCaptureError(source: String, reason: String, error: Throwable?) {
+    projectionResultData = null
+    captureActive = false
+    pendingCaptureStart?.reject(
+      "E_CAPTURE_START_FAILED",
+      error?.message ?: reason,
+      error
+    )
+    pendingCaptureStart = null
+    emitState(reason)
   }
 
   private fun requestPlayIntegrityTokenSync(nonce: String): Map<String, Any> {
