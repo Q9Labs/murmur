@@ -1,0 +1,278 @@
+/**
+ * English is the source catalog. Keep these keys flat so a missing translation
+ * is easy to spot and so catalog parity can be checked without walking a tree.
+ */
+export const enCatalog = {
+  "common.languageEnglish": "English",
+  "common.languageArabic": "العربية",
+
+  "accessibility.closeSheet": "Close sheet",
+  "accessibility.close": "Close",
+  "accessibility.openSettings": "Open settings",
+  "accessibility.changeSpokenLanguage": "Change spoken language",
+  "accessibility.reverseTranslationLanguages": "Reverse translation languages",
+  "accessibility.changeTranslationLanguage": "Change translation language",
+  "accessibility.searchLanguages": "Search languages",
+  "accessibility.murmurBrand": "Murmur",
+  "accessibility.setupStep": "Setup step {current} of {total}",
+
+  "onboarding.agreeAndContinue": "Agree and Continue",
+  "onboarding.continue": "Continue",
+  "onboarding.firstSetup": "First setup",
+  "onboarding.languagesTitle": "Which way are we translating?",
+  "onboarding.listen": "Listen",
+  "onboarding.beforeListen": "Before you listen",
+  "onboarding.aiProcessingNotice": "AI processing notice",
+  "onboarding.sourceLabel": "I will speak",
+  "onboarding.targetLabel": "Translate into",
+  "onboarding.welcomeCopy": "Choose a direction, listen, and read clear captions in real time.",
+  "onboarding.welcomeTitle": "Talk with anyone, in any language.",
+  "onboarding.privacyDataFlow":
+    "When you tap Listen, Murmur sends live audio through Q9 Labs on Cloudflare to OpenAI for transcription, translation, and translated speech.",
+  "onboarding.privacyDataUse":
+    "Murmur uses this data only to provide translation, speech output, safety reports, diagnostics, and abuse prevention.",
+  "onboarding.noHistory": "Murmur does not save audio or transcript history by default.",
+  "onboarding.consent": "I agree to share this data with these services for live AI translation.",
+
+  "home.audioSaveError": "Could not save the audio setting. Please try again.",
+  "home.localDataDeleted":
+    "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.",
+  "home.localDataDeleteError": "Could not delete local data. Please try again.",
+  "home.identityReset": "Accountless identity reset. The next session will use a fresh install id.",
+  "home.autoDetect": "Auto detect",
+  "home.listening": "Listening",
+  "home.microphoneAccessNeeded": "Microphone access needed",
+  "home.readyToTranslate": "Ready to translate",
+  "home.speakNowCaptions": "Speak now. Captions will appear here.",
+  "home.allowMicrophone": "Allow microphone access to start listening.",
+  "home.chooseDirection": "Choose a direction, then tap Listen.",
+  "home.timelineListening": "Listening. The conversation will appear here.",
+  "home.timelineEmpty": "The conversation appears here once you start.",
+  "home.listen": "Listen",
+  "home.stop": "Stop",
+  "home.reportReceived": "Report received: {receiptId}",
+
+  "settings.title": "Settings",
+  "settings.shareMurmur": "Share Murmur",
+  "settings.privacyPolicy": "Privacy policy",
+  "settings.termsOfUse": "Terms of use",
+  "settings.supportDataRequests": "Support & data requests",
+  "settings.deleteLocalData": "Delete local data",
+  "settings.sessionDiagnostics": "Session diagnostics",
+  "settings.reportTranslation": "Report translation",
+  "settings.resetMurmurIdentity": "Reset Murmur Identity",
+
+  "languagePicker.speakIn": "Speak in",
+  "languagePicker.translateTo": "Translate to",
+  "languagePicker.searchLanguages": "Search languages",
+  "languagePicker.search": "Search",
+  "languagePicker.autoDetect": "Auto detect",
+  "languagePicker.liveMultilingualSource": "Live multilingual source",
+
+  "report.title": "Report translation",
+  "report.noCommittedTranslations": "No committed translations yet.",
+  "report.inaccurate": "Inaccurate",
+  "report.wrongLanguage": "Wrong language",
+  "report.harmful": "Harmful",
+  "report.speech": "Speech",
+  "report.other": "Other",
+
+  "diagnostics.title": "Diagnostics",
+  "diagnostics.downloaded": "Diagnostics downloaded.",
+  "diagnostics.fileReadyToShare": "Diagnostics file ready to share.",
+  "diagnostics.fileCouldNotPrepare": "Diagnostics file could not be prepared.",
+  "diagnostics.session": "Session",
+  "diagnostics.spans": "Spans",
+  "diagnostics.mic": "Mic",
+  "diagnostics.speech": "Speech",
+  "diagnostics.on": "on",
+  "diagnostics.off": "off",
+  "diagnostics.copied": "Diagnostics copied.",
+  "diagnostics.copyReport": "Copy report",
+  "diagnostics.downloadText": "Download .txt",
+  "diagnostics.fileShared": "Diagnostics file shared.",
+  "diagnostics.shared": "Diagnostics shared.",
+  "diagnostics.couldNotShare": "Diagnostics could not be shared.",
+  "diagnostics.firstSourceTranscript": "First source transcript",
+  "diagnostics.firstTranslatedTranscript": "First translated transcript",
+  "diagnostics.noSpans": "No spans yet",
+
+  "status.ended": "Ended",
+  "status.healthOk": "Health OK",
+  "status.networkDegraded": "Network degraded",
+  "status.recovering": "Recovering",
+  "status.microphone": "Microphone",
+  "status.disconnected": "Disconnected",
+  "status.connecting": "Connecting",
+  "status.ready": "Ready",
+  "status.degraded": "Degraded",
+  "status.ok": "OK",
+  "status.needsSetup": "Needs setup",
+
+  "error.providerUnconfigured":
+    "Live translation is not connected yet. Please try again after setup is complete.",
+  "error.providerUnavailable": "Live translation provider is unavailable. Please try again.",
+  "error.workerUnavailable":
+    "Could not reach Murmur translation service. Check your connection and try again.",
+  "error.microphonePermission": "Microphone access is required to translate speech.",
+  "error.microphoneStart": "Could not start the microphone. Please try again.",
+  "error.transport": "Translation connection was interrupted. Please try again. ({error})",
+  "error.realtimeFailure": "Live translation failed. Please try again. ({error})",
+  "error.unavailable": "Live translation is unavailable. Please try again. ({error})",
+  "error.reportRateLimited": "Too many reports were sent from this session. Please try again later.",
+  "error.reportFailed": "Could not send the report. Please try again.",
+
+  "audio.turnTranslatedOff": "Turn translated audio off",
+  "audio.turnTranslatedOn": "Turn translated audio on",
+} as const;
+
+export type MessageKey = keyof typeof enCatalog;
+export type EnglishCatalog = typeof enCatalog;
+
+export const arCatalog: { [Key in MessageKey]: string } = {
+  "common.languageEnglish": "English",
+  "common.languageArabic": "العربية",
+
+  "accessibility.closeSheet": "إغلاق اللوحة",
+  "accessibility.close": "إغلاق",
+  "accessibility.openSettings": "فتح الإعدادات",
+  "accessibility.changeSpokenLanguage": "تغيير لغة التحدث",
+  "accessibility.reverseTranslationLanguages": "عكس لغتي الترجمة",
+  "accessibility.changeTranslationLanguage": "تغيير لغة الترجمة",
+  "accessibility.searchLanguages": "البحث عن اللغات",
+  "accessibility.murmurBrand": "Murmur",
+  "accessibility.setupStep": "خطوة الإعداد {current} من {total}",
+
+  "onboarding.agreeAndContinue": "موافقة ومتابعة",
+  "onboarding.continue": "متابعة",
+  "onboarding.firstSetup": "الإعداد الأول",
+  "onboarding.languagesTitle": "ما اتجاه الترجمة؟",
+  "onboarding.listen": "استماع",
+  "onboarding.beforeListen": "قبل الاستماع",
+  "onboarding.aiProcessingNotice": "تنبيه معالجة الذكاء الاصطناعي",
+  "onboarding.sourceLabel": "سأتحدث",
+  "onboarding.targetLabel": "الترجمة إلى",
+  "onboarding.welcomeCopy": "اختر اتجاهًا، واستمع، واقرأ تسميات توضيحية واضحة فورًا.",
+  "onboarding.welcomeTitle": "تحدث مع أي شخص، بأي لغة.",
+  "onboarding.privacyDataFlow":
+    "عند الضغط على «استماع»، يرسل Murmur الصوت المباشر عبر Q9 Labs على Cloudflare إلى OpenAI لتحويل الكلام إلى نص وترجمته وإنشاء كلام مترجم.",
+  "onboarding.privacyDataUse":
+    "يستخدم Murmur هذه البيانات فقط لتوفير الترجمة، وإخراج الكلام، وتقارير السلامة، والتشخيص، ومنع إساءة الاستخدام.",
+  "onboarding.noHistory": "لا يحفظ Murmur الصوت أو سجل النصوص افتراضيًا.",
+  "onboarding.consent": "أوافق على مشاركة هذه البيانات مع هذه الخدمات لترجمة مباشرة بالذكاء الاصطناعي.",
+
+  "home.audioSaveError": "تعذر حفظ إعداد الصوت. يُرجى المحاولة مرة أخرى.",
+  "home.localDataDeleted":
+    "حُذفت بيانات Murmur المحلية. مُسح إقرار الخصوصية ومعرّف التثبيت وأهلية التقييم.",
+  "home.localDataDeleteError": "تعذر حذف البيانات المحلية. يُرجى المحاولة مرة أخرى.",
+  "home.identityReset": "تمت إعادة ضبط الهوية من دون حساب. ستستخدم الجلسة التالية معرّف تثبيت جديدًا.",
+  "home.autoDetect": "اكتشاف تلقائي",
+  "home.listening": "جارٍ الاستماع",
+  "home.microphoneAccessNeeded": "يلزم السماح بالميكروفون",
+  "home.readyToTranslate": "جاهز للترجمة",
+  "home.speakNowCaptions": "تحدث الآن. ستظهر التسميات التوضيحية هنا.",
+  "home.allowMicrophone": "اسمح بالوصول إلى الميكروفون لبدء الاستماع.",
+  "home.chooseDirection": "اختر اتجاهًا، ثم اضغط «استماع».",
+  "home.timelineListening": "جارٍ الاستماع. ستظهر المحادثة هنا.",
+  "home.timelineEmpty": "ستظهر المحادثة هنا بعد البدء.",
+  "home.listen": "استماع",
+  "home.stop": "إيقاف",
+  "home.reportReceived": "تم استلام البلاغ: {receiptId}",
+
+  "settings.title": "الإعدادات",
+  "settings.shareMurmur": "مشاركة Murmur",
+  "settings.privacyPolicy": "سياسة الخصوصية",
+  "settings.termsOfUse": "شروط الاستخدام",
+  "settings.supportDataRequests": "الدعم وطلبات البيانات",
+  "settings.deleteLocalData": "حذف البيانات المحلية",
+  "settings.sessionDiagnostics": "تشخيص الجلسة",
+  "settings.reportTranslation": "الإبلاغ عن الترجمة",
+  "settings.resetMurmurIdentity": "إعادة ضبط هوية Murmur",
+
+  "languagePicker.speakIn": "التحدث بـ",
+  "languagePicker.translateTo": "الترجمة إلى",
+  "languagePicker.searchLanguages": "البحث عن اللغات",
+  "languagePicker.search": "بحث",
+  "languagePicker.autoDetect": "اكتشاف تلقائي",
+  "languagePicker.liveMultilingualSource": "مصدر مباشر متعدد اللغات",
+
+  "report.title": "الإبلاغ عن الترجمة",
+  "report.noCommittedTranslations": "لا توجد ترجمات مثبتة بعد.",
+  "report.inaccurate": "غير دقيقة",
+  "report.wrongLanguage": "لغة خاطئة",
+  "report.harmful": "ضارة",
+  "report.speech": "الكلام",
+  "report.other": "أخرى",
+
+  "diagnostics.title": "التشخيص",
+  "diagnostics.downloaded": "تم تنزيل التشخيص.",
+  "diagnostics.fileReadyToShare": "ملف التشخيص جاهز للمشاركة.",
+  "diagnostics.fileCouldNotPrepare": "تعذر تجهيز ملف التشخيص.",
+  "diagnostics.session": "الجلسة",
+  "diagnostics.spans": "المقاطع",
+  "diagnostics.mic": "الميكروفون",
+  "diagnostics.speech": "الكلام",
+  "diagnostics.on": "مفعّل",
+  "diagnostics.off": "متوقف",
+  "diagnostics.copied": "تم نسخ التشخيص.",
+  "diagnostics.copyReport": "نسخ التقرير",
+  "diagnostics.downloadText": "تنزيل .txt",
+  "diagnostics.fileShared": "تمت مشاركة ملف التشخيص.",
+  "diagnostics.shared": "تمت مشاركة التشخيص.",
+  "diagnostics.couldNotShare": "تعذرت مشاركة التشخيص.",
+  "diagnostics.firstSourceTranscript": "أول نص مصدر",
+  "diagnostics.firstTranslatedTranscript": "أول نص مترجم",
+  "diagnostics.noSpans": "لا توجد مقاطع بعد",
+
+  "status.ended": "انتهت",
+  "status.healthOk": "الحالة سليمة",
+  "status.networkDegraded": "الشبكة متدهورة",
+  "status.recovering": "جارٍ الاسترداد",
+  "status.microphone": "الميكروفون",
+  "status.disconnected": "غير متصل",
+  "status.connecting": "جارٍ الاتصال",
+  "status.ready": "جاهز",
+  "status.degraded": "متدهور",
+  "status.ok": "سليم",
+  "status.needsSetup": "يلزم الإعداد",
+
+  "error.providerUnconfigured":
+    "الترجمة المباشرة غير متصلة بعد. يُرجى المحاولة بعد اكتمال الإعداد.",
+  "error.providerUnavailable": "موفر الترجمة المباشرة غير متاح. يُرجى المحاولة مرة أخرى.",
+  "error.workerUnavailable":
+    "تعذر الوصول إلى خدمة ترجمة Murmur. تحقق من اتصالك وحاول مرة أخرى.",
+  "error.microphonePermission": "يلزم الوصول إلى الميكروفون لترجمة الكلام.",
+  "error.microphoneStart": "تعذر بدء الميكروفون. يُرجى المحاولة مرة أخرى.",
+  "error.transport": "انقطع اتصال الترجمة. يُرجى المحاولة مرة أخرى. ({error})",
+  "error.realtimeFailure": "فشلت الترجمة المباشرة. يُرجى المحاولة مرة أخرى. ({error})",
+  "error.unavailable": "الترجمة المباشرة غير متاحة. يُرجى المحاولة مرة أخرى. ({error})",
+  "error.reportRateLimited": "تم إرسال بلاغات كثيرة من هذه الجلسة. يُرجى المحاولة لاحقًا.",
+  "error.reportFailed": "تعذر إرسال البلاغ. يُرجى المحاولة مرة أخرى.",
+
+  "audio.turnTranslatedOff": "إيقاف الصوت المترجم",
+  "audio.turnTranslatedOn": "تشغيل الصوت المترجم",
+};
+
+export const catalogs = {
+  en: enCatalog,
+  ar: arCatalog,
+} as const;
+
+export function placeholderNames(value: string): string[] {
+  return [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)].map((match) => match[1]);
+}
+
+export function assertCatalogParity(): void {
+  const englishKeys = Object.keys(enCatalog);
+  const arabicKeys = Object.keys(arCatalog);
+  if (englishKeys.length !== arabicKeys.length || englishKeys.some((key) => !(key in arCatalog))) {
+    throw new Error("Arabic catalog keys must exactly match the English catalog");
+  }
+  for (const key of englishKeys) {
+    const englishPlaceholders = placeholderNames(enCatalog[key as MessageKey]).sort();
+    const arabicPlaceholders = placeholderNames(arCatalog[key as MessageKey]).sort();
+    if (englishPlaceholders.join("\0") !== arabicPlaceholders.join("\0")) {
+      throw new Error(`Arabic catalog placeholders do not match for ${key}`);
+    }
+  }
+}
