@@ -658,8 +658,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
   private fun stopForegroundCaptureService(reason: String = "capture_stop") {
     val context = appContext.reactContext ?: return
-    val serviceWillStopItself = captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK &&
-      MurmurCaptureBridge.stopCapture(reason)
+    val serviceWillStopItself = MurmurCaptureBridge.stopCapture(reason)
     if (!serviceWillStopItself) {
       context.stopService(Intent(context, MurmurForegroundService::class.java))
     }
@@ -789,6 +788,20 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
   override fun onServiceCaptureStopped(source: String, reason: String) {
     projectionResultData = null
+    if (source == CAPTURE_SOURCE_MICROPHONE) {
+      captureActive = false
+      try {
+        recorder?.stop()
+      } catch (_: IllegalStateException) {
+      }
+      captureThread?.join(250)
+      captureThread = null
+      recorder?.release()
+      recorder = null
+      releaseAudioEffects()
+      emitState(reason)
+      return
+    }
     captureActive = false
     if (pendingCaptureStart != null) {
       pendingCaptureStart?.reject("E_CAPTURE_START_FAILED", reason, null)

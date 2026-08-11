@@ -259,7 +259,6 @@ class MurmurForegroundService : Service() {
   }
 
   private fun stopCaptureInternal(reason: String) {
-    val wasActive = captureActive || mediaProjection != null || recorder != null
     captureActive = false
     overlayController.hide()
     unregisterScreenOffReceiver()
@@ -283,11 +282,9 @@ class MurmurForegroundService : Service() {
       }
       it.stop()
     }
-    if (source == CAPTURE_SOURCE_DEVICE_PLAYBACK && (wasActive || !stopNotified)) {
-      if (!stopNotified) {
-        stopNotified = true
-        MurmurCaptureBridge.notifyCaptureStopped(source, reason)
-      }
+    if (!stopNotified) {
+      stopNotified = true
+      MurmurCaptureBridge.notifyCaptureStopped(source, reason)
     }
   }
 
