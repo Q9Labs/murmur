@@ -81,16 +81,17 @@ export function summarizeLatency(samples: LatencySample[]): LatencyReport {
 
 export function formatLatencyPercentiles(
   percentiles: LatencyPercentiles | null | undefined,
+  formatNumber: (value: number) => string = String,
 ): string {
   if (!percentiles || percentiles.count === 0) {
     return "n/a";
   }
 
   return [
-    `n=${percentiles.count}`,
-    `p50 ${formatLatencyValue(percentiles.p50_ms)}`,
-    `p90 ${formatLatencyValue(percentiles.p90_ms)}`,
-    `p95 ${formatLatencyValue(percentiles.p95_ms)}`,
+    `n=${formatNumber(percentiles.count)}`,
+    `p50 ${formatLatencyValue(percentiles.p50_ms, formatNumber)}`,
+    `p90 ${formatLatencyValue(percentiles.p90_ms, formatNumber)}`,
+    `p95 ${formatLatencyValue(percentiles.p95_ms, formatNumber)}`,
   ].join(" / ");
 }
 
@@ -160,6 +161,6 @@ export function formatLatencyEvidenceReport(report: LatencyEvidenceReport): stri
   return lines.join("\n");
 }
 
-function formatLatencyValue(value: number | null): string {
-  return typeof value === "number" ? `${Math.round(value)}ms` : "n/a";
+function formatLatencyValue(value: number | null, formatNumber: (value: number) => string): string {
+  return typeof value === "number" ? `${formatNumber(Math.round(value))}ms` : "n/a";
 }

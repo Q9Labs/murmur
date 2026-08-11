@@ -45,4 +45,16 @@ describe("local storage", () => {
     await expect(getLocalValue("key")).resolves.toBeNull();
     expect(secureStore.setItemAsync).not.toHaveBeenCalled();
   });
+
+  it("rejects browser writes and deletes when local storage is unavailable", async () => {
+    platform.OS = "web";
+
+    await expect(setLocalValue("key", "value")).rejects.toThrow(
+      "Browser local storage is unavailable.",
+    );
+    await expect(deleteLocalValue("key")).rejects.toThrow(
+      "Browser local storage is unavailable.",
+    );
+    await expect(getLocalValue("key")).resolves.toBeNull();
+  });
 });

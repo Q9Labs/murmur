@@ -4,6 +4,14 @@ All notable changes to Murmur are documented here.
 
 ## Unreleased
 
+### Added
+
+- Bundled English and Modern Standard Arabic UI catalogs with a persistent in-app language switcher, Arabic-Indic display digits, and locale-derived right-to-left layout.
+
+### Changed
+
+- Kept transcript direction tied to each speech language while the surrounding Bloom shell follows the selected UI locale.
+
 ## 1.2.0 - 2026-08-10
 
 ### Added

@@ -1,4 +1,9 @@
-import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
+import {
+  autoSourceLanguageCode,
+  getLanguage,
+  type LanguageCode,
+  type SourceLanguageCode,
+} from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { ComponentType, MutableRefObject, ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -6,6 +11,7 @@ import type { ScrollView } from "react-native";
 
 import type { AudioStateEvent } from "../../modules/murmur-audio";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
+import { uiTextDirectionStyle, useUiLocale } from "../i18n/runtime";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
 import { ModalSheet } from "./modalSheet";
@@ -105,6 +111,11 @@ export function HomeExperience(props: {
           live={props.live}
           onClose={props.onCloseDiagnostics}
           open={props.diagnosticsOpen}
+          sourceLanguageRtl={
+            props.sourceLanguageCode === autoSourceLanguageCode
+              ? false
+              : getLanguage(props.sourceLanguageCode).rtl
+          }
           targetLanguageRtl={props.viewModel.targetLanguage.rtl}
         />
       )}
@@ -116,26 +127,32 @@ export function TranslationReportModal({
   live,
   onClose,
   open,
+  sourceLanguageRtl,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
   onClose: () => void;
   open: boolean;
+  sourceLanguageRtl: boolean;
   targetLanguageRtl: boolean;
 }): ReactNode {
+  const { direction, t } = useUiLocale();
   const reportableSpans = [...live.spans.filter((span) => span.status === "committed")].reverse();
 
   return (
-    <ModalSheet onClose={onClose} open={open} scroll title="Report translation">
+    <ModalSheet onClose={onClose} open={open} scroll title={t("report.title")}>
       <View style={styles.timeline}>
         {reportableSpans.length === 0 ? (
-          <Text style={styles.timelineEmpty}>No committed translations yet.</Text>
+          <Text style={[styles.timelineEmpty, uiTextDirectionStyle(direction)]}>
+            {t("report.noCommittedTranslations")}
+          </Text>
         ) : (
           reportableSpans.map((span) => (
             <ReportSpanRow
               key={`${span.span_id}-${span.revision}`}
               live={live}
               span={span}
+              sourceLanguageRtl={sourceLanguageRtl}
               targetLanguageRtl={targetLanguageRtl}
             />
           ))
@@ -147,17 +164,21 @@ export function TranslationReportModal({
 
 function ReportSpanRow({
   live,
+  sourceLanguageRtl,
   span,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
+  sourceLanguageRtl: boolean;
   span: TranslationSpan;
   targetLanguageRtl: boolean;
 }): ReactNode {
   return (
     <View style={styles.spanRow}>
-      <Text style={styles.spanSource}>{span.source_caption}</Text>
-      <Text style={[styles.spanTranslation, targetLanguageRtl && styles.rtlText]}>
+      <Text style={[styles.spanSource, sourceLanguageRtl ? styles.rtlText : styles.ltrText]}>
+        {span.source_caption}
+      </Text>
+      <Text style={[styles.spanTranslation, targetLanguageRtl ? styles.rtlText : styles.ltrText]}>
         {span.committed_translated_caption ?? span.translated_caption}
       </Text>
       <TranslationReportActions live={live} span={span} />

@@ -1,20 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("expo-secure-store", () => ({
-  deleteItemAsync: vi.fn(),
-  getItemAsync: vi.fn(),
-  setItemAsync: vi.fn(),
-}));
-vi.mock("react-native", () => ({ Platform: { OS: "ios" }, View: "div" }));
+import { describe, expect, it } from "vitest";
 
 import {
   createTranslator,
-  directionForLocale,
   formatUiNumber,
-  isUiLocale,
   uiContentDirectionStyle,
   uiTextDirectionStyle,
-} from "./index";
+} from "./runtime";
+import { directionForLocale, isUiLocale } from "./types";
 
 describe("UI locale runtime", () => {
   it("rejects unknown keys and missing interpolation values clearly", () => {

@@ -24,16 +24,15 @@ export function SettingsChrome({
   pressedStyle: StyleProp<ViewStyle>;
   rightSlot: ReactNode;
 }): ReactNode {
-  const { direction, t } = useUiLocale();
   return (
     <View style={containerStyle}>
       <Pressable
-        accessibilityLabel={t("accessibility.openSettings")}
+        accessibilityLabel="Open settings"
         accessibilityRole="button"
         onPress={onOpenSettings}
         style={({ pressed }) => [pressed && pressedStyle]}
       >
-        <Text style={[buttonTextStyle, uiTextDirectionStyle(direction)]}>···</Text>
+        <Text style={buttonTextStyle}>···</Text>
       </Pressable>
       {rightSlot}
     </View>

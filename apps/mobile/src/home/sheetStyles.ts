@@ -85,6 +85,12 @@ function createSheetStyles(theme: MurmurTheme) {
       fontSize: 16,
       fontWeight: "700",
     },
+    settingsActionMeta: {
+      color: theme.muted,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 3,
+    },
     settingsList: {
       marginTop: 2,
     },

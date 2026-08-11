@@ -17,6 +17,7 @@ vi.mock("./modalSheet", () => ({
 vi.mock("./settingsModals", () => ({ SettingsModal: () => null }));
 vi.mock("./styles", () => ({
   styles: {
+    ltrText: {},
     reportButton: {},
     reportButtonText: {},
     reportRow: {},
@@ -63,7 +64,13 @@ describe("production translation reporting", () => {
   it("shows report actions only for committed spans", () => {
     const live = createLive();
     const markup = renderToStaticMarkup(
-      <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+      <TranslationReportModal
+        live={live}
+        onClose={vi.fn()}
+        open
+        sourceLanguageRtl={false}
+        targetLanguageRtl={false}
+      />,
     );
 
     expect(markup).toContain("Report translation");
@@ -92,7 +99,13 @@ describe("production translation reporting", () => {
 
     expect(
       renderToStaticMarkup(
-        <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+        <TranslationReportModal
+          live={live}
+          onClose={vi.fn()}
+          open
+          sourceLanguageRtl={false}
+          targetLanguageRtl={false}
+        />,
       ),
     ).toContain("No committed translations yet.");
   });

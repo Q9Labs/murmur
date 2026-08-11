@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { platform, secureStore } = vi.hoisted(() => ({
-  platform: { OS: "ios" },
-  secureStore: { deleteItemAsync: vi.fn(), getItemAsync: vi.fn(), setItemAsync: vi.fn() },
+const localValues = vi.hoisted(() => ({
+  deleteLocalValue: vi.fn(),
+  getLocalValue: vi.fn(),
+  setLocalValue: vi.fn(),
 }));
 
-vi.mock("expo-secure-store", () => secureStore);
-vi.mock("react-native", () => ({ Platform: platform }));
+vi.mock("../lib/localStorage", () => localValues);
 
 import {
   deleteStoredUiLocale,
@@ -16,22 +16,21 @@ import {
 
 afterEach(() => {
   vi.clearAllMocks();
-  platform.OS = "ios";
 });
 
 describe("stored UI locale", () => {
   it("restores missing or invalid values as English without rewriting", async () => {
-    secureStore.getItemAsync.mockResolvedValueOnce(null).mockResolvedValueOnce("ar-SA");
+    localValues.getLocalValue.mockResolvedValueOnce(null).mockResolvedValueOnce("ar-SA");
 
     await expect(getStoredUiLocale()).resolves.toBe("en");
     await expect(getStoredUiLocale()).resolves.toBe("en");
-    expect(secureStore.setItemAsync).not.toHaveBeenCalled();
+    expect(localValues.setLocalValue).not.toHaveBeenCalled();
   });
 
   it("does not hide storage failures and rejects unsupported locales", async () => {
-    secureStore.getItemAsync.mockRejectedValueOnce(new Error("read failed"));
-    secureStore.setItemAsync.mockRejectedValueOnce(new Error("write failed"));
-    secureStore.deleteItemAsync.mockRejectedValueOnce(new Error("delete failed"));
+    localValues.getLocalValue.mockRejectedValueOnce(new Error("read failed"));
+    localValues.setLocalValue.mockRejectedValueOnce(new Error("write failed"));
+    localValues.deleteLocalValue.mockRejectedValueOnce(new Error("delete failed"));
 
     await expect(getStoredUiLocale()).resolves.toBe("en");
     await expect(setStoredUiLocale("ar")).rejects.toThrow("write failed");

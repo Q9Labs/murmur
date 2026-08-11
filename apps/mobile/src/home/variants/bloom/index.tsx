@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { uiContentDirectionStyle, useUiLocale } from "../../i18n/runtime";
+import { uiContentDirectionStyle, useUiLocale } from "../../../i18n/runtime";
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
 import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";

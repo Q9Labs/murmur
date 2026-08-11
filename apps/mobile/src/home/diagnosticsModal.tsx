@@ -55,7 +55,7 @@ export function DiagnosticsModal({
     <ModalSheet onClose={onClose} open={open} title={t("diagnostics.title")}>
       <ScrollView contentContainerStyle={styles.diagnosticsContent}>
         <DiagnosticsMetrics audioState={audioState} direction={direction} live={live} locale={locale} translate={t} />
-        <DiagnosticsLatency direction={direction} live={live} translate={t} />
+        <DiagnosticsLatency direction={direction} live={live} locale={locale} translate={t} />
         <DiagnosticActions
           direction={direction}
           getReportParams={getReportParams}
@@ -240,10 +240,12 @@ function DiagnosticActions({
 function DiagnosticsLatency({
   direction,
   live,
+  locale,
   translate,
 }: {
   direction: "ltr" | "rtl";
   live: LiveTranslationController;
+  locale: "en" | "ar";
   translate: Translate;
 }): ReactNode {
   return (
@@ -251,12 +253,18 @@ function DiagnosticsLatency({
       <LatencyRow
         direction={direction}
         label={translate("diagnostics.firstSourceTranscript")}
-        value={formatLatencyPercentiles(live.latency_report.first_source_transcript)}
+        value={formatLatencyPercentiles(
+          live.latency_report.first_source_transcript,
+          (value) => formatUiNumber(value, locale),
+        )}
       />
       <LatencyRow
         direction={direction}
         label={translate("diagnostics.firstTranslatedTranscript")}
-        value={formatLatencyPercentiles(live.latency_report.first_translated_transcript)}
+        value={formatLatencyPercentiles(
+          live.latency_report.first_translated_transcript,
+          (value) => formatUiNumber(value, locale),
+        )}
       />
     </>
   );

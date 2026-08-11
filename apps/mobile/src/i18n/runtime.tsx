@@ -1,5 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { createContext, useContext } from "react";
 
 import {
   arCatalog,
@@ -8,7 +7,6 @@ import {
   placeholderNames,
   type MessageKey,
 } from "./catalogs";
-import { deleteStoredUiLocale, getStoredUiLocale, setStoredUiLocale } from "./storage";
 import { directionForLocale, isUiLocale, type UiDirection, type UiLocale } from "./types";
 
 type InterpolationValue = string | number;
@@ -71,109 +69,6 @@ export function createTranslator(locale: UiLocale): Translate {
 
 export function useUiLocale(): UiLocaleContextValue {
   return useContext(UiLocaleContext);
-}
-
-export function UiLocaleProvider({ children }: { children: ReactNode }): ReactNode {
-  const [locale, setLocaleState] = useState<UiLocale>("en");
-  const [ready, setReady] = useState(false);
-  const mountedRef = useRef(false);
-  const persistedLocaleRef = useRef<UiLocale>("en");
-  const requestVersionRef = useRef(0);
-  const operationQueueRef = useRef(Promise.resolve());
-
-  useEffect(() => {
-    mountedRef.current = true;
-    let active = true;
-    void getStoredUiLocale().then((storedLocale) => {
-      if (!active) {
-        return;
-      }
-      persistedLocaleRef.current = storedLocale;
-      setLocaleState(storedLocale);
-      setReady(true);
-    });
-    return () => {
-      active = false;
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const enqueue = useCallback((operation: () => Promise<void>): Promise<void> => {
-    const next = operationQueueRef.current.catch(() => undefined).then(operation);
-    operationQueueRef.current = next.catch(() => undefined);
-    return next;
-  }, []);
-
-  const setLocale = useCallback((nextLocale: UiLocale): Promise<void> => {
-    if (!isUiLocale(nextLocale)) {
-      return Promise.reject(new RangeError(`Unsupported UI locale: ${String(nextLocale)}`));
-    }
-    if (!mountedRef.current) {
-      return Promise.resolve();
-    }
-    const requestVersion = ++requestVersionRef.current;
-    setLocaleState(nextLocale);
-    return enqueue(async () => {
-      try {
-        await setStoredUiLocale(nextLocale);
-        persistedLocaleRef.current = nextLocale;
-      } catch (error) {
-        if (mountedRef.current && requestVersionRef.current === requestVersion) {
-          setLocaleState(persistedLocaleRef.current);
-        }
-        throw error;
-      }
-    });
-  }, [enqueue]);
-
-  const deleteLocale = useCallback((): Promise<void> => {
-    if (!mountedRef.current) {
-      return Promise.resolve();
-    }
-    const requestVersion = ++requestVersionRef.current;
-    return enqueue(async () => {
-      try {
-        await deleteStoredUiLocale();
-        persistedLocaleRef.current = "en";
-        if (mountedRef.current && requestVersionRef.current === requestVersion) {
-          setLocaleState("en");
-        }
-      } catch (error) {
-        if (mountedRef.current && requestVersionRef.current === requestVersion) {
-          setLocaleState(persistedLocaleRef.current);
-        }
-        throw error;
-      }
-    });
-  }, [enqueue]);
-
-  const translator = useMemo(() => createTranslator(locale), [locale]);
-  const contextValue = useMemo<UiLocaleContextValue>(() => ({
-    locale,
-    direction: directionForLocale(locale),
-    ready,
-    t: translator,
-    translate: translator,
-    setLocale,
-    deleteLocale,
-  }), [deleteLocale, locale, ready, setLocale, translator]);
-
-  useEffect(() => {
-    if (!ready || typeof document === "undefined" || !document.documentElement) {
-      return;
-    }
-    document.documentElement.lang = locale;
-    document.documentElement.dir = directionForLocale(locale);
-  }, [locale, ready]);
-
-  if (!ready) {
-    return null;
-  }
-  return (
-    <UiLocaleContext.Provider value={contextValue}>
-      <View style={[{ flex: 1 }, uiContentDirectionStyle(locale)]}>{children}</View>
-    </UiLocaleContext.Provider>
-  );
 }
 
 function resolveDirection(value: UiLocale | UiDirection): UiDirection {

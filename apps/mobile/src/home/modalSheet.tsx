@@ -79,7 +79,7 @@ function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: stri
   const { colors, styles } = useSheetStyles();
   const { direction, t } = useUiLocale();
   return (
-    <View style={styles.sheetHeader}>
+    <View style={[styles.sheetHeader, uiContentDirectionStyle(direction)]}>
       <Text style={[styles.sheetTitle, uiTextDirectionStyle(direction)]}>{title}</Text>
       <Pressable
         accessibilityLabel={t("accessibility.close")}

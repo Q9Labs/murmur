@@ -27,6 +27,8 @@ import {
 import { requestMurmurReview } from "../lib/requestReview";
 import { shareMurmur } from "../lib/shareMurmur";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
+import type { MessageKey } from "../i18n/catalogs";
+import { createTranslator, type Translate, useUiLocale } from "../i18n/runtime";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
   deleteStoredAudioPlaybackEnabled,
@@ -38,10 +40,7 @@ import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 
-const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
-const localDataDeletedMessage =
-  "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.";
-const localDataDeleteError = "Could not delete local data. Please try again.";
+const englishTranslate = createTranslator("en");
 
 type AudioPlaybackPreferenceController = ReturnType<
   typeof createAudioPlaybackPreferenceController
@@ -52,6 +51,7 @@ export function createAudioPlaybackPreferenceController(options: {
   onEnabledChange: (enabled: boolean) => void;
   onMessage: (message: string | null) => void;
   setStored: (enabled: boolean) => Promise<void>;
+  translate?: Translate;
 }): {
   deleteLocalData: (operation: () => Promise<void>, onDeleted: () => void) => Promise<void>;
   dispose: () => void;
@@ -119,7 +119,7 @@ export function createAudioPlaybackPreferenceController(options: {
       } catch {
         if (isCurrent(version) && currentEnabled === enabled) {
           applyEnabled(persistedEnabled);
-          options.onMessage(audioPlaybackSaveError);
+          options.onMessage(message("home.audioSaveError"));
         }
       }
     }).catch(() => undefined);
@@ -143,10 +143,10 @@ export function createAudioPlaybackPreferenceController(options: {
       }
       applyEnabled(true);
       onDeleted();
-      options.onMessage(localDataDeletedMessage);
+      options.onMessage(englishTranslate("home.localDataDeleted"));
     }).catch(() => {
       if (isCurrent(version)) {
-        options.onMessage(localDataDeleteError);
+        options.onMessage(message("home.localDataDeleteError"));
       }
     });
   }
@@ -161,6 +161,10 @@ export function createAudioPlaybackPreferenceController(options: {
     restoreVersion += 1;
   }
 
+  function message(key: MessageKey): string {
+    return options.translate?.(key) ?? englishTranslate(key);
+  }
+
   return {
     deleteLocalData,
     dispose,
@@ -171,6 +175,7 @@ export function createAudioPlaybackPreferenceController(options: {
 }
 
 export default function HomeScreen(): ReactNode {
+  const { deleteLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -187,12 +192,15 @@ export default function HomeScreen(): ReactNode {
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
   const audioPreferenceControllerRef = useRef<AudioPlaybackPreferenceController | null>(null);
+  const translateRef = useRef(t);
+  translateRef.current = t;
   if (!audioPreferenceControllerRef.current) {
     audioPreferenceControllerRef.current = createAudioPlaybackPreferenceController({
       getStored: getStoredAudioPlaybackEnabled,
       onEnabledChange: setAudioPlaybackEnabled,
       onMessage: setSettingsMessage,
       setStored: setStoredAudioPlaybackEnabled,
+      translate: (key, values) => translateRef.current(key, values),
     });
   }
   const audioPreferenceController = audioPreferenceControllerRef.current;
@@ -215,8 +223,9 @@ export default function HomeScreen(): ReactNode {
       live,
       sourceLanguageCode,
       targetLanguageCode,
+      translate: t,
     }),
-    [live, sourceLanguageCode, targetLanguageCode],
+    [live, sourceLanguageCode, t, targetLanguageCode],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -385,7 +394,7 @@ export default function HomeScreen(): ReactNode {
       }}
       onDeleteLocalData={() => {
         void audioPreferenceController.deleteLocalData(
-          () => deleteLocalData(live.cancel),
+          () => deleteLocalData(live.cancel, deleteLocale),
           () => {
             setPrivacyAcknowledged(false);
             setPrivacyConsentChecked(false);
@@ -396,7 +405,7 @@ export default function HomeScreen(): ReactNode {
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
       onPrimaryAction={() => void handlePrimaryAction()}
-      onResetIdentity={() => void resetIdentity(setSettingsMessage)}
+      onResetIdentity={() => void resetIdentity(setSettingsMessage, t("home.identityReset"))}
       onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       pickerMode={pickerMode}
@@ -426,9 +435,12 @@ function newestAudioState(
   return order >= 0 ? next : current;
 }
 
-async function resetIdentity(setMessage: (message: string | null) => void): Promise<void> {
+async function resetIdentity(
+  setMessage: (message: string | null) => void,
+  successMessage: string,
+): Promise<void> {
   await resetInstallId();
-  setMessage("Accountless identity reset. The next session will use a fresh install id.");
+  setMessage(successMessage);
 }
 
 async function handleCompletedSessionEngagement(
@@ -447,10 +459,14 @@ async function handleCompletedSessionEngagement(
   }
 }
 
-async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
+async function deleteLocalData(
+  cancel: () => Promise<void>,
+  deleteLocale: () => Promise<void>,
+): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await deleteLocale();
 }
