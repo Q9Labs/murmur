@@ -8,12 +8,13 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 internal class MurmurOverlayController(private val context: Context) {
@@ -24,6 +25,7 @@ internal class MurmurOverlayController(private val context: Context) {
   @Volatile private var dismissedForSession = false
   private var rootView: View? = null
   private var captionView: TextView? = null
+  private var captionScrollView: ScrollView? = null
   private var windowParams: WindowManager.LayoutParams? = null
 
   fun show() {
@@ -62,6 +64,7 @@ internal class MurmurOverlayController(private val context: Context) {
     rootView = root
     windowParams = params
     visible = true
+    scrollCaptionToLatest()
   }
 
   fun hide() {
@@ -78,6 +81,7 @@ internal class MurmurOverlayController(private val context: Context) {
     }
     rootView = null
     captionView = null
+    captionScrollView = null
     windowParams = null
     currentCaption = ""
     dismissedForSession = false
@@ -85,7 +89,7 @@ internal class MurmurOverlayController(private val context: Context) {
   }
 
   fun updateCaption(caption: String, rtl: Boolean) {
-    val boundedCaption = caption.trim().takeLast(MAX_CAPTION_LENGTH)
+    val boundedCaption = MurmurCaptionWindow.tail(caption)
     currentCaption = boundedCaption
     if (Looper.myLooper() != Looper.getMainLooper()) {
       mainHandler.post { updateCaption(boundedCaption, rtl) }
@@ -98,7 +102,8 @@ internal class MurmurOverlayController(private val context: Context) {
     captionTextView.text = boundedCaption.ifEmpty { EMPTY_CAPTION }
     captionTextView.layoutDirection = if (rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
     captionTextView.textDirection = if (rtl) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_LTR
-    captionTextView.gravity = if (rtl) Gravity.END else Gravity.START
+    captionTextView.gravity = Gravity.BOTTOM or if (rtl) Gravity.END else Gravity.START
+    scrollCaptionToLatest()
   }
 
   fun state(context: Context): Map<String, Any?> = mapOf(
@@ -109,7 +114,7 @@ internal class MurmurOverlayController(private val context: Context) {
 
   companion object {
     private const val EMPTY_CAPTION = "Listening for phone audio…"
-    private const val MAX_CAPTION_LENGTH = 240
+    private const val CAPTION_VIEW_HEIGHT_DP = 96
 
     fun hasPermission(context: Context): Boolean {
       return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(context)
@@ -156,22 +161,45 @@ internal class MurmurOverlayController(private val context: Context) {
     val caption = TextView(context).apply {
       setTextColor(Color.WHITE)
       textSize = 16f
-      maxLines = 4
-      ellipsize = TextUtils.TruncateAt.END
       setLineSpacing(0f, 1.08f)
       gravity = Gravity.START
       text = currentCaption.ifEmpty { EMPTY_CAPTION }
       accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-      layoutParams = LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        LinearLayout.LayoutParams.WRAP_CONTENT
+      layoutParams = FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.WRAP_CONTENT
       ).apply { topMargin = dp(2) }
     }
+    val captionScroll = ScrollView(context).apply {
+      isVerticalScrollBarEnabled = false
+      isHorizontalScrollBarEnabled = false
+      overScrollMode = View.OVER_SCROLL_NEVER
+      isSmoothScrollingEnabled = false
+      setFadingEdgeLength(dp(12))
+      isVerticalFadingEdgeEnabled = true
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        dp(CAPTION_VIEW_HEIGHT_DP)
+      ).apply { topMargin = dp(2) }
+      addView(caption)
+    }
     captionView = caption
+    captionScrollView = captionScroll
     container.addView(header)
-    container.addView(caption)
+    container.addView(captionScroll)
     label.setOnTouchListener(DragTouchListener())
     return container
+  }
+
+  private fun scrollCaptionToLatest() {
+    val scrollView = captionScrollView ?: return
+    val textView = captionView ?: return
+    scrollView.post {
+      if (captionScrollView !== scrollView || captionView !== textView) {
+        return@post
+      }
+      scrollView.scrollTo(0, maxOf(0, textView.height - scrollView.height))
+    }
   }
 
   private fun dismissForSession() {
@@ -189,6 +217,7 @@ internal class MurmurOverlayController(private val context: Context) {
     }
     rootView = null
     captionView = null
+    captionScrollView = null
     windowParams = null
     visible = false
   }

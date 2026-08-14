@@ -14,6 +14,7 @@ All notable changes to Murmur are documented here.
 
 - Made live-audio consent, diagnostics, store copy, and privacy terms explicit about microphone and supported Android playback capture. Existing installs will see the updated consent once.
 - Disabled translated speech during Device Audio sessions and excluded Murmur's own playback from capture to prevent feedback.
+- Anchored floating captions to the newest lines so the overlay advances immediately instead of hiding the live tail behind older text.
 - Prepared reusable session prerequisites when the translation screen opens, made Worker session admission atomic in one Durable Object call, silenced capture and playback promptly on Stop, and ran Worker closure beside the provider drain.
 - Made failed sessions explicitly retryable, cleared stale service errors when languages change, ignored late realtime events after a session finishes, and added a clear empty state to language search.
 
