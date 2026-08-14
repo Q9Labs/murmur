@@ -76,5 +76,17 @@ function getErrorStatusText(error: string): string {
   if (error === "realtime_transport_error") {
     return "Network degraded";
   }
+  if (
+    error === "provider_unavailable" ||
+    error.startsWith("provider_unavailable_") ||
+    error.startsWith("realtime_") ||
+    error === "worker_session_network_error" ||
+    error.startsWith("worker_session_http_")
+  ) {
+    return "Service unavailable";
+  }
+  if (error === "microphone_permission_denied") {
+    return "Microphone access needed";
+  }
   return "Needs setup";
 }

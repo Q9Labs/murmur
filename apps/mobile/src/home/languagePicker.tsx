@@ -108,33 +108,39 @@ function LanguagePickerModal({
         showsVerticalScrollIndicator={false}
       >
         <AutoDetectOption onSelect={onSelect} selected={selected} visible={showAutoDetect} />
-        {filteredLanguages.map((language) => {
-          const isSelected = language.app_code === selected;
-          const isDisabled = language.app_code === disabledLanguage;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isDisabled, selected: isSelected }}
-              disabled={isDisabled}
-              key={language.app_code}
-              onPress={() => onSelect(language.app_code)}
-              style={({ pressed }) => [
-                styles.languageOption,
-                isSelected && styles.languageOptionSelected,
-                isDisabled && styles.languageOptionDisabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.languageOptionCopy}>
-                <Text style={styles.languageOptionName}>{language.display_name}</Text>
-                <Text style={styles.languageOptionNative}>{language.native_name}</Text>
-              </View>
-              <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
-                {isSelected ? "✓" : ""}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {filteredLanguages.length === 0 && !showAutoDetect ? (
+          <Text accessibilityRole="text" style={styles.languageEmpty}>
+            No languages found. Try a different search.
+          </Text>
+        ) : (
+          filteredLanguages.map((language) => {
+            const isSelected = language.app_code === selected;
+            const isDisabled = language.app_code === disabledLanguage;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isDisabled, selected: isSelected }}
+                disabled={isDisabled}
+                key={language.app_code}
+                onPress={() => onSelect(language.app_code)}
+                style={({ pressed }) => [
+                  styles.languageOption,
+                  isSelected && styles.languageOptionSelected,
+                  isDisabled && styles.languageOptionDisabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.languageOptionCopy}>
+                  <Text style={styles.languageOptionName}>{language.display_name}</Text>
+                  <Text style={styles.languageOptionNative}>{language.native_name}</Text>
+                </View>
+                <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
+                  {isSelected ? "✓" : ""}
+                </Text>
+              </Pressable>
+            );
+          })
+        )}
       </ScrollView>
     </ModalSheet>
   );

@@ -12,6 +12,7 @@ All notable changes to Murmur are documented here.
 ### Changed
 
 - Prepared reusable session prerequisites when the translation screen opens, made Worker session admission atomic in one Durable Object call, silenced capture and playback promptly on Stop, and ran Worker closure beside the provider drain.
+- Made failed sessions explicitly retryable, cleared stale service errors when languages change, ignored late realtime events after a session finishes, and added a clear empty state to language search.
 
 ## 1.2.0 - 2026-08-10
 

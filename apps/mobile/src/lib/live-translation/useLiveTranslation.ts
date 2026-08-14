@@ -82,6 +82,7 @@ export function useLiveTranslation(
   const sessionRef = useRef(session);
   const spanRef = useRef<TranslationSpan | null>(null);
   const clientRef = useRef<RealtimeTranslationClient | null>(null);
+  const activeRealtimeSessionTokenRef = useRef<string | null>(null);
   const captureStartedAtRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
   const errorRef = useRef<string | null>(null);
@@ -132,6 +133,7 @@ export function useLiveTranslation(
     const next = createSession(params);
     sessionRef.current = next;
     setSession(next);
+    setLiveError(null);
   }, [params.source_language, params.target_language]);
 
   useEffect(() => {
@@ -169,6 +171,7 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    activeRealtimeSessionTokenRef.current = null;
     preparationRef.current?.dispose();
     const client = clientRef.current;
     clientRef.current = null;
@@ -270,8 +273,10 @@ export function useLiveTranslation(
     const listenTappedAtMs = Date.now();
     timingRef.current!.beginListen(listenTappedAtMs);
     const freshSession = createSession(params);
+    const realtimeSessionToken = freshSession.identity.connection_id;
     sessionRef.current = freshSession;
     setSession(freshSession);
+    activeRealtimeSessionTokenRef.current = realtimeSessionToken;
     sessionStartedAtRef.current = listenTappedAtMs;
     captureStartedAtRef.current = null;
     setLiveError(null);
@@ -345,9 +350,7 @@ export function useLiveTranslation(
       return next;
     });
     const client = createRealtimeTranslationClient({
-      onEvent: (event) => {
-        void receiveRealtimeEvent(event);
-      },
+      onEvent: (event) => receiveRealtimeEventIfActive(realtimeSessionToken, event),
       shouldPlayAudio: () =>
         playbackEnabledRef.current && !playbackSuppressedRef.current,
       url: response.realtime_ws_url,
@@ -374,6 +377,19 @@ export function useLiveTranslation(
     }, gracefulStopDelayMs);
     client.connect();
     recordDebug("realtime.connecting", "Connecting to live translation");
+  }
+
+  function receiveRealtimeEventIfActive(
+    realtimeSessionToken: string,
+    event: RealtimeTranslationClientEvent,
+  ): void {
+    if (
+      finishingRef.current ||
+      activeRealtimeSessionTokenRef.current !== realtimeSessionToken
+    ) {
+      return;
+    }
+    void receiveRealtimeEvent(event);
   }
 
   async function receiveRealtimeEvent(
@@ -502,6 +518,7 @@ export function useLiveTranslation(
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    activeRealtimeSessionTokenRef.current = null;
     playbackSuppressedRef.current = true;
     transition("cancelling");
     const appSessionId = sessionRef.current.identity.app_session_id;
@@ -533,6 +550,7 @@ export function useLiveTranslation(
       return getCompletionPromise() as Promise<LiveTranslationCompletion>;
     }
     finishingRef.current = true;
+    activeRealtimeSessionTokenRef.current = null;
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);

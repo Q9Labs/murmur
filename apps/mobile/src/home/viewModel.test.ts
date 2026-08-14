@@ -128,4 +128,21 @@ describe("home view model", () => {
       targetLanguageCode: "ar",
     }).statusText).toBe("Starting AI");
   });
+
+  it("keeps failed sessions ready to retry with a clear service status", () => {
+    const model = buildHomeViewModel({
+      live: makeLive({
+        error: "worker_session_network_error",
+        status: "failed",
+      }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+
+    expect(model).toMatchObject({
+      canChangeLanguages: true,
+      canStart: true,
+      statusText: "Service unavailable",
+    });
+  });
 });

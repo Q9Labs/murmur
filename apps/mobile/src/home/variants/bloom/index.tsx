@@ -52,7 +52,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel="Listen"
+          startLabel={live.error && live.error !== "microphone_permission_denied" ? "Try again" : "Listen"}
           stopLabel="Stop"
           style={styles.listenPill}
           textStyle={styles.listenPillText}
