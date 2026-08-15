@@ -12,8 +12,8 @@
     "@murmur/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260516.1",
-    "vitest": "^4.1.6",
-    "wrangler": "^4.92.0"
+    "@cloudflare/workers-types": "^5.20260812.1",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.121.0"
   }
 }
