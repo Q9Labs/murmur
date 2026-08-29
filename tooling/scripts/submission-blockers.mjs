@@ -1,6 +1,6 @@
 const LEDGER_STATUSES = new Set(["not_submission_ready", "submission_ready"]);
 const APPLE_POLICY_URL = /^https:\/\/developer\.apple\.com\//;
-const GOOGLE_POLICY_URL = /^https:\/\/(?:support\.google\.com\/googleplay|developer\.android\.com\/google\/play)\//;
+const GOOGLE_POLICY_URL = /^https:\/\/(?:support\.google\.com\/google(?:play)|developer\.android\.com\/google\/play)\//;
 
 const failureUnless = (condition, message) => (condition ? [] : [message]);
 
