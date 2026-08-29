@@ -4,6 +4,9 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 output_dir=${SIGNED_OUTPUT_DIR:-"$repo_root/build/release"}
+if [[ "$output_dir" != /* ]]; then
+  output_dir="$repo_root/$output_dir"
+fi
 temp_parent=${RUNNER_TEMP:-/private/tmp}
 temp_dir=$(mktemp -d "$temp_parent/murmur-ios-signing.XXXXXX")
 keychain_path="$temp_dir/release.keychain-db"
@@ -18,8 +21,6 @@ while IFS= read -r keychain; do
 done < <(security list-keychains -d user)
 
 cleanup() {
-  unset MURMUR_IOS_P12_PASSWORD
-
   if ((${#original_keychains[@]})); then
     security list-keychains -d user -s "${original_keychains[@]}" >/dev/null 2>&1 || true
   fi
@@ -61,9 +62,8 @@ expected_bundle_id=$(jq -er '.apple.bundle_id' "$manifest")
 echo "Recovering Murmur Apple release credentials from 1Password."
 bash "$repo_root/scripts/release/restore-signing-assets.sh" ios "$temp_dir/assets"
 
-export MURMUR_IOS_P12_PASSWORD
-MURMUR_IOS_P12_PASSWORD=$(<"$temp_dir/assets/p12.password")
-openssl pkcs12 -legacy -in "$temp_dir/assets/distribution.p12" -nokeys -passin env:MURMUR_IOS_P12_PASSWORD 2>/dev/null |
+openssl pkcs12 -legacy -in "$temp_dir/assets/distribution.p12" -nokeys \
+  -passin "file:$temp_dir/assets/p12.password" 2>/dev/null |
   openssl x509 -outform der -out "$temp_dir/distribution.cer"
 certificate_sha256=$(openssl x509 -inform der -in "$temp_dir/distribution.cer" -noout -fingerprint -sha256 | cut -d= -f2)
 
@@ -90,7 +90,11 @@ keychain_password=$(openssl rand -hex 24)
 security create-keychain -p "$keychain_password" "$keychain_path"
 security set-keychain-settings -lut 21600 "$keychain_path"
 security unlock-keychain -p "$keychain_password" "$keychain_path"
-security import "$temp_dir/assets/distribution.p12" -k "$keychain_path" -P "$MURMUR_IOS_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+chmod 600 "$temp_dir/assets/distribution.p12" "$temp_dir/assets/p12.password"
+openssl pkcs12 -legacy -in "$temp_dir/assets/distribution.p12" -nodes \
+  -passin "file:$temp_dir/assets/p12.password" -out "$temp_dir/distribution.pem" 2>/dev/null
+chmod 600 "$temp_dir/distribution.pem"
+security import "$temp_dir/distribution.pem" -k "$keychain_path" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path" >/dev/null
 security list-keychains -d user -s "$keychain_path" "${original_keychains[@]}"
 
@@ -109,7 +113,8 @@ if command -v pod >/dev/null; then
 fi
 
 archive_path="$temp_dir/Murmur.xcarchive"
-export_path="$temp_dir/export"
+mkdir -p "$output_dir"
+export_path="$output_dir"
 echo "Building the signed Murmur iOS archive."
 if ! xcodebuild \
   -workspace ios/Murmur.xcworkspace \
@@ -170,6 +175,12 @@ if [[ -z "$built_ipa" ]]; then
   exit 1
 fi
 
+target_ipa="$output_dir/murmur-ios-signed.ipa"
+if [[ "$built_ipa" != "$target_ipa" ]]; then
+  mv "$built_ipa" "$target_ipa"
+  built_ipa="$target_ipa"
+fi
+
 mkdir -p "$temp_dir/extracted"
 unzip -q "$built_ipa" -d "$temp_dir/extracted"
 signed_app=$(find "$temp_dir/extracted/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
@@ -181,8 +192,6 @@ if [[ "$signed_certificate_sha256" != "$expected_certificate_sha256" ]]; then
   exit 1
 fi
 
-mkdir -p "$output_dir"
-cp "$built_ipa" "$output_dir/murmur-ios-signed.ipa"
 ditto -c -k --keepParent "$archive_path/dSYMs" "$output_dir/murmur-ios-dsyms.zip"
 
 printf 'ios_ipa=%s\n' "$output_dir/murmur-ios-signed.ipa"

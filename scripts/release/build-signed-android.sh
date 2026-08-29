@@ -4,11 +4,15 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 output_dir=${SIGNED_OUTPUT_DIR:-"$repo_root/build/release"}
+if [[ "$output_dir" != /* ]]; then
+  output_dir="$repo_root/$output_dir"
+fi
 temp_parent=${RUNNER_TEMP:-/private/tmp}
 temp_dir=$(mktemp -d "$temp_parent/murmur-android-signing.XXXXXX")
+gradle_user_home="$temp_dir/gradle-home"
+artifact_name=murmur-android-signed.aab
 
 cleanup() {
-  unset MURMUR_ANDROID_KEYSTORE_PATH MURMUR_ANDROID_KEYSTORE_PASSWORD MURMUR_ANDROID_KEY_ALIAS MURMUR_ANDROID_KEY_PASSWORD MURMUR_REQUIRE_RELEASE_SIGNING
   if [[ -d "$temp_dir" && ! -L "$temp_dir" && $(basename "$temp_dir") == murmur-android-signing.* ]]; then
     find "$temp_dir" -depth -delete
   fi
@@ -27,17 +31,13 @@ expected_keystore_sha256=$(jq -er '.android.keystore_sha256' "$manifest")
 expected_certificate_sha256=$(jq -er '.android.certificate_sha256' "$manifest")
 
 bash "$repo_root/scripts/release/restore-signing-assets.sh" android "$temp_dir/assets"
-export MURMUR_ANDROID_KEYSTORE_PATH="$temp_dir/assets/upload.keystore"
-export MURMUR_ANDROID_KEYSTORE_PASSWORD
-MURMUR_ANDROID_KEYSTORE_PASSWORD=$(<"$temp_dir/assets/store.password")
-export MURMUR_ANDROID_KEY_ALIAS
-MURMUR_ANDROID_KEY_ALIAS=$(<"$temp_dir/assets/key.alias")
-export MURMUR_ANDROID_KEY_PASSWORD
-MURMUR_ANDROID_KEY_PASSWORD=$(<"$temp_dir/assets/key.password")
-export MURMUR_REQUIRE_RELEASE_SIGNING=true
-
-actual_keystore_sha256=$(shasum -a 256 "$MURMUR_ANDROID_KEYSTORE_PATH" | awk '{print $1}')
-keytool -J-Djava.security.egd=file:/dev/urandom -list -keystore "$MURMUR_ANDROID_KEYSTORE_PATH" -storepass:env MURMUR_ANDROID_KEYSTORE_PASSWORD -alias "$MURMUR_ANDROID_KEY_ALIAS" -keypass:env MURMUR_ANDROID_KEY_PASSWORD -v > "$temp_dir/keytool.txt"
+actual_keystore_sha256=$(shasum -a 256 "$temp_dir/assets/upload.keystore" | awk '{print $1}')
+keytool -J-Djava.security.egd=file:/dev/urandom -list \
+  -keystore "$temp_dir/assets/upload.keystore" \
+  -storepass:file "$temp_dir/assets/store.password" \
+  -alias "$(<"$temp_dir/assets/key.alias")" \
+  -keypass:file "$temp_dir/assets/key.password" \
+  -v > "$temp_dir/keytool.txt"
 actual_certificate_sha256=$(awk '/SHA256:/{sub(/^[[:space:]]*SHA256: /, ""); print; exit}' "$temp_dir/keytool.txt")
 
 if [[ "$actual_keystore_sha256" != "$expected_keystore_sha256" || "$actual_certificate_sha256" != "$expected_certificate_sha256" ]]; then
@@ -45,13 +45,51 @@ if [[ "$actual_keystore_sha256" != "$expected_keystore_sha256" || "$actual_certi
   exit 1
 fi
 
+mkdir -p "$gradle_user_home" "$output_dir"
+chmod 700 "$gradle_user_home"
+cat > "$gradle_user_home/gradle.properties" <<PROPERTIES
+MURMUR_ANDROID_KEYSTORE_PATH=$temp_dir/assets/upload.keystore
+MURMUR_ANDROID_KEYSTORE_PASSWORD_FILE=$temp_dir/assets/store.password
+MURMUR_ANDROID_KEY_ALIAS=$(<"$temp_dir/assets/key.alias")
+MURMUR_ANDROID_KEY_PASSWORD_FILE=$temp_dir/assets/key.password
+MURMUR_REQUIRE_RELEASE_SIGNING=true
+PROPERTIES
+chmod 600 "$gradle_user_home/gradle.properties"
+
+cat > "$temp_dir/release-output.init.gradle" <<'GRADLE'
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+gradle.projectsEvaluated {
+    def outputPath = gradle.startParameter.projectProperties["q9ReleaseOutputDir"]
+    def artifactName = gradle.startParameter.projectProperties["q9ReleaseArtifactName"]
+    def appProject = rootProject.findProject(":app")
+    if (!outputPath || !artifactName || !appProject) {
+        return
+    }
+
+    appProject.tasks.matching { it.name == "bundleRelease" }.configureEach {
+        doLast {
+            def bundle = new File(project.buildDir, "outputs/bundle/release/app-release.aab")
+            def destination = new File(outputPath, artifactName)
+            destination.parentFile.mkdirs()
+            Files.copy(bundle.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+}
+GRADLE
+
 cd "$repo_root/apps/mobile"
 export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
 pnpm exec expo prebuild --clean --no-install --platform android
 echo "Building the signed Murmur Android bundle."
-./gradlew --no-daemon testDebugUnitTest bundleRelease
+./gradlew --no-daemon --gradle-user-home "$gradle_user_home" \
+  --init-script "$temp_dir/release-output.init.gradle" \
+  -Pq9ReleaseOutputDir="$output_dir" \
+  -Pq9ReleaseArtifactName="$artifact_name" \
+  testDebugUnitTest bundleRelease
 
-built_bundle="$repo_root/apps/mobile/android/app/build/outputs/bundle/release/app-release.aab"
+built_bundle="$output_dir/$artifact_name"
 if [[ ! -f "$built_bundle" ]]; then
   echo "Gradle completed without producing the expected Murmur release bundle." >&2
   exit 1
@@ -64,8 +102,6 @@ if [[ "$bundle_certificate_sha256" != "$expected_certificate_sha256" ]]; then
   exit 1
 fi
 
-mkdir -p "$output_dir"
-cp "$built_bundle" "$output_dir/murmur-android-signed.aab"
 printf 'android_bundle=%s\n' "$output_dir/murmur-android-signed.aab"
 printf 'keystore_sha256=%s\n' "$actual_keystore_sha256"
 printf 'certificate_sha256=%s\n' "$bundle_certificate_sha256"
