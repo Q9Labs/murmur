@@ -7,6 +7,7 @@ import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/language
 import { getMurmurSession } from "../auth/auth";
 import { ensureCurrentAllowance } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
+import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
 import {
   type Env,
   getReadiness,
@@ -55,7 +56,12 @@ export async function createSession(
   if (!limitResult.ok) {
     return json({ error: "rate_limited", code: limitResult.code }, 429);
   }
-  const billingUsage = await prepareBillingUsage(request, env, appSessionId, nowMs);
+  const billingUsage = await prepareBillingUsage(
+    request,
+    env,
+    appSessionId,
+    nowMs,
+  );
   if (!billingUsage.ok) {
     await closeSessionDurable({
       app_session_id: appSessionId,
@@ -135,9 +141,11 @@ async function prepareBillingUsage(
   if (!customerSession) {
     return { ok: false, response: json({ error: "authentication_required" }, 401) };
   }
+  const freeClaimHash = await freeAllowanceClaimHashFromRequest(request, env);
   const bootstrap = await ensureCurrentAllowance({
     customerId: customerSession.user.id,
     env,
+    freeClaimHash,
     nowMs,
     principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",
   });

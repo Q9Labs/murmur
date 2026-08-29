@@ -72,10 +72,6 @@ export class LedgerRepository {
       throw new CustomerDeletedError();
     }
 
-    const idempotencyKey = `${command.customerId}:${command.periodKey}`;
-    const ledgerEntryId = `ledger:${idempotencyKey}`;
-    const grantId = `grant:${idempotencyKey}`;
-    const allowancePeriodId = `period:${idempotencyKey}`;
     const results = await this.database.batch([
       this.database
         .prepare(
@@ -99,13 +95,56 @@ export class LedgerRepository {
         ),
       this.database
         .prepare(
-          `INSERT OR IGNORE INTO allowance_periods
+          `INSERT OR IGNORE INTO projection_versions
+            (customer_id, version, last_ledger_entry_id, rebuilt_at_ms, updated_at_ms)
+           VALUES (?, 0, NULL, NULL, ?)`,
+        )
+        .bind(command.customerId, command.nowMs),
+    ]);
+
+    const principal = await this.database
+      .prepare(
+        `SELECT customer_id
+         FROM customer_principals
+         WHERE provider = ? AND provider_subject = ?`,
+      )
+      .bind(command.principalProvider, command.providerSubject)
+      .first<PrincipalRow>();
+    if (!principal || principal.customer_id !== command.customerId) {
+      throw new CustomerMismatchError();
+    }
+    if (command.grantFreeAllowance) {
+      await this.grantFreeAllowance(command);
+    }
+
+    return {
+      balance: await this.getBalance(command.customerId, command.nowMs),
+      created: results[0]?.meta.changes === 1,
+    };
+  }
+
+  private async grantFreeAllowance(command: BootstrapGuestCommand): Promise<void> {
+    const idempotencyKey = `${command.customerId}:${command.periodKey}`;
+    const ledgerEntryId = `ledger:${idempotencyKey}`;
+    const grantId = `grant:${idempotencyKey}`;
+    const existing = await this.database
+      .prepare("SELECT grant_id FROM balance_grants WHERE grant_id = ?")
+      .bind(grantId)
+      .first<{ grant_id: string }>();
+    if (existing) {
+      return;
+    }
+
+    const results = await this.database.batch([
+      this.database
+        .prepare(
+          `INSERT INTO allowance_periods
             (allowance_period_id, customer_id, allowance_kind, period_key, starts_at_ms,
              expires_at_ms, allowance_ms, created_at_ms)
            VALUES (?, ?, 'free', ?, ?, ?, ?, ?)`,
         )
         .bind(
-          allowancePeriodId,
+          `period:${idempotencyKey}`,
           command.customerId,
           command.periodKey,
           command.periodStartsAtMs,
@@ -115,7 +154,7 @@ export class LedgerRepository {
         ),
       this.database
         .prepare(
-          `INSERT OR IGNORE INTO ledger_entries
+          `INSERT INTO ledger_entries
             (ledger_entry_id, customer_id, entry_kind, amount_ms, idempotency_key, grant_id,
              usage_session_id, store_transaction_row_id, store_event_row_id,
              reverses_ledger_entry_id, metadata_json, created_at_ms)
@@ -132,7 +171,7 @@ export class LedgerRepository {
         ),
       this.database
         .prepare(
-          `INSERT OR IGNORE INTO balance_grants
+          `INSERT INTO balance_grants
             (grant_id, customer_id, grant_kind, grant_key, original_ms, remaining_ms,
              valid_from_ms, expires_at_ms, state, source_ledger_entry_id,
              source_transaction_row_id, created_at_ms, updated_at_ms)
@@ -152,29 +191,15 @@ export class LedgerRepository {
         ),
       this.database
         .prepare(
-          `INSERT OR IGNORE INTO projection_versions
-            (customer_id, version, last_ledger_entry_id, rebuilt_at_ms, updated_at_ms)
-           VALUES (?, 1, ?, NULL, ?)`,
+          `UPDATE projection_versions
+           SET version = version + 1,
+               last_ledger_entry_id = ?,
+               updated_at_ms = ?
+           WHERE customer_id = ?`,
         )
-        .bind(command.customerId, ledgerEntryId, command.nowMs),
+        .bind(ledgerEntryId, command.nowMs, command.customerId),
     ]);
-
-    const principal = await this.database
-      .prepare(
-        `SELECT customer_id
-         FROM customer_principals
-         WHERE provider = ? AND provider_subject = ?`,
-      )
-      .bind(command.principalProvider, command.providerSubject)
-      .first<PrincipalRow>();
-    if (!principal || principal.customer_id !== command.customerId) {
-      throw new CustomerMismatchError();
-    }
-
-    return {
-      balance: await this.getBalance(command.customerId, command.nowMs),
-      created: results[0]?.meta.changes === 1,
-    };
+    requireChanges(results, [1, 1, 1, 1]);
   }
 
   async getBalance(customerId: string, nowMs: number): Promise<LedgerBalance> {

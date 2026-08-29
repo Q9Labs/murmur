@@ -83,7 +83,6 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         await deleteMurmurAccount();
         setCustomer(null);
         setPurchasesAvailable(false);
-        await refresh();
         setError(null);
       } catch (failure) {
         setError(errorMessage(failure));

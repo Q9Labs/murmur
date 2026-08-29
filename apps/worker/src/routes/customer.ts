@@ -6,6 +6,7 @@ import {
   ensureCurrentAllowance,
 } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
+import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
 import type { Env } from "../env";
 import { json } from "../http/response";
 
@@ -20,9 +21,11 @@ export async function getCustomer(
   }
 
   const nowMs = Date.now();
+  const freeClaimHash = await freeAllowanceClaimHashFromRequest(request, env);
   const bootstrap = await ensureCurrentAllowance({
     customerId: session.user.id,
     env,
+    freeClaimHash,
     nowMs,
     principalProvider: session.user.isAnonymous === true ? "anonymous" : "email",
   });

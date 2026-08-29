@@ -277,14 +277,6 @@ export default function HomeScreen(): ReactNode {
   }, []);
 
   useEffect(() => {
-    void initializeAnonymousAnalytics()
-      .then(setAnonymousAnalyticsEnabled)
-      .catch((failure: unknown) => {
-        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
-      });
-  }, []);
-
-  useEffect(() => {
     let mounted = true;
     void hasAcknowledgedPrivacyDisclosure().then((acknowledged) => {
       if (mounted) {

@@ -64,6 +64,7 @@ function decodeBootstrapGuest(
   const periodExpiresAtMs = requiredInteger(value, "periodExpiresAtMs");
   const periodKey = requiredString(value, "periodKey");
   const periodStartsAtMs = requiredInteger(value, "periodStartsAtMs");
+  const grantFreeAllowance = Reflect.get(value, "grantFreeAllowance");
   const principalId = requiredString(value, "principalId");
   const principalProvider = Reflect.get(value, "principalProvider");
   const providerSubject = requiredString(value, "providerSubject");
@@ -71,6 +72,7 @@ function decodeBootstrapGuest(
     periodExpiresAtMs === null ||
     !periodKey ||
     periodStartsAtMs === null ||
+    typeof grantFreeAllowance !== "boolean" ||
     !principalId ||
     (principalProvider !== "anonymous" && principalProvider !== "email") ||
     !providerSubject
@@ -80,6 +82,7 @@ function decodeBootstrapGuest(
   return {
     action: "bootstrap_guest",
     ...common,
+    grantFreeAllowance,
     periodExpiresAtMs,
     periodKey,
     periodStartsAtMs,

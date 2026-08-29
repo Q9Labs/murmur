@@ -54,6 +54,7 @@ describe("billing services", () => {
       expect.objectContaining({
         action: "bootstrap_guest",
         customerId: "customer-1",
+        grantFreeAllowance: false,
         principalProvider: "anonymous",
       }),
     );

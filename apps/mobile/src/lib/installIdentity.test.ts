@@ -14,6 +14,7 @@ vi.mock("react-native", () => ({ Platform: platform }));
 import {
   acknowledgePrivacyDisclosure,
   deleteLocalMurmurData,
+  getOrCreateFreeAllowanceId,
   getOrCreateInstallId,
   hasAcknowledgedPrivacyDisclosure,
   resetInstallId,
@@ -48,6 +49,24 @@ describe("install identity storage", () => {
     expect(secureStore.setItemAsync).toHaveBeenCalledWith("murmur_install_id", installId);
   });
 
+  it("shares one install identity creation across concurrent callers", async () => {
+    let finishRead = (): void => undefined;
+    secureStore.getItemAsync.mockImplementation(() => new Promise((resolve) => {
+      finishRead = () => resolve(null);
+    }));
+
+    const firstInstallId = getOrCreateInstallId();
+    const secondInstallId = getOrCreateInstallId();
+    finishRead();
+
+    await expect(Promise.all([firstInstallId, secondInstallId])).resolves.toEqual([
+      expect.stringMatching(/^install_/),
+      expect.stringMatching(/^install_/),
+    ]);
+    expect(await firstInstallId).toBe(await secondInstallId);
+    expect(secureStore.setItemAsync).toHaveBeenCalledOnce();
+  });
+
   it("uses web localStorage for web installs and privacy acknowledgements", async () => {
     platform.OS = "web";
     const storedValues = new Map<string, string>();
@@ -70,9 +89,13 @@ describe("install identity storage", () => {
 
     const installId = await resetInstallId();
     expect(storedValues.get("murmur_install_id")).toBe(installId);
+    const freeAllowanceId = await getOrCreateFreeAllowanceId();
+    await resetInstallId();
+    expect(await getOrCreateFreeAllowanceId()).toBe(freeAllowanceId);
 
     await deleteLocalMurmurData();
     expect(storedValues.has("murmur_install_id")).toBe(false);
+    expect(storedValues.has("murmur_free_allowance_id")).toBe(false);
     expect(storedValues.has("murmur_third_party_ai_consent_v2")).toBe(false);
   });
 });

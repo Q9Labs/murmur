@@ -8,6 +8,9 @@ const auth = vi.hoisted(() => ({
   signInEmailOtp: vi.fn(),
   sendVerificationOtp: vi.fn(),
 }));
+const installIdentity = vi.hoisted(() => ({
+  getOrCreateFreeAllowanceId: vi.fn(),
+}));
 
 vi.mock("@better-auth/expo/client", () => ({ expoClient: vi.fn(() => ({})) }));
 vi.mock("better-auth/client/plugins", () => ({
@@ -27,6 +30,7 @@ vi.mock("better-auth/react", () => ({
   })),
 }));
 vi.mock("expo-secure-store", () => ({}));
+vi.mock("../installIdentity", () => installIdentity);
 
 import {
   authenticatedWorkerHeaders,
@@ -43,6 +47,7 @@ beforeEach(() => {
   auth.sendVerificationOtp.mockResolvedValue({ error: null });
   auth.signInEmailOtp.mockResolvedValue({ error: null });
   auth.deleteUser.mockResolvedValue({ error: null });
+  installIdentity.getOrCreateFreeAllowanceId.mockResolvedValue("free_test_123");
 });
 
 describe("mobile Murmur authentication client", () => {
@@ -50,8 +55,25 @@ describe("mobile Murmur authentication client", () => {
     const headers = await authenticatedWorkerHeaders({ "x-test": "value" });
 
     expect(headers.get("cookie")).toBe("murmur.session=test-cookie");
+    expect(headers.get("x-murmur-free-allowance-id")).toBe("free_test_123");
     expect(headers.get("x-test")).toBe("value");
     expect(auth.signInAnonymous).not.toHaveBeenCalled();
+  });
+
+  it("shares one guest creation across concurrent cold-start requests", async () => {
+    auth.getSession.mockResolvedValue({ data: null });
+    let finishCreation = (): void => undefined;
+    auth.signInAnonymous.mockImplementation(() => new Promise((resolve) => {
+      finishCreation = () => resolve({ error: null });
+    }));
+
+    const firstRequest = authenticatedWorkerHeaders();
+    const secondRequest = authenticatedWorkerHeaders();
+    await vi.waitFor(() => expect(auth.signInAnonymous).toHaveBeenCalledOnce());
+    finishCreation();
+    await Promise.all([firstRequest, secondRequest]);
+
+    expect(auth.signInAnonymous).toHaveBeenCalledOnce();
   });
 
   it("creates a guest session before reading its cookie", async () => {

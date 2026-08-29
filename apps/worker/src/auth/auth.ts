@@ -7,13 +7,21 @@ import { anonymous, emailOTP } from "better-auth/plugins";
 import { freeAllowancePeriod } from "../billing/allowancePeriods";
 import { ensureCurrentAllowance } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
+import {
+  freeAllowanceClaimHashFromRequest,
+  transferFreeAllowanceClaim,
+} from "../billing/freeAllowanceClaims";
 import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
 
 const localDevelopmentSecret = "murmur-local-development-secret-change-before-deploy";
 const guestEmailDomain = "guest.murmur.invalid";
 
-export function createMurmurAuth(env: Env, _context?: ExecutionContext) {
+export function createMurmurAuth(
+  env: Env,
+  request?: Request,
+  _context?: ExecutionContext,
+) {
   const database = env.BILLING_DB;
   const secret = env.BETTER_AUTH_SECRET?.trim() ||
     (env.MURMUR_ENV === "development" ? localDevelopmentSecret : null);
@@ -49,6 +57,7 @@ export function createMurmurAuth(env: Env, _context?: ExecutionContext) {
             const nowMs = Date.now();
             await bootstrapFreeAllowance(
               env,
+              request,
               user.id,
               user.email.endsWith(`@${guestEmailDomain}`) ? "anonymous" : "email",
               nowMs,
@@ -76,19 +85,22 @@ export function createMurmurAuth(env: Env, _context?: ExecutionContext) {
         generateName: () => "Guest",
         onLinkAccount: async ({ anonymousUser, newUser }) => {
           const nowMs = Date.now();
-          await bootstrapFreeAllowance(env, anonymousUser.user.id, "anonymous", nowMs);
-          await bootstrapFreeAllowance(env, newUser.user.id, "email", nowMs);
-          const destinationAllowance = await ensureCurrentAllowance({
-            customerId: newUser.user.id,
-            env,
-            nowMs,
-            principalProvider: "email",
-          });
-          if (!destinationAllowance.result.ok) {
-            throw new Error(
-              `destination allowance bootstrap failed: ${destinationAllowance.result.code}`,
-            );
+          await bootstrapFreeAllowance(env, request, anonymousUser.user.id, "anonymous", nowMs);
+          const freeClaimHash = request
+            ? await freeAllowanceClaimHashFromRequest(request, env)
+            : null;
+          if (!freeClaimHash) {
+            throw new Error("Free allowance identity is missing during account registration");
           }
+          await transferFreeAllowanceClaim({
+            claimHash: freeClaimHash,
+            database: env.BILLING_DB,
+            destinationCustomerId: newUser.user.id,
+            nowMs,
+            periodKey: freeAllowancePeriod(nowMs).periodKey,
+            sourceCustomerId: anonymousUser.user.id,
+          });
+          await bootstrapFreeAllowance(env, request, newUser.user.id, "email", nowMs);
           await mergeGuestCustomer({
             database: env.BILLING_DB,
             destinationCustomerId: newUser.user.id,
@@ -127,21 +139,20 @@ export function createMurmurAuth(env: Env, _context?: ExecutionContext) {
 
 async function bootstrapFreeAllowance(
   env: Env,
+  request: Request | undefined,
   customerId: string,
   principalProvider: "anonymous" | "email",
   nowMs: number,
 ): Promise<void> {
-  const period = freeAllowancePeriod(nowMs);
-  const ledger = await callCustomerLedger(env.CUSTOMER_LEDGER, customerId, {
-    action: "bootstrap_guest",
+  const freeClaimHash = request
+    ? await freeAllowanceClaimHashFromRequest(request, env)
+    : null;
+  const ledger = await ensureCurrentAllowance({
     customerId,
+    env,
+    freeClaimHash,
     nowMs,
-    periodExpiresAtMs: period.expiresAtMs,
-    periodKey: period.periodKey,
-    periodStartsAtMs: period.startsAtMs,
-    principalId: `auth:${customerId}`,
     principalProvider,
-    providerSubject: customerId,
   });
   if (!ledger.result.ok) {
     throw new Error(`customer bootstrap failed: ${ledger.result.code}`);
@@ -153,7 +164,7 @@ export async function getMurmurSession(
   env: Env,
   context?: ExecutionContext,
 ) {
-  const auth = createMurmurAuth(env, context);
+  const auth = createMurmurAuth(env, request, context);
   if (!auth) {
     return null;
   }

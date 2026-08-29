@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/cloudflare";
 
 import { createMurmurAuth } from "./auth/auth";
 import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObject";
+import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
 import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
 import {
   getReadiness,
@@ -61,7 +62,7 @@ const handler = {
     }
 
     if (url.pathname.startsWith("/api/auth/")) {
-      const auth = createMurmurAuth(env, context);
+      const auth = createMurmurAuth(env, request, context);
       return auth ? auth.handler(request) : json({ error: "billing_unavailable" }, 503);
     }
 
@@ -131,7 +132,8 @@ const handler = {
     return json({ error: "not_found" }, 404);
   },
   async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext) {
-    const reconciliation = reconcileDailyRevenueCatBatch(env, Date.now()).then((result) => {
+    const nowMs = Date.now();
+    const reconciliation = reconcileDailyRevenueCatBatch(env, nowMs).then((result) => {
       logWorkerEvent({
         attempted: result.attempted,
         event: "revenuecat_reconciliation_completed",
@@ -149,7 +151,14 @@ const handler = {
       });
       throw failure;
     });
-    context.waitUntil(reconciliation);
+    const freeClaimCleanup = deleteExpiredFreeAllowanceClaims(env.BILLING_DB, nowMs)
+      .catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { operation: "free_allowance_claim_cleanup" },
+        });
+        throw failure;
+      });
+    context.waitUntil(Promise.all([reconciliation, freeClaimCleanup]).then(() => undefined));
   },
 } satisfies ExportedHandler<Env>;
 

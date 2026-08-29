@@ -11,6 +11,7 @@ export type LedgerBalance = {
 export type BootstrapGuestCommand = {
   action: "bootstrap_guest";
   customerId: string;
+  grantFreeAllowance: boolean;
   nowMs: number;
   periodExpiresAtMs: number;
   periodKey: string;

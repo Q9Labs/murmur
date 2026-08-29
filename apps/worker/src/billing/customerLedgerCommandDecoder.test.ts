@@ -30,6 +30,7 @@ describe("customer ledger command decoder", () => {
     ["guest bootstrap", {
       action: "bootstrap_guest",
       customerId: "customer-1",
+      grantFreeAllowance: true,
       nowMs: 1,
       periodExpiresAtMs: 3,
       periodKey: "free:2026-08",

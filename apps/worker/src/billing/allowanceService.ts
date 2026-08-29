@@ -5,6 +5,7 @@ import { currentProAllowancePeriod, freeAllowancePeriod } from "./allowancePerio
 import { firstProGrantMs } from "./allowanceUpgrade";
 import { proAllowanceMs } from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
+import { claimFreeAllowance } from "./freeAllowanceClaims";
 import type { LedgerCommandResult } from "./contracts";
 
 type ActiveSubscriptionRow = {
@@ -28,6 +29,7 @@ export async function currentCustomerPlan(
 export async function ensureCurrentAllowance(params: {
   customerId: string;
   env: Env;
+  freeClaimHash?: string | null;
   nowMs: number;
   principalProvider: "anonymous" | "email";
   storeEventRowId?: string;
@@ -40,9 +42,18 @@ export async function ensureCurrentAllowance(params: {
   );
   if (!subscription) {
     const period = freeAllowancePeriod(params.nowMs);
+    const grantFreeAllowance = await claimFreeAllowance({
+      claimHash: params.freeClaimHash,
+      customerId: params.customerId,
+      database: params.env.BILLING_DB,
+      expiresAtMs: period.expiresAtMs,
+      nowMs: params.nowMs,
+      periodKey: period.periodKey,
+    });
     return callCustomerLedger(params.env.CUSTOMER_LEDGER, params.customerId, {
       action: "bootstrap_guest",
       customerId: params.customerId,
+      grantFreeAllowance,
       nowMs: params.nowMs,
       periodExpiresAtMs: period.expiresAtMs,
       periodKey: period.periodKey,

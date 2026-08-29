@@ -4,9 +4,19 @@ import { createAuthClient } from "better-auth/react";
 import { anonymousClient, emailOTPClient } from "better-auth/client/plugins";
 
 import { getWorkerBaseUrl } from "../config";
+import { getOrCreateFreeAllowanceId } from "../installIdentity";
+
+const freeAllowanceIdHeader = "x-murmur-free-allowance-id";
+let guestSessionCreation: Promise<void> | null = null;
 
 const murmurAuthClient = createAuthClient({
   baseURL: getWorkerBaseUrl(),
+  fetchOptions: {
+    onRequest: async (context) => {
+      context.headers.set(freeAllowanceIdHeader, await getOrCreateFreeAllowanceId());
+      return context;
+    },
+  },
   plugins: [
     anonymousClient(),
     emailOTPClient(),
@@ -24,7 +34,20 @@ async function ensureMurmurSession(): Promise<void> {
   if (existing.data) {
     return;
   }
+  if (!guestSessionCreation) {
+    guestSessionCreation = createGuestSession();
+  }
+  const pendingCreation = guestSessionCreation;
+  try {
+    await pendingCreation;
+  } finally {
+    if (guestSessionCreation === pendingCreation) {
+      guestSessionCreation = null;
+    }
+  }
+}
 
+async function createGuestSession(): Promise<void> {
   const created = await murmurAuthClient.signIn.anonymous();
   if (created.error) {
     throw new Error(created.error.message ?? "Murmur could not create an account.");
@@ -45,6 +68,7 @@ export async function authenticatedWorkerHeaders(
 ): Promise<Headers> {
   const authenticated = new Headers(headers);
   authenticated.set("cookie", await getMurmurCookie());
+  authenticated.set(freeAllowanceIdHeader, await getOrCreateFreeAllowanceId());
   return authenticated;
 }
 
