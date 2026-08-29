@@ -3,9 +3,12 @@
   "product": "Murmur",
   "android": {
     "package_name": "com.q9labsai.murmur",
-    "status": "blocked_missing_upload_keystore",
-    "signing_item": null,
-    "note": "The current Android upload keystore was not present on either release machine or in the release vault. Do not generate a replacement without a Play Console key-rotation decision."
+    "status": "upload_key_reset_pending",
+    "signing_item": "Murmur Android upload signing",
+    "keystore_sha256": "5dc2c6aa8f78947dc1705067b7250ce8ef9e89db969e869c22d1ba9835071c63",
+    "certificate_sha256": "7F:5F:DA:D7:78:F6:CA:37:91:81:E4:A0:A9:1D:7E:52:81:FD:62:14:59:ED:21:48:33:46:27:F8:A1:C0:FE:CE",
+    "previous_play_upload_certificate_sha256": "2F:70:C6:D6:41:DA:C7:3B:C6:81:98:17:14:31:DB:C7:38:F3:97:77:31:BC:BE:5F:CD:3C:BE:08:E5:34:21:BB",
+    "note": "The only recoverable EAS upload keystore is stored in the Mobile App Releases vault. Google Play must approve its public certificate as the replacement upload key before a new bundle can be uploaded."
   },
   "apple": {
     "bundle_id": "com.q9labsai.murmur",

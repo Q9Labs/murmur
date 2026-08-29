@@ -11,3 +11,11 @@ paths = [
   '''^scratchpad/''',
   '''^apps/mobile/store-assets/source/'''
 ]
+
+[[allowlists]]
+description = "The release manifest stores an opaque 1Password item reference, not a credential."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^release/manifest\.json$''']
+regexes = ['''"p12_password_item_id"\s*:\s*"[a-z0-9]{26}"''']
