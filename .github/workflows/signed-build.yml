@@ -1,0 +1,117 @@
+name: Signed release builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        required: true
+        default: ios
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: murmur-signed-build
+  cancel-in-progress: false
+
+jobs:
+  android:
+    if: github.ref == 'refs/heads/master' && (inputs.platform == 'all' || inputs.platform == 'android')
+    name: Signed Android bundle
+    runs-on: ubuntu-latest
+    environment: production-signing
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Java 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10.26.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@67621b124fd2e251c5e8a0e6e3b91318f2287669
+        with:
+          cache-disabled: true
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@9a0c9dd934086b7ab1d90115d455bda1c53c2bdb
+
+      - name: Build and verify signed Android bundle
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: scripts/release/build-signed-android.sh
+
+      - name: Preserve signed Android evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: murmur-android-signed
+          path: build/release/*.aab
+          if-no-files-found: warn
+          retention-days: 14
+
+  ios:
+    if: github.ref == 'refs/heads/master' && (inputs.platform == 'all' || inputs.platform == 'ios')
+    name: Signed iOS archive
+    runs-on: macos-26
+    environment: production-signing
+    timeout-minutes: 75
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10.26.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@9a0c9dd934086b7ab1d90115d455bda1c53c2bdb
+
+      - name: Build and verify signed iOS archive
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: scripts/release/build-signed-ios.sh
+
+      - name: Preserve signed iOS evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: murmur-ios-signed
+          path: |
+            build/release/*.ipa
+            build/release/*-dsyms.zip
+          if-no-files-found: warn
+          retention-days: 14
