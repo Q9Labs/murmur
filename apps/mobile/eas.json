@@ -11,6 +11,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-development.msbilal.workers.dev",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
@@ -24,6 +26,8 @@
       },
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
@@ -31,13 +35,34 @@
         "simulator": false
       }
     },
-    "production": {
+    "testing": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "credentialsSource": "remote"
       },
       "autoIncrement": false,
       "distribution": "store",
       "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
+      },
+      "environment": "production",
+      "ios": {
+        "credentialsSource": "remote",
+        "simulator": false
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true,
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },

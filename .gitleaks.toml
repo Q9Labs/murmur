@@ -11,3 +11,19 @@ paths = [
   '''^scratchpad/''',
   '''^apps/mobile/store-assets/source/'''
 ]
+
+[[allowlists]]
+description = "The release manifest stores an opaque 1Password item reference, not a credential."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^release/manifest\.json$''']
+regexes = ['''"p12_password_item_id"\s*:\s*"[a-z0-9]{26}"''']
+
+[[allowlists]]
+description = "The release manifest records the public SHA-256 checksum of the Android upload keystore."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^release/manifest\.json$''']
+regexes = ['''"keystore_sha256"\s*:\s*"[a-f0-9]{64}"''']
