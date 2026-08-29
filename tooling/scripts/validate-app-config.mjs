@@ -144,10 +144,12 @@ assert(appUiSource.includes(">Listen<"), "App UI must include the canonical List
 const productionBuild = easConfig.build?.production;
 const testingBuild = easConfig.build?.testing;
 assert(testingBuild?.distribution === "store", "EAS testing build must use store distribution");
+assert(testingBuild?.autoIncrement === false, "EAS testing build must keep the reserved testing build numbers");
 assert(testingBuild?.android?.buildType === "app-bundle", "EAS testing Android build must produce an app bundle");
 assert(testingBuild?.ios?.simulator === false, "EAS testing iOS build must target devices, not simulator");
 assert(testingBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS store testing Worker URL must target the production Worker");
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
+assert(productionBuild?.autoIncrement === true, "EAS production build must increment store build numbers after testing");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
