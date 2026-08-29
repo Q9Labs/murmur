@@ -84,7 +84,7 @@ export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
 echo "Building the signed Murmur Android bundle."
-./gradlew --no-daemon --gradle-user-home "$gradle_user_home" \
+./android/gradlew --no-daemon --gradle-user-home "$gradle_user_home" \
   --init-script "$temp_dir/release-output.init.gradle" \
   -Pq9ReleaseOutputDir="$output_dir" \
   -Pq9ReleaseArtifactName="$artifact_name" \
