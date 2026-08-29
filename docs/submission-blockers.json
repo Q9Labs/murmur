@@ -42,10 +42,10 @@
     {
       "id": "apple-developer-agreement",
       "title": "Accept the updated Apple Developer Program Agreement",
-      "status": "blocked_on_account_holder",
-      "why_blocking": "App Store Connect does not permit the remaining in-app purchase and submission work until the Account Holder accepts the updated agreement.",
+      "status": "closed",
+      "why_blocking": "The updated Apple Developer Program agreement was accepted by the Account Holder on 2026-08-29.",
       "current_evidence": [
-        "App Store Connect shows an updated Apple Developer Program Agreement that requires Account Holder action."
+        "The Apple Developer account no longer shows the agreement prompt, and App Store Connect no longer shows the agreement warning."
       ],
       "exit_criteria": [
         "The Account Holder accepts the current agreement and App Store Connect no longer shows the agreement blocker."
@@ -54,11 +54,12 @@
     {
       "id": "billing-production-credentials",
       "title": "Create and install production billing credentials",
-      "status": "awaiting_action_confirmation",
+      "status": "in_progress",
       "why_blocking": "The Worker and RevenueCat cannot verify Apple or Google purchases or deliver account recovery email without production credentials and webhook secrets.",
       "current_evidence": [
-        "The RevenueCat Murmur project exists, but its Apple and Google apps are not fully connected.",
-        "No Apple in-app purchase key, Google Play service-account key, RevenueCat API keys, webhook secret, or Resend API key has been generated for this launch."
+        "RevenueCat secret API access and an authenticated, HMAC-signed Worker webhook are configured; their server secrets are installed in both Cloudflare environments.",
+        "The Google service-account file is stored in RevenueCat and can read the product catalogs. Purchase validation is awaiting propagation of the new app-level financial and order permissions.",
+        "The Resend sending-only key is installed for the verified notifications.q9labs.ai domain. The Apple In-App Purchase key still requires a manual one-time download from App Store Connect."
       ],
       "exit_criteria": [
         "Generate the minimum-scope Apple, Google, RevenueCat, and Resend credentials after explicit action-time approval.",
@@ -73,7 +74,8 @@
       "why_blocking": "Customers cannot buy Murmur Pro or credit packs until the exact products, prices, entitlement, offering, and packages exist and are linked across both stores and RevenueCat.",
       "current_evidence": [
         "The source-controlled catalog and contribution-margin tests define the approved products and prices.",
-        "The matching App Store Connect, Play Console, and RevenueCat product records are not complete.",
+        "App Store Connect has the monthly and annual subscriptions plus all three consumable credit packs; review screenshots are still missing.",
+        "RevenueCat has ten store products, one Pro entitlement containing only subscription products, and one current offering with five cross-platform packages.",
         "Google Play will not enable subscription or one-time product creation until a billing-enabled Android App Bundle is uploaded."
       ],
       "exit_criteria": [
