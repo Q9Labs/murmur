@@ -36,6 +36,16 @@ test("reports malformed blocker records", () => {
   assert.ok(failures.some((failure) => failure.endsWith("needs exit_criteria")));
 });
 
+test("reports a malformed blocker collection without throwing", () => {
+  const failures = validateSubmissionBlockerLedger({
+    status: "not_submission_ready",
+    policy_sources_checked: validLedger.policy_sources_checked,
+    p0_blockers: {}
+  });
+
+  assert.deepEqual(failures, ["p0_blockers must be an array"]);
+});
+
 test("reports no open blockers when every blocker is closed", () => {
   const closedLedger = {
     ...validLedger,

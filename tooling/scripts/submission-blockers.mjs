@@ -1,24 +1,33 @@
+const LEDGER_STATUSES = new Set(["not_submission_ready", "submission_ready"]);
+
+const failureUnless = (condition, message) => (condition ? [] : [message]);
+
+const arrayOrEmpty = (value) => (Array.isArray(value) ? value : []);
+
+const isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
+
+const isNonEmptyArray = (value) => Array.isArray(value) && value.length > 0;
+
+const validateBlocker = (blocker) => [
+  ...failureUnless(isNonEmptyString(blocker?.id), "each blocker needs an id"),
+  ...failureUnless(isNonEmptyString(blocker?.title), `${blocker?.id} needs a title`),
+  ...failureUnless(isNonEmptyString(blocker?.status), `${blocker?.id} needs a status`),
+  ...failureUnless(isNonEmptyString(blocker?.why_blocking), `${blocker?.id} needs why_blocking`),
+  ...failureUnless(isNonEmptyArray(blocker?.current_evidence), `${blocker?.id} needs current_evidence`),
+  ...failureUnless(isNonEmptyArray(blocker?.exit_criteria), `${blocker?.id} needs exit_criteria`)
+];
+
 export const validateSubmissionBlockerLedger = (payload) => {
-  const failures = [];
-  const assert = (condition, message) => {
-    if (!condition) failures.push(message);
-  };
+  const policySources = arrayOrEmpty(payload?.policy_sources_checked);
+  const blockers = arrayOrEmpty(payload?.p0_blockers);
 
-  assert(payload?.status === "not_submission_ready" || payload?.status === "submission_ready", "status must be explicit");
-  assert(Array.isArray(payload?.policy_sources_checked), "policy_sources_checked must be an array");
-  assert((payload?.policy_sources_checked ?? []).length >= 4, "policy_sources_checked should include Apple and Google sources");
-  assert(Array.isArray(payload?.p0_blockers), "p0_blockers must be an array");
-
-  for (const blocker of payload?.p0_blockers ?? []) {
-    assert(typeof blocker?.id === "string" && blocker.id.length > 0, "each blocker needs an id");
-    assert(typeof blocker?.title === "string" && blocker.title.length > 0, `${blocker?.id} needs a title`);
-    assert(typeof blocker?.status === "string" && blocker.status.length > 0, `${blocker?.id} needs a status`);
-    assert(typeof blocker?.why_blocking === "string" && blocker.why_blocking.length > 0, `${blocker?.id} needs why_blocking`);
-    assert(Array.isArray(blocker?.current_evidence) && blocker.current_evidence.length > 0, `${blocker?.id} needs current_evidence`);
-    assert(Array.isArray(blocker?.exit_criteria) && blocker.exit_criteria.length > 0, `${blocker?.id} needs exit_criteria`);
-  }
-
-  return failures;
+  return [
+    ...failureUnless(LEDGER_STATUSES.has(payload?.status), "status must be explicit"),
+    ...failureUnless(Array.isArray(payload?.policy_sources_checked), "policy_sources_checked must be an array"),
+    ...failureUnless(policySources.length >= 4, "policy_sources_checked should include Apple and Google sources"),
+    ...failureUnless(Array.isArray(payload?.p0_blockers), "p0_blockers must be an array"),
+    ...blockers.flatMap(validateBlocker)
+  ];
 };
 
 export const findOpenSubmissionBlockers = (payload) =>
