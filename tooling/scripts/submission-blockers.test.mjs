@@ -51,6 +51,20 @@ test("reports a malformed blocker collection without throwing", () => {
   assert.deepEqual(failures, ["p0_blockers must be an array"]);
 });
 
+test("rejects policy source counts without trusted Apple and Google authorities", () => {
+  const failures = validateSubmissionBlockerLedger({
+    ...validLedger,
+    policy_sources_checked: [
+      { url: "https://example.com/apple" },
+      { url: "https://developer.apple.com.evil.example/review" },
+      { url: "https://example.com/google" },
+      {}
+    ]
+  });
+
+  assert.ok(failures.includes("policy_sources_checked must include trusted Apple and Google sources"));
+});
+
 test("reports no open blockers when every blocker is closed", () => {
   const closedLedger = {
     ...validLedger,
