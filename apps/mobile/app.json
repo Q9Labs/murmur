@@ -129,7 +129,16 @@
       "expo-router",
       "expo-secure-store",
       "expo-system-ui",
-      "./plugins/withAndroidReleaseSigning"
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "q9labs",
+          "project": "murmur-mobile",
+          "url": "https://sentry.io/"
+        }
+      ],
+      "./plugins/withAndroidReleaseSigning",
+      "expo-web-browser"
     ],
     "splash": {
       "backgroundColor": "#F8F4ED",

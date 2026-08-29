@@ -6,6 +6,7 @@
     "./acquisition": "./src/acquisition.ts",
     "./languages": "./src/languages.ts",
     "./session": "./src/session.ts",
+    "./telemetry": "./src/telemetry.ts",
     "./transport/types": "./src/transport/types.ts"
   },
   "scripts": {

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "product": "Murmur",
+  "android": {
+    "package_name": "com.q9labsai.murmur",
+    "status": "blocked_missing_upload_keystore",
+    "signing_item": null,
+    "note": "The current Android upload keystore was not present on either release machine or in the release vault. Do not generate a replacement without a Play Console key-rotation decision."
+  },
+  "apple": {
+    "bundle_id": "com.q9labsai.murmur",
+    "team_id": "5K9635LZ6F",
+    "certificate_sha256": "97:B9:31:DA:10:8D:7E:DE:A6:FC:88:32:85:A6:7A:E9:71:3B:28:49:27:AB:9A:BC:5A:71:BA:9D:91:8B:69:98",
+    "certificate_expires_at": "2027-05-20T06:39:05Z",
+    "p12_item_id": "jw7juoemfup6yh5lbjaklpn7va",
+    "p12_password_item_id": "ndofbbyh5laduewwm2pfltq37y",
+    "profile_item_id": "nehdcbxndoloubl4vk3dzesqva",
+    "profile_name": "Murmur App Store Direct 2026-05-20",
+    "profile_uuid": "f287c919-1cc0-45a9-b5d8-7aa80ee4160e",
+    "profile_sha256": "dde98000b23bdd1d79a33317d5785d7acc76973c276924ffe68203e7b4e7054b",
+    "profile_expires_at": "2027-05-20T06:39:05Z"
+  },
+  "sentry": {
+    "credential_item": "Sentry Q9 Labs release uploads",
+    "organization": "q9labs",
+    "mobile_project": "murmur-mobile",
+    "symbol_upload_status": "blocked_pending_credential_rotation"
+  }
+}

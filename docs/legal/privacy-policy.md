@@ -1,6 +1,6 @@
 # Murmur Privacy Policy
 
-Last updated: 2026-07-30
+Last updated: 2026-08-29
 
 Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
@@ -36,9 +36,15 @@ Murmur stores a qualified-session count and the version and time of its last nat
 
 You can report an inaccurate, wrong-language, harmful, speech-related, or other translation issue. Reports include session/span metadata and may include text snapshots only when the app explicitly sends them. Report receipts can be used for support follow-up or deletion requests.
 
-### Diagnostics And Latency Telemetry
+### Product Analytics, Diagnostics, And Latency Telemetry
 
-Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Network type means a broad connection category such as Wi-Fi, cellular, offline, unknown, or other; Murmur does not use this to collect network names, nearby network identifiers, or location. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.
+Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. These events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include microphone audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.
+
+The app sends analytics events to Murmur's Cloudflare Worker. The Worker validates a fixed event schema, hashes the anonymous install identifier, and forwards the allowed event properties to PostHog US. PostHog does not receive the raw install identifier or the device's IP address from Murmur. Murmur disables PostHog person profiles, geolocation, autocapture, and session replay.
+
+Murmur also uses Sentry for crash, error, and sampled performance monitoring. Murmur disables screenshots, view hierarchy capture, session replay, request bodies, cookies, query strings, user fields, and default personally identifiable information. Sentry may receive a sanitized stack trace, operation and error categories, release, environment, app session identifier, and limited performance timing. Sentry does not receive conversation content from Murmur.
+
+Network type means a broad connection category such as Wi-Fi, cellular, offline, unknown, or other. Murmur does not use it to collect network names, nearby network identifiers, or location.
 
 ## Third-Party Processors
 
@@ -46,15 +52,18 @@ Murmur uses these processors. Murmur requires third-party processors that handle
 
 - Cloudflare: Worker gateway, rate limits, session records, report endpoint, and privacy-safe logs.
 - OpenAI Realtime: live transcription, translation, and translated speech generation.
+- PostHog US: anonymous product analytics after Worker-side validation and identifier hashing.
+- Sentry: sanitized crash, error, performance, and release diagnostics for the mobile app and Worker.
 
 ## Retention
 
-Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session, campaign, and rate-limit metadata is retained only as needed for abuse prevention, diagnostics, acquisition measurement, and service operation. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review according to the retention period configured for the report triage system.
+Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous analytics, diagnostics, session, campaign, and rate-limit metadata is retained only as needed for product measurement, abuse prevention, debugging, and service operation, then deleted or anonymized under Murmur's provider retention settings. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review according to the retention period configured for the report triage system.
 
 ## Your Choices
 
 - Stop or cancel a live session at any time.
 - Use translated captions even when speech output is unavailable.
+- Turn Anonymous Analytics off or on in Settings. Analytics is on by default until you turn it off. Turning it off stops new PostHog product analytics events; essential sanitized crash and error monitoring can continue.
 - Reset Murmur Identity in the app.
 - Delete Local Data in the app.
 - Contact support to request deletion of server-side diagnostics or report records tied to a report receipt or anonymous install/session metadata.

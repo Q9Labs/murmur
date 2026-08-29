@@ -26,6 +26,13 @@ import {
 } from "../lib/installIdentity";
 import { requestMurmurReview } from "../lib/requestReview";
 import { shareMurmur } from "../lib/shareMurmur";
+import { captureMobileFailure } from "../lib/observability/sentry";
+import {
+  captureOnboardingCompleted,
+  initializeAnonymousAnalytics,
+  resetAnonymousAnalyticsPreference,
+  updateAnonymousAnalyticsEnabled,
+} from "../lib/telemetry";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
@@ -40,7 +47,7 @@ import { buildHomeViewModel } from "./viewModel";
 
 const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
 const localDataDeletedMessage =
-  "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.";
+  "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared.";
 const localDataDeleteError = "Could not delete local data. Please try again.";
 
 type AudioPlaybackPreferenceController = ReturnType<
@@ -180,6 +187,7 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState(true);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
@@ -206,6 +214,8 @@ export default function HomeScreen(): ReactNode {
 
   const live = useLiveTranslation({
     acquisition,
+    analytics_enabled: anonymousAnalyticsEnabled,
+    network_type: networkType,
     playback_enabled: audioPlaybackEnabled,
     source_language: sourceLanguageCode,
     target_language: targetLanguageCode,
@@ -242,6 +252,14 @@ export default function HomeScreen(): ReactNode {
       void live.prepare();
     }
   }, [live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
+    void initializeAnonymousAnalytics()
+      .then(setAnonymousAnalyticsEnabled)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
+      });
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -316,7 +334,20 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    captureOnboardingCompleted();
     await startLiveTranslation();
+  }
+
+  async function changeAnonymousAnalyticsEnabled(enabled: boolean): Promise<void> {
+    setSettingsMessage(null);
+    try {
+      await updateAnonymousAnalyticsEnabled(enabled);
+      setAnonymousAnalyticsEnabled(enabled);
+      setSettingsMessage(`Anonymous analytics ${enabled ? "enabled" : "disabled"}.`);
+    } catch (failure) {
+      captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
+      setSettingsMessage("Could not save the analytics setting. Please try again.");
+    }
   }
 
   async function startLiveTranslation(): Promise<void> {
@@ -376,6 +407,7 @@ export default function HomeScreen(): ReactNode {
 
   return (
     <HomeExperience
+      anonymousAnalyticsEnabled={anonymousAnalyticsEnabled}
       audioPlaybackEnabled={audioPlaybackEnabled}
       audioState={audioState}
       autoScrollRef={autoScrollRef}
@@ -386,6 +418,9 @@ export default function HomeScreen(): ReactNode {
       onCloseDiagnostics={() => setDiagnosticsOpen(false)}
       onClosePicker={() => setPickerMode(null)}
       onCloseSettings={() => setSettingsOpen(false)}
+      onAnonymousAnalyticsEnabledChange={(enabled) => {
+        void changeAnonymousAnalyticsEnabled(enabled);
+      }}
       onAudioPlaybackEnabledChange={(enabled) => {
         void audioPreferenceController.setEnabled(enabled);
       }}
@@ -394,6 +429,7 @@ export default function HomeScreen(): ReactNode {
           () => deleteLocalData(live.cancel),
           () => {
             live.invalidatePreparation();
+            setAnonymousAnalyticsEnabled(true);
             setPrivacyAcknowledged(false);
             setPrivacyConsentChecked(false);
           },
@@ -465,4 +501,5 @@ async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await resetAnonymousAnalyticsPreference();
 }

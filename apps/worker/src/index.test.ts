@@ -68,7 +68,9 @@ describe("worker routes", () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({
-      missing: { required: ["OPENAI_API_KEY", "SESSION_HASH_SALT"] },
+      missing: {
+        required: ["OPENAI_API_KEY", "SESSION_HASH_SALT", "POSTHOG_PROJECT_TOKEN", "SENTRY_DSN"],
+      },
       ok: false,
       providers: { realtime_translation: "missing_required" },
     });

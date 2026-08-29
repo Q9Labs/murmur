@@ -14,9 +14,11 @@ const legalUrls = {
 } as const;
 
 export function SettingsModal(props: {
+  anonymousAnalyticsEnabled: boolean;
   developerToolsEnabled: boolean;
   live: LiveTranslationController;
   onClose: () => void;
+  onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
   onDeleteLocalData: () => void;
   onOpenDiagnostics: () => void;
   onResetIdentity: () => void;
@@ -30,6 +32,11 @@ export function SettingsModal(props: {
     <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
       <View style={styles.settingsList}>
         <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
+        <SettingsAction
+          disabled={disabled}
+          label={`Anonymous analytics: ${props.anonymousAnalyticsEnabled ? "On" : "Off"}`}
+          onPress={() => props.onAnonymousAnalyticsEnabledChange(!props.anonymousAnalyticsEnabled)}
+        />
         <SettingsAction
           label="Privacy policy"
           onPress={() => void Linking.openURL(legalUrls.privacy)}

@@ -1,8 +1,8 @@
-# Murmur Support And Deletion Draft
+# Murmur Support And Deletion
 
-Last updated: 2026-05-17
+Last updated: 2026-08-29
 
-This draft defines the support and deletion surface Murmur needs before external testing or public release. It is hosted by the production Worker and must still be reviewed against the final provider settings before App Store or Google Play submission.
+This document defines Murmur's support and deletion surface. The production Worker hosts the public support page.
 
 ## Support Contact
 
@@ -19,11 +19,13 @@ Murmur V1 does not create accounts. There is no login, profile, password, subscr
 The app does store an anonymous install identifier on the device. The app includes:
 
 - Reset Murmur Identity: replaces the anonymous install id.
-- Delete Local Data: clears the anonymous install id, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
+- Delete Local Data: clears the anonymous install id, analytics preference, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
+
+Anonymous Analytics can be turned off separately in Settings. This stops new PostHog product analytics events. Essential sanitized crash and error monitoring can continue.
 
 ## Server-Side Deletion Requests
 
-Because Murmur may process rate-limit metadata, diagnostic records, and translation report receipts, support must provide a deletion path for server-side records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
+Because Murmur may process rate-limit metadata, PostHog analytics, Sentry diagnostics, and translation report receipts, support provides a deletion path for server-side records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
 
 Support request intake should ask for:
 

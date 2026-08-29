@@ -8,10 +8,12 @@ describe("worker env readiness", () => {
       env: "production",
       missing: {
         optional: ["REPORT_WEBHOOK_URL_OR_REPORT_ADMIN_TOKEN"],
-        required: ["OPENAI_API_KEY", "SESSION_HASH_SALT"],
+        required: ["OPENAI_API_KEY", "SESSION_HASH_SALT", "POSTHOG_PROJECT_TOKEN", "SENTRY_DSN"],
       },
       ok: false,
       providers: {
+        error_monitoring: "missing_required",
+        product_analytics: "missing_required",
         realtime_translation: "missing_required",
         report_webhook: "missing_optional",
       },
@@ -23,7 +25,9 @@ describe("worker env readiness", () => {
       getReadiness({
         MURMUR_ENV: "production",
         OPENAI_API_KEY: "openai_key",
+        POSTHOG_PROJECT_TOKEN: "posthog_token",
         REPORT_ADMIN_TOKEN: "admin_token",
+        SENTRY_DSN: "sentry_dsn",
         SESSION_HASH_SALT: "salt",
       }),
     ).toEqual({
@@ -31,6 +35,8 @@ describe("worker env readiness", () => {
       missing: { optional: [], required: [] },
       ok: true,
       providers: {
+        error_monitoring: "configured",
+        product_analytics: "configured",
         realtime_translation: "configured",
         report_webhook: "configured",
       },

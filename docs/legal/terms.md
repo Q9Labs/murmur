@@ -1,6 +1,6 @@
 # Murmur Terms Of Use
 
-Last updated: 2026-07-30
+Last updated: 2026-08-29
 
 Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 

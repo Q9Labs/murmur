@@ -142,9 +142,11 @@ function SettingsPreview(): ReactNode {
     <>
       <TranslationPreview />
       <SettingsModal
+        anonymousAnalyticsEnabled
         developerToolsEnabled={false}
         live={previewSettingsLive}
         onClose={noop}
+        onAnonymousAnalyticsEnabledChange={noop}
         onDeleteLocalData={noop}
         onOpenDiagnostics={noop}
         onResetIdentity={noop}

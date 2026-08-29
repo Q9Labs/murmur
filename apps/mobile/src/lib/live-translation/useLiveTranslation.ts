@@ -10,6 +10,7 @@ import type {
   ReportTranslationCategory,
   RealtimeServerEvent,
 } from "@murmur/protocol/transport/types";
+import type { MobileFailureStage } from "@murmur/protocol/telemetry";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import MurmurAudioModule, {
@@ -30,6 +31,8 @@ import {
   type RealtimeTransportDiagnostics,
 } from "../providers/realtimeTranslation";
 import { reportTranslation } from "../providers/reportTranslation";
+import { captureMobileFailure } from "../observability/sentry";
+import { captureMobileTelemetry } from "../telemetry";
 import {
   getGracefulSessionStopDelay,
   scheduleRealtimeConnectionDeadline,
@@ -271,6 +274,13 @@ export function useLiveTranslation(
       return;
     }
     const listenTappedAtMs = Date.now();
+    captureMobileTelemetry({
+      event: "mobile_listen_tapped",
+      network_type: params.network_type,
+      playback_enabled: params.playback_enabled,
+      source_language: params.source_language,
+      target_language: params.target_language,
+    });
     timingRef.current!.beginListen(listenTappedAtMs);
     const freshSession = createSession(params);
     const realtimeSessionToken = freshSession.identity.connection_id;
@@ -303,13 +313,15 @@ export function useLiveTranslation(
       recordListenTiming("identity_ready", preparation.identity_ready_at_ms);
     }
     if (!preparation.microphone_granted) {
-      setLiveError("microphone_permission_denied");
-      transition("failed");
+      failBeforeWorkerSession(
+        "microphone_permission_denied",
+        "microphone_permission",
+        listenTappedAtMs,
+      );
       return;
     }
     if (!preparation.app_install_id) {
-      setLiveError("install_identity_failed");
-      transition("failed");
+      failBeforeWorkerSession("install_identity_failed", "identity", listenTappedAtMs);
       return;
     }
 
@@ -323,14 +335,14 @@ export function useLiveTranslation(
     transition("creating_session");
     const response = await createWorkerSession({
       acquisition: params.acquisition,
+      analytics_enabled: params.analytics_enabled,
       app_install_id: preparation.app_install_id,
       device_integrity: deviceIntegrity,
       source_language: params.source_language,
       target_language: params.target_language,
     });
     if ("error" in response) {
-      setLiveError(response.error);
-      transition("failed");
+      failBeforeWorkerSession(response.error, "session_creation", listenTappedAtMs);
       return;
     }
     recordListenTiming("worker_session_ready");
@@ -405,7 +417,12 @@ export function useLiveTranslation(
       }));
       try {
         await MurmurAudioModule.startCapture();
-      } catch {
+      } catch (failure) {
+        captureMobileFailure(failure, {
+          app_session_id: sessionRef.current.identity.app_session_id,
+          operation: "start_microphone_capture",
+          stage: "audio_capture",
+        });
         setLiveError("microphone_start_failed");
         await finishSession("failed");
         return;
@@ -413,6 +430,16 @@ export function useLiveTranslation(
       captureStartedAtRef.current = Date.now();
       recordListenTiming("capture_started", captureStartedAtRef.current);
       transition("live");
+      captureMobileTelemetry({
+        app_session_id: sessionRef.current.identity.app_session_id,
+        event: "mobile_session_live",
+        source_language: sessionRef.current.source_language,
+        startup_latency_ms: Math.max(
+          0,
+          Date.now() - (sessionStartedAtRef.current ?? Date.now()),
+        ),
+        target_language: sessionRef.current.target_language,
+      });
       recordDebug("realtime.opened", "Live translation connected");
       return;
     }
@@ -423,8 +450,20 @@ export function useLiveTranslation(
       return;
     }
     if (event.kind === "translation_delta") {
+      const isFirstTranslation = !firstTranslationReceivedRef.current;
       recordListenTiming("first_translation");
       recordFirstLatency("first_translated_transcript", firstTranslationReceivedRef);
+      if (isFirstTranslation) {
+        captureMobileTelemetry({
+          app_session_id: sessionRef.current.identity.app_session_id,
+          event: "mobile_first_translation",
+          first_translation_latency_ms: Math.max(
+            0,
+            Date.now() - (captureStartedAtRef.current ?? Date.now()),
+          ),
+          provider_elapsed_ms: event.provider_elapsed_ms ?? null,
+        });
+      }
       applyTranscriptDelta(event);
       return;
     }
@@ -499,7 +538,12 @@ export function useLiveTranslation(
     const localCleanup = startLocalStopCleanup("user_stop");
     try {
       clientRef.current?.finish();
-    } catch {
+    } catch (failure) {
+      captureMobileFailure(failure, {
+        app_session_id: sessionRef.current.identity.app_session_id,
+        operation: "request_provider_finish",
+        stage: "session_runtime",
+      });
       recordDebug("realtime.finish_error", "Could not request a clean provider finish", "error");
     }
     recordStopTiming("close_requested");
@@ -590,6 +634,23 @@ export function useLiveTranslation(
       started_at_ms: sessionStartedAtRef.current ?? sessionRef.current.created_at_ms,
       state,
     });
+    const diagnostics = getDiagnosticsSnapshot();
+    captureMobileTelemetry({
+      app_session_id: sessionRef.current.identity.app_session_id,
+      committed_translation: completion.committed_caption_count > 0,
+      duration_ms: completion.duration_ms,
+      error_code: completion.error,
+      event: "mobile_session_completed",
+      input_audio_bytes: diagnostics.transport.input_bytes_received,
+      input_audio_frames: diagnostics.transport.input_frames_received,
+      network_type: params.network_type,
+      outcome: state === "ended" ? "completed" : "failed",
+      playback_enabled: playbackEnabledRef.current,
+      source_char_count: diagnostics.runtime.source_char_count,
+      source_language: sessionRef.current.source_language,
+      target_language: sessionRef.current.target_language,
+      translated_char_count: diagnostics.runtime.translated_char_count,
+    });
     resolveCompletion(completion);
     return completion;
   }
@@ -618,7 +679,13 @@ export function useLiveTranslation(
       sessionRef.current.identity.app_session_id,
       reason,
     )
-      .catch(() => undefined)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, {
+          app_session_id: sessionRef.current.identity.app_session_id,
+          operation: "close_worker_session",
+          stage: "session_runtime",
+        });
+      })
       .then(() => recordStopTiming("worker_session_close_completed"));
     return workerClosePromiseRef.current;
   }
@@ -630,7 +697,12 @@ export function useLiveTranslation(
   ): Promise<void> {
     try {
       await operation();
-    } catch {
+    } catch (failure) {
+      captureMobileFailure(failure, {
+        app_session_id: sessionRef.current.identity.app_session_id,
+        operation: debugName,
+        stage: "session_runtime",
+      });
       recordDebug(debugName, debugMessage, "error");
     }
   }
@@ -657,6 +729,29 @@ export function useLiveTranslation(
       return;
     }
     setReportReceiptId(response.report_id);
+    captureMobileTelemetry({
+      app_session_id: sessionRef.current.identity.app_session_id,
+      error_category: category,
+      event: "mobile_translation_reported",
+    });
+  }
+
+  function failBeforeWorkerSession(
+    errorCode: string,
+    failureStage: MobileFailureStage,
+    startedAtMs: number,
+  ): void {
+    setLiveError(errorCode);
+    transition("failed");
+    captureMobileTelemetry({
+      app_session_id: null,
+      duration_ms: Math.max(0, Date.now() - startedAtMs),
+      error_code: normalizeFailureCode(errorCode),
+      event: "mobile_session_failed",
+      failure_stage: failureStage,
+      source_language: sessionRef.current.source_language,
+      target_language: sessionRef.current.target_language,
+    });
   }
 
   function getDiagnosticsSnapshot(): LiveTranslationController["diagnostics_snapshot"] {
@@ -703,6 +798,11 @@ export function useLiveTranslation(
     stop,
     tentative_source_caption: "",
   };
+}
+
+function normalizeFailureCode(errorCode: string): string {
+  const normalized = errorCode.toLowerCase().replace(/[^a-z0-9_:,-]/g, "_");
+  return normalized.slice(0, 160) || "unknown_failure";
 }
 
 function clearCloseTimer(
