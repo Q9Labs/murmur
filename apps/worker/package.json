@@ -3,16 +3,23 @@
   "version": "1.2.0",
   "private": true,
   "scripts": {
+    "deploy:development": "node ../../tooling/scripts/deploy-worker-release.mjs development",
+    "deploy:production": "node ../../tooling/scripts/deploy-worker-release.mjs production",
     "dev": "wrangler dev --config wrangler.toml",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "unit": "vitest run"
   },
   "dependencies": {
+    "@better-auth/expo": "1.7.2",
+    "@better-auth/utils": "0.4.2",
     "@bradford-tech/supabase-integrity-attest": "^0.8.2",
-    "@murmur/protocol": "workspace:*"
+    "@murmur/protocol": "workspace:*",
+    "@sentry/cloudflare": "10.72.0",
+    "better-auth": "1.7.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260516.1",
+    "@sentry/cli": "3.6.2",
     "vitest": "^4.1.6",
     "wrangler": "^4.92.0"
   }

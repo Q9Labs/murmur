@@ -1,5 +1,11 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import * as Sentry from "@sentry/cloudflare";
+
+import { createMurmurAuth } from "./auth/auth";
+import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObject";
+import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
+import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
 import {
   getReadiness,
   type Env,
@@ -10,15 +16,20 @@ import {
 } from "./http/response";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
+import { getSentryOptions } from "./observability/sentry";
 import {
   closeSessionDurable,
   RateLimitDurableObject,
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
+import { getCustomer } from "./routes/customer";
+import { reconcileBilling } from "./routes/reconcileBilling";
+import { receiveRevenueCatWebhook } from "./routes/revenueCatWebhook";
 import { createSession } from "./routes/session";
+import { captureMobileTelemetry } from "./routes/telemetry";
 import { connectRealtimeSocket } from "./sockets/realtime";
 
-export { RateLimitDurableObject };
+export { CustomerLedgerDurableObject, RateLimitDurableObject };
 export type { Env } from "./env";
 export { getReadiness } from "./env";
 export {
@@ -28,8 +39,8 @@ export {
   parseTranslationOutput,
 } from "./providers/openaiRealtime";
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+const handler = {
+  async fetch(request: Request, env: Env, context?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -50,16 +61,37 @@ export default {
       return json(readiness, readiness.ok ? 200 : 503);
     }
 
+    if (url.pathname.startsWith("/api/auth/")) {
+      const auth = createMurmurAuth(env, request, context);
+      return auth ? auth.handler(request) : json({ error: "billing_unavailable" }, 503);
+    }
+
+    if (url.pathname === "/v3/customer" && request.method === "GET") {
+      return getCustomer(request, env, context);
+    }
+
+    if (url.pathname === "/v3/billing/reconcile" && request.method === "POST") {
+      return reconcileBilling(request, env, context);
+    }
+
+    if (url.pathname === "/v3/webhooks/revenuecat" && request.method === "POST") {
+      return receiveRevenueCatWebhook(request, env);
+    }
+
     if (url.pathname === "/v1/session" && request.method === "POST") {
       return json({ error: "client_upgrade_required" }, 426);
     }
 
     if (url.pathname === "/v2/session" && request.method === "POST") {
-      return createSession(request, env);
+      return createSession(request, env, context);
     }
 
     if (url.pathname === "/v2/realtime" && request.headers.get("Upgrade") === "websocket") {
-      return connectRealtimeSocket(request, env);
+      return connectRealtimeSocket(request, env, context);
+    }
+
+    if (url.pathname === "/v1/telemetry" && request.method === "POST") {
+      return captureMobileTelemetry(request, env, context);
     }
 
     if (url.pathname === "/v1/report" && request.method === "POST") {
@@ -99,4 +131,35 @@ export default {
 
     return json({ error: "not_found" }, 404);
   },
-};
+  async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext) {
+    const nowMs = Date.now();
+    const reconciliation = reconcileDailyRevenueCatBatch(env, nowMs).then((result) => {
+      logWorkerEvent({
+        attempted: result.attempted,
+        event: "revenuecat_reconciliation_completed",
+        failed: result.failed,
+      });
+      if (result.failed > 0) {
+        Sentry.captureMessage("revenuecat_reconciliation_partial_failure", {
+          level: "error",
+          tags: { operation: "revenuecat_reconciliation" },
+        });
+      }
+    }).catch((failure: unknown) => {
+      Sentry.captureException(failure, {
+        tags: { operation: "revenuecat_reconciliation" },
+      });
+      throw failure;
+    });
+    const freeClaimCleanup = deleteExpiredFreeAllowanceClaims(env.BILLING_DB, nowMs)
+      .catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { operation: "free_allowance_claim_cleanup" },
+        });
+        throw failure;
+      });
+    context.waitUntil(Promise.all([reconciliation, freeClaimCleanup]).then(() => undefined));
+  },
+} satisfies ExportedHandler<Env>;
+
+export default Sentry.withSentry(getSentryOptions, handler);

@@ -18,7 +18,7 @@ export function formatLiveError(error: string): string {
     return `Translation connection was interrupted. Please try again. (${error})`;
   }
   if (error.startsWith("realtime_")) {
-    return `Live translation failed. Please try again. (${error})`;
+    return "Live translation is unavailable right now. Please try again.";
   }
   return `Live translation is unavailable. Please try again. (${error})`;
 }

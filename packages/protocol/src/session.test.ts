@@ -31,6 +31,7 @@ describe("session lifecycle", () => {
 
   it("treats setup, live, and recovery states as teardown-capable", () => {
     expect(isActiveOrRecoveringSession("requesting_mic_permission")).toBe(true);
+    expect(isActiveOrRecoveringSession("checking_device")).toBe(true);
     expect(isActiveOrRecoveringSession("creating_session")).toBe(true);
     expect(isActiveOrRecoveringSession("connecting_realtime")).toBe(true);
     expect(isActiveOrRecoveringSession("live")).toBe(true);

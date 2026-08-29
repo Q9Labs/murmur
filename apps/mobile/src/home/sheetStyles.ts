@@ -13,6 +13,14 @@ function createSheetStyles(theme: MurmurTheme) {
       paddingBottom: 28,
       paddingTop: 8,
     },
+    languageEmpty: {
+      color: theme.muted,
+      fontSize: 15,
+      fontWeight: "600",
+      paddingHorizontal: 12,
+      paddingVertical: 28,
+      textAlign: "center",
+    },
     languageOption: {
       alignItems: "center",
       borderBottomColor: theme.hairline,

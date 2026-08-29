@@ -186,17 +186,35 @@ function DiagnosticActions({
 function DiagnosticsLatency({ live }: { live: LiveTranslationController }): ReactNode {
   return (
     <>
-      <LatencyRow
-        label="First source transcript"
-        value={formatLatencyPercentiles(live.latency_report.first_source_transcript)}
-      />
-      <LatencyRow
-        label="First translated transcript"
-        value={formatLatencyPercentiles(live.latency_report.first_translated_transcript)}
-      />
+      {diagnosticLatencyRows.map(([name, label]) => (
+        <LatencyRow
+          key={name}
+          label={label}
+          value={formatLatencyPercentiles(live.latency_report[name])}
+        />
+      ))}
     </>
   );
 }
+
+const diagnosticLatencyRows = [
+  ["listen_to_microphone_ready", "Listen to microphone ready"],
+  ["listen_to_identity_ready", "Listen to app identity ready"],
+  ["listen_to_integrity_ready", "Listen to device check ready"],
+  ["listen_to_worker_session_ready", "Listen to Worker session ready"],
+  ["listen_to_realtime_provider_ready", "Listen to AI ready"],
+  ["listen_to_capture_started", "Listen to microphone capture"],
+  ["listen_to_first_source", "Listen to first source text"],
+  ["listen_to_first_translation", "Listen to first translation"],
+  ["stop_to_close_requested", "Stop to AI close request"],
+  ["stop_to_capture_stopped", "Stop to microphone silent"],
+  ["stop_to_playback_cleared_silenced", "Stop to speaker silent"],
+  ["stop_to_provider_client_closed", "Stop to AI connection closed"],
+  ["stop_to_worker_session_close_completed", "Stop to Worker session closed"],
+  ["stop_to_ui_ended_start_enabled", "Stop to Listen enabled"],
+  ["first_source_transcript", "Capture to first source text"],
+  ["first_translated_transcript", "Capture to first translation"],
+] as const;
 
 function DiagnosticsTimeline({
   live,

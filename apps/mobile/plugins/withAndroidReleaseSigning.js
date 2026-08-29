@@ -3,8 +3,20 @@ const { createRunOncePlugin, withAppBuildGradle } = require("expo/config-plugins
 const pkg = require("../package.json");
 
 const helperBlock = `// @murmur-release-signing-start
+def releaseSigningFileValue(String name) {
+    def filePath = project.findProperty(name + "_FILE")
+    if (!filePath) {
+        return null
+    }
+    def valueFile = project.file(filePath)
+    if (!valueFile.isFile()) {
+        throw new GradleException("Missing Android release signing value file for " + name)
+    }
+    return valueFile.getText("UTF-8").replaceFirst(/(?:\\r\\n|\\n|\\r)$/, "")
+}
+
 def releaseSigningValue(String name) {
-    return System.getenv(name) ?: project.findProperty(name)
+    return System.getenv(name) ?: releaseSigningFileValue(name) ?: project.findProperty(name)
 }
 
 def releaseKeystorePath = releaseSigningValue("MURMUR_ANDROID_KEYSTORE_PATH")

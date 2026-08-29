@@ -96,6 +96,10 @@ function PrivacyStep({
           Murmur uses this data only to provide translation, speech output, safety reports,
           diagnostics, and abuse prevention.
         </Text>
+        <Text style={theme.copy}>
+          Content-free anonymous analytics is on by default and uses PostHog US. You can turn it
+          off in Settings. Essential sanitized crash monitoring uses Sentry and can continue.
+        </Text>
         <Text style={theme.copy}>Murmur does not save audio or transcript history by default.</Text>
         <ConsentRow checked={privacyConsentChecked} onToggle={onTogglePrivacyConsent} theme={theme} />
       </View>

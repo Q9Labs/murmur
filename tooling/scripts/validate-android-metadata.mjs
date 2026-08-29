@@ -51,7 +51,8 @@ for (const locale of locales) {
     /\btap Listen\b/i.test(combinedCopy),
     `${locale} Play metadata must include the real first-session CTA: tap Listen`,
   );
-  assert(/accountless|no login/i.test(combinedCopy), `${locale} Play metadata must mention accountless/no-login use`);
+  assert(/guest account|no sign-up/i.test(combinedCopy), `${locale} Play metadata must explain guest access`);
+  assert(/30 translation minutes|30 free minutes/i.test(combinedCopy), `${locale} Play metadata must state the free monthly allowance`);
   assert(/AI output can be incomplete or inaccurate/i.test(combinedCopy), `${locale} Play metadata must disclose AI output limits`);
 
   const featureGraphicPath = join(localeDir, "images", "featureGraphic", "feature-graphic.png");

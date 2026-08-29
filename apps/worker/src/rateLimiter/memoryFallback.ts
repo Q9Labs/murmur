@@ -7,7 +7,11 @@ import {
   type LimitResult,
   reserveRealtimeSession,
 } from "../limits";
-import { canAcceptReportWithStores, pruneReportInboxWithStores } from "./stateAdapter";
+import {
+  canAcceptReportWithStores,
+  canAcceptTelemetryWithStores,
+  pruneReportInboxWithStores,
+} from "./stateAdapter";
 import type {
   AppAttestDeviceRecord,
   DurableLimitRequest,
@@ -18,21 +22,12 @@ const reportTimestampsBySession = new Map<string, number[]>();
 const reportInboxById = new Map<string, ReportInboxRecord>();
 const reportInboxOrder: string[] = [];
 const appAttestDevicesByKeyId = new Map<string, AppAttestDeviceRecord>();
+const telemetryTimestampsByClient = new Map<string, number[]>();
 
 export function callMemoryLimiter(body: DurableLimitRequest): unknown {
   switch (body.action) {
-    case "can_create_session":
-      return canCreateSession({
-        config: defaultRateLimits,
-        hashed_install_id: body.hashed_install_id,
-        now_ms: body.now_ms,
-      });
     case "create_session_record":
-      return createSessionRecord({
-        app_session_id: body.app_session_id,
-        hashed_install_id: body.hashed_install_id,
-        now_ms: body.now_ms,
-      });
+      return createMemorySessionRecord(body);
     case "close_session":
       closeSession(body.app_session_id, body.now_ms);
       return { ok: true };
@@ -44,6 +39,12 @@ export function callMemoryLimiter(body: DurableLimitRequest): unknown {
       });
     case "can_accept_report":
       return canAcceptReportMemory(body.app_session_id, body.now_ms);
+    case "can_accept_telemetry":
+      return canAcceptTelemetryWithStores(
+        body.hashed_client_id,
+        body.now_ms,
+        telemetryTimestampsByClient,
+      );
     case "store_report":
       reportInboxById.set(body.report.report_id, body.report);
       reportInboxOrder.unshift(body.report.report_id);
@@ -77,6 +78,27 @@ export function callMemoryLimiter(body: DurableLimitRequest): unknown {
       return { ok: true };
     }
   }
+}
+
+function createMemorySessionRecord(
+  body: Extract<DurableLimitRequest, { action: "create_session_record" }>,
+): LimitResult | ReturnType<typeof createSessionRecord> {
+  if (body.enforce_limits) {
+    const limit = canCreateSession({
+      config: defaultRateLimits,
+      hashed_install_id: body.hashed_install_id,
+      now_ms: body.now_ms,
+    });
+    if (!limit.ok) {
+      return limit;
+    }
+  }
+  const record = createSessionRecord({
+    app_session_id: body.app_session_id,
+    hashed_install_id: body.hashed_install_id,
+    now_ms: body.now_ms,
+  });
+  return body.enforce_limits ? { ok: true } : record;
 }
 
 function canAcceptReportMemory(appSessionId: string, nowMs: number): LimitResult {

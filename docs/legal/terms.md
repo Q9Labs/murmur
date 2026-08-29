@@ -1,8 +1,8 @@
 # Murmur Terms Of Use
 
-Last updated: 2026-07-30
+Last updated: 2026-08-29
 
-Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
+Murmur is a one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
 This text is not legal advice. It describes the OpenAI Realtime service path hosted by the production Worker.
 
@@ -18,9 +18,15 @@ OpenAI Realtime handles speech recognition, translation, and translated speech. 
 
 You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.
 
-## Accounts And Local Data
+## Accounts, Plans, Credits, And Usage
 
-Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. It also keeps local interface and rating-prompt eligibility preferences. You can reset the anonymous identity or delete local Murmur data in the app.
+Murmur starts with a guest customer account and 30 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.
+
+Monthly Pro renews each month. Annual Pro provides the same 3-hour allowance each internal month for one yearly charge. It does not grant the full year of time at once. Unused Free or Pro allowance expires at the end of its allowance period and does not roll over. Credit packs do not expire.
+
+Apple or Google handles payment, renewal, cancellation, and applicable taxes. Deleting a Murmur account does not cancel a store subscription. Cancel it in the App Store or Google Play. Refunds can remove granted value and may create a negative balance when refunded time was already used. A reversed refund restores the corresponding value.
+
+Murmur does not keep cloud transcript history. The app stores an anonymous install identifier locally for abuse prevention and diagnostics, plus local interface and rating-prompt preferences. You can reset that identity, delete local data, or delete the Murmur account in the app.
 
 ## Acceptable Use
 
@@ -38,7 +44,7 @@ Murmur's privacy practices are described in the Murmur Privacy Policy at `https:
 
 ## Third-Party Services
 
-Murmur relies on Cloudflare and OpenAI Realtime for live translation, infrastructure, diagnostics, and support workflows. OpenAI Realtime or Cloudflare may be unavailable or may change independently from Murmur.
+Murmur relies on Cloudflare, OpenAI Realtime, RevenueCat, Apple, Google, Resend, PostHog, and Sentry for translation, accounts, billing, email delivery, diagnostics, and support workflows. These services may be unavailable or may change independently from Murmur.
 
 ## Availability
 

@@ -43,16 +43,19 @@ describe("RateLimitDurableObject", () => {
     const durableObject = new RateLimitDurableObject(createState() as unknown as DurableObjectState);
 
     expect((await call(durableObject, {
-      action: "can_create_session",
+      action: "create_session_record",
+      app_session_id: "session",
+      enforce_limits: true,
       hashed_install_id: "install",
       now_ms: 2_000_000_000_000,
     })).value).toEqual({ ok: true });
     expect((await call(durableObject, {
       action: "create_session_record",
-      app_session_id: "session",
+      app_session_id: "blocked-session",
+      enforce_limits: true,
       hashed_install_id: "install",
-      now_ms: 2_000_000_000_000,
-    })).value).toMatchObject({ app_session_id: "session" });
+      now_ms: 2_000_000_000_001,
+    })).value).toEqual({ code: "active_session_limit", ok: false });
     expect((await call(durableObject, {
       action: "get_session",
       app_session_id: "session",

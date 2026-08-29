@@ -69,8 +69,16 @@ assert(
   "Review notes must include the real first-session CTA: tap Listen",
 );
 assert(
-  /no account/i.test(reviewNotes),
-  "Review notes must state that no account is required",
+  /guest account/i.test(reviewNotes),
+  "Review notes must explain the automatic guest account",
+);
+assert(
+  /30 free translation minutes/i.test(reviewNotes),
+  "Review notes must state the free monthly allowance",
+);
+assert(
+  /server-side/i.test(reviewNotes),
+  "Review notes must explain server-side purchase verification",
 );
 
 if (!screenshotRedesignPending) {

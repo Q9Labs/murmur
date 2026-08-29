@@ -27,6 +27,7 @@ words:
   - appattest
   - appiconset
   - aacute
+  - autocapture
   - automatable
   - backpressure
   - Bahnhof
@@ -62,6 +63,8 @@ words:
   - ferroviaria
   - fputs
   - gare
+  - geolocation
+  - geoip
   - Gitleaks
   - gplay
   - gradlew
@@ -69,6 +72,7 @@ words:
   - hhushhas
   - Hasan
   - Hibiki
+  - HMAC
   - hotspots
   - inspectable
   - Italiano
@@ -107,13 +111,19 @@ words:
   - Pressable
   - pseudonymized
   - pseudonymize
+  - purch
   - preventrecord
   - Portuguese
   - Portugu
+  - posthog
+  - PostHog
+  - POSTHOG
   - Q9Labs
   - rarr
   - readback
   - realtime
+  - revenuecat
+  - REVENUECAT
   - retarget
   - rdquo
   - rsquo
@@ -140,6 +150,7 @@ words:
   - TTFT
   - Tunables
   - UFAL
+  - UNCANCELLATION
   - ungated
   - Ungated
   - unconfigured

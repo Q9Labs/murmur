@@ -30,8 +30,18 @@ vi.mock("../lib/installIdentity", () => ({
   hasAcknowledgedPrivacyDisclosure: vi.fn(async () => false),
   resetInstallId: vi.fn(async () => undefined),
 }));
+vi.mock("../lib/observability/sentry", () => ({
+  captureMobileFailure: vi.fn(),
+  captureMobileFailureCode: vi.fn(),
+}));
 vi.mock("../lib/requestReview", () => ({ requestMurmurReview: vi.fn(async () => false) }));
 vi.mock("../lib/shareMurmur", () => ({ shareMurmur: vi.fn(async () => undefined) }));
+vi.mock("../lib/telemetry", () => ({
+  captureOnboardingCompleted: vi.fn(),
+  initializeAnonymousAnalytics: vi.fn(async () => true),
+  resetAnonymousAnalyticsPreference: vi.fn(async () => undefined),
+  updateAnonymousAnalyticsEnabled: vi.fn(async () => undefined),
+}));
 vi.mock("../lib/useLiveTranslation", () => ({
   useLiveTranslation: vi.fn(() => ({
     cancel: vi.fn(async () => undefined),
@@ -178,7 +188,7 @@ describe("audio playback preference controller", () => {
 
     expect(onDeleted).toHaveBeenCalledOnce();
     expect(enabledChanges).toEqual([false, true]);
-    expect(messages).toEqual([null, null, "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared."]);
+    expect(messages).toEqual([null, null, "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared."]);
 
     const latestUpdate = controller.setEnabled(false);
     await flushMicrotasks();

@@ -109,6 +109,10 @@ const explicitPolicyExclusions = new Map([
     "React Native settings/dev modal presentation; route/model helpers are covered by focused tests.",
   ],
   [
+    "apps/mobile/src/home/accountBillingModal.tsx",
+    "React Native account and purchase presentation; authentication, store, and Worker client behavior is covered by focused tests while direct coverage requires a native renderer harness.",
+  ],
+  [
     "apps/mobile/src/home/timeline.tsx",
     "React Native timeline row presentation; translation state shaping is covered by live translation/view-model tests.",
   ],
@@ -123,6 +127,10 @@ const explicitPolicyExclusions = new Map([
   [
     "apps/mobile/src/lib/live-translation/useLiveTranslation.ts",
     "Large hook implementation covered through extracted helper/provider/session tests and end-to-end app flows; direct coverage requires a dedicated hook harness.",
+  ],
+  [
+    "apps/mobile/src/lib/billing/context.tsx",
+    "React billing-provider orchestration around tested authentication, RevenueCat, and Worker clients; direct state-transition coverage requires a hook/native renderer harness.",
   ],
   [
     "apps/mobile/src/lib/live-translation/workerApi.ts",

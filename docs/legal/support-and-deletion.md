@@ -1,8 +1,8 @@
-# Murmur Support And Deletion Draft
+# Murmur Support And Deletion
 
-Last updated: 2026-05-17
+Last updated: 2026-08-29
 
-This draft defines the support and deletion surface Murmur needs before external testing or public release. It is hosted by the production Worker and must still be reviewed against the final provider settings before App Store or Google Play submission.
+This document defines Murmur's support and deletion surface. The production Worker hosts the public support page.
 
 ## Support Contact
 
@@ -12,18 +12,22 @@ Current public support surface:
 - Support email address: `q9labs.ai@gmail.com`.
 - Expected response window and escalation path for harmful, offensive, or safety-related translation reports still need an operational owner before public launch.
 
-## Accountless App Explanation
+## Accounts And Deletion
 
-Murmur V1 does not create accounts. There is no login, profile, password, subscription account, cloud transcript history, or account deletion flow.
+Murmur creates a random guest customer account when the app first starts. A user can add email recovery from Account & billing. Murmur has no cloud transcript history.
+
+Delete Murmur account removes sign-in data and access to the remaining balance. It does not cancel an Apple or Google subscription, which must be cancelled through the store first. Murmur retains a pseudonymous financial and entitlement record only when needed for refunds, fraud prevention, reconciliation, and legal obligations.
 
 The app does store an anonymous install identifier on the device. The app includes:
 
 - Reset Murmur Identity: replaces the anonymous install id.
-- Delete Local Data: clears the anonymous install id, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
+- Delete Local Data: clears the anonymous install id, analytics preference, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
+
+Anonymous Analytics can be turned off separately in Settings. This stops new PostHog product analytics events. Essential sanitized crash and error monitoring can continue.
 
 ## Server-Side Deletion Requests
 
-Because Murmur may process rate-limit metadata, diagnostic records, and translation report receipts, support must provide a deletion path for server-side records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
+Because Murmur may process rate-limit metadata, PostHog analytics, Sentry diagnostics, and translation report receipts, support provides a deletion path for server-side records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
 
 Support request intake should ask for:
 
@@ -52,7 +56,7 @@ Before App Store or Google Play submission, provide:
 - Public privacy policy URL.
 - Public terms URL.
 - Public support URL.
-- No-account explanation in reviewer notes.
+- Guest-account, billing, Restore, and deletion steps in reviewer notes.
 - In-app report translation path.
 - Data retention and deletion explanation for diagnostics and reports.
 
@@ -63,3 +67,4 @@ Before App Store or Google Play submission, provide:
 - Confirm report-triage ownership, escalation, and retention.
 - Verify app privacy and Play Data Safety answers match the final implementation.
 - Confirm support can handle deletion requests tied to report receipts or anonymous install/session metadata.
+- Confirm account deletion, store cancellation, refunds, and Restore use the documented entitlement process.

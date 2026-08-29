@@ -5,10 +5,11 @@
     "ios_bundle_id": "com.q9labsai.murmur",
     "version": "1.2.0"
   },
-  "last_updated": "2026-08-10",
-  "status": "submission_ready",
+  "last_updated": "2026-08-29",
+  "status": "not_submission_ready",
   "readiness_notes": [
-    "Option B store screenshots passed local iOS, Android, opacity, dimension, and locale-mirroring validation."
+    "The billing implementation, local typechecks, billing tests, mobile customer API tests, and store metadata validators pass.",
+    "Billing enforcement and purchases remain disabled in deployed environments until credentials, store products, and sandbox lifecycle tests are complete."
   ],
   "policy_sources_checked": [
     {
@@ -30,7 +31,87 @@
       "name": "Google Play target API requirements",
       "url": "https://developer.android.com/google/play/requirements/target-sdk",
       "checked_at": "2026-07-11"
+    },
+    {
+      "name": "RevenueCat webhooks",
+      "url": "https://www.revenuecat.com/docs/integrations/webhooks",
+      "checked_at": "2026-08-29"
     }
   ],
-  "p0_blockers": []
+  "p0_blockers": [
+    {
+      "id": "apple-developer-agreement",
+      "title": "Accept the updated Apple Developer Program Agreement",
+      "status": "blocked_on_account_holder",
+      "why_blocking": "App Store Connect does not permit the remaining in-app purchase and submission work until the Account Holder accepts the updated agreement.",
+      "current_evidence": [
+        "App Store Connect shows an updated Apple Developer Program Agreement that requires Account Holder action."
+      ],
+      "exit_criteria": [
+        "The Account Holder accepts the current agreement and App Store Connect no longer shows the agreement blocker."
+      ]
+    },
+    {
+      "id": "billing-production-credentials",
+      "title": "Create and install production billing credentials",
+      "status": "awaiting_action_confirmation",
+      "why_blocking": "The Worker and RevenueCat cannot verify Apple or Google purchases or deliver account recovery email without production credentials and webhook secrets.",
+      "current_evidence": [
+        "The RevenueCat Murmur project exists, but its Apple and Google apps are not fully connected.",
+        "No Apple in-app purchase key, Google Play service-account key, RevenueCat API keys, webhook secret, or Resend API key has been generated for this launch."
+      ],
+      "exit_criteria": [
+        "Generate the minimum-scope Apple, Google, RevenueCat, and Resend credentials after explicit action-time approval.",
+        "Store credential material in 1Password and install only the required public values and Worker secrets in each environment.",
+        "Confirm RevenueCat-to-Worker webhook authentication and server-side customer verification in sandbox."
+      ]
+    },
+    {
+      "id": "store-billing-catalog",
+      "title": "Configure the Apple, Google, and RevenueCat product catalog",
+      "status": "open",
+      "why_blocking": "Customers cannot buy Murmur Pro or credit packs until the exact products, prices, entitlement, offering, and packages exist and are linked across both stores and RevenueCat.",
+      "current_evidence": [
+        "The source-controlled catalog and contribution-margin tests define the approved products and prices.",
+        "The matching App Store Connect, Play Console, and RevenueCat product records are not complete.",
+        "Google Play will not enable subscription or one-time product creation until a billing-enabled Android App Bundle is uploaded."
+      ],
+      "exit_criteria": [
+        "Upload a signed internal-test Android App Bundle that declares the Google Play Billing permission.",
+        "Configure Pro monthly at USD 12.99, Pro annual at USD 124.99, and credit packs at USD 3.99, USD 10.99, and USD 31.99 with approved localized tiers.",
+        "Link the Apple and Google products to RevenueCat entitlement pro and offering default with the documented package identifiers.",
+        "Complete store review metadata, tax, availability, and subscription disclosures for CollabEZ FZE LLC."
+      ]
+    },
+    {
+      "id": "billing-sandbox-evidence",
+      "title": "Complete Apple and Google billing sandbox tests",
+      "status": "open",
+      "why_blocking": "The code is locally verified, but production release needs real store evidence for purchase, restore, renewal, expiry, refund, and metered balance behavior.",
+      "current_evidence": [
+        "Local tests cover ledger idempotency, grants, reversals, reconciliation, account merge, and translation metering.",
+        "No completed App Store sandbox or Google Play licensed-tester lifecycle run is recorded for the new catalog."
+      ],
+      "exit_criteria": [
+        "Record successful purchase and restore tests for each platform and product class.",
+        "Record renewal, cancellation, expiry, refund, refund reversal, duplicate webhook, reinstall, cross-device sign-in, and negative-balance behavior.",
+        "Prove billing enforcement can stay enabled while the purchase kill switch disables new checkout."
+      ]
+    },
+    {
+      "id": "billing-production-rollout",
+      "title": "Deploy and verify the staged production billing release",
+      "status": "open",
+      "why_blocking": "The live Worker and mobile builds must use the verified production configuration before the paid offer can be released safely.",
+      "current_evidence": [
+        "Production billing enforcement and purchase flags remain false.",
+        "The additive reconciliation migrations are applied to development and production D1, but no billing-enabled Worker revision has been deployed."
+      ],
+      "exit_criteria": [
+        "Apply all additive D1 migrations and deploy the Worker with production secrets while purchases stay disabled.",
+        "Verify readiness, account recovery, entitlement reconciliation, metering, observability, and rollback controls live.",
+        "Release approved store builds in stages, enable purchases only after live proof, and verify the deployed revision."
+      ]
+    }
+  ]
 }

@@ -26,6 +26,13 @@ import {
 } from "../lib/installIdentity";
 import { requestMurmurReview } from "../lib/requestReview";
 import { shareMurmur } from "../lib/shareMurmur";
+import { captureMobileFailure } from "../lib/observability/sentry";
+import {
+  captureOnboardingCompleted,
+  initializeAnonymousAnalytics,
+  resetAnonymousAnalyticsPreference,
+  updateAnonymousAnalyticsEnabled,
+} from "../lib/telemetry";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
@@ -40,7 +47,7 @@ import { buildHomeViewModel } from "./viewModel";
 
 const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
 const localDataDeletedMessage =
-  "Local Murmur data deleted. Privacy acknowledgement, install id, and rating eligibility were cleared.";
+  "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared.";
 const localDataDeleteError = "Could not delete local data. Please try again.";
 
 type AudioPlaybackPreferenceController = ReturnType<
@@ -180,6 +187,7 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
@@ -206,6 +214,8 @@ export default function HomeScreen(): ReactNode {
 
   const live = useLiveTranslation({
     acquisition,
+    analytics_enabled: anonymousAnalyticsEnabled === true,
+    network_type: networkType,
     playback_enabled: audioPlaybackEnabled,
     source_language: sourceLanguageCode,
     target_language: targetLanguageCode,
@@ -236,6 +246,35 @@ export default function HomeScreen(): ReactNode {
       setAcquisition(undefined);
     }
   }, [acquisition, live.status]);
+
+  useEffect(() => {
+    if (
+      anonymousAnalyticsEnabled !== null &&
+      privacyAcknowledged &&
+      onboardingStep === "done"
+    ) {
+      void live.prepare();
+    }
+  }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
+    let mounted = true;
+    void initializeAnonymousAnalytics()
+      .then((enabled) => {
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(enabled);
+        }
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(false);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -310,10 +349,27 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    captureOnboardingCompleted();
     await startLiveTranslation();
   }
 
+  async function changeAnonymousAnalyticsEnabled(enabled: boolean): Promise<void> {
+    setSettingsMessage(null);
+    try {
+      await updateAnonymousAnalyticsEnabled(enabled);
+      setAnonymousAnalyticsEnabled(enabled);
+      setSettingsMessage(`Anonymous analytics ${enabled ? "enabled" : "disabled"}.`);
+    } catch (failure) {
+      captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
+      setSettingsMessage("Could not save the analytics setting. Please try again.");
+    }
+  }
+
   async function startLiveTranslation(): Promise<void> {
+    if (anonymousAnalyticsEnabled === null) {
+      setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
+      return;
+    }
     await audioPreferenceController.waitForRestore();
     await live.start();
   }
@@ -370,6 +426,7 @@ export default function HomeScreen(): ReactNode {
 
   return (
     <HomeExperience
+      anonymousAnalyticsEnabled={anonymousAnalyticsEnabled ?? false}
       audioPlaybackEnabled={audioPlaybackEnabled}
       audioState={audioState}
       autoScrollRef={autoScrollRef}
@@ -380,6 +437,9 @@ export default function HomeScreen(): ReactNode {
       onCloseDiagnostics={() => setDiagnosticsOpen(false)}
       onClosePicker={() => setPickerMode(null)}
       onCloseSettings={() => setSettingsOpen(false)}
+      onAnonymousAnalyticsEnabledChange={(enabled) => {
+        void changeAnonymousAnalyticsEnabled(enabled);
+      }}
       onAudioPlaybackEnabledChange={(enabled) => {
         void audioPreferenceController.setEnabled(enabled);
       }}
@@ -387,6 +447,8 @@ export default function HomeScreen(): ReactNode {
         void audioPreferenceController.deleteLocalData(
           () => deleteLocalData(live.cancel),
           () => {
+            live.invalidatePreparation();
+            setAnonymousAnalyticsEnabled(true);
             setPrivacyAcknowledged(false);
             setPrivacyConsentChecked(false);
           },
@@ -396,7 +458,7 @@ export default function HomeScreen(): ReactNode {
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
       onPrimaryAction={() => void handlePrimaryAction()}
-      onResetIdentity={() => void resetIdentity(setSettingsMessage)}
+      onResetIdentity={() => void resetIdentity(live, setSettingsMessage)}
       onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       pickerMode={pickerMode}
@@ -426,9 +488,14 @@ function newestAudioState(
   return order >= 0 ? next : current;
 }
 
-async function resetIdentity(setMessage: (message: string | null) => void): Promise<void> {
+async function resetIdentity(
+  live: Pick<ReturnType<typeof useLiveTranslation>, "invalidatePreparation" | "prepare">,
+  setMessage: (message: string | null) => void,
+): Promise<void> {
   await resetInstallId();
-  setMessage("Accountless identity reset. The next session will use a fresh install id.");
+  live.invalidatePreparation();
+  await live.prepare();
+  setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
 }
 
 async function handleCompletedSessionEngagement(
@@ -453,4 +520,5 @@ async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await resetAnonymousAnalyticsPreference();
 }

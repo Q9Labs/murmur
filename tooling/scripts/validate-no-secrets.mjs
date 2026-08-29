@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ignoredDirectories = new Set([
   ".expo",
   ".git",
+  ".worktrees",
   ".gradle",
   ".next",
   ".turbo",

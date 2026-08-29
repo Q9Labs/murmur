@@ -20,11 +20,24 @@ describe("iOS privacy manifest config", () => {
         "NSPrivacyCollectedDataTypePerformanceData",
         "NSPrivacyCollectedDataTypeDeviceID",
         "NSPrivacyCollectedDataTypeProductInteraction",
+        "NSPrivacyCollectedDataTypeEmailAddress",
+        "NSPrivacyCollectedDataTypeUserID",
+        "NSPrivacyCollectedDataTypePurchaseHistory",
       ]),
     );
 
+    const linkedTypes = new Set([
+      "NSPrivacyCollectedDataTypeAudioData",
+      "NSPrivacyCollectedDataTypeOtherUserContent",
+      "NSPrivacyCollectedDataTypeEmailAddress",
+      "NSPrivacyCollectedDataTypeUserID",
+      "NSPrivacyCollectedDataTypePurchaseHistory",
+    ]);
+
     for (const entry of privacyManifests.NSPrivacyCollectedDataTypes) {
-      expect(entry.NSPrivacyCollectedDataTypeLinked).toBe(false);
+      expect(entry.NSPrivacyCollectedDataTypeLinked).toBe(
+        linkedTypes.has(entry.NSPrivacyCollectedDataType),
+      );
       expect(entry.NSPrivacyCollectedDataTypeTracking).toBe(false);
     }
 

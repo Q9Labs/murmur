@@ -27,9 +27,11 @@ import { SettingsModal } from "./settingsModals";
 function renderSettings(developerToolsEnabled: boolean): string {
   return renderToStaticMarkup(
     <SettingsModal
+      anonymousAnalyticsEnabled
       developerToolsEnabled={developerToolsEnabled}
       live={{ status: "idle" } as LiveTranslationController}
       onClose={vi.fn()}
+      onAnonymousAnalyticsEnabledChange={vi.fn()}
       onDeleteLocalData={vi.fn()}
       onOpenDiagnostics={vi.fn()}
       onResetIdentity={vi.fn()}
@@ -45,6 +47,7 @@ describe("settings sheet", () => {
     const markup = renderSettings(false);
 
     expect(markup).toContain("Share Murmur");
+    expect(markup).toContain("Anonymous analytics: On");
     expect(markup).toContain("Privacy policy");
     expect(markup).toContain("Terms of use");
     expect(markup).toContain("Support &amp; data requests");

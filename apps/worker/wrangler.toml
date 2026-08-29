@@ -1,21 +1,77 @@
 name = "murmur-worker"
 main = "src/index.ts"
 compatibility_date = "2026-05-16"
+compatibility_flags = ["nodejs_compat"]
+upload_source_maps = true
 workers_dev = true
 
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimitDurableObject"
 
+[[durable_objects.bindings]]
+name = "CUSTOMER_LEDGER"
+class_name = "CustomerLedgerDurableObject"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RateLimitDurableObject"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["CustomerLedgerDurableObject"]
+
+[[d1_databases]]
+binding = "BILLING_DB"
+database_name = "murmur-billing-development"
+database_id = "e1a58a8e-95a8-4cdd-8938-af018a50060d"
+migrations_dir = "migrations"
+
 [vars]
 APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
+BILLING_ENFORCEMENT_ENABLED = "false"
+BILLING_PURCHASES_ENABLED = "false"
 MURMUR_ENV = "development"
 OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+REVENUECAT_PROJECT_ID = "projc52a5a19"
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
+GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
+
+[env.development]
+name = "murmur-worker-development"
+workers_dev = true
+
+[[env.development.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimitDurableObject"
+
+[[env.development.durable_objects.bindings]]
+name = "CUSTOMER_LEDGER"
+class_name = "CustomerLedgerDurableObject"
+
+[[env.development.migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[[env.development.migrations]]
+tag = "v2"
+new_sqlite_classes = ["CustomerLedgerDurableObject"]
+
+[[env.development.d1_databases]]
+binding = "BILLING_DB"
+database_name = "murmur-billing-development"
+database_id = "e1a58a8e-95a8-4cdd-8938-af018a50060d"
+migrations_dir = "migrations"
+
+[env.development.vars]
+APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_ENVIRONMENT = "development"
+BILLING_ENFORCEMENT_ENABLED = "false"
+BILLING_PURCHASES_ENABLED = "false"
+MURMUR_ENV = "development"
+OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+REVENUECAT_PROJECT_ID = "projc52a5a19"
 GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
 GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
 
@@ -26,18 +82,38 @@ routes = [
   { pattern = "murmur.q9labs.ai", custom_domain = true },
 ]
 
+[env.production.triggers]
+crons = [ "17 3 * * *" ]
+
 [[env.production.durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimitDurableObject"
+
+[[env.production.durable_objects.bindings]]
+name = "CUSTOMER_LEDGER"
+class_name = "CustomerLedgerDurableObject"
 
 [[env.production.migrations]]
 tag = "v1"
 new_sqlite_classes = ["RateLimitDurableObject"]
 
+[[env.production.migrations]]
+tag = "v2"
+new_sqlite_classes = ["CustomerLedgerDurableObject"]
+
+[[env.production.d1_databases]]
+binding = "BILLING_DB"
+database_name = "murmur-billing-production"
+database_id = "893dbd59-ac2a-473f-bf8f-0091b375e517"
+migrations_dir = "migrations"
+
 [env.production.vars]
 APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
+BILLING_ENFORCEMENT_ENABLED = "false"
+BILLING_PURCHASES_ENABLED = "false"
 MURMUR_ENV = "production"
 OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+REVENUECAT_PROJECT_ID = "projc52a5a19"
 GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
 GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"

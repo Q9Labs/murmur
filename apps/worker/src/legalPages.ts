@@ -7,8 +7,8 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-07-30";
-const marketingUpdated = "2026-07-30";
+const lastUpdated = "2026-08-29";
+const marketingUpdated = "2026-08-29";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
@@ -21,7 +21,7 @@ const defaultKeywords = [
   "live voice translator",
   "real-time translated captions",
   "speech translation app",
-  "accountless translator app",
+  "translator app without sign up",
   "one-way live translator",
   "AI speech translation",
   "voice translator with captions",
@@ -61,7 +61,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
           <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
-        <p class="hero-points">Live translated captions · No account · No saved transcript history</p>
+        <p class="hero-points">Live translated captions · 30 free minutes · No saved transcript history</p>
       </section>
 
       <section class="landing-grid">
@@ -106,7 +106,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
       <section class="cta">
         <div class="cta-inner">
           <h2>Follow spoken language through live captions.</h2>
-          <p>Download Murmur for iOS or Android. No account required.</p>
+          <p>Download Murmur for iOS or Android. Start as a guest and add email only for account recovery.</p>
           <div class="hero-actions">
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
@@ -127,7 +127,7 @@ export const legalPages: Record<string, Page> = {
     path: "/",
     title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Murmur needs no account and saves no cloud transcript history by default.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 30 free minutes and no cloud transcript history by default.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
@@ -138,7 +138,7 @@ export const legalPages: Record<string, Page> = {
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
           </div>
-          <p class="hero-points">Real-time captions · No account · Nothing saved by default</p>
+          <p class="hero-points">Real-time captions · 30 free minutes monthly · Nothing saved by default</p>
         </div>
         <div class="hero-card">
           <span class="hero-card-glow"></span>
@@ -218,8 +218,8 @@ export const legalPages: Record<string, Page> = {
         </div>
         <div class="value">
           <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M17 9l4 4M21 9l-4 4"/></svg></div>
-          <h4>No account</h4>
-          <p>No login, profile, or subscription to get in your way.</p>
+          <h4>Guest first</h4>
+          <p>Start without sign-up. Verify an email before purchase so a plan or credit balance can be recovered across devices.</p>
         </div>
         <div class="value">
           <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
@@ -228,10 +228,38 @@ export const legalPages: Record<string, Page> = {
         </div>
       </section>
 
+      <section class="pricing" id="pricing">
+        <div class="section-head">
+          <h2>Start free. Add time when you need it.</h2>
+          <p>Allowances reset each month. Credit packs never expire and are used after plan time.</p>
+        </div>
+        <div class="price-grid">
+          <article class="price-card">
+            <span class="price-kicker">Free</span>
+            <h3>30 minutes</h3>
+            <p class="price">$0 <span>/ month</span></p>
+            <p>For quick questions, directions, and short explanations.</p>
+          </article>
+          <article class="price-card price-card-featured">
+            <span class="price-kicker">Murmur Pro</span>
+            <h3>3 hours monthly</h3>
+            <p class="price">$12.99 <span>/ month</span></p>
+            <p>Or $124.99 yearly, about 20% less for the same 3-hour monthly allowance.</p>
+          </article>
+          <article class="price-card">
+            <span class="price-kicker">Credit packs</span>
+            <h3>Time that stays</h3>
+            <p class="price">From $3.99</p>
+            <p>60 minutes for $3.99, 180 for $10.99, or 540 for $31.99. Packs never expire.</p>
+          </article>
+        </div>
+        <p class="pricing-note">Purchases use Apple App Store or Google Play billing. Taxes and localized prices can vary by storefront.</p>
+      </section>
+
       <section class="cta">
         <div class="cta-inner">
           <h2>Take Murmur to your next tour or talk.</h2>
-          <p>Free to try, with nothing to sign up for. Download Murmur and follow spoken language through live captions.</p>
+          <p>Start with 30 free minutes each month. Upgrade or add non-expiring time inside the app.</p>
           <div class="hero-actions">
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
@@ -245,7 +273,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
     description:
-      "Follow guides and spoken explanations in another language with live translated captions on your phone. No account required.",
+      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 30 free minutes each month.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
     eyebrow: "Live translation for travel",
     heading: "Understand the guide without interrupting the tour.",
@@ -265,7 +293,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-talks",
     title: "Live Translation for Talks, Lectures, and Conferences | Murmur",
     description:
-      "Read live translated captions while a lecturer, workshop host, or conference speaker continues talking. No event setup or account required.",
+      "Read live translated captions while a lecturer, workshop host, or conference speaker continues talking. No event setup is required.",
     keywords: "conference speech translator, live translation for lectures, translated captions for talks, event voice translator",
     eyebrow: "Live translation for talks",
     heading: "Read the talk live on your own phone.",
@@ -321,33 +349,38 @@ export const legalPages: Record<string, Page> = {
     ],
   }),
   "/privacy": {
-    description: "Murmur privacy policy for accountless live translation.",
+    description: "Murmur privacy policy for live translation, accounts, and in-app purchases.",
     path: "/privacy",
     title: "Murmur Privacy Policy",
     html: `
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
+      <p>Murmur is a one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
       <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.</p>
       <h2>Data Murmur Processes</h2>
       <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.</p>
       <p><strong>Source and translated captions.</strong> OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker for local display. Murmur does not save transcript history by default.</p>
 
-      <p><strong>Anonymous install and session metadata.</strong> Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.</p>
+      <p><strong>Account, entitlement, and purchase metadata.</strong> Murmur creates a random guest customer id so it can grant Free time and meter translation use. You can add an email address for account recovery; Murmur stores the email and sign-in records needed for that purpose. Murmur stores plan state, credit grants, usage debits, renewals, restores, refunds, and store transaction identifiers in an append-only entitlement ledger. Apple, Google, and RevenueCat process store purchases. Murmur does not receive or store your payment-card details.</p>
+      <p><strong>Anonymous install, Free allowance, and session metadata.</strong> The app creates an anonymous install identifier and a separate Free allowance identifier in platform secure storage. The Worker hashes both values. The install identifier supports diagnostics and pseudonymous session measurement; the Free allowance identifier prevents account deletion from creating more than one 30-minute grant for the same app installation in a UTC month. Reset Murmur Identity replaces only the diagnostic install identifier. Delete Local Data removes both local identifiers, while the current monthly Free claim hash can remain on the server through its allowance period for abuse prevention.</p>
       <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
       <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
-      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.</p>
+      <p><strong>Product analytics, diagnostics, and latency telemetry.</strong> Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. Events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include microphone audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.</p>
+      <p>The app sends analytics events to Murmur's Cloudflare Worker. The Worker validates a fixed event schema, hashes the anonymous install identifier, and forwards the allowed event properties to PostHog US. PostHog does not receive the raw install identifier or the device's IP address from Murmur. Murmur disables PostHog person profiles, geolocation, autocapture, and session replay.</p>
+      <p>Murmur uses Sentry for crash, error, and sampled performance monitoring. Murmur disables screenshots, view hierarchy capture, session replay, request bodies, cookies, query strings, user fields, and default personally identifiable information. Sentry may receive a sanitized stack trace, operation and error categories, release, environment, app session identifier, and limited performance timing. Sentry does not receive conversation content from Murmur.</p>
       <h2>Third-Party Processors</h2>
-      <p>Murmur uses Cloudflare for the Worker gateway and OpenAI Realtime for live transcription, translation, and translated speech. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
+      <p>Murmur uses Cloudflare for the Worker gateway, account database, entitlement ledger, and rate limits; OpenAI Realtime for live transcription and translation; RevenueCat for Apple and Google purchase validation and lifecycle events; Resend for email sign-in codes; PostHog US for anonymous product analytics; and Sentry for sanitized error and performance monitoring. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable store privacy rules.</p>
       <h2>Retention</h2>
-      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session, campaign, and rate-limit metadata is retained only as needed for abuse prevention, diagnostics, acquisition measurement, and service operation. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review.</p>
+      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Account records remain until account deletion. A hashed Free allowance claim can remain through the applicable UTC month after deletion so a replacement guest account cannot mint another grant. Entitlement, store transaction, usage, renewal, and refund ledger records are retained as needed for service integrity, fraud prevention, financial reconciliation, and legal obligations, with direct identifiers removed when the account is deleted. Analytics, diagnostics, campaign, and rate-limit metadata is retained only as needed for product measurement, abuse prevention, debugging, and service operation, then deleted or anonymized under Murmur's provider retention settings.</p>
       <h2>Your Choices</h2>
       <ul>
         <li>Stop or cancel a live session at any time.</li>
         <li>Use translated captions even when speech output is unavailable.</li>
+        <li>Turn Anonymous Analytics off or on in Settings. Analytics is on by default until you turn it off. Turning it off stops new PostHog product analytics events; essential sanitized crash and error monitoring can continue.</li>
         <li>Reset Murmur Identity in the app.</li>
         <li>Delete Local Data in the app.</li>
+        <li>Delete your Murmur account and sign-in data in Account &amp; billing. Store subscriptions must be cancelled separately.</li>
         <li>Contact support to request deletion of server-side diagnostics or report records tied to a report receipt or anonymous install/session metadata.</li>
       </ul>
       <h2>Children</h2>
@@ -363,15 +396,17 @@ export const legalPages: Record<string, Page> = {
     html: `
       <h1>Murmur Terms of Use</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is an accountless one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Optional speech output may play translated phrases when available.</p>
+      <p>Murmur is a one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Optional speech output may play translated phrases when available.</p>
       <h2>Using Murmur</h2>
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>
       <h2>AI Translation Limits</h2>
       <p>OpenAI Realtime handles speech recognition, translation, and translated speech. Its output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
       <p>You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.</p>
-      <h2>Accounts and Local Data</h2>
-      <p>Murmur V1 has no accounts, login, profile, or cloud transcript history. The app stores an anonymous install identifier locally for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. You can reset this identity or delete local Murmur data in the app.</p>
+      <h2>Accounts, Plans, Credits, and Usage</h2>
+      <p>Murmur starts with a guest customer account and 30 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.</p>
+      <p>Monthly Pro renews each month. Annual Pro provides the same 3-hour allowance each internal month for one yearly charge. It does not grant the full year of time at once. Unused Free or Pro allowance expires at the end of its allowance period and does not roll over. Credit packs do not expire.</p>
+      <p>Apple or Google handles payment, renewal, cancellation, and applicable taxes. Deleting a Murmur account does not cancel a store subscription. Cancel it in the App Store or Google Play. Refunds can remove granted value and may create a negative balance when refunded time was already used. A reversed refund restores the corresponding value.</p>
       <h2>Acceptable Use</h2>
       <ul>
         <li>Do not break the law or violate someone else's rights.</li>
@@ -402,16 +437,17 @@ export const legalPages: Record<string, Page> = {
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
       <h2>Support Contact</h2>
       <p>Email <a href="mailto:${supportEmail}">${supportEmail}</a> for support, safety issues, privacy questions, and deletion requests. Include your report receipt id if your request relates to a translation report.</p>
-      <h2>Accountless App Explanation</h2>
-      <p>Murmur V1 does not create accounts. There is no login, profile, password, subscription account, cloud transcript history, or account deletion flow.</p>
-      <p>The app stores an anonymous install identifier, interface preference, and rating-prompt eligibility state on the device. Use <strong>Reset Murmur Identity</strong> to replace the identifier, or <strong>Delete Local Data</strong> to clear all of this local Murmur data and the privacy acknowledgement.</p>
+      <h2>Accounts and Deletion</h2>
+      <p>Murmur creates a random guest customer account when you first use the app. You can add email recovery from Account &amp; billing. Murmur has no cloud transcript history.</p>
+      <p>Use <strong>Delete Murmur account</strong> in Account &amp; billing to remove sign-in data and access to the remaining balance. This does not cancel an Apple or Google subscription; cancel it through the store first. Murmur retains a pseudonymous financial and entitlement record only when needed for refunds, fraud prevention, reconciliation, and legal obligations.</p>
+      <p>The app stores anonymous install and Free allowance identifiers, interface preference, and rating-prompt eligibility state on the device. Use <strong>Reset Murmur Identity</strong> to replace the diagnostic install identifier without changing billing, or <strong>Delete Local Data</strong> to clear all local Murmur data and the privacy acknowledgement. The hashed current-month Free claim can remain on the server through that month for abuse prevention.</p>
       <h2>Server-Side Deletion Requests</h2>
       <p>Murmur may process rate-limit metadata, diagnostic records, and translation report receipts. Support can review deletion requests for records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.</p>
       <p>Support will not ask users to send microphone recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.</p>
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
       <h2>Store Submission Notes</h2>
-      <p>Store reviewers can use the app without creating an account. Tap Listen, speak naturally, review translated captions, and use the report buttons on a committed translation span.</p>
+      <p>Store reviewers can start with the automatic guest account and Free allowance. Tap Listen, speak naturally, review translated captions, then verify an email in Account &amp; billing before testing purchase and Restore controls. Use the report buttons on a committed translation span.</p>
     `,
   },
 };
@@ -939,6 +975,20 @@ function renderHtml(page: Page): string {
       .value h4 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--deep-teal-text); margin: 0 0 6px; }
       .value p { color: var(--text-secondary); font-weight: 500; margin: 0; font-size: 0.98rem; line-height: 1.5; }
 
+      /* Pricing */
+      .pricing { padding-top: 96px; }
+      .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      @media (max-width: 820px) { .price-grid { grid-template-columns: 1fr; max-width: 520px; } }
+      .price-card { background: #FFFFFF; border: 1px solid var(--mint-border); border-radius: 26px; padding: 30px; }
+      .price-card-featured { background: var(--deep-teal); border-color: var(--deep-teal); color: #FFFFFF; box-shadow: 0 20px 42px rgba(13, 124, 102, 0.2); }
+      .price-kicker { color: var(--coral); font-size: 0.78rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+      .price-card h3 { font-family: var(--font-display); font-size: 1.5rem; margin: 14px 0 4px; }
+      .price-card > p:last-child { color: var(--text-secondary); font-weight: 600; line-height: 1.55; }
+      .price-card-featured > p:last-child { color: #CFF6EB; }
+      .price { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin: 8px 0 20px; }
+      .price span { font-family: var(--font-main); font-size: 0.9rem; font-weight: 700; opacity: 0.72; }
+      .pricing-note { color: var(--text-secondary); font-size: 0.86rem; font-weight: 600; margin: 18px 0 0; }
+
       /* Closing CTA */
       .cta { margin-top: 84px; }
       .cta-inner {
@@ -1013,6 +1063,7 @@ function renderHtml(page: Page): string {
           <span>${siteName}</span>
         </a>
         <nav aria-label="Main navigation">
+          <a href="/#pricing">Pricing</a>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
           <a href="/support">Support</a>
@@ -1030,7 +1081,7 @@ function renderHtml(page: Page): string {
           <a href="/english-to-arabic-live-captions">English to Arabic</a>
           <a href="/arabic-to-english-live-captions">Arabic to English</a>
         </div>
-        &copy; 2026 Q9 Labs. Murmur is an accountless AI translation service.
+        &copy; 2026 Q9 Labs. Murmur is a privacy-first AI translation service.
       </footer>
     </div>
   </body>
@@ -1107,12 +1158,13 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
           "@type": "SoftwareApplication",
           applicationCategory: "UtilitiesApplication",
           description:
-            "Accountless one-way live speech translation with real-time translated captions, optional translated speech, and no cloud transcript history by default.",
+            "One-way live speech translation with real-time translated captions, 30 free minutes each month, optional paid time, and no cloud transcript history by default.",
           featureList: [
             "One-way live speech translation",
             "Real-time translated captions",
             "Optional translated speech",
-            "No account required in V1",
+            "Automatic guest account with optional email recovery",
+            "30 free minutes each month",
             "No cloud transcript history by default",
           ],
           name: siteName,
@@ -1129,7 +1181,7 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
               name: "Does Murmur require an account?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "No. Murmur V1 has no login, profile, subscription account, or cloud transcript library.",
+                text: "Murmur creates a guest account automatically. Email is optional for Free use and is required before purchase so plans and credits can be recovered across devices.",
               },
             },
             {

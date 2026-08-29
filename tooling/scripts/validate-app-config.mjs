@@ -32,7 +32,17 @@ const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypePerformanceData",
   "NSPrivacyCollectedDataTypeProductInteraction",
   "NSPrivacyCollectedDataTypeDeviceID",
+  "NSPrivacyCollectedDataTypeEmailAddress",
+  "NSPrivacyCollectedDataTypeUserID",
+  "NSPrivacyCollectedDataTypePurchaseHistory",
 ];
+const linkedPrivacyTypes = new Set([
+  "NSPrivacyCollectedDataTypeAudioData",
+  "NSPrivacyCollectedDataTypeOtherUserContent",
+  "NSPrivacyCollectedDataTypeEmailAddress",
+  "NSPrivacyCollectedDataTypeUserID",
+  "NSPrivacyCollectedDataTypePurchaseHistory",
+]);
 
 assert(appConfig.name === "Murmur", `app name must be Murmur; got ${appConfig.name}`);
 assert(appConfig.owner === "q9labs", `Expo owner must be q9labs; got ${appConfig.owner}`);
@@ -77,7 +87,10 @@ for (const privacyType of requiredPrivacyTypes) {
   assert(privacyTypes.has(privacyType), `iOS privacy manifest missing ${privacyType}`);
 }
 for (const entry of privacyManifest?.NSPrivacyCollectedDataTypes ?? []) {
-  assert(entry.NSPrivacyCollectedDataTypeLinked === false, `${entry.NSPrivacyCollectedDataType} must not be linked`);
+  assert(
+    entry.NSPrivacyCollectedDataTypeLinked === linkedPrivacyTypes.has(entry.NSPrivacyCollectedDataType),
+    `${entry.NSPrivacyCollectedDataType} has an incorrect account-linking declaration`,
+  );
   assert(entry.NSPrivacyCollectedDataTypeTracking === false, `${entry.NSPrivacyCollectedDataType} must not be used for tracking`);
 }
 

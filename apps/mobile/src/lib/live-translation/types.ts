@@ -6,9 +6,12 @@ import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
 import type { RealtimeTransportDiagnostics } from "../providers/realtimeTranslation";
 import type { AudioCaptureDiagnostics } from "./audioDiagnostics";
+import type { SessionPreparationStatus } from "./sessionPreparation";
 
 export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
+  analytics_enabled: boolean;
+  network_type: string;
   playback_enabled: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
@@ -54,6 +57,7 @@ export type LiveTranslationState = {
   error: string | null;
   latency_report: LatencyReport;
   latency_samples: LatencySample[];
+  preparation_status: SessionPreparationStatus;
   report_error: string | null;
   report_receipt_id: string | null;
   session: TranslationSession;
@@ -65,6 +69,8 @@ export type LiveTranslationState = {
 export type LiveTranslationController = LiveTranslationState & {
   cancel: () => Promise<void>;
   getDiagnosticsSnapshot: () => LiveTranslationDiagnosticsSnapshot;
+  invalidatePreparation: () => void;
+  prepare: () => Promise<void>;
   reportSpan: (
     span: TranslationSpan,
     category: ReportTranslationCategory,

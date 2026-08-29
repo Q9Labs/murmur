@@ -33,6 +33,9 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     }),
     latency_report: {},
     latency_samples: [],
+    invalidatePreparation: () => undefined,
+    preparation_status: "ready",
+    prepare: async () => undefined,
     report_error: null,
     report_receipt_id: null,
     reportSpan: async () => undefined,
@@ -110,5 +113,36 @@ describe("home view model", () => {
         targetLanguageCode: "en",
       }).canStart,
     ).toBe(true);
+  });
+
+  it("shows preparation and Start stages", () => {
+    expect(buildHomeViewModel({
+      live: makeLive({ preparation_status: "checking_microphone" }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    }).statusText).toBe("Checking microphone");
+
+    expect(buildHomeViewModel({
+      live: makeLive({ status: "creating_session" }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    }).statusText).toBe("Starting AI");
+  });
+
+  it("keeps failed sessions ready to retry with a clear service status", () => {
+    const model = buildHomeViewModel({
+      live: makeLive({
+        error: "worker_session_network_error",
+        status: "failed",
+      }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+
+    expect(model).toMatchObject({
+      canChangeLanguages: true,
+      canStart: true,
+      statusText: "Service unavailable",
+    });
   });
 });

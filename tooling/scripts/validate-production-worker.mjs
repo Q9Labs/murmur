@@ -2,7 +2,7 @@
 
 const workerUrl = process.env.MURMUR_WORKER_URL ?? "https://murmur.q9labs.ai";
 const baseUrl = workerUrl.replace(/\/+$/, "");
-const currentLegalPageDate = "2026-07-30";
+const currentLegalPageDate = "2026-08-29";
 const failures = [];
 
 const assert = (condition, message) => {
@@ -42,6 +42,8 @@ assert(Array.isArray(readiness.json?.missing?.required), "/ready missing.require
 assert(readiness.json?.missing?.required?.length === 0, "/ready must have no missing required config");
 assert(readiness.json?.providers?.realtime_translation === "configured", "/ready realtime translation provider must be configured");
 assert(readiness.json?.providers?.report_webhook === "configured", "/ready report triage must be configured");
+assert(readiness.json?.providers?.product_analytics === "configured", "/ready product analytics must be configured");
+assert(readiness.json?.providers?.error_monitoring === "configured", "/ready error monitoring must be configured");
 
 for (const path of ["/privacy", "/terms", "/support"]) {
   const page = await getText(path);
@@ -55,6 +57,11 @@ for (const path of ["/privacy", "/terms", "/support"]) {
   assert(!/\btap Start\b|\bStart a session\b|\bstart a live session\b/.test(page.body), `${path} must not include stale Start CTA copy`);
   assert(page.body.includes(currentLegalPageDate), `${path} must include the current legal page date`);
 }
+
+const privacyPage = await getText("/privacy");
+assert(privacyPage.body.includes("PostHog US"), "/privacy must disclose PostHog US");
+assert(privacyPage.body.includes("Sentry"), "/privacy must disclose Sentry");
+assert(privacyPage.body.includes("never include microphone audio"), "/privacy must prohibit conversation content in analytics");
 
 if (failures.length > 0) {
   console.error(`Production Worker validation failed for ${baseUrl}:`);

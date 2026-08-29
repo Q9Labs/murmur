@@ -26,7 +26,7 @@ The live listings do not yet have enough traffic to support statistical ASO deci
 | Google Play, previous 28 days | 419 device impressions, 11 listing visitors, 1 acquisition, and no first-open or retention data | The listing-level conversion result is suppressed, so the 3.7 percent overview figure is not reliable enough for a decision. |
 | Ratings and reviews | No public rating summary on either store | Murmur has no trust signal in search results or on its product pages. |
 | Experiments | No App Store product page or Play listing experiments | There is no creative learning history. |
-| Product analytics | No acquisition or product analytics SDK in the mobile app | Store downloads cannot yet be connected to successful caption sessions. |
+| Product analytics | Content-free mobile and Worker events pass through a strict Worker schema to PostHog US | Activation, latency, retention, quality proxies, failures, and direct tagged launches can be measured without sending captions or audio. |
 
 The public App Store listing is in Utilities and exposes only English as the interface language. The Google Play listing shows `1+` downloads. The previous screenshot sets were removed intentionally because they did not explain a use case or show the rolling-caption experience that differentiates Murmur. The replacement set is pending redesign.
 
@@ -53,9 +53,9 @@ The repository-owned English metadata should use the following search structure:
 | App name/title | `Murmur: Live Voice Translator` |
 | App Store subtitle | `Captions for travel & talks` |
 | App Store keyword field | `interpreter,conference,meeting,event,tour,lecture,arabic,urdu,hindi,spanish,french,german,transcribe` |
-| Google Play short description | `Live translated captions for tours, talks, and conferences. No account needed.` |
+| Google Play short description | `Live translated captions with 30 free minutes each month. No sign-up needed.` |
 | Primary message | Follow ongoing speech in another language through live captions. |
-| Trust message | No account and no saved cloud transcript history. |
+| Trust message | Start without sign-up; no saved cloud transcript history by default. |
 | Supporting message | Live sessions handle short exchanges, tours, lectures, talks, and other ongoing speech. |
 
 The App Store keyword field avoids repeating exact words already present in the name and subtitle, which leaves room for use cases and language terms. The public Apple search snapshot suggests the English clusters `voice translator`, `live translator`, `speech translator`, `real time translation`, and `Arabic translator`, plus the Arabic clusters `مترجم صوتي`, `ترجمة صوتية`, and `ترجمة مباشرة`. Real Apple Ads popularity and bid data are still required before assigning spend; the CollabEZ Apple Ads account has not been created.
@@ -74,7 +74,7 @@ The first three screenshots need to show value before setup:
 4. **Short exchange or ongoing speech.** Show the live caption flow without implying a two-way conversation feature.
 5. **15 supported languages, including Arabic.** Show the language picker with accurate availability.
 6. **Translated speech when available.** Show translated audio without making speech output look more reliable than captions.
-7. **No account. No saved transcript history.** Explain the privacy benefit in plain language.
+7. **30 free minutes. No saved transcript history.** Explain the free allowance and privacy benefit in plain language.
 
 Every screenshot must use the current shipping interface and a successful real caption session. Marketing overlays may clarify the benefit, but the underlying app state cannot be fabricated. The Android feature graphic should use the same first message rather than a generic logo composition.
 
@@ -132,8 +132,8 @@ Each page should show a real demo, name the supported languages and limits, link
 
 ASO copy will not compensate for failed activation. The following product changes have direct growth value:
 
-1. **Instrument a qualified session.** Count a user as activated only after Murmur commits a translated caption and the live session either runs for at least 60 seconds or commits at least two translated captions. Store download counts alone cannot distinguish curiosity from product value.
-2. **Add privacy-conscious acquisition events.** Record first open, onboarding completion, microphone permission outcome, session start, first committed caption, qualified session, session end, language pair, session duration, non-content error code, and normalized campaign source. Keep the install identifier hashed and never send raw audio or caption text to analytics.
+1. **Use first committed translation as activation.** Store download counts alone cannot distinguish curiosity from product value, so activation occurs only after Murmur commits a translated caption.
+2. **Maintain privacy-conscious acquisition events.** Record first open, onboarding completion, session start, first committed caption, successful session end, language pair, session duration, non-content error code, and normalized campaign source. Keep the install identifier hashed and never send raw audio or caption text to analytics.
 3. **Add a rating prompt after success.** Ask only after several successful sessions and never while the microphone is active or after an error. Apple recommends requesting a review after a completed task when the user is likely to feel satisfied. [Apple ratings and reviews](https://developer.apple.com/app-store/ratings-and-reviews/)
 4. **Localize the whole interface into Arabic.** Verify right-to-left layout, native copy, permission context, language names, caption rendering, support, and real Arabic speech before buying Arabic-language installs.
 5. **Expose a simple share path.** After a successful ended session, let the user share Murmur's store link with a short use-case message. Do not share captions unless the product later adds an explicit, privacy-reviewed export.
@@ -161,7 +161,7 @@ Report every stage by store, country, campaign, product page, language pair, and
 Before paid spend:
 
 1. Publish the revised English metadata with current, benefit-led screenshots.
-2. Add qualified-session analytics, a success-timed rating prompt, and campaign attribution that does not collect caption content.
+2. Verify activation analytics, the success-timed rating prompt, and campaign attribution without collecting caption content.
 3. Verify real English-to-Arabic and Arabic-to-English sessions on current iOS and Android builds in quiet speech, background noise, a tour-like setting, and a talk from several meters away.
 4. Run moderated tests with at least ten travelers and ten talk attendees, then fix repeated onboarding or caption failures before using their behavior as an acquisition benchmark.
 

@@ -1,1 +1,1 @@
-Adds a polished light and dark design, clearer live captions, improved language selection, optional translated audio, and direct privacy, terms, support, and local-data controls.
+Adds a draggable live-caption bubble and keeps the newest translated text visible as captions fill.

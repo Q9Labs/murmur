@@ -32,7 +32,19 @@ describe("home status helpers", () => {
     expect(getStatusText("live", null)).toBe("Health OK");
     expect(getStatusText("recovering", null)).toBe("Recovering");
     expect(getStatusText("idle", "realtime_transport_error")).toBe("Network degraded");
-    expect(getStatusText("requesting_mic_permission", null)).toBe("Microphone");
+    expect(getStatusText("idle", "worker_session_network_error")).toBe("Service unavailable");
+    expect(getStatusText("idle", "provider_unavailable")).toBe("Service unavailable");
+    expect(getStatusText("idle", "realtime_invalid_api_key")).toBe("Service unavailable");
+    expect(getStatusText("idle", "microphone_permission_denied")).toBe("Microphone access needed");
+    expect(getStatusText("requesting_mic_permission", null)).toBe("Checking microphone");
+    expect(getStatusText("requesting_mic_permission", null, "checking_device")).toBe(
+      "Checking device",
+    );
+    expect(getStatusText("checking_device", null)).toBe("Checking device");
+    expect(getStatusText("creating_session", null)).toBe("Starting AI");
+    expect(getStatusText("connecting_realtime", null)).toBe("Starting AI");
+    expect(getStatusText("idle", null, "checking_microphone")).toBe("Checking microphone");
+    expect(getStatusText("idle", null, "checking_device")).toBe("Checking device");
 
     expect(getHealthText("live", null)).toBe("OK");
     expect(getHealthText("network_degraded", null)).toBe("Degraded");
@@ -43,7 +55,7 @@ describe("home status helpers", () => {
   it("formats live and report errors into user-facing copy", () => {
     expect(formatLiveError("provider_unavailable")).toContain("provider is unavailable");
     expect(formatLiveError("worker_session_http_503")).toContain("translation service");
-    expect(formatLiveError("realtime_server_error")).toContain("failed");
+    expect(formatLiveError("realtime_server_error")).toContain("unavailable");
     expect(formatLiveError("unknown_code")).toContain("unknown_code");
 
     expect(formatReportError("report_rate_limited")).toContain("Too many reports");

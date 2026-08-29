@@ -34,6 +34,9 @@ export function BloomShell(props: VariantShellProps): ReactNode {
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
+        <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
+          {viewModel.statusText}
+        </Text>
         <TextLanguageRow
           containerStyle={styles.languageRow}
           onOpenPicker={props.onOpenPicker}
@@ -49,7 +52,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel="Listen"
+          startLabel={live.error && live.error !== "microphone_permission_denied" ? "Try again" : "Listen"}
           stopLabel="Stop"
           style={styles.listenPill}
           textStyle={styles.listenPillText}

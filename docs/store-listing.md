@@ -6,7 +6,7 @@ Replaces the current fastlane metadata copy. Two corrections baked in: the live 
 Murmur: Live Voice Translator
 
 ## Short description
-Live translated captions for tours, talks, and lectures — no account, no setup.
+Live translated captions with 30 free minutes each month. No sign-up needed.
 
 ## Google Play full description
 The tour guide is speaking. The lecture is running. The sermon has started. And it's all in a language you don't speak.
@@ -22,10 +22,12 @@ Made for listening, not conversation
 13 languages
 English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-No account, no organizer, no equipment
-- Nothing to sign up for; sessions start from one tap.
+Start free, then keep your time
+- A durable guest account starts with 30 translation minutes each month; there is nothing to sign up for.
+- Murmur Pro includes 3 hours each month, with monthly and annual plans.
+- Non-expiring 60, 180, and 540 minute credit packs add time when you need it.
 - No interpretation headsets, event codes, or organizer setup — Murmur works for you, the person in the seat.
-- Privacy controls built in: Reset Identity and Delete Local Data whenever you like.
+- Link an email for recovery, restore store purchases, or delete the account in the app.
 - Audio and transcripts are not retained by default.
 
 Built for real rooms
@@ -42,7 +44,7 @@ Live captions in 13 languages
 interpreter,conference,meeting,tour,lecture,sermon,arabic,hindi,spanish,speech,translate,transcribe
 
 ## Apple App Store promotional text
-Tours, lectures, sermons, conferences — follow them all in your language with live translated captions. No account, no organizer setup, just tap Listen.
+Follow tours, talks, and lectures with live translated captions. Start with 30 free minutes each month, then add Pro or non-expiring credit packs.
 
 ## Apple App Store description
 The tour guide is speaking. The lecture is running. The sermon has started. And it's all in a language you don't speak.
@@ -58,10 +60,12 @@ Made for listening, not conversation:
 13 languages:
 English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-No account, no organizer, no equipment:
-- Nothing to sign up for; sessions start from one tap.
+Start free, then keep your time:
+- A durable guest account starts with 30 translation minutes each month; there is nothing to sign up for.
+- Murmur Pro includes 3 hours each month, with monthly and annual plans.
+- Non-expiring 60, 180, and 540 minute credit packs add time when you need it.
 - No interpretation headsets, event codes, or organizer setup.
-- Privacy controls built in: Reset Identity and Delete Local Data whenever you like.
+- Link an email for recovery, restore store purchases, or delete the account in the app.
 - Audio and transcripts are not retained by default.
 
 Built for real rooms:
@@ -71,10 +75,10 @@ Built for real rooms:
 Murmur needs an internet connection and a microphone — that's it.
 
 ## Google testing instructions
-No account required. Grant microphone permission, pick a target language (or leave source on auto-detect), and tap Listen while someone speaks — captions appear live. An internet connection is required; translation runs through Murmur's service, not on device.
+A guest account is created automatically. Grant microphone permission, pick a target language, and tap Listen while someone speaks. Use Account & Billing to test a Google Play sandbox purchase or Restore Purchases, then confirm the server-verified balance updates. An internet connection is required.
 
 ## Apple review notes
-No account required. Microphone is used only during an active Listen session; audio is streamed for recognition and translation and is not retained by default. An internet connection is required. To test: grant mic access, choose a target language, tap Listen, and speak in any supported language.
+A guest account is created automatically. Microphone audio is used only during an active Listen session and is not retained by default. To test billing, open Account & Billing, complete an Apple sandbox purchase or Restore Purchases, and confirm the server-verified balance updates.
 
 ## Claims deliberately avoided (keep it this way)
 15 languages / Urdu, Turkish, or Indonesian; offline or on-device translation; two-way conversation features; camera/document translation; organizer or enterprise event features; accuracy guarantees; "unlimited use" (session and rate limits exist); background/lock-screen listening (spec vs. code conflict unresolved); "free forever"; "no data collected" (anonymous install ID and diagnostics exist).

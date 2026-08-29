@@ -128,6 +128,7 @@ function shellProps(params: {
   };
   const liveState = {
     error: "network_error",
+    preparation_status: "ready" as const,
     report_error: "translation_error",
     report_receipt_id: "receipt-123456",
     spans: params.hasTimeline ? [committed, partial] : [],
