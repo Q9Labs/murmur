@@ -10,6 +10,8 @@ import type { SessionPreparationStatus } from "./sessionPreparation";
 
 export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
+  analytics_enabled: boolean;
+  network_type: string;
   playback_enabled: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;

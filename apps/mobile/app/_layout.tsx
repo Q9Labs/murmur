@@ -1,11 +1,15 @@
+import * as Sentry from "@sentry/react-native";
 import { Stack } from "expo-router";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useMurmurTheme } from "../src/home/theme";
+import { initializeSentry } from "../src/lib/observability/sentry";
 
-export default function RootLayout(): ReactNode {
+initializeSentry();
+
+function RootLayout(): ReactNode {
   const colors = useMurmurTheme();
 
   useEffect(() => {
@@ -21,3 +25,5 @@ export default function RootLayout(): ReactNode {
     />
   );
 }
+
+export default Sentry.wrap(RootLayout);

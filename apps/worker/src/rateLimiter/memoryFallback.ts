@@ -7,7 +7,11 @@ import {
   type LimitResult,
   reserveRealtimeSession,
 } from "../limits";
-import { canAcceptReportWithStores, pruneReportInboxWithStores } from "./stateAdapter";
+import {
+  canAcceptReportWithStores,
+  canAcceptTelemetryWithStores,
+  pruneReportInboxWithStores,
+} from "./stateAdapter";
 import type {
   AppAttestDeviceRecord,
   DurableLimitRequest,
@@ -18,6 +22,7 @@ const reportTimestampsBySession = new Map<string, number[]>();
 const reportInboxById = new Map<string, ReportInboxRecord>();
 const reportInboxOrder: string[] = [];
 const appAttestDevicesByKeyId = new Map<string, AppAttestDeviceRecord>();
+const telemetryTimestampsByClient = new Map<string, number[]>();
 
 export function callMemoryLimiter(body: DurableLimitRequest): unknown {
   switch (body.action) {
@@ -34,6 +39,12 @@ export function callMemoryLimiter(body: DurableLimitRequest): unknown {
       });
     case "can_accept_report":
       return canAcceptReportMemory(body.app_session_id, body.now_ms);
+    case "can_accept_telemetry":
+      return canAcceptTelemetryWithStores(
+        body.hashed_client_id,
+        body.now_ms,
+        telemetryTimestampsByClient,
+      );
     case "store_report":
       reportInboxById.set(body.report.report_id, body.report);
       reportInboxOrder.unshift(body.report.report_id);

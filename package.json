@@ -23,6 +23,8 @@
     "dev:worker": "pnpm run worker:dev",
     "worker:dev": "node tooling/scripts/dev-log.mjs worker:dev:raw",
     "worker:dev:raw": "pnpm --filter @murmur/worker dev",
+    "worker:deploy:development": "pnpm --filter @murmur/worker deploy:development",
+    "worker:deploy:production": "pnpm --filter @murmur/worker deploy:production",
     "gate": "bash tooling/gates/commit.sh",
     "gate:explain": "sed -n '1,240p' tooling/gates/README.md",
     "hooks:install": "lefthook install",

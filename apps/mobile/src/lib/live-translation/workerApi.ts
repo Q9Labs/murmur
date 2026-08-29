@@ -20,6 +20,7 @@ export async function requestMicrophonePermission(): Promise<boolean> {
 
 export async function createWorkerSession(body: {
   acquisition?: AcquisitionContext;
+  analytics_enabled: boolean;
   app_install_id: string;
   device_integrity: DeviceIntegrityPayload;
   source_language: SourceLanguageCode;

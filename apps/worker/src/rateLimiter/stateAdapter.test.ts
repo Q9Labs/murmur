@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   canAcceptReportWithStores,
+  canAcceptTelemetryWithStores,
   createEmptyDurableLimitState,
   createMemoryAdapter,
   pruneReportInboxWithStores,
@@ -11,6 +12,23 @@ import {
 const nowMs = 2_000_000_000_000;
 
 describe("durable rate-limit state adapter", () => {
+  it("bounds telemetry ingestion per hashed network client", () => {
+    const telemetry = new Map<string, number[]>();
+    for (let index = 0; index < 120; index += 1) {
+      expect(canAcceptTelemetryWithStores("client_1", index, telemetry)).toEqual({ ok: true });
+    }
+    expect(canAcceptTelemetryWithStores("client_1", 120, telemetry)).toEqual({
+      code: "telemetry_rate_limited",
+      ok: false,
+      retry_after_ms: 3_599_880,
+    });
+
+    const state = createEmptyDurableLimitState();
+    state.telemetry_timestamps_by_client.client_1 = [0];
+    pruneState(state, 60 * 60 * 1000 + 1);
+    expect(state.telemetry_timestamps_by_client).toEqual({});
+  });
+
   it("persists sessions, reports, and App Attest devices", () => {
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
     const state = createEmptyDurableLimitState();

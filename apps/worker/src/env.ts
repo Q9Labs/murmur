@@ -12,10 +12,13 @@ export type Env = {
   MURMUR_REQUIRE_DEVICE_INTEGRITY?: string;
   OPENAI_API_KEY?: string;
   OPENAI_REALTIME_MODEL?: string;
+  POSTHOG_PROJECT_TOKEN?: string;
   RATE_LIMITER?: DurableObjectNamespace;
   REPORT_WEBHOOK_URL?: string;
   REPORT_ADMIN_TOKEN?: string;
   SESSION_HASH_SALT?: string;
+  SENTRY_DSN?: string;
+  SENTRY_RELEASE?: string;
 };
 
 export type WorkerReadiness = {
@@ -26,6 +29,8 @@ export type WorkerReadiness = {
   };
   ok: boolean;
   providers: {
+    error_monitoring: "configured" | "missing_required";
+    product_analytics: "configured" | "missing_required";
     realtime_translation: "configured" | "missing_required";
     report_webhook: "configured" | "missing_optional";
   };
@@ -36,6 +41,10 @@ export function getReadiness(env: Env): WorkerReadiness {
   const required = [
     !realtimeApiKey ? "OPENAI_API_KEY" : null,
     env.MURMUR_ENV === "production" && !env.SESSION_HASH_SALT ? "SESSION_HASH_SALT" : null,
+    env.MURMUR_ENV === "production" && !env.POSTHOG_PROJECT_TOKEN
+      ? "POSTHOG_PROJECT_TOKEN"
+      : null,
+    env.MURMUR_ENV === "production" && !env.SENTRY_DSN ? "SENTRY_DSN" : null,
   ].filter((item): item is string => Boolean(item));
   const optional = [
     !env.REPORT_WEBHOOK_URL && !env.REPORT_ADMIN_TOKEN ? "REPORT_WEBHOOK_URL_OR_REPORT_ADMIN_TOKEN" : null,
@@ -49,6 +58,8 @@ export function getReadiness(env: Env): WorkerReadiness {
     },
     ok: required.length === 0,
     providers: {
+      error_monitoring: env.SENTRY_DSN ? "configured" : "missing_required",
+      product_analytics: env.POSTHOG_PROJECT_TOKEN ? "configured" : "missing_required",
       realtime_translation: realtimeApiKey ? "configured" : "missing_required",
       report_webhook: env.REPORT_WEBHOOK_URL || env.REPORT_ADMIN_TOKEN ? "configured" : "missing_optional",
     },

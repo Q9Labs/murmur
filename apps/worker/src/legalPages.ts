@@ -7,7 +7,7 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-07-30";
+const lastUpdated = "2026-08-29";
 const marketingUpdated = "2026-07-30";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
@@ -337,15 +337,18 @@ export const legalPages: Record<string, Page> = {
       <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
       <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
-      <p><strong>Diagnostics and latency telemetry.</strong> Murmur may process timing, OpenAI Realtime metadata, error codes, language pair, network type, and request/session identifiers to debug reliability and measure latency. Logs should not include raw microphone audio, source captions, translated captions, OpenAI credentials, or generated speech audio by default.</p>
+      <p><strong>Product analytics, diagnostics, and latency telemetry.</strong> Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. Events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include microphone audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.</p>
+      <p>The app sends analytics events to Murmur's Cloudflare Worker. The Worker validates a fixed event schema, hashes the anonymous install identifier, and forwards the allowed event properties to PostHog US. PostHog does not receive the raw install identifier or the device's IP address from Murmur. Murmur disables PostHog person profiles, geolocation, autocapture, and session replay.</p>
+      <p>Murmur uses Sentry for crash, error, and sampled performance monitoring. Murmur disables screenshots, view hierarchy capture, session replay, request bodies, cookies, query strings, user fields, and default personally identifiable information. Sentry may receive a sanitized stack trace, operation and error categories, release, environment, app session identifier, and limited performance timing. Sentry does not receive conversation content from Murmur.</p>
       <h2>Third-Party Processors</h2>
-      <p>Murmur uses Cloudflare for the Worker gateway and OpenAI Realtime for live transcription, translation, and translated speech. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
+      <p>Murmur uses Cloudflare for the Worker gateway, OpenAI Realtime for live transcription and translation, PostHog US for anonymous product analytics, and Sentry for sanitized error and performance monitoring. Murmur requires third-party processors that handle user data for Murmur to provide the same or equal protection for that data as described in this policy and required by applicable App Store privacy rules.</p>
       <h2>Retention</h2>
-      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous session, campaign, and rate-limit metadata is retained only as needed for abuse prevention, diagnostics, acquisition measurement, and service operation. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review.</p>
+      <p>Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous analytics, diagnostics, session, campaign, and rate-limit metadata is retained only as needed for product measurement, abuse prevention, debugging, and service operation, then deleted or anonymized under Murmur's provider retention settings. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review.</p>
       <h2>Your Choices</h2>
       <ul>
         <li>Stop or cancel a live session at any time.</li>
         <li>Use translated captions even when speech output is unavailable.</li>
+        <li>Turn Anonymous Analytics off or on in Settings. Analytics is on by default until you turn it off. Turning it off stops new PostHog product analytics events; essential sanitized crash and error monitoring can continue.</li>
         <li>Reset Murmur Identity in the app.</li>
         <li>Delete Local Data in the app.</li>
         <li>Contact support to request deletion of server-side diagnostics or report records tied to a report receipt or anonymous install/session metadata.</li>

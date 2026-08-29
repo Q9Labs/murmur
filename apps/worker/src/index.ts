@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import * as Sentry from "@sentry/cloudflare";
+
 import {
   getReadiness,
   type Env,
@@ -10,12 +12,14 @@ import {
 } from "./http/response";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
+import { getSentryOptions } from "./observability/sentry";
 import {
   closeSessionDurable,
   RateLimitDurableObject,
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
 import { createSession } from "./routes/session";
+import { captureMobileTelemetry } from "./routes/telemetry";
 import { connectRealtimeSocket } from "./sockets/realtime";
 
 export { RateLimitDurableObject };
@@ -28,8 +32,8 @@ export {
   parseTranslationOutput,
 } from "./providers/openaiRealtime";
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+const handler = {
+  async fetch(request: Request, env: Env, context?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -55,11 +59,15 @@ export default {
     }
 
     if (url.pathname === "/v2/session" && request.method === "POST") {
-      return createSession(request, env);
+      return createSession(request, env, context);
     }
 
     if (url.pathname === "/v2/realtime" && request.headers.get("Upgrade") === "websocket") {
-      return connectRealtimeSocket(request, env);
+      return connectRealtimeSocket(request, env, context);
+    }
+
+    if (url.pathname === "/v1/telemetry" && request.method === "POST") {
+      return captureMobileTelemetry(request, env, context);
     }
 
     if (url.pathname === "/v1/report" && request.method === "POST") {
@@ -99,4 +107,6 @@ export default {
 
     return json({ error: "not_found" }, 404);
   },
-};
+} satisfies ExportedHandler<Env>;
+
+export default Sentry.withSentry(getSentryOptions, handler);

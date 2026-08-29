@@ -27,6 +27,7 @@ words:
   - appattest
   - appiconset
   - aacute
+  - autocapture
   - automatable
   - backpressure
   - Bahnhof
@@ -62,6 +63,8 @@ words:
   - ferroviaria
   - fputs
   - gare
+  - geolocation
+  - geoip
   - Gitleaks
   - gplay
   - gradlew
@@ -110,6 +113,9 @@ words:
   - preventrecord
   - Portuguese
   - Portugu
+  - posthog
+  - PostHog
+  - POSTHOG
   - Q9Labs
   - rarr
   - readback

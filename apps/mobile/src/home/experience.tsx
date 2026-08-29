@@ -22,6 +22,7 @@ const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
 };
 
 export function HomeExperience(props: {
+  anonymousAnalyticsEnabled: boolean;
   audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
   autoScrollRef: MutableRefObject<boolean>;
@@ -32,6 +33,7 @@ export function HomeExperience(props: {
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
   onCloseSettings: () => void;
+  onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onDeleteLocalData: () => void;
   onOpenDiagnostics: () => void;
@@ -78,9 +80,11 @@ export function HomeExperience(props: {
         targetLanguageCode={props.targetLanguageCode}
       />
       <SettingsModal
+        anonymousAnalyticsEnabled={props.anonymousAnalyticsEnabled}
         developerToolsEnabled={props.developerToolsEnabled}
         live={props.live}
         onClose={props.onCloseSettings}
+        onAnonymousAnalyticsEnabledChange={props.onAnonymousAnalyticsEnabledChange}
         onDeleteLocalData={props.onDeleteLocalData}
         onOpenDiagnostics={props.onOpenDiagnostics}
         onResetIdentity={props.onResetIdentity}
