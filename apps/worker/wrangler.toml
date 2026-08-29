@@ -1,6 +1,8 @@
 name = "murmur-worker"
 main = "src/index.ts"
 compatibility_date = "2026-05-16"
+compatibility_flags = ["nodejs_compat"]
+upload_source_maps = true
 workers_dev = true
 
 [[durable_objects.bindings]]

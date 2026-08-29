@@ -55,6 +55,8 @@ export class RateLimitDurableObject {
         return adapter.reserveRealtimeSession(body.app_session_id, body.now_ms);
       case "can_accept_report":
         return adapter.canAcceptReport(body.app_session_id, body.now_ms);
+      case "can_accept_telemetry":
+        return adapter.canAcceptTelemetry(body.hashed_client_id, body.now_ms);
       case "store_report":
         adapter.storeReport(body.report);
         return { ok: true };
@@ -193,6 +195,33 @@ export async function canAcceptReportDurable(params: {
     app_session_id: params.app_session_id,
     now_ms: params.now_ms,
   })) as LimitResult;
+}
+
+export async function canAcceptTelemetryDurable(params: {
+  hashed_client_id: string;
+  namespace?: DurableObjectNamespace;
+  now_ms: number;
+}): Promise<LimitResult> {
+  const result = await callRateLimiter(params.namespace, {
+    action: "can_accept_telemetry",
+    hashed_client_id: params.hashed_client_id,
+    now_ms: params.now_ms,
+  });
+  if (typeof result !== "object" || result === null || !("ok" in result)) {
+    return { code: "rate_limiter_invalid_response", ok: false };
+  }
+  if (result.ok === true) {
+    return { ok: true };
+  }
+  if (result.ok !== false || !("code" in result) || typeof result.code !== "string") {
+    return { code: "rate_limiter_invalid_response", ok: false };
+  }
+  const retryAfterMs = "retry_after_ms" in result && typeof result.retry_after_ms === "number"
+    ? result.retry_after_ms
+    : undefined;
+  return retryAfterMs === undefined
+    ? { code: result.code, ok: false }
+    : { code: result.code, ok: false, retry_after_ms: retryAfterMs };
 }
 
 export async function storeReportDurable(params: {

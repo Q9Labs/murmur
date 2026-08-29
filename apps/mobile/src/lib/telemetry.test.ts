@@ -60,8 +60,8 @@ describe("mobile telemetry privacy preference", () => {
 
   it("sends only the closed app-open payload when analytics is enabled", async () => {
     await expect(initializeAnonymousAnalytics()).resolves.toBe(true);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body).toEqual({
       app_install_id: "install-id-123456",
@@ -91,5 +91,23 @@ describe("mobile telemetry privacy preference", () => {
     expect(String(fetchMock.mock.calls[0]?.[1]?.body)).toContain(
       '"event":"mobile_analytics_preference_changed"',
     );
+  });
+
+  it("keeps analytics off when opt-out delivery fails", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("network unavailable"));
+
+    await expect(updateAnonymousAnalyticsEnabled(false)).resolves.toBeUndefined();
+    captureMobileTelemetry({
+      event: "mobile_listen_tapped",
+      network_type: "wifi",
+      playback_enabled: true,
+      source_language: "en",
+      target_language: "ar",
+    });
+    await Promise.resolve();
+
+    expect(dependencies.setAnonymousAnalyticsEnabled).toHaveBeenCalledWith(false);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(dependencies.captureMobileFailure).toHaveBeenCalledOnce();
   });
 });

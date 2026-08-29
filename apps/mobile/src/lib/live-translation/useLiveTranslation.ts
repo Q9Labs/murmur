@@ -404,6 +404,8 @@ export function useLiveTranslation(
     void receiveRealtimeEvent(event);
   }
 
+  // This existing dispatcher mirrors the closed realtime event protocol in one place.
+  // fallow-ignore-next-line complexity
   async function receiveRealtimeEvent(
     event: RealtimeTranslationClientEvent,
   ): Promise<void> {

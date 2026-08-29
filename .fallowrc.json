@@ -13,6 +13,7 @@
   ],
   "ignoreDependencies": [
     "@react-navigation/native",
+    "@sentry/cli",
     "babel-preset-expo",
     "react-native-web"
   ],

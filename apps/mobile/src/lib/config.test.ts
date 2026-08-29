@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getUiPreviewScreen, getWorkerBaseUrl } from "./config";
+import { getSentryDsn, getUiPreviewScreen, getWorkerBaseUrl } from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -26,6 +26,16 @@ describe("Worker URL config", () => {
     vi.stubEnv("NODE_ENV", "production");
 
     expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
+  });
+});
+
+describe("Sentry config", () => {
+  it("returns only a non-empty public DSN", () => {
+    vi.stubEnv("EXPO_PUBLIC_SENTRY_DSN", " https://public@sentry.example/1 ");
+    expect(getSentryDsn()).toBe("https://public@sentry.example/1");
+
+    vi.stubEnv("EXPO_PUBLIC_SENTRY_DSN", "");
+    expect(getSentryDsn()).toBeUndefined();
   });
 });
 

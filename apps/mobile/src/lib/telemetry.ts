@@ -7,21 +7,17 @@ import {
   getAnonymousAnalyticsEnabled,
   setAnonymousAnalyticsEnabled,
 } from "./anonymousAnalytics";
-import { getWorkerBaseUrl } from "./config";
 import { getOrCreateInstallId } from "./installIdentity";
 import { captureMobileFailure } from "./observability/sentry";
+import { deliverMobileTelemetryRequest } from "./providers/mobileTelemetry";
 
-let anonymousAnalyticsEnabled = true;
+let anonymousAnalyticsEnabled = false;
 
 export async function initializeAnonymousAnalytics(): Promise<boolean> {
   anonymousAnalyticsEnabled = await getAnonymousAnalyticsEnabled();
   if (anonymousAnalyticsEnabled) {
-    await deliverMobileTelemetry(createAppLifecycleEvent("mobile_app_opened"));
+    captureMobileTelemetry(createAppLifecycleEvent("mobile_app_opened"));
   }
-  return anonymousAnalyticsEnabled;
-}
-
-export function isAnonymousAnalyticsEnabled(): boolean {
   return anonymousAnalyticsEnabled;
 }
 
@@ -32,12 +28,12 @@ export async function updateAnonymousAnalyticsEnabled(enabled: boolean): Promise
   if (enabled) {
     await setAnonymousAnalyticsEnabled(true);
     anonymousAnalyticsEnabled = true;
-    await deliverMobileTelemetry(createAnalyticsPreferenceEvent(true));
+    await deliverMobileTelemetryBestEffort(createAnalyticsPreferenceEvent(true));
     return;
   }
-  await deliverMobileTelemetry(createAnalyticsPreferenceEvent(false));
-  await setAnonymousAnalyticsEnabled(false);
   anonymousAnalyticsEnabled = false;
+  await setAnonymousAnalyticsEnabled(false);
+  await deliverMobileTelemetryBestEffort(createAnalyticsPreferenceEvent(false));
 }
 
 export async function resetAnonymousAnalyticsPreference(): Promise<void> {
@@ -49,9 +45,7 @@ export function captureMobileTelemetry(payload: MobileTelemetryEvent): void {
   if (!anonymousAnalyticsEnabled) {
     return;
   }
-  void deliverMobileTelemetry(payload).catch((failure: unknown) => {
-    captureMobileFailure(failure, { operation: "mobile_telemetry_delivery" });
-  });
+  void deliverMobileTelemetryBestEffort(payload);
 }
 
 export function captureOnboardingCompleted(): void {
@@ -60,13 +54,14 @@ export function captureOnboardingCompleted(): void {
 
 async function deliverMobileTelemetry(payload: MobileTelemetryEvent): Promise<void> {
   const appInstallId = await getOrCreateInstallId();
-  const response = await fetch(`${getWorkerBaseUrl()}/v1/telemetry`, {
-    body: JSON.stringify({ app_install_id: appInstallId, payload }),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
-  if (!response.ok) {
-    throw new Error(`mobile_telemetry_http_${response.status}`);
+  await deliverMobileTelemetryRequest({ app_install_id: appInstallId, payload });
+}
+
+async function deliverMobileTelemetryBestEffort(payload: MobileTelemetryEvent): Promise<void> {
+  try {
+    await deliverMobileTelemetry(payload);
+  } catch (failure) {
+    captureMobileFailure(failure, { operation: "mobile_telemetry_delivery" });
   }
 }
 

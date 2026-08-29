@@ -187,7 +187,7 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
-  const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState(true);
+  const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
@@ -214,7 +214,7 @@ export default function HomeScreen(): ReactNode {
 
   const live = useLiveTranslation({
     acquisition,
-    analytics_enabled: anonymousAnalyticsEnabled,
+    analytics_enabled: anonymousAnalyticsEnabled === true,
     network_type: networkType,
     playback_enabled: audioPlaybackEnabled,
     source_language: sourceLanguageCode,
@@ -248,10 +248,33 @@ export default function HomeScreen(): ReactNode {
   }, [acquisition, live.status]);
 
   useEffect(() => {
-    if (privacyAcknowledged && onboardingStep === "done") {
+    if (
+      anonymousAnalyticsEnabled !== null &&
+      privacyAcknowledged &&
+      onboardingStep === "done"
+    ) {
       void live.prepare();
     }
-  }, [live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
+    let mounted = true;
+    void initializeAnonymousAnalytics()
+      .then((enabled) => {
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(enabled);
+        }
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(false);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     void initializeAnonymousAnalytics()
@@ -351,6 +374,10 @@ export default function HomeScreen(): ReactNode {
   }
 
   async function startLiveTranslation(): Promise<void> {
+    if (anonymousAnalyticsEnabled === null) {
+      setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
+      return;
+    }
     await audioPreferenceController.waitForRestore();
     await live.start();
   }
@@ -407,7 +434,7 @@ export default function HomeScreen(): ReactNode {
 
   return (
     <HomeExperience
-      anonymousAnalyticsEnabled={anonymousAnalyticsEnabled}
+      anonymousAnalyticsEnabled={anonymousAnalyticsEnabled ?? false}
       audioPlaybackEnabled={audioPlaybackEnabled}
       audioState={audioState}
       autoScrollRef={autoScrollRef}

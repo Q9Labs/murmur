@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/react-native";
 
+import { getSentryDsn } from "../config";
+
 export type MobileFailureContext = {
   app_session_id?: string;
   error_code?: string;
@@ -14,7 +16,7 @@ export function initializeSentry(): void {
     return;
   }
   initialized = true;
-  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+  const dsn = getSentryDsn();
   Sentry.init({
     attachScreenshot: false,
     attachStacktrace: true,
@@ -54,19 +56,6 @@ export function captureMobileFailure(
   Sentry.captureMessage(context.operation, {
     level: "error",
     tags,
-  });
-}
-
-export function captureMobileFailureCode(context: MobileFailureContext): void {
-  Sentry.captureMessage("mobile_operation_failed", {
-    fingerprint: [context.operation, context.error_code ?? "unknown"],
-    level: "error",
-    tags: {
-      app_session_id: context.app_session_id ?? "none",
-      error_code: context.error_code ?? "unknown",
-      operation: context.operation,
-      stage: context.stage ?? "unknown",
-    },
   });
 }
 

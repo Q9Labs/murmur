@@ -6,6 +6,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "eas-build-on-success": "node ../../tooling/scripts/link-mobile-sentry-release.mjs",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "unit": "vitest run"
@@ -13,9 +14,10 @@
   "dependencies": {
     "@murmur/protocol": "workspace:*",
     "@react-navigation/native": "^7.1.8",
-    "expo": "~54.0.36",
-    "expo-constants": "~18.0.12",
-    "expo-file-system": "~19.0.23",
+    "@sentry/react-native": "~7.2.0",
+    "expo": "~54.0.37",
+    "expo-constants": "~18.0.14",
+    "expo-file-system": "~19.0.24",
     "expo-linking": "~8.0.12",
     "expo-network": "~8.0.8",
     "expo-router": "~6.0.24",
@@ -33,6 +35,7 @@
     "react-native-web": "~0.21.0"
   },
   "devDependencies": {
+    "@sentry/cli": "3.6.2",
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
     "babel-preset-expo": "~54.0.10",

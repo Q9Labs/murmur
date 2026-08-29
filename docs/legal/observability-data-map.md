@@ -9,6 +9,7 @@ Murmur uses PostHog US for anonymous product analytics and Sentry for sanitized 
 ```text
 Murmur mobile
   -> Cloudflare Worker schema validation
+  -> Worker hashes the connecting network address for a one-hour abuse limit
   -> Worker hashes the anonymous install id
   -> PostHog US receives only allowlisted event properties
 
@@ -26,6 +27,8 @@ Murmur mobile and Worker
 - Failures use bounded stage and error codes, component, app release, environment, language pair, broad network type, and session outcome.
 
 Every PostHog event includes `product=murmur`, `component=mobile|worker`, `environment`, and `telemetry_schema_version=1`. The PostHog distinct ID is a one-way Worker hash. Murmur sends `$geoip_disable=true`, `$ip=null`, and `$process_person_profile=false` with every capture.
+
+The Worker uses a separate one-way hash of the connecting network address to limit analytics ingestion to 120 events per hour per network client. It keeps only request timestamps under that hash for up to one hour. It does not send the address or this abuse-prevention hash to PostHog or Sentry.
 
 ## Sentry Data Controls
 

@@ -29,6 +29,7 @@ export type DurableLimitState = {
   report_timestamps_by_session: Record<string, number[]>;
   session_starts_by_install: Record<string, number[]>;
   sessions_by_id: Record<string, SessionRecord>;
+  telemetry_timestamps_by_client: Record<string, number[]>;
 };
 
 export type DurableLimitRequest =
@@ -52,6 +53,11 @@ export type DurableLimitRequest =
   | {
       action: "can_accept_report";
       app_session_id: string;
+      now_ms: number;
+    }
+  | {
+      action: "can_accept_telemetry";
+      hashed_client_id: string;
       now_ms: number;
     }
   | {

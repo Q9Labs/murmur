@@ -49,7 +49,7 @@ export type WorkerTelemetryEvent =
 
 export type TelemetryExecutionContext = Pick<ExecutionContext, "waitUntil">;
 
-export async function capturePostHogEvent(params: {
+async function capturePostHogEvent(params: {
   distinct_id: string;
   env: Env;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;

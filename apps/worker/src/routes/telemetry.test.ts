@@ -73,4 +73,57 @@ describe("mobile telemetry route", () => {
     expect(response.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("rejects an oversized streamed body even when Content-Length is misleading", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await captureMobileTelemetry(
+      new Request("https://murmur.test/v1/telemetry", {
+        body: JSON.stringify({
+          app_install_id: "install_12345678",
+          padding: "x".repeat(9_000),
+          payload: { event: "mobile_app_opened" },
+        }),
+        headers: {
+          "Content-Length": "1",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+      { POSTHOG_PROJECT_TOKEN: "phc_test" },
+    );
+
+    expect(response.status).toBe(413);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits repeated telemetry from one network client", async () => {
+    const clientAddress = `203.0.113.${Date.now() % 200}`;
+    const requestBody = JSON.stringify({
+      app_install_id: "install_rate_limit_12345678",
+      payload: {
+        app_version: "1.2.0",
+        build_number: "10",
+        event: "mobile_app_opened",
+        platform: "ios",
+      },
+    });
+    let response = new Response(null, { status: 500 });
+    for (let index = 0; index < 121; index += 1) {
+      response = await captureMobileTelemetry(
+        new Request("https://murmur.test/v1/telemetry", {
+          body: requestBody,
+          headers: {
+            "CF-Connecting-IP": clientAddress,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        }),
+        { SESSION_HASH_SALT: "test-salt" },
+      );
+    }
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ error: "telemetry_rate_limited" });
+  });
 });

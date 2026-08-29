@@ -26,6 +26,7 @@ export function createEmptyDurableLimitState(): DurableLimitState {
     report_timestamps_by_session: {},
     session_starts_by_install: {},
     sessions_by_id: {},
+    telemetry_timestamps_by_client: {},
   };
 }
 
@@ -36,6 +37,7 @@ export function createMemoryAdapter(state: DurableLimitState) {
   const reportsBySession = new Map(Object.entries(state.report_timestamps_by_session ?? {}));
   const sessionsById = new Map(Object.entries(state.sessions_by_id));
   const startsByInstall = new Map(Object.entries(state.session_starts_by_install));
+  const telemetryByClient = new Map(Object.entries(state.telemetry_timestamps_by_client ?? {}));
   const sessionStore: SessionStore = { sessionStartsByInstall: startsByInstall, sessionsById };
   return {
     canAcceptReport: (appSessionId: string, nowMs: number) => {
@@ -51,6 +53,11 @@ export function createMemoryAdapter(state: DurableLimitState) {
     canCreateSession: (params: Parameters<typeof canCreateSession>[0]) => {
       const result = canCreateSessionWithStores(params, sessionStore);
       syncMaps(state, sessionsById, startsByInstall);
+      return result;
+    },
+    canAcceptTelemetry: (hashedClientId: string, nowMs: number) => {
+      const result = canAcceptTelemetryWithStores(hashedClientId, nowMs, telemetryByClient);
+      state.telemetry_timestamps_by_client = Object.fromEntries(telemetryByClient);
       return result;
     },
     closeSession: (appSessionId: string, nowMs: number) => {
@@ -154,6 +161,28 @@ export function canAcceptReportWithStores(
   return { ok: true };
 }
 
+export function canAcceptTelemetryWithStores(
+  hashedClientId: string,
+  nowMs: number,
+  telemetryByClient: Map<string, number[]>,
+): LimitResult {
+  const oneHourAgo = nowMs - 60 * 60 * 1000;
+  const timestamps = (telemetryByClient.get(hashedClientId) ?? []).filter(
+    (timestamp) => timestamp >= oneHourAgo,
+  );
+  if (timestamps.length >= 120) {
+    telemetryByClient.set(hashedClientId, timestamps);
+    return {
+      code: "telemetry_rate_limited",
+      ok: false,
+      retry_after_ms: Math.max(1, timestamps[0] + 60 * 60 * 1000 - nowMs),
+    };
+  }
+  timestamps.push(nowMs);
+  telemetryByClient.set(hashedClientId, timestamps);
+  return { ok: true };
+}
+
 function syncMaps(
   state: DurableLimitState,
   sessionsById: Map<string, SessionRecord>,
@@ -207,7 +236,21 @@ export function pruneState(state: DurableLimitState, nowMs: number): void {
     }
   }
 
+  pruneTelemetryState(state, nowMs);
   pruneReportInboxState(state, nowMs);
+}
+
+function pruneTelemetryState(state: DurableLimitState, nowMs: number): void {
+  for (const [clientId, telemetry] of Object.entries(
+    state.telemetry_timestamps_by_client ?? {},
+  )) {
+    const retained = telemetry.filter((timestamp) => timestamp >= nowMs - 60 * 60 * 1000);
+    if (retained.length === 0) {
+      delete state.telemetry_timestamps_by_client[clientId];
+    } else {
+      state.telemetry_timestamps_by_client[clientId] = retained;
+    }
+  }
 }
 
 function pruneReportInboxState(state: DurableLimitState, nowMs: number): void {

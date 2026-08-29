@@ -124,6 +124,23 @@ type TelemetryEventCandidate = {
   translated_char_count?: unknown;
 };
 
+type TelemetryEventParser = (value: TelemetryEventCandidate) => MobileTelemetryEvent | null;
+
+const telemetryEventParsers = new Map<string, TelemetryEventParser>([
+  ["mobile_app_opened", (value) => parseAppLifecycleEvent(value, "mobile_app_opened")],
+  [
+    "mobile_onboarding_completed",
+    (value) => parseAppLifecycleEvent(value, "mobile_onboarding_completed"),
+  ],
+  ["mobile_analytics_preference_changed", parseAnalyticsPreferenceEvent],
+  ["mobile_listen_tapped", parseListenTappedEvent],
+  ["mobile_session_live", parseSessionLiveEvent],
+  ["mobile_first_translation", parseFirstTranslationEvent],
+  ["mobile_session_failed", parseSessionFailedEvent],
+  ["mobile_session_completed", parseSessionCompletedEvent],
+  ["mobile_translation_reported", parseTranslationReportedEvent],
+]);
+
 export function parseMobileTelemetryRequest(value: unknown): MobileTelemetryRequest | null {
   if (!isTelemetryRequestCandidate(value)) {
     return null;
@@ -139,27 +156,7 @@ export function parseMobileTelemetryEvent(value: unknown): MobileTelemetryEvent 
   if (!isTelemetryEventCandidate(value) || typeof value.event !== "string") {
     return null;
   }
-  switch (value.event) {
-    case "mobile_app_opened":
-    case "mobile_onboarding_completed":
-      return parseAppLifecycleEvent(value, value.event);
-    case "mobile_analytics_preference_changed":
-      return parseAnalyticsPreferenceEvent(value);
-    case "mobile_listen_tapped":
-      return parseListenTappedEvent(value);
-    case "mobile_session_live":
-      return parseSessionLiveEvent(value);
-    case "mobile_first_translation":
-      return parseFirstTranslationEvent(value);
-    case "mobile_session_failed":
-      return parseSessionFailedEvent(value);
-    case "mobile_session_completed":
-      return parseSessionCompletedEvent(value);
-    case "mobile_translation_reported":
-      return parseTranslationReportedEvent(value);
-    default:
-      return null;
-  }
+  return telemetryEventParsers.get(value.event)?.(value) ?? null;
 }
 
 function parseAppLifecycleEvent(
@@ -272,36 +269,67 @@ function parseSessionFailedEvent(value: TelemetryEventCandidate): MobileTelemetr
 function parseSessionCompletedEvent(
   value: TelemetryEventCandidate,
 ): MobileTelemetryEvent | null {
+  const context = parseSessionCompletionContext(value);
+  const metrics = parseSessionCompletionMetrics(value);
+  if (!hasLanguagePair(value) || !isIdentifier(value.app_session_id) || !context || !metrics) {
+    return null;
+  }
+  return {
+    app_session_id: value.app_session_id,
+    ...context,
+    event: "mobile_session_completed",
+    ...metrics,
+    source_language: value.source_language,
+    target_language: value.target_language,
+  };
+}
+
+function parseSessionCompletionContext(value: TelemetryEventCandidate): {
+  committed_translation: boolean;
+  error_code: string | null;
+  network_type: string;
+  outcome: "completed" | "failed";
+  playback_enabled: boolean;
+} | null {
   if (
-    !hasLanguagePair(value) ||
-    !isIdentifier(value.app_session_id) ||
     typeof value.committed_translation !== "boolean" ||
-    !isDuration(value.duration_ms) ||
     !isNullableFailureCode(value.error_code) ||
-    !isCount(value.input_audio_bytes) ||
-    !isCount(value.input_audio_frames) ||
     !isShortLabel(value.network_type) ||
     (value.outcome !== "completed" && value.outcome !== "failed") ||
-    typeof value.playback_enabled !== "boolean" ||
+    typeof value.playback_enabled !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    committed_translation: value.committed_translation,
+    error_code: value.error_code,
+    network_type: value.network_type,
+    outcome: value.outcome,
+    playback_enabled: value.playback_enabled,
+  };
+}
+
+function parseSessionCompletionMetrics(value: TelemetryEventCandidate): {
+  duration_ms: number;
+  input_audio_bytes: number;
+  input_audio_frames: number;
+  source_char_count: number;
+  translated_char_count: number;
+} | null {
+  if (
+    !isDuration(value.duration_ms) ||
+    !isCount(value.input_audio_bytes) ||
+    !isCount(value.input_audio_frames) ||
     !isCount(value.source_char_count) ||
     !isCount(value.translated_char_count)
   ) {
     return null;
   }
   return {
-    app_session_id: value.app_session_id,
-    committed_translation: value.committed_translation,
     duration_ms: value.duration_ms,
-    error_code: value.error_code,
-    event: "mobile_session_completed",
     input_audio_bytes: value.input_audio_bytes,
     input_audio_frames: value.input_audio_frames,
-    network_type: value.network_type,
-    outcome: value.outcome,
-    playback_enabled: value.playback_enabled,
     source_char_count: value.source_char_count,
-    source_language: value.source_language,
-    target_language: value.target_language,
     translated_char_count: value.translated_char_count,
   };
 }
