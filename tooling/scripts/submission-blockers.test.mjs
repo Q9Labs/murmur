@@ -5,7 +5,12 @@ import { findOpenSubmissionBlockers, validateSubmissionBlockerLedger } from "./s
 
 const validLedger = {
   status: "not_submission_ready",
-  policy_sources_checked: ["apple-review", "apple-iap", "google-review", "google-billing"],
+  policy_sources_checked: [
+    { url: "https://developer.apple.com/app-store/review/guidelines/" },
+    { url: "https://developer.apple.com/documentation/storekit" },
+    { url: "https://support.google.com/googleplay/android-developer/answer/10144311" },
+    { url: "https://developer.android.com/google/play/billing" }
+  ],
   p0_blockers: [
     {
       id: "billing-sandbox",
