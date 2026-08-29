@@ -121,7 +121,7 @@ fi
 cp "$temp_dir/assets/profile.mobileprovision" "$installed_profile"
 
 cd "$repo_root/apps/mobile"
-export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
+export EXPO_PUBLIC_MURMUR_WORKER_URL="${EXPO_PUBLIC_MURMUR_WORKER_URL:-https://murmur.q9labs.ai}"
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform ios
 if command -v pod >/dev/null; then
