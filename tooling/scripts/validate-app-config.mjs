@@ -25,7 +25,6 @@ const assert = (condition, message) => {
 };
 
 const productionWorkerUrl = "https://murmur.q9labs.ai";
-const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev";
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -147,7 +146,7 @@ const testingBuild = easConfig.build?.testing;
 assert(testingBuild?.distribution === "store", "EAS testing build must use store distribution");
 assert(testingBuild?.android?.buildType === "app-bundle", "EAS testing Android build must produce an app bundle");
 assert(testingBuild?.ios?.simulator === false, "EAS testing iOS build must target devices, not simulator");
-assert(testingBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === testingWorkerUrl, "EAS testing Worker URL must target the development Worker");
+assert(testingBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS store testing Worker URL must target the production Worker");
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
