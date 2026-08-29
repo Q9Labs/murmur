@@ -49,6 +49,7 @@ command -v xcodebuild >/dev/null
 command -v codesign >/dev/null
 command -v openssl >/dev/null
 command -v plutil >/dev/null
+command -v ruby >/dev/null
 
 chmod 700 "$temp_dir"
 manifest="$repo_root/release/manifest.json"
@@ -85,6 +86,20 @@ if [[ "$profile_name" != "$expected_profile_name" || "$profile_uuid" != "$expect
   exit 1
 fi
 
+configure_app_signing() {
+  local project_file="$1"
+  ruby - "$project_file" "$expected_team_id" "$expected_profile_name" <<'RUBY'
+project_file, team_id, profile_name = ARGV
+source = File.read(project_file)
+target = /(13B07F951A680F5B00A75B9A \/\* Release \*\/ = \{\n\s*isa = XCBuildConfiguration;\n\s*baseConfigurationReference = .*?;\n\s*buildSettings = \{\n)(.*?)(\n\s*\};\n\s*name = Release;)/m
+match = source.match(target)
+raise "Murmur app Release build settings were not found" unless match
+raise "Murmur app Release signing settings are already configured" if match[2].include?("PROVISIONING_PROFILE_SPECIFIER")
+settings = "#{match[1]}\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution\";\n\t\t\t\tDEVELOPMENT_TEAM = #{team_id};\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"#{profile_name}\";\n#{match[2]}#{match[3]}"
+File.write(project_file, source.sub(target, settings))
+RUBY
+}
+
 echo "Verifying the Murmur Apple release identity."
 keychain_password=$(openssl rand -hex 24)
 security create-keychain -p "$keychain_password" "$keychain_path"
@@ -107,10 +122,12 @@ cp "$temp_dir/assets/profile.mobileprovision" "$installed_profile"
 
 cd "$repo_root/apps/mobile"
 export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
+export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform ios
 if command -v pod >/dev/null; then
   pod install --project-directory=ios
 fi
+configure_app_signing ios/Murmur.xcodeproj/project.pbxproj
 
 archive_path="$temp_dir/Murmur.xcarchive"
 mkdir -p "$output_dir"
@@ -122,10 +139,6 @@ if ! xcodebuild \
   -configuration Release \
   -destination generic/platform=iOS \
   -archivePath "$archive_path" \
-  DEVELOPMENT_TEAM="$expected_team_id" \
-  CODE_SIGN_STYLE=Manual \
-  CODE_SIGN_IDENTITY="Apple Distribution" \
-  PROVISIONING_PROFILE_SPECIFIER="$expected_profile_name" \
   archive > "$temp_dir/archive.log" 2>&1; then
   rg -n 'error:|ARCHIVE FAILED' "$temp_dir/archive.log" | tail -80 >&2 || true
   tail -120 "$temp_dir/archive.log" >&2

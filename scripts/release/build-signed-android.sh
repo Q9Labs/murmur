@@ -81,6 +81,7 @@ GRADLE
 
 cd "$repo_root/apps/mobile"
 export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
+export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
 echo "Building the signed Murmur Android bundle."
 ./gradlew --no-daemon --gradle-user-home "$gradle_user_home" \
