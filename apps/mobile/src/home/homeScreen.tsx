@@ -503,7 +503,7 @@ async function resetIdentity(
   await resetInstallId();
   live.invalidatePreparation();
   await live.prepare();
-  setMessage("Accountless identity reset. The next session will use a fresh install id.");
+  setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
 }
 
 async function handleCompletedSessionEngagement(

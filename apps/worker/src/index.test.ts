@@ -107,6 +107,19 @@ describe("worker routes", () => {
     await expect(response.json()).resolves.toEqual({ error: "client_upgrade_required" });
   });
 
+  it("rejects oversized RevenueCat webhooks before signature processing", async () => {
+    const response = await worker.fetch(
+      new Request("https://worker.example/v3/webhooks/revenuecat", {
+        body: "x".repeat(257 * 1_024),
+        method: "POST",
+      }),
+      {},
+    );
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({ error: "webhook_payload_too_large" });
+  });
+
   it("normalizes acquisition tags and logs hashed install measurement", async () => {
     const installId = `install_measurement_${crypto.randomUUID()}`;
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);

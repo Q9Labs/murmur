@@ -12,6 +12,18 @@ export function getSentryDsn(): string | undefined {
   return process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined;
 }
 
+export type RevenueCatApiKeys = {
+  android?: string;
+  ios?: string;
+};
+
+export function getRevenueCatApiKeys(): RevenueCatApiKeys {
+  return {
+    android: publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY),
+    ios: publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY),
+  };
+}
+
 export type UiPreviewScreen = "picker" | "settings" | "translation" | "welcome";
 
 export function getUiPreviewScreen(): UiPreviewScreen | null {
@@ -22,4 +34,8 @@ export function getUiPreviewScreen(): UiPreviewScreen | null {
     previewScreen === "welcome"
     ? previewScreen
     : null;
+}
+
+function publicConfigValue(value: string | undefined): string | undefined {
+  return value?.trim() || undefined;
 }

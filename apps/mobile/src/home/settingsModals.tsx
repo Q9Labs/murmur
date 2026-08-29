@@ -1,9 +1,11 @@
 import * as Linking from "expo-linking";
 import { ChevronRight } from "lucide-react-native";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
+import { AccountBillingModal } from "./accountBillingModal";
 import { ModalSheet } from "./modalSheet";
 import { useSheetStyles } from "./sheetStyles";
 
@@ -27,11 +29,18 @@ export function SettingsModal(props: {
   settingsMessage: string | null;
 }): ReactNode {
   const { styles } = useSheetStyles();
+  const [accountBillingOpen, setAccountBillingOpen] = useState(false);
   const disabled = props.live.status === "live";
   return (
-    <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
-      <View style={styles.settingsList}>
-        <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
+    <>
+      <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
+        <View style={styles.settingsList}>
+          <SettingsAction
+            disabled={disabled}
+            label="Account & billing"
+            onPress={() => setAccountBillingOpen(true)}
+          />
+          <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
         <SettingsAction
           disabled={disabled}
           label={`Anonymous analytics: ${props.anonymousAnalyticsEnabled ? "On" : "Off"}`}
@@ -60,9 +69,16 @@ export function SettingsModal(props: {
           label="Reset Murmur Identity"
           onPress={props.onResetIdentity}
         />
-      </View>
-      {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
-    </ModalSheet>
+        </View>
+        {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
+      </ModalSheet>
+      {props.open && accountBillingOpen ? (
+        <AccountBillingModal
+          onClose={() => setAccountBillingOpen(false)}
+          open
+        />
+      ) : null}
+    </>
   );
 }
 

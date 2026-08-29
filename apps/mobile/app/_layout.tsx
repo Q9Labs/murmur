@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useMurmurTheme } from "../src/home/theme";
+import { MurmurBillingProvider } from "../src/lib/billing/context";
 import { initializeSentry } from "../src/lib/observability/sentry";
 
 initializeSentry();
@@ -17,12 +18,14 @@ function RootLayout(): ReactNode {
   }, [colors.background]);
 
   return (
-    <Stack
-      screenOptions={{
-        contentStyle: { backgroundColor: colors.background },
-        headerShown: false,
-      }}
-    />
+    <MurmurBillingProvider>
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: colors.background },
+          headerShown: false,
+        }}
+      />
+    </MurmurBillingProvider>
   );
 }
 

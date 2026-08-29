@@ -17,7 +17,7 @@ import {
   proxyRealtimeSession,
 } from "./realtime";
 
-// cspell:ignore AQID
+// cspell:ignore AQID AQIDBA
 
 class FakeSocket extends EventTarget {
   binaryType = "blob";
@@ -35,6 +35,32 @@ class FakeSocket extends EventTarget {
   send(value: unknown): void {
     this.sent.push(value);
   }
+}
+
+async function openTestRealtimeSession(params: {
+  env?: Parameters<typeof proxyRealtimeSession>[2];
+  name: string;
+  targetLanguage?: string;
+}): Promise<{ appSessionId: string; client: FakeSocket; upstream: FakeSocket }> {
+  const appSessionId = `session_${params.name}_${crypto.randomUUID()}`;
+  await createSessionRecordDurable({
+    app_session_id: appSessionId,
+    hashed_install_id: "install_hash",
+    now_ms: Date.now(),
+  });
+  const client = new FakeSocket();
+  const upstream = new FakeSocket();
+  providerMocks.openTranslationSocket.mockResolvedValueOnce(
+    upstream as unknown as WorkerWebSocket,
+  );
+  await proxyRealtimeSession(
+    new Request(
+      `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=${params.targetLanguage ?? "ar"}`,
+    ),
+    client as unknown as WorkerWebSocket,
+    params.env ?? { OPENAI_API_KEY: "test_key" },
+  );
+  return { appSessionId, client, upstream };
 }
 
 describe("app-facing realtime socket", () => {
@@ -60,6 +86,7 @@ describe("app-facing realtime socket", () => {
     expect(isAcceptedAudioFrame(9_600)).toBe(true);
     expect(isAcceptedAudioFrame(64 * 1024)).toBe(true);
     expect(isAcceptedAudioFrame(0)).toBe(false);
+    expect(isAcceptedAudioFrame(959)).toBe(false);
     expect(isAcceptedAudioFrame(64 * 1024 + 1)).toBe(false);
   });
 
@@ -162,25 +189,7 @@ describe("app-facing realtime socket", () => {
   it("closes both sockets at the server-enforced session deadline", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000_000_000);
-    const appSessionId = `session_deadline_${crypto.randomUUID()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: "install_hash",
-      now_ms: Date.now(),
-    });
-    const client = new FakeSocket();
-    const upstream = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(
-      upstream as unknown as WorkerWebSocket,
-    );
-
-    await proxyRealtimeSession(
-      new Request(
-        `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=ar`,
-      ),
-      client as unknown as WorkerWebSocket,
-      { OPENAI_API_KEY: "test_key" },
-    );
+    const { client, upstream } = await openTestRealtimeSession({ name: "deadline" });
     await vi.advanceTimersByTimeAsync(900_000);
 
     expect(client.sent.map(String).join(" ")).toContain("session_expired");
@@ -189,28 +198,14 @@ describe("app-facing realtime socket", () => {
   });
 
   it("proxies audio, transcripts, translated audio, close, and errors", async () => {
-    const appSessionId = `session_success_${crypto.randomUUID()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: "install_hash",
-      now_ms: Date.now(),
-    });
-    const client = new FakeSocket();
-    const upstream = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(
-      upstream as unknown as WorkerWebSocket,
-    );
-
-    await proxyRealtimeSession(
-      new Request(
-        `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=pt-BR`,
-      ),
-      client as unknown as WorkerWebSocket,
-      {
+    const { client, upstream } = await openTestRealtimeSession({
+      env: {
         OPENAI_API_KEY: "test_key",
         OPENAI_REALTIME_MODEL: "gpt-realtime-translate-test",
       },
-    );
+      name: "success",
+      targetLanguage: "pt-BR",
+    });
 
     expect(providerMocks.openTranslationSocket).toHaveBeenCalledWith({
       apiKey: "test_key",
@@ -229,14 +224,16 @@ describe("app-facing realtime socket", () => {
     expect(client.sent.map(String).join(" ")).toContain("session_opened");
 
     client.dispatchEvent(new MessageEvent("message", {
-      data: new Uint8Array([1, 2, 3]).buffer,
+      data: new Uint8Array([1, 2, 3, 4]).buffer,
     }));
-    expect(JSON.parse(String(upstream.sent.at(-1)))).toEqual({
-      audio: "AQID",
-      type: "session.input_audio_buffer.append",
+    await vi.waitFor(() => {
+      expect(JSON.parse(String(upstream.sent.at(-1)))).toEqual({
+        audio: "AQIDBA==",
+        type: "session.input_audio_buffer.append",
+      });
     });
     expect(client.sent.map(String).join(" ")).toContain("input_audio_ack");
-    expect(client.sent.map(String).join(" ")).toContain('"bytes_received":3');
+    expect(client.sent.map(String).join(" ")).toContain('"bytes_received":4');
 
     client.dispatchEvent(new MessageEvent("message", {
       data: new ArrayBuffer(64 * 1024 + 1),
@@ -246,7 +243,9 @@ describe("app-facing realtime socket", () => {
     client.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ kind: "close_session" }),
     }));
-    expect(JSON.parse(String(upstream.sent.at(-1)))).toEqual({ type: "session.close" });
+    await vi.waitFor(() => {
+      expect(JSON.parse(String(upstream.sent.at(-1)))).toEqual({ type: "session.close" });
+    });
 
     upstream.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({
@@ -274,70 +273,21 @@ describe("app-facing realtime socket", () => {
   });
 
   it("closes the peer socket on transport shutdown", async () => {
-    const appSessionId = `session_transport_${crypto.randomUUID()}`;
-    await createSessionRecordDurable({
-      app_session_id: appSessionId,
-      hashed_install_id: "install_hash",
-      now_ms: Date.now(),
-    });
-    const client = new FakeSocket();
-    const upstream = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(
-      upstream as unknown as WorkerWebSocket,
-    );
-    await proxyRealtimeSession(
-      new Request(
-        `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=ar`,
-      ),
-      client as unknown as WorkerWebSocket,
-      { OPENAI_API_KEY: "test_key" },
-    );
+    const { client, upstream } = await openTestRealtimeSession({ name: "transport" });
 
     upstream.dispatchEvent(new Event("error"));
     expect(client.sent.map(String).join(" ")).toContain("provider_transport_error");
 
-    const secondAppSessionId = `session_transport_second_${crypto.randomUUID()}`;
-    await createSessionRecordDurable({
-      app_session_id: secondAppSessionId,
-      hashed_install_id: "install_hash",
-      now_ms: Date.now(),
-    });
-    const secondClient = new FakeSocket();
-    const secondUpstream = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(
-      secondUpstream as unknown as WorkerWebSocket,
-    );
-    await proxyRealtimeSession(
-      new Request(
-        `https://worker.test/v2/realtime?app_session_id=${secondAppSessionId}&target_language=ar`,
-      ),
-      secondClient as unknown as WorkerWebSocket,
-      { OPENAI_API_KEY: "test_key" },
-    );
+    const { client: secondClient, upstream: secondUpstream } =
+      await openTestRealtimeSession({ name: "transport_second" });
     secondClient.dispatchEvent(new Event("close"));
     expect(secondUpstream.closeCalls).toContainEqual({
       code: 1000,
       reason: "client_close",
     });
 
-    const thirdAppSessionId = `session_transport_third_${crypto.randomUUID()}`;
-    await createSessionRecordDurable({
-      app_session_id: thirdAppSessionId,
-      hashed_install_id: "install_hash",
-      now_ms: Date.now(),
-    });
-    const thirdClient = new FakeSocket();
-    const thirdUpstream = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(
-      thirdUpstream as unknown as WorkerWebSocket,
-    );
-    await proxyRealtimeSession(
-      new Request(
-        `https://worker.test/v2/realtime?app_session_id=${thirdAppSessionId}&target_language=ar`,
-      ),
-      thirdClient as unknown as WorkerWebSocket,
-      { OPENAI_API_KEY: "test_key" },
-    );
+    const { client: thirdClient, upstream: thirdUpstream } =
+      await openTestRealtimeSession({ name: "transport_third" });
     thirdUpstream.dispatchEvent(new Event("close"));
     expect(thirdClient.sent.map(String).join(" ")).toContain("provider_transport_closed");
     expect(thirdClient.closeCalls).toContainEqual({

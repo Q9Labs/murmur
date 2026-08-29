@@ -12,9 +12,11 @@
     "apps/mobile/store-assets/**"
   ],
   "ignoreDependencies": [
+    "@better-auth/utils",
     "@react-navigation/native",
     "@sentry/cli",
     "babel-preset-expo",
+    "expo-web-browser",
     "react-native-web"
   ],
   "audit": {

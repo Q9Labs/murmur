@@ -4,10 +4,14 @@ import {
 } from "@murmur/protocol/acquisition";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
+import { getMurmurSession } from "../auth/auth";
+import { ensureCurrentAllowance } from "../billing/allowanceService";
+import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import {
   type Env,
   getReadiness,
   getRealtimeApiKey,
+  isBillingEnforced,
   requiresDeviceIntegrity,
 } from "../env";
 import { json } from "../http/response";
@@ -15,7 +19,10 @@ import { defaultRateLimits } from "../limits";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
 import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
-import { createSessionIfAllowedDurable } from "../rateLimitDurableObject";
+import {
+  closeSessionDurable,
+  createSessionIfAllowedDurable,
+} from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
 
 export async function createSession(
@@ -48,6 +55,16 @@ export async function createSession(
   if (!limitResult.ok) {
     return json({ error: "rate_limited", code: limitResult.code }, 429);
   }
+  const billingUsage = await prepareBillingUsage(request, env, appSessionId, nowMs);
+  if (!billingUsage.ok) {
+    await closeSessionDurable({
+      app_session_id: appSessionId,
+      namespace: env.RATE_LIMITER,
+      now_ms: Date.now(),
+    });
+    return billingUsage.response;
+  }
+  const sessionDurationMs = billingUsage.sessionDurationMs;
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
     event: "session_created",
@@ -88,8 +105,8 @@ export async function createSession(
   return json({
     app_session_id: appSessionId,
     limits: {
-      expires_at_ms: nowMs + defaultRateLimits.maxSessionSeconds * 1_000,
-      max_session_seconds: defaultRateLimits.maxSessionSeconds,
+      expires_at_ms: nowMs + sessionDurationMs,
+      max_session_seconds: Math.floor(sessionDurationMs / 1_000),
     },
     realtime_ws_url: realtimeUrl(
       request.url,
@@ -99,6 +116,63 @@ export async function createSession(
     ),
     session_epoch: 1,
   });
+}
+
+async function prepareBillingUsage(
+  request: Request,
+  env: Env,
+  usageSessionId: string,
+  nowMs: number,
+): Promise<
+  | { ok: true; sessionDurationMs: number }
+  | { ok: false; response: Response }
+> {
+  const defaultDurationMs = defaultRateLimits.maxSessionSeconds * 1_000;
+  if (!isBillingEnforced(env)) {
+    return { ok: true, sessionDurationMs: defaultDurationMs };
+  }
+  const customerSession = await getMurmurSession(request, env);
+  if (!customerSession) {
+    return { ok: false, response: json({ error: "authentication_required" }, 401) };
+  }
+  const bootstrap = await ensureCurrentAllowance({
+    customerId: customerSession.user.id,
+    env,
+    nowMs,
+    principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",
+  });
+  if (!bootstrap.result.ok) {
+    return {
+      ok: false,
+      response: json({ error: bootstrap.result.code }, bootstrap.response.status),
+    };
+  }
+  const usage = await callCustomerLedger(env.CUSTOMER_LEDGER, customerSession.user.id, {
+    action: "open_usage_session",
+    customerId: customerSession.user.id,
+    nowMs,
+    usageSessionId,
+  });
+  if (!usage.result.ok || !("balance" in usage.result)) {
+    return {
+      ok: false,
+      response: json(
+        { error: usage.result.ok ? "billing_unavailable" : usage.result.code },
+        usage.response.status,
+      ),
+    };
+  }
+  if (usage.result.balance.availableMs < 1_000) {
+    await callCustomerLedger(env.CUSTOMER_LEDGER, customerSession.user.id, {
+      action: "close_usage_session",
+      customerId: customerSession.user.id,
+      nowMs: Date.now(),
+      outcome: "failed",
+      usageSessionId,
+    });
+    return { ok: false, response: json({ error: "allowance_exhausted" }, 402) };
+  }
+  return { ok: true, sessionDurationMs: defaultDurationMs };
 }
 
 type ParsedCreateSessionRequest = {

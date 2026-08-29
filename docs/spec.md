@@ -2,7 +2,7 @@
 
 ## Product
 
-Murmur is an accountless, one-way live translator. A user chooses the spoken and translated languages, taps Listen, and receives:
+Murmur is a guest-first, one-way live translator. The app creates a durable guest account automatically. A user chooses the spoken and translated languages, taps Listen, and receives:
 
 - a live source transcript;
 - a live translated transcript;
@@ -12,6 +12,8 @@ There is one session experience. Listening continues until the user stops, cance
 
 Murmur does not save microphone audio or transcript history by default. Reports may include transcript snapshots only when a user explicitly opts in.
 
+Each account receives 30 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
+
 ## Architecture
 
 ```text
@@ -20,7 +22,8 @@ Native audio capture (24 kHz mono PCM16)
                  v
 Expo app <---- WebSocket ----> Cloudflare Worker <---- WebSocket ----> OpenAI Realtime
                  ^                    |
-                 |                    +-- session validation and rate limits
+                 |                    +-- authenticated session and metering
+                 |                    +-- D1 entitlement and balance ledger
                  |                    +-- OpenAI credential and adapter
                  |
 Translated PCM16 playback + source/translated captions

@@ -1,4 +1,4 @@
-Murmur is an accountless one-way live translator. No account, demo credentials, subscription, or 2FA are required.
+Murmur is a one-way live translator. It creates a durable guest account automatically, so no demo credentials or sign-in are required. The guest account receives 30 free translation minutes each calendar month. Optional Murmur Pro subscriptions and non-expiring credit packs use Apple in-app purchase.
 
 Test path:
 1. Open Murmur.
@@ -11,6 +11,8 @@ Test path:
 8. Tap Stop, then start again.
 9. Tap Cancel during a session and confirm microphone capture/playback stop.
 10. Use Report translation on a committed translated span.
-11. Use Reset Murmur Identity and Delete Local Data from the app controls.
+11. Open Account & Billing. Add and verify an email address, then confirm the Pro, credit pack, and Restore Purchases controls become available.
+12. Use an Apple sandbox purchase to test a product, then confirm the updated time appears after server verification.
+13. Delete the Murmur account and confirm the app explains that account deletion does not cancel an Apple subscription.
 
-Murmur uses the microphone only during a user-started live translation session. The audio background capability is used only so an active live translation session can continue during app switches or lock-screen moments; Stop and Cancel end capture/playback. Murmur V1 has no account creation, login, profile, or cloud transcript history.
+Murmur uses the microphone only during a user-started live translation session. The audio background capability is used only so an active live translation session can continue during app switches or lock-screen moments; Stop and Cancel end capture/playback. Murmur does not retain microphone audio or cloud transcript history by default. Purchases are verified server-side through RevenueCat before Murmur grants translation time.

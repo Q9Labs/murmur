@@ -2,7 +2,7 @@
 
 # Murmur app-store product brief
 
-Scope: factual research from the current repository state on 2026-08-01. This is a product brief for a copywriter, not proposed store copy. The worktree contains uncommitted product and store-metadata changes, so public-store status should be checked separately before publication.
+Scope: factual research from the current repository state on 2026-08-29. This is a product brief for a copywriter, not proposed store copy. Public-store status must be checked separately before publication.
 
 ## 1. App name, IDs, platforms, and tech stack
 
@@ -36,7 +36,7 @@ The product is deliberately one-directional. The spec excludes bidirectional con
 - **Optional translated speech:** OpenAI Realtime can return target-language speech during a live session. Users can turn translated audio off from the translation screen while source and translated captions keep running. Sources: `apps/worker/src/providers/openaiRealtime.ts`, `apps/worker/src/sockets/realtime.ts`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `apps/mobile/src/home/variants/bloom/index.tsx`.
 - **Start, stop, cancel, reconnect, and limits:** users can start and stop sessions, cancel active capture/playback, and the runtime has transport-recovery paths. The Worker enforces active-session, session-duration, per-install, span-length, concurrency, and per-minute translation limits. Sources: `apps/mobile/src/home/homeScreen.tsx`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `apps/worker/src/limits.ts`.
 - **In-app translation reporting:** users can report inaccurate, harmful/offensive, wrong-language, speech, or other issues; text snapshots are optional. Sources: `apps/mobile/src/home/diagnosticsModal.tsx`, `apps/mobile/src/lib/providers/reportTranslation.ts`, `apps/worker/src/routes/report.ts`.
-- **Accountless privacy controls:** there is no login or profile; the app offers **Reset Murmur Identity** and **Delete Local Data**. Sources: `apps/mobile/src/home/settingsModals.tsx`, `apps/mobile/src/lib/installIdentity.ts`, `apps/mobile/src/lib/engagement.ts`.
+- **Guest account and billing controls:** the app creates a durable guest account automatically, supports optional email recovery, shows the authoritative remaining balance, restores store purchases, opens subscription management, and deletes the account in-app. Sources: `apps/mobile/src/home/accountBillingModal.tsx`, `apps/mobile/src/lib/auth/client.ts`, `apps/mobile/src/lib/billing/context.tsx`.
 - **Secondary UX/features:** the Bloom UI direction, an in-app Murmur share action, and a native rating request after qualifying successful sessions. Session diagnostics remain available only in developer builds. Sources: `apps/mobile/src/home/experience.tsx`, `apps/mobile/src/home/diagnosticsModal.tsx`, `apps/mobile/src/lib/shareMurmur.ts`, `apps/mobile/src/lib/engagement.ts`.
 
 ### Planned, experimental, or not yet safe to describe as shipped
@@ -54,22 +54,20 @@ These are repository-supported positioning differences, not claims of market exc
 - **Individual attendee workflow:** the repository contrasts Murmur with Google Translate, iTranslate, Apple Translate, Wordly, KUDO, and Interprefy. Its intended opening is an attendee who can start listening without organizer setup, access links, event feeds, or enterprise purchase workflows. Source: `docs/growth-and-aso-strategy.md`.
 - **Text-first live experience:** Murmur treats readable translated captions as the primary output and lets speech output degrade separately. That gives it a narrower focus than general translators that also cover camera, text, phrasebooks, or offline features. Sources: `docs/spec.md`, `apps/mobile/src/home/errorCopy.ts`, `docs/growth-and-aso-strategy.md`.
 - **Short exchange to ongoing talk:** the same live session handles short turns and longer explanations while committed captions remain ordered. Sources: `apps/mobile/src/home/translationSurface.tsx`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`.
-- **Accountless by design:** no login, profile, or saved cloud transcript history is part of the V1 contract, with local reset/delete controls. Sources: `docs/spec.md`, `docs/legal/privacy-policy.md`.
+- **No sign-up to start:** the app creates a durable guest account automatically, while optional email recovery and in-app deletion make paid value recoverable and controllable. Sources: `docs/spec.md`, `docs/legal/privacy-policy.md`.
 - **Privacy-aware service boundary:** the OpenAI API key remains server-side, the Worker hashes the install identifier, and default logs redact audio, captions, credentials, and report snapshots. Sources: `README.md`, `apps/worker/src/privacy.ts`, `docs/legal/privacy-policy.md`.
 
 ## 5. Monetization
 
-**No monetization was found in the current product.** The product spec explicitly defines V1 as free with no subscriptions, external payment links, or paid digital features. The App Store review notes also say no subscription is required, and no billing, IAP, paywall, or advertising dependency/code path was found in the mobile manifest or source. Sources: `docs/spec.md`, `apps/mobile/fastlane/metadata/en-US/review_information/notes.txt`, `apps/mobile/package.json`, `apps/mobile/app.json`.
-
-The Worker does enforce usage limits, so “unlimited” is not supported by the repository even though no user-facing price or paid tier exists. Source: `apps/worker/src/limits.ts`.
+Each durable customer receives 30 free minutes per calendar month. Murmur Pro provides 3 hours each internal month at $12.99 monthly or $124.99 annually. Non-expiring credit packs provide 60 minutes for $3.99, 180 minutes for $10.99, or 540 minutes for $31.99. Apple and Google process payment, RevenueCat normalizes store state, and the Worker verifies purchases before D1 grants value. Sources: `docs/billing-spec.md`, `apps/worker/src/billing/catalog.ts`, `apps/mobile/src/lib/billing/revenueCat.ts`.
 
 ## 6. Privacy posture
 
-- **Account:** no account, login, profile, password, subscription account, or cloud transcript library is required. The app creates an anonymous install ID in platform secure storage, and the Worker hashes it for rate limits, abuse prevention, diagnostics, session authorization, and pseudonymous measurement. Sources: `docs/legal/privacy-policy.md`, `apps/mobile/src/lib/installIdentity.ts`, `apps/mobile/src/lib/localStorage.ts`, `apps/worker/src/privacy.ts`.
+- **Account:** a durable guest account is created automatically. A user can add an email for recovery and can delete the account in-app. Murmur does not create a cloud transcript library. Sources: `docs/legal/privacy-policy.md`, `apps/mobile/src/lib/auth/client.ts`, `apps/mobile/src/home/accountBillingModal.tsx`.
 - **Tracking and analytics:** the iOS privacy manifest sets `NSPrivacyTracking` to `false` and declares no tracking domains. Murmur sends fixed, content-free product events through its Worker to PostHog US, hashes the install identifier before forwarding, and provides an Anonymous Analytics opt-out. Sentry receives sanitized reliability diagnostics. Sources: `apps/mobile/app.json`, `docs/legal/privacy-policy.md`, `docs/legal/observability-data-map.md`.
 - **Network/offline:** no offline translation path or on-device translation engine was found. A session requires the Murmur Worker and OpenAI Realtime, and the app reports worker/network failures. Sources: `apps/mobile/src/lib/live-translation/workerApi.ts`, `apps/worker/src/index.ts`, `apps/worker/src/sockets/realtime.ts`, `apps/mobile/src/home/errorCopy.ts`, `docs/growth-and-aso-strategy.md`.
 - **On-device processing:** the native module captures and converts audio locally to PCM frames, but speech recognition, translation, and optional speech output run through OpenAI Realtime. Murmur says it does not retain audio or transcript history by default; reports may include text snapshots only when explicitly sent. Sources: `apps/mobile/modules/murmur-audio/`, `apps/worker/src/providers/openaiRealtime.ts`, `docs/legal/privacy-policy.md`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`.
-- **Third-party processors:** Cloudflare provides the Worker gateway, and OpenAI Realtime provides live transcription, translation, and translated speech. Source: `docs/legal/privacy-policy.md`.
+- **Third-party processors:** Cloudflare provides the Worker, account database, and entitlement ledger; OpenAI Realtime provides live transcription, translation, and translated speech; RevenueCat normalizes Apple and Google billing; Resend delivers email codes; PostHog and Sentry receive the limited analytics and diagnostics described in the privacy policy. Source: `docs/legal/privacy-policy.md`.
 - **Permissions and native capabilities:** iOS requests microphone access and declares an audio background capability. Android declares `RECORD_AUDIO`, `FOREGROUND_SERVICE`, and `FOREGROUND_SERVICE_MICROPHONE`; storage, biometric, vibration, and overlay permissions are blocked in the Expo config. Source: `apps/mobile/app.json`.
 - **Background behavior caveat:** current code and reviewer notes preserve an active session when the app backgrounds, while `docs/spec.md` still says V1 should be foreground-only. Do not make a background/lock-screen claim until this conflict is resolved and real-device behavior is verified. Sources: `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `apps/mobile/fastlane/metadata/en-US/review_information/notes.txt`, `docs/spec.md`.
 - **Policy maturity:** the checked-in privacy policy, terms, and support pages describe the current OpenAI Realtime and Cloudflare data flow; retention remains limited to the operational metadata and report records described in those pages. Sources: `docs/legal/privacy-policy.md`, `docs/legal/terms.md`, `docs/legal/support-and-deletion.md`.
@@ -86,15 +84,15 @@ Exact text already present:
 
 > **App Store subtitle:** “Captions for travel & talks”
 
-> **App Store promotional text:** “Follow tours, talks, lectures, and conferences in another language with live translated captions—no account required.”
+> **App Store promotional text:** “Follow tours, talks, and lectures with live translated captions. Start with 30 free minutes each month, then add Pro or non-expiring credit packs.”
 
-> **Google Play short description:** “Live translated captions for tours, talks, and conferences. No account needed.”
+> **Google Play short description:** “Live translated captions with 30 free minutes each month. No sign-up needed.”
 
 The long descriptions open with:
 
 > “Follow spoken language as it happens.”
 
-They describe live translated captions, optional translated speech, source/target language controls, in-app translation reporting, no account, no saved cloud transcript history, and AI accuracy limits. Sources: `apps/mobile/fastlane/metadata/en-US/description.txt`, `apps/mobile/fastlane/metadata/android/en-US/full_description.txt`.
+They describe live translated captions, optional translated speech, source/target language controls, the free allowance and paid options, guest accounts, no saved cloud transcript history by default, and AI accuracy limits. Sources: `apps/mobile/fastlane/metadata/en-US/description.txt`, `apps/mobile/fastlane/metadata/android/en-US/full_description.txt`.
 
 The current App Store keyword field is:
 
@@ -149,4 +147,4 @@ Do not turn the keyword list into claims about ranking or search volume. The gro
 - **“Unlimited use”:** the Worker enforces session and translation limits, including a 15-minute maximum session, one active session per install, and per-install session caps. Source: `apps/worker/src/limits.ts`.
 - **“Translated speech always available”:** speech output is optional and configuration-dependent, while readable captions remain the primary path. Sources: `apps/worker/src/sockets/realtime.ts`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `apps/mobile/src/home/errorCopy.ts`.
 - **“Runs in the background” or “works from the lock screen”:** current code/config and review notes suggest active background continuation, but the V1 spec says foreground-only. Resolve and verify the platform behavior first. Sources: `apps/mobile/app.json`, `apps/mobile/src/lib/live-translation/useLiveTranslation.ts`, `docs/spec.md`.
-- **“Free forever” or a paid plan:** no paid path is present, but the repository only establishes the current V1 monetization state, not a permanent pricing promise. Source: `docs/spec.md`.
+- **“Free forever” or “unlimited”:** the free allowance renews monthly, Pro has a fixed monthly allowance, and packs add a fixed amount of non-expiring time. Source: `docs/billing-spec.md`.

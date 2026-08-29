@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-29
 
-Murmur is an accountless one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
+Murmur is a one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
 
 Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.
 
@@ -20,9 +20,13 @@ OpenAI Realtime returns source-language and translated captions through Murmur's
 
 OpenAI Realtime returns translated speech audio through Murmur's Cloudflare Worker for local playback.
 
+### Account, Entitlement, And Purchase Metadata
+
+Murmur creates a random guest customer id so it can grant Free time and meter translation use. You can add an email address for account recovery; Murmur stores the email and sign-in records needed for that purpose. Murmur stores plan state, credit grants, usage debits, renewals, restores, refunds, and store transaction identifiers in an append-only entitlement ledger. Apple, Google, and RevenueCat process store purchases. Murmur does not receive or store payment-card details.
+
 ### Anonymous Install And Session Metadata
 
-Murmur has no accounts, login, profile, or cloud transcript history in V1. The app creates an anonymous install identifier stored in platform secure storage. The Worker hashes this identifier and uses it for rate limits, abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the anonymous identity and delete local Murmur data.
+The app also creates an anonymous install identifier in platform secure storage. The Worker hashes this identifier for abuse prevention, diagnostics, and pseudonymous session measurement. The app includes controls to reset the install identity and delete local Murmur data.
 
 ### Campaign And Referral Tags
 
@@ -52,12 +56,14 @@ Murmur uses these processors. Murmur requires third-party processors that handle
 
 - Cloudflare: Worker gateway, rate limits, session records, report endpoint, and privacy-safe logs.
 - OpenAI Realtime: live transcription, translation, and translated speech generation.
+- RevenueCat: Apple and Google purchase validation and lifecycle events.
+- Resend: email sign-in code delivery.
 - PostHog US: anonymous product analytics after Worker-side validation and identifier hashing.
 - Sentry: sanitized crash, error, performance, and release diagnostics for the mobile app and Worker.
 
 ## Retention
 
-Murmur does not retain audio, transcript history, or translated caption history by default. Anonymous analytics, diagnostics, session, campaign, and rate-limit metadata is retained only as needed for product measurement, abuse prevention, debugging, and service operation, then deleted or anonymized under Murmur's provider retention settings. Local engagement state remains on the device until it is replaced or the user selects Delete Local Data. Translation reports may be retained for support, safety, and quality review according to the retention period configured for the report triage system.
+Murmur does not retain audio, transcript history, or translated caption history by default. Account records remain until account deletion. Entitlement, store transaction, usage, renewal, and refund ledger records are retained as needed for service integrity, fraud prevention, financial reconciliation, and legal obligations, with direct identifiers removed when the account is deleted. Analytics, diagnostics, session, campaign, and rate-limit metadata is retained only as needed for product measurement, abuse prevention, debugging, and service operation, then deleted or anonymized under Murmur's provider retention settings.
 
 ## Your Choices
 
@@ -66,6 +72,7 @@ Murmur does not retain audio, transcript history, or translated caption history 
 - Turn Anonymous Analytics off or on in Settings. Analytics is on by default until you turn it off. Turning it off stops new PostHog product analytics events; essential sanitized crash and error monitoring can continue.
 - Reset Murmur Identity in the app.
 - Delete Local Data in the app.
+- Delete your Murmur account and sign-in data in Account & billing. Store subscriptions must be cancelled separately.
 - Contact support to request deletion of server-side diagnostics or report records tied to a report receipt or anonymous install/session metadata.
 
 ## Children

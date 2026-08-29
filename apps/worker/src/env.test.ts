@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getReadiness } from "./env";
+import { getReadiness, isBillingEnforced } from "./env";
 
 describe("worker env readiness", () => {
   it("reports the OpenAI key and production salt as required", () => {
@@ -12,6 +12,7 @@ describe("worker env readiness", () => {
       },
       ok: false,
       providers: {
+        billing: "disabled",
         error_monitoring: "missing_required",
         product_analytics: "missing_required",
         realtime_translation: "missing_required",
@@ -35,11 +36,48 @@ describe("worker env readiness", () => {
       missing: { optional: [], required: [] },
       ok: true,
       providers: {
+        billing: "disabled",
         error_monitoring: "configured",
         product_analytics: "configured",
         realtime_translation: "configured",
         report_webhook: "configured",
       },
     });
+  });
+
+  it("fails readiness when billing is enabled without its bindings and secrets", () => {
+    const readiness = getReadiness({
+      BILLING_PURCHASES_ENABLED: "true",
+      MURMUR_ENV: "development",
+      OPENAI_API_KEY: "openai_key",
+    });
+
+    expect(readiness.providers.billing).toBe("missing_required");
+    expect(readiness.missing.required).toEqual([
+      "BETTER_AUTH_SECRET",
+      "BILLING_DB",
+      "CUSTOMER_LEDGER",
+      "EMAIL_FROM",
+      "RESEND_API_KEY",
+      "REVENUECAT_API_KEY",
+      "REVENUECAT_PROJECT_ID",
+      "REVENUECAT_WEBHOOK_AUTH",
+      "REVENUECAT_WEBHOOK_SIGNING_SECRET",
+    ]);
+  });
+
+  it("keeps metering independent from the new-purchase kill switch", () => {
+    expect(isBillingEnforced({
+      BILLING_ENFORCEMENT_ENABLED: "true",
+      BILLING_PURCHASES_ENABLED: "false",
+    })).toBe(true);
+    expect(isBillingEnforced({
+      BILLING_ENFORCEMENT_ENABLED: "false",
+      BILLING_PURCHASES_ENABLED: "true",
+    })).toBe(true);
+    expect(isBillingEnforced({
+      BILLING_ENFORCEMENT_ENABLED: "false",
+      BILLING_PURCHASES_ENABLED: "false",
+    })).toBe(false);
   });
 });

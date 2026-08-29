@@ -12,9 +12,11 @@ Current public support surface:
 - Support email address: `q9labs.ai@gmail.com`.
 - Expected response window and escalation path for harmful, offensive, or safety-related translation reports still need an operational owner before public launch.
 
-## Accountless App Explanation
+## Accounts And Deletion
 
-Murmur V1 does not create accounts. There is no login, profile, password, subscription account, cloud transcript history, or account deletion flow.
+Murmur creates a random guest customer account when the app first starts. A user can add email recovery from Account & billing. Murmur has no cloud transcript history.
+
+Delete Murmur account removes sign-in data and access to the remaining balance. It does not cancel an Apple or Google subscription, which must be cancelled through the store first. Murmur retains a pseudonymous financial and entitlement record only when needed for refunds, fraud prevention, reconciliation, and legal obligations.
 
 The app does store an anonymous install identifier on the device. The app includes:
 
@@ -54,7 +56,7 @@ Before App Store or Google Play submission, provide:
 - Public privacy policy URL.
 - Public terms URL.
 - Public support URL.
-- No-account explanation in reviewer notes.
+- Guest-account, billing, Restore, and deletion steps in reviewer notes.
 - In-app report translation path.
 - Data retention and deletion explanation for diagnostics and reports.
 
@@ -65,3 +67,4 @@ Before App Store or Google Play submission, provide:
 - Confirm report-triage ownership, escalation, and retention.
 - Verify app privacy and Play Data Safety answers match the final implementation.
 - Confirm support can handle deletion requests tied to report receipts or anonymous install/session metadata.
+- Confirm account deletion, store cancellation, refunds, and Restore use the documented entitlement process.

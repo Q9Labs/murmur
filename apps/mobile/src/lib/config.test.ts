@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getSentryDsn, getUiPreviewScreen, getWorkerBaseUrl } from "./config";
+import {
+  getRevenueCatApiKeys,
+  getSentryDsn,
+  getUiPreviewScreen,
+  getWorkerBaseUrl,
+} from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -36,6 +41,25 @@ describe("Sentry config", () => {
 
     vi.stubEnv("EXPO_PUBLIC_SENTRY_DSN", "");
     expect(getSentryDsn()).toBeUndefined();
+  });
+});
+
+describe("RevenueCat config", () => {
+  it("returns trimmed public store keys", () => {
+    vi.stubEnv("EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY", " google-public-key ");
+    vi.stubEnv("EXPO_PUBLIC_REVENUECAT_IOS_API_KEY", " apple-public-key ");
+
+    expect(getRevenueCatApiKeys()).toEqual({
+      android: "google-public-key",
+      ios: "apple-public-key",
+    });
+  });
+
+  it("omits empty store keys", () => {
+    vi.stubEnv("EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY", "");
+    vi.stubEnv("EXPO_PUBLIC_REVENUECAT_IOS_API_KEY", "  ");
+
+    expect(getRevenueCatApiKeys()).toEqual({ android: undefined, ios: undefined });
   });
 });
 

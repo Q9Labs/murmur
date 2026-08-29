@@ -6,9 +6,11 @@ Choose a source language and target language, then tap Listen. Murmur shows tran
 
 Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-NO ACCOUNT OR SAVED TRANSCRIPT HISTORY
+START FREE, KEEP YOUR TIME
 
-Murmur has no accounts, login, profiles, or cloud transcript history. Microphone audio streams only during a live session. You can stop or cancel at any time, reset your anonymous Murmur identity, and delete local Murmur data from the app.
+Murmur creates a durable guest account with 30 translation minutes each month, so no sign-up is needed. Murmur Pro includes 3 hours each month, with monthly and annual plans. Non-expiring credit packs add time when you need it. You can link an email for recovery, restore store purchases, and delete your account in the app.
+
+Murmur does not save cloud transcript history by default. Microphone audio streams only during a live session, and you can stop or cancel at any time.
 
 BUILT FOR READABLE LIVE TRANSLATION
 

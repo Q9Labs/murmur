@@ -13,7 +13,7 @@ No composition may contain people, hands, silhouettes, faces, lifestyle photogra
 1. `Translation, as it happens.`
 2. `Follow spoken language live.`
 3. `Choose your language.`
-4. `No account. No setup.`
+4. `30 free minutes every month.`
 5. `Privacy controls, close at hand.`
 6. `Read captions. Choose audio.`
 7. `Set a direction. Tap Listen.`
@@ -23,7 +23,7 @@ No composition may contain people, hands, silhouettes, faces, lifestyle photogra
 1. `Translation, as it happens.`
 2. `Follow spoken language live.`
 3. `Choose your language.`
-4. `No account. No setup.`
+4. `30 free minutes every month.`
 5. `Read captions. Choose audio.`
 
 ## Imagegen prompt contract

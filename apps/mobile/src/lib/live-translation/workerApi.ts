@@ -8,6 +8,7 @@ import MurmurAudioModule, {
   type DeviceIntegrityPayload,
 } from "../../../modules/murmur-audio";
 import type { AcquisitionContext } from "@murmur/protocol/acquisition";
+import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
 export async function requestMicrophonePermission(): Promise<boolean> {
@@ -35,7 +36,7 @@ export async function closeWorkerSession(appSessionId: string, reason: string): 
   }
   await fetch(`${getWorkerBaseUrl()}/v2/session/${appSessionId}/stop`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authenticatedWorkerHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ reason }),
   }).catch(() => null);
 }
@@ -80,7 +81,7 @@ export async function collectDeviceIntegrity(params: {
 async function postWorkerJson<T>(url: string, body: unknown): Promise<T | { error: string }> {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authenticatedWorkerHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   }).catch(() => null);
   if (!response) {

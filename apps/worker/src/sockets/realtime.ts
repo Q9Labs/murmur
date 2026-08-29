@@ -4,7 +4,13 @@ import { isLanguageCode, type LanguageCode } from "@murmur/protocol/languages";
 import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protocol/transport/types";
 import * as Sentry from "@sentry/cloudflare";
 
-import { type Env, getRealtimeApiKey } from "../env";
+import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
+import {
+  createRealtimeUsageMeter,
+  type RealtimeUsageMeter,
+} from "../billing/realtimeUsageMeter";
+import { findOpenUsageSession } from "../billing/usageSessionStore";
+import { type Env, getRealtimeApiKey, isBillingEnforced } from "../env";
 import {
   closeSocket,
   send,
@@ -33,6 +39,25 @@ declare const WebSocketPair: {
 };
 
 const maxAudioFrameBytes = 64 * 1024;
+
+type SessionValidationFailure = { code: number; ok: false; reason: string };
+
+type BillingSessionValidation =
+  | { availableMs: number; customerId: string | null; ok: true }
+  | SessionValidationFailure;
+
+type RealtimeSessionValidation =
+  | {
+      apiKey: string;
+      analyticsEnabled: boolean;
+      availableMs: number;
+      customerId: string | null;
+      expiresAtMs: number;
+      ok: true;
+      safetyIdentifier: string;
+      targetLanguage: LanguageCode;
+    }
+  | SessionValidationFailure;
 
 export function connectRealtimeSocket(
   request: Request,
@@ -72,6 +97,14 @@ export async function proxyRealtimeSession(
     closeSocket(client, validated.code, validated.reason);
     return;
   }
+  const usageMeter = validated.customerId
+    ? createRealtimeUsageMeter({
+        availableMs: validated.availableMs,
+        customerId: validated.customerId,
+        namespace: env.CUSTOMER_LEDGER,
+        usageSessionId: appSessionId,
+      })
+    : null;
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
@@ -100,7 +133,7 @@ export async function proxyRealtimeSession(
     Sentry.captureException(failure, {
       tags: { app_session_id: appSessionId, operation: "open_translation_socket" },
     });
-    await closeRealtimeSession(appSessionId, env).catch((closeFailure: unknown) => {
+    await closeMeteredRealtimeSession(appSessionId, "failed", usageMeter, env).catch((closeFailure: unknown) => {
       Sentry.captureException(closeFailure, {
         tags: { app_session_id: appSessionId, operation: "close_failed_realtime_session" },
       });
@@ -123,7 +156,7 @@ export async function proxyRealtimeSession(
 
   if (client.readyState !== WebSocket.OPEN) {
     closeSocket(upstream, 1000, "client_gone");
-    await closeRealtimeSession(appSessionId, env);
+    await closeMeteredRealtimeSession(appSessionId, "failed", usageMeter, env);
     queueRealtimeTelemetry(telemetry, createSessionEndedEvent(
       telemetry,
       "failed",
@@ -132,6 +165,7 @@ export async function proxyRealtimeSession(
     return;
   }
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+  let settlementTimer: ReturnType<typeof setInterval> | null = null;
   let sessionFinished = false;
   const finishSessionRecord = (
     outcome: "completed" | "failed",
@@ -145,7 +179,16 @@ export async function proxyRealtimeSession(
       clearTimeout(deadlineTimer);
       deadlineTimer = null;
     }
-    const close = closeRealtimeSession(appSessionId, env).catch((failure: unknown) => {
+    if (settlementTimer) {
+      clearInterval(settlementTimer);
+      settlementTimer = null;
+    }
+    const close = closeMeteredRealtimeSession(
+      appSessionId,
+      outcome === "completed" ? "closed" : "failed",
+      usageMeter,
+      env,
+    ).catch((failure: unknown) => {
       Sentry.captureException(failure, {
         tags: { app_session_id: appSessionId, operation: "close_realtime_session_record" },
       });
@@ -167,7 +210,28 @@ export async function proxyRealtimeSession(
     closeSocket(client, 1008, "session_expired");
     finishSessionRecord("failed", "session_expired");
   }, remainingMs);
-  bindClientEvents(client, upstream, telemetry, finishSessionRecord);
+  if (usageMeter) {
+    settlementTimer = setInterval(() => {
+      void usageMeter.settle().then((settlement) => {
+        if (!settlement.exhausted || sessionFinished) {
+          return;
+        }
+        sendSessionError(client, "allowance_exhausted", false);
+        closeSocket(upstream, 1008, "allowance_exhausted");
+        closeSocket(client, 1008, "allowance_exhausted");
+        finishSessionRecord("failed", "allowance_exhausted");
+      }).catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { app_session_id: appSessionId, operation: "settle_realtime_usage" },
+        });
+        sendSessionError(client, "billing_unavailable", true);
+        closeSocket(upstream, 1011, "billing_unavailable");
+        closeSocket(client, 1011, "billing_unavailable");
+        finishSessionRecord("failed", "billing_unavailable");
+      });
+    }, 5_000);
+  }
+  bindClientEvents(client, upstream, telemetry, finishSessionRecord, usageMeter);
   bindProviderEvents(client, upstream, telemetry, finishSessionRecord);
   upstream.send(createSessionUpdate(validated.targetLanguage));
   send(client, {
@@ -184,17 +248,7 @@ async function validateSession(
   targetLanguage: string,
   analyticsEnabled: boolean,
   env: Env,
-): Promise<
-  | {
-      apiKey: string;
-      analyticsEnabled: boolean;
-      expiresAtMs: number;
-      ok: true;
-      safetyIdentifier: string;
-      targetLanguage: LanguageCode;
-    }
-  | { code: number; ok: false; reason: string }
-> {
+): Promise<RealtimeSessionValidation> {
   if (!appSessionId || !isLanguageCode(targetLanguage)) {
     return { code: 1008, ok: false, reason: "invalid_realtime_request" };
   }
@@ -210,13 +264,47 @@ async function validateSession(
   if (!reservation.ok) {
     return { code: 1008, ok: false, reason: reservation.code };
   }
+  const billing: BillingSessionValidation = isBillingEnforced(env)
+    ? await validateBilledSession(appSessionId, env)
+    : { availableMs: Number.POSITIVE_INFINITY, customerId: null, ok: true };
+  if (!billing.ok) {
+    return billing;
+  }
   return {
     apiKey,
     analyticsEnabled,
+    availableMs: billing.availableMs,
+    customerId: billing.customerId,
     expiresAtMs: reservation.expires_at_ms,
     ok: true,
     safetyIdentifier: reservation.hashed_install_id,
     targetLanguage,
+  };
+}
+
+async function validateBilledSession(
+  appSessionId: string,
+  env: Env,
+): Promise<BillingSessionValidation> {
+  const usageSession = await findOpenUsageSession(env.BILLING_DB, appSessionId);
+  if (!usageSession) {
+    return { code: 1008, ok: false, reason: "usage_session_unavailable" };
+  }
+  const balance = await callCustomerLedger(env.CUSTOMER_LEDGER, usageSession.customerId, {
+    action: "get_balance",
+    customerId: usageSession.customerId,
+    nowMs: Date.now(),
+  });
+  if (!balance.result.ok || !("balance" in balance.result)) {
+    return { code: 1011, ok: false, reason: "billing_unavailable" };
+  }
+  if (balance.result.balance.availableMs <= 0) {
+    return { code: 1008, ok: false, reason: "allowance_exhausted" };
+  }
+  return {
+    availableMs: balance.result.balance.availableMs,
+    customerId: usageSession.customerId,
+    ok: true,
   };
 }
 
@@ -228,9 +316,11 @@ function bindClientEvents(
     outcome: "completed" | "failed",
     failureCode?: string | null,
   ) => void,
+  usageMeter: RealtimeUsageMeter | null,
 ): void {
   const forwardAudio = (audio: ArrayBuffer): void => {
     upstream.send(createInputAudioMessage(audio));
+    usageMeter?.recordAudio(audio.byteLength);
     telemetry.stats.inputAudioChunks += 1;
     telemetry.stats.inputAudioBytes += audio.byteLength;
     send(client, {
@@ -240,13 +330,53 @@ function bindClientEvents(
       worker_received_at_ms: Date.now(),
     });
   };
+  let audioQueue = Promise.resolve();
+  let billingStopped = false;
+  const stopForBilling = (code: "allowance_exhausted" | "billing_unavailable"): void => {
+    if (billingStopped) {
+      return;
+    }
+    billingStopped = true;
+    sendSessionError(client, code, code === "billing_unavailable");
+    closeSocket(upstream, code === "allowance_exhausted" ? 1008 : 1011, code);
+    closeSocket(client, code === "allowance_exhausted" ? 1008 : 1011, code);
+    finishSessionRecord("failed", code);
+  };
+  const queueAudio = (audio: ArrayBuffer): void => {
+    audioQueue = audioQueue.then(async () => {
+      if (upstream.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      if (usageMeter) {
+        let acceptance = usageMeter.checkAudio(audio.byteLength);
+        if (acceptance === "settlement_required") {
+          const settlement = await usageMeter.settle();
+          if (settlement.exhausted) {
+            stopForBilling("allowance_exhausted");
+            return;
+          }
+          acceptance = usageMeter.checkAudio(audio.byteLength);
+        }
+        if (acceptance !== "accepted") {
+          stopForBilling("allowance_exhausted");
+          return;
+        }
+      }
+      forwardAudio(audio);
+    }).catch((failure: unknown) => {
+      Sentry.captureException(failure, {
+        tags: { app_session_id: telemetry.appSessionId, operation: "meter_realtime_audio" },
+      });
+      stopForBilling("billing_unavailable");
+    });
+  };
   client.addEventListener("message", (event: MessageEvent) => {
     if (event.data instanceof ArrayBuffer) {
       if (!isAcceptedAudioFrame(event.data.byteLength)) {
         sendSessionError(client, "audio_frame_too_large", false);
         return;
       }
-      forwardAudio(event.data);
+      queueAudio(event.data);
       return;
     }
     if (event.data instanceof Blob) {
@@ -256,14 +386,28 @@ function bindClientEvents(
       }
       void event.data.arrayBuffer().then((audio) => {
         if (upstream.readyState === WebSocket.OPEN) {
-          forwardAudio(audio);
+          queueAudio(audio);
         }
+      }).catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { app_session_id: telemetry.appSessionId, operation: "decode_realtime_audio" },
+        });
+        stopForBilling("billing_unavailable");
       });
       return;
     }
     const command = parseClientCommand(event.data);
     if (command?.kind === "close_session") {
-      upstream.send(createCloseMessage());
+      audioQueue = audioQueue.then(() => {
+        if (upstream.readyState === WebSocket.OPEN) {
+          upstream.send(createCloseMessage());
+        }
+      }).catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { app_session_id: telemetry.appSessionId, operation: "close_realtime_audio" },
+        });
+        stopForBilling("billing_unavailable");
+      });
     }
   });
   client.addEventListener("close", () => {
@@ -428,9 +572,22 @@ async function closeRealtimeSession(appSessionId: string, env: Env): Promise<voi
   });
 }
 
+async function closeMeteredRealtimeSession(
+  appSessionId: string,
+  outcome: "closed" | "failed",
+  usageMeter: ReturnType<typeof createRealtimeUsageMeter> | null,
+  env: Env,
+): Promise<void> {
+  if (usageMeter) {
+    await usageMeter.close(outcome);
+  }
+  await closeRealtimeSession(appSessionId, env);
+}
+
 export function isAcceptedAudioFrame(byteLength: number): boolean {
   return Number.isInteger(byteLength) &&
     byteLength > 0 &&
+    byteLength % 2 === 0 &&
     byteLength <= maxAudioFrameBytes;
 }
 
