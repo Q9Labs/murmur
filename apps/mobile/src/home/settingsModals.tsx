@@ -31,16 +31,22 @@ export function SettingsModal(props: {
   const { styles } = useSheetStyles();
   const [accountBillingOpen, setAccountBillingOpen] = useState(false);
   const disabled = props.live.status === "live";
+
+  if (accountBillingOpen) {
+    return (
+      <AccountBillingModal onClose={() => setAccountBillingOpen(false)} open={props.open} />
+    );
+  }
+
   return (
-    <>
-      <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
-        <View style={styles.settingsList}>
-          <SettingsAction
-            disabled={disabled}
-            label="Account & billing"
-            onPress={() => setAccountBillingOpen(true)}
-          />
-          <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
+    <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
+      <View style={styles.settingsList}>
+        <SettingsAction
+          disabled={disabled}
+          label="Account & billing"
+          onPress={() => setAccountBillingOpen(true)}
+        />
+        <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
         <SettingsAction
           disabled={disabled}
           label={`Anonymous analytics: ${props.anonymousAnalyticsEnabled ? "On" : "Off"}`}
@@ -50,7 +56,10 @@ export function SettingsModal(props: {
           label="Privacy policy"
           onPress={() => void Linking.openURL(legalUrls.privacy)}
         />
-        <SettingsAction label="Terms of use" onPress={() => void Linking.openURL(legalUrls.terms)} />
+        <SettingsAction
+          label="Terms of use"
+          onPress={() => void Linking.openURL(legalUrls.terms)}
+        />
         <SettingsAction
           label="Support & data requests"
           onPress={() => void Linking.openURL(legalUrls.support)}
@@ -69,16 +78,9 @@ export function SettingsModal(props: {
           label="Reset Murmur Identity"
           onPress={props.onResetIdentity}
         />
-        </View>
-        {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
-      </ModalSheet>
-      {props.open && accountBillingOpen ? (
-        <AccountBillingModal
-          onClose={() => setAccountBillingOpen(false)}
-          open
-        />
-      ) : null}
-    </>
+      </View>
+      {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
+    </ModalSheet>
   );
 }
 
