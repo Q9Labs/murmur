@@ -25,6 +25,13 @@ export type {
 } from "./rateLimiter/types";
 
 const stateKey = "rate_limit_state_v1";
+const rateLimiterInvalidResponseCode = "rate_limiter_invalid_response";
+const rateLimiterUnavailableCode = "rate_limiter_unavailable";
+
+export type RateLimiterNamespace = {
+  get(id: DurableObjectId): { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
+  idFromName(name: string): DurableObjectId;
+};
 
 export class RateLimitDurableObject {
   constructor(private readonly state: DurableObjectState) {}
@@ -117,7 +124,7 @@ function createSessionRecord(
 }
 
 async function callRateLimiter(
-  namespace: DurableObjectNamespace | undefined,
+  namespace: RateLimiterNamespace | undefined,
   body: DurableLimitRequest,
 ): Promise<unknown> {
   if (!namespace) {
@@ -132,19 +139,71 @@ async function callRateLimiter(
   return response.json();
 }
 
+async function callRateLimiterForLimit(
+  namespace: RateLimiterNamespace | undefined,
+  body: DurableLimitRequest,
+): Promise<LimitResult> {
+  try {
+    return decodeLimitResult(await callRateLimiter(namespace, body));
+  } catch {
+    return { code: rateLimiterUnavailableCode, ok: false };
+  }
+}
+
+function decodeLimitResult(result: unknown): LimitResult {
+  if (typeof result !== "object") {
+    return invalidRateLimiterResponse();
+  }
+  if (result === null) {
+    return invalidRateLimiterResponse();
+  }
+  if (!("ok" in result)) {
+    return invalidRateLimiterResponse();
+  }
+  if (result.ok === true) {
+    return { ok: true };
+  }
+  if (result.ok !== false) {
+    return invalidRateLimiterResponse();
+  }
+  const code = "code" in result ? result.code : undefined;
+  const retryAfterMs = "retry_after_ms" in result ? result.retry_after_ms : undefined;
+  return decodeRejectedLimit(code, retryAfterMs);
+}
+
+function decodeRejectedLimit(code: unknown, retryAfterMs: unknown): LimitResult {
+  if (typeof code !== "string") {
+    return invalidRateLimiterResponse();
+  }
+  if (typeof retryAfterMs === "number") {
+    return { code, ok: false, retry_after_ms: retryAfterMs };
+  }
+  return { code, ok: false };
+}
+
+function invalidRateLimiterResponse(): LimitResult {
+  return { code: rateLimiterInvalidResponseCode, ok: false };
+}
+
+export function isRateLimiterUnavailable(result: LimitResult): boolean {
+  return !result.ok && (
+    result.code === rateLimiterUnavailableCode || result.code === rateLimiterInvalidResponseCode
+  );
+}
+
 export async function createSessionIfAllowedDurable(params: {
   app_session_id: string;
   hashed_install_id: string;
-  namespace?: DurableObjectNamespace;
+  namespace?: RateLimiterNamespace;
   now_ms: number;
 }): Promise<LimitResult> {
-  return (await callRateLimiter(params.namespace, {
+  return callRateLimiterForLimit(params.namespace, {
     action: "create_session_record",
     app_session_id: params.app_session_id,
     enforce_limits: true,
     hashed_install_id: params.hashed_install_id,
     now_ms: params.now_ms,
-  })) as LimitResult;
+  });
 }
 
 export async function createSessionRecordDurable(params: {
@@ -199,29 +258,14 @@ export async function canAcceptReportDurable(params: {
 
 export async function canAcceptTelemetryDurable(params: {
   hashed_client_id: string;
-  namespace?: DurableObjectNamespace;
+  namespace?: RateLimiterNamespace;
   now_ms: number;
 }): Promise<LimitResult> {
-  const result = await callRateLimiter(params.namespace, {
+  return callRateLimiterForLimit(params.namespace, {
     action: "can_accept_telemetry",
     hashed_client_id: params.hashed_client_id,
     now_ms: params.now_ms,
   });
-  if (typeof result !== "object" || result === null || !("ok" in result)) {
-    return { code: "rate_limiter_invalid_response", ok: false };
-  }
-  if (result.ok === true) {
-    return { ok: true };
-  }
-  if (result.ok !== false || !("code" in result) || typeof result.code !== "string") {
-    return { code: "rate_limiter_invalid_response", ok: false };
-  }
-  const retryAfterMs = "retry_after_ms" in result && typeof result.retry_after_ms === "number"
-    ? result.retry_after_ms
-    : undefined;
-  return retryAfterMs === undefined
-    ? { code: result.code, ok: false }
-    : { code: result.code, ok: false, retry_after_ms: retryAfterMs };
 }
 
 export async function storeReportDurable(params: {

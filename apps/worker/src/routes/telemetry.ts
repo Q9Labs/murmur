@@ -4,7 +4,10 @@ import type { Env } from "../env";
 import { json } from "../http/response";
 import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
 import { hashInstallId } from "../privacy";
-import { canAcceptTelemetryDurable } from "../rateLimitDurableObject";
+import {
+  canAcceptTelemetryDurable,
+  isRateLimiterUnavailable,
+} from "../rateLimitDurableObject";
 
 const maxTelemetryBodyBytes = 8 * 1024;
 
@@ -35,6 +38,9 @@ export async function captureMobileTelemetry(
     now_ms: Date.now(),
   });
   if (!limit.ok) {
+    if (isRateLimiterUnavailable(limit)) {
+      return json({ error: limit.code }, 503);
+    }
     return json(
       { error: limit.code, retry_after_ms: limit.retry_after_ms },
       429,

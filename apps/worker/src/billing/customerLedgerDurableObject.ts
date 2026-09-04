@@ -18,6 +18,11 @@ const customerStateKey = "customer_id";
 const generationStateKey = "usage_generation";
 const internalHeader = "x-murmur-ledger-internal";
 
+export type CustomerLedgerNamespace = {
+  get(id: DurableObjectId): { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
+  idFromName(name: string): DurableObjectId;
+};
+
 export class CustomerLedgerDurableObject {
   constructor(
     private readonly state: DurableObjectState,
@@ -62,25 +67,30 @@ export class CustomerLedgerDurableObject {
 }
 
 export async function callCustomerLedger(
-  namespace: DurableObjectNamespace | undefined,
+  namespace: CustomerLedgerNamespace | undefined,
   customerId: string,
   command: CustomerLedgerCommand,
 ): Promise<{ response: Response; result: LedgerCommandResult }> {
   if (!namespace) {
-    const unavailable = response({ code: "billing_unavailable", ok: false }, 503);
-    return {
-      response: unavailable,
-      result: { code: "billing_unavailable", ok: false },
-    };
+    return billingUnavailable();
   }
-  const stub = namespace.get(namespace.idFromName(customerId));
-  const ledgerResponse = await stub.fetch("https://customer-ledger.internal/", {
-    body: JSON.stringify(command),
-    headers: { [internalHeader]: "1", "content-type": "application/json" },
-    method: "POST",
-  });
-  const result: LedgerCommandResult = await ledgerResponse.json();
-  return { response: ledgerResponse, result };
+  try {
+    const stub = namespace.get(namespace.idFromName(customerId));
+    const ledgerResponse = await stub.fetch("https://customer-ledger.internal/", {
+      body: JSON.stringify(command),
+      headers: { [internalHeader]: "1", "content-type": "application/json" },
+      method: "POST",
+    });
+    const result: LedgerCommandResult = await ledgerResponse.json();
+    return { response: ledgerResponse, result };
+  } catch {
+    return billingUnavailable();
+  }
+}
+
+function billingUnavailable(): { response: Response; result: LedgerCommandResult } {
+  const result: LedgerCommandResult = { code: "billing_unavailable", ok: false };
+  return { response: response(result, 503), result };
 }
 
 function response(result: LedgerCommandResult, status = 200): Response {

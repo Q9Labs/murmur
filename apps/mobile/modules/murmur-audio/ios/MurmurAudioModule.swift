@@ -87,6 +87,26 @@ public class MurmurAudioModule: Module {
       return
     }
 
+    audioGenerationId += 1
+    droppedFrames = 0
+    captureBuffer.removeAll(keepingCapacity: true)
+
+    do {
+      try configureAndStartCaptureEngine()
+    } catch {
+      resetCaptureEngine()
+      do {
+        try configureAndStartCaptureEngine()
+      } catch {
+        resetCaptureEngine()
+        throw error
+      }
+    }
+    captureActive = true
+    emitState(reason: "capture_started")
+  }
+
+  private func configureAndStartCaptureEngine() throws {
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(
       .playAndRecord,
@@ -96,10 +116,6 @@ public class MurmurAudioModule: Module {
     try session.setPreferredSampleRate(48_000)
     try session.setPreferredIOBufferDuration(0.02)
     try session.setActive(true)
-
-    audioGenerationId += 1
-    droppedFrames = 0
-    captureBuffer.removeAll(keepingCapacity: true)
 
     let inputNode = captureEngine.inputNode
     let inputFormat = inputNode.outputFormat(forBus: 0)
@@ -116,19 +132,20 @@ public class MurmurAudioModule: Module {
 
     captureEngine.prepare()
     try captureEngine.start()
-    captureActive = true
-    emitState(reason: "capture_started")
   }
 
   private func stopCaptureSync(reason: String) {
-    if captureActive {
-      captureEngine.inputNode.removeTap(onBus: 0)
-      captureEngine.stop()
-    }
+    resetCaptureEngine()
+    emitState(reason: reason)
+  }
+
+  private func resetCaptureEngine() {
+    captureEngine.inputNode.removeTap(onBus: 0)
+    captureEngine.stop()
+    captureEngine.reset()
     captureBuffer.removeAll(keepingCapacity: true)
     converter = nil
     captureActive = false
-    emitState(reason: reason)
   }
 
   private func startPlaybackSync() throws {

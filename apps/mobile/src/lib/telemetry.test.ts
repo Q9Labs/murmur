@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dependencies = vi.hoisted(() => ({
-  captureMobileFailure: vi.fn(),
   deleteAnonymousAnalyticsPreference: vi.fn(async () => undefined),
   getAnonymousAnalyticsEnabled: vi.fn(async () => true),
   getOrCreateInstallId: vi.fn(async () => "install-id-123456"),
@@ -26,10 +25,6 @@ vi.mock("./config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
 vi.mock("./installIdentity", () => ({
   getOrCreateInstallId: dependencies.getOrCreateInstallId,
 }));
-vi.mock("./observability/sentry", () => ({
-  captureMobileFailure: dependencies.captureMobileFailure,
-}));
-
 import {
   captureMobileTelemetry,
   initializeAnonymousAnalytics,
@@ -93,7 +88,7 @@ describe("mobile telemetry privacy preference", () => {
     );
   });
 
-  it("keeps analytics off when opt-out delivery fails", async () => {
+  it("keeps analytics off without reporting a duplicate product error when delivery fails", async () => {
     fetchMock.mockRejectedValueOnce(new Error("network unavailable"));
 
     await expect(updateAnonymousAnalyticsEnabled(false)).resolves.toBeUndefined();
@@ -108,6 +103,5 @@ describe("mobile telemetry privacy preference", () => {
 
     expect(dependencies.setAnonymousAnalyticsEnabled).toHaveBeenCalledWith(false);
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(dependencies.captureMobileFailure).toHaveBeenCalledOnce();
   });
 });

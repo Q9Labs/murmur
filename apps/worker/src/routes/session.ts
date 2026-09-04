@@ -23,6 +23,7 @@ import { queuePostHogEvent, type TelemetryExecutionContext } from "../observabil
 import {
   closeSessionDurable,
   createSessionIfAllowedDurable,
+  isRateLimiterUnavailable,
 } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
 
@@ -54,6 +55,9 @@ export async function createSession(
     now_ms: nowMs,
   });
   if (!limitResult.ok) {
+    if (isRateLimiterUnavailable(limitResult)) {
+      return json({ error: "service_unavailable", code: limitResult.code }, 503);
+    }
     return json({ error: "rate_limited", code: limitResult.code }, 429);
   }
   const billingUsage = await prepareBillingUsage(

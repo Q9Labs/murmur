@@ -43,20 +43,30 @@ export function captureMobileFailure(
   failure: unknown,
   context: MobileFailureContext,
 ): void {
+  const errorCode = context.error_code ?? getFailureCode(failure) ?? "none";
   const tags = {
     app_session_id: context.app_session_id ?? "none",
-    error_code: context.error_code ?? "none",
+    error_code: errorCode,
     operation: context.operation,
     stage: context.stage ?? "unknown",
   };
+  const fingerprint = [context.operation, tags.stage, errorCode];
   if (failure instanceof Error) {
-    Sentry.captureException(failure, { tags });
+    Sentry.captureException(failure, { fingerprint, tags });
     return;
   }
   Sentry.captureMessage(context.operation, {
+    fingerprint,
     level: "error",
     tags,
   });
+}
+
+function getFailureCode(failure: unknown): string | null {
+  if (!(failure instanceof Error) || !("code" in failure) || typeof failure.code !== "string") {
+    return null;
+  }
+  return /^[A-Za-z0-9_.-]{1,64}$/.test(failure.code) ? failure.code : null;
 }
 
 export function sanitizeMobileEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {

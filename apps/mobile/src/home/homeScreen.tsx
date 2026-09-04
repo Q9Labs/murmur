@@ -278,14 +278,18 @@ export default function HomeScreen(): ReactNode {
 
   useEffect(() => {
     let mounted = true;
-    void hasAcknowledgedPrivacyDisclosure().then((acknowledged) => {
-      if (mounted) {
-        setPrivacyAcknowledged(acknowledged);
-        if (acknowledged) {
-          setOnboardingStep("done");
+    void hasAcknowledgedPrivacyDisclosure()
+      .then((acknowledged) => {
+        if (mounted) {
+          setPrivacyAcknowledged(acknowledged);
+          if (acknowledged) {
+            setOnboardingStep("done");
+          }
         }
-      }
-    });
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "read_privacy_acknowledgement" });
+      });
     return () => {
       mounted = false;
     };
@@ -303,9 +307,16 @@ export default function HomeScreen(): ReactNode {
         setAudioState((current) => newestAudioState(current, nextState));
       },
     );
-    void MurmurAudioModule.getAudioState().then((nextState) => {
-      setAudioState((current) => newestAudioState(current, nextState as AudioStateEvent));
-    });
+    void MurmurAudioModule.getAudioState()
+      .then((nextState) => {
+        setAudioState((current) => newestAudioState(current, nextState as AudioStateEvent));
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, {
+          operation: "read_audio_state",
+          stage: "audio_capture",
+        });
+      });
     return () => subscription.remove();
   }, []);
 

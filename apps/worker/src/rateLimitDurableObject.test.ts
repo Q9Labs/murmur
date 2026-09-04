@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { RateLimitDurableObject } from "./rateLimitDurableObject";
+import {
+  createSessionIfAllowedDurable,
+  isRateLimiterUnavailable,
+  RateLimitDurableObject,
+  type RateLimiterNamespace,
+} from "./rateLimitDurableObject";
 
 function createState() {
   let saved: unknown;
@@ -27,6 +32,35 @@ async function call(
 }
 
 describe("RateLimitDurableObject", () => {
+  it("distinguishes dependency failures from ordinary rate limits", () => {
+    expect(isRateLimiterUnavailable({ code: "rate_limiter_unavailable", ok: false })).toBe(true);
+    expect(isRateLimiterUnavailable({ code: "rate_limiter_invalid_response", ok: false })).toBe(true);
+    expect(isRateLimiterUnavailable({ code: "hourly_limit", ok: false })).toBe(false);
+    expect(isRateLimiterUnavailable({ ok: true })).toBe(false);
+  });
+
+  it("returns service-unavailable semantics when the Durable Object cannot be reached", async () => {
+    const durableObjectId: DurableObjectId = {
+      equals: () => true,
+      toString: () => "rate-limiter-id",
+    };
+    const namespace: RateLimiterNamespace = {
+      get: () => ({
+        fetch: async () => {
+          throw new Error("durable object unavailable");
+        },
+      }),
+      idFromName: () => durableObjectId,
+    };
+
+    await expect(createSessionIfAllowedDurable({
+      app_session_id: "session",
+      hashed_install_id: "install",
+      namespace,
+      now_ms: 1,
+    })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
+  });
+
   it("rejects malformed JSON", async () => {
     const durableObject = new RateLimitDurableObject(createState() as unknown as DurableObjectState);
     const response = await durableObject.fetch(new Request("https://limiter.test", {
