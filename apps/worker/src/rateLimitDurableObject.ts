@@ -136,6 +136,9 @@ async function callRateLimiter(
     body: JSON.stringify(body),
     method: "POST",
   });
+  if (!response.ok) {
+    throw new Error(`Rate limiter request failed with status ${response.status}`);
+  }
   return response.json();
 }
 

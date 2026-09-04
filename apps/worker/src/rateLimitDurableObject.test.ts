@@ -62,6 +62,25 @@ describe("RateLimitDurableObject", () => {
     })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
   });
 
+  it("rejects an accepted result sent with an unsuccessful HTTP status", async () => {
+    const durableObjectId: DurableObjectId = {
+      equals: () => true,
+      toString: () => "rate-limiter-id",
+    };
+    const namespace: RateLimiterNamespace = {
+      get: () => ({
+        fetch: async () => Response.json({ ok: true }, { status: 503 }),
+      }),
+      idFromName: () => durableObjectId,
+    };
+
+    await expect(canAcceptTelemetryDurable({
+      hashed_client_id: "client",
+      namespace,
+      now_ms: 1,
+    })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
+  });
+
   it.each([
     {
       expected: { code: "rate_limiter_invalid_response", ok: false },
