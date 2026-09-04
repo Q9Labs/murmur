@@ -1,12 +1,58 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@sentry/react-native", () => ({
+const sentry = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   init: vi.fn(),
 }));
 
-import { sanitizeMobileEvent } from "./sentry";
+vi.mock("@sentry/react-native", () => sentry);
+
+import { captureMobileFailure, sanitizeMobileEvent } from "./sentry";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("mobile Sentry failure grouping", () => {
+  it("groups failures by operation, stage, and a safe native error code", () => {
+    const failure = new Error("private native message");
+    Object.assign(failure, { code: "ERR_AUDIO_CAPTURE" });
+
+    captureMobileFailure(failure, {
+      app_session_id: "session-1",
+      operation: "start_microphone_capture",
+      stage: "audio_capture",
+    });
+
+    expect(sentry.captureException).toHaveBeenCalledWith(failure, {
+      fingerprint: ["start_microphone_capture", "audio_capture", "ERR_AUDIO_CAPTURE"],
+      tags: {
+        app_session_id: "session-1",
+        error_code: "ERR_AUDIO_CAPTURE",
+        operation: "start_microphone_capture",
+        stage: "audio_capture",
+      },
+    });
+  });
+
+  it("does not use arbitrary native error content as a tag or fingerprint", () => {
+    const failure = new Error("private native message");
+    Object.assign(failure, { code: "private user content with spaces" });
+
+    captureMobileFailure(failure, { operation: "read_audio_state" });
+
+    expect(sentry.captureException).toHaveBeenCalledWith(failure, {
+      fingerprint: ["read_audio_state", "unknown", "none"],
+      tags: {
+        app_session_id: "none",
+        error_code: "none",
+        operation: "read_audio_state",
+        stage: "unknown",
+      },
+    });
+  });
+});
 
 describe("mobile Sentry privacy sanitizer", () => {
   it("removes content-bearing contexts and exception messages", () => {

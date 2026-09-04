@@ -125,7 +125,10 @@ export function useLiveTranslation(
   useEffect(() => {
     playbackEnabledRef.current = params.playback_enabled;
     if (!params.playback_enabled) {
-      void MurmurAudioModule.clearPlayback("playback_disabled");
+      observeBackgroundOperation(
+        MurmurAudioModule.clearPlayback("playback_disabled"),
+        "clear_disabled_playback",
+      );
     }
   }, [params.playback_enabled]);
 
@@ -178,10 +181,13 @@ export function useLiveTranslation(
     preparationRef.current?.dispose();
     const client = clientRef.current;
     clientRef.current = null;
-    void Promise.all([
-      client?.close("hook_unmount"),
-      MurmurAudioModule.stopCapture("hook_unmount"),
-    ]).then(() => MurmurAudioModule.clearPlayback("hook_unmount"));
+    observeBackgroundOperation(
+      Promise.all([
+        client?.close("hook_unmount"),
+        MurmurAudioModule.stopCapture("hook_unmount"),
+      ]).then(() => MurmurAudioModule.clearPlayback("hook_unmount")),
+      "stop_audio_on_unmount",
+    );
   }, []);
 
   function transition(state: SessionState): void {
@@ -195,6 +201,16 @@ export function useLiveTranslation(
   function setLiveError(nextError: string | null): void {
     errorRef.current = nextError;
     setError(nextError);
+  }
+
+  function observeBackgroundOperation(promise: Promise<unknown>, operation: string): void {
+    void promise.catch((failure: unknown) => {
+      captureMobileFailure(failure, {
+        app_session_id: sessionRef.current.identity.app_session_id,
+        operation,
+        stage: "session_runtime",
+      });
+    });
   }
 
   function resetCompletionWaiter(): void {
@@ -374,7 +390,10 @@ export function useLiveTranslation(
       }
       setLiveError("realtime_connect_timeout");
       recordDebug("realtime.timeout", "Live translation connection timed out", "error");
-      void finishSession("failed");
+      observeBackgroundOperation(
+        finishSession("failed"),
+        "finish_session_after_connection_timeout",
+      );
     });
     const gracefulStopDelayMs = getGracefulSessionStopDelay(
       response.limits.expires_at_ms,
@@ -382,9 +401,9 @@ export function useLiveTranslation(
     );
     sessionTimerRef.current = setTimeout(() => {
       if (sessionRef.current.state === "live") {
-        void stop();
+        observeBackgroundOperation(stop(), "stop_expired_session");
       } else {
-        void finishSession("failed");
+        observeBackgroundOperation(finishSession("failed"), "finish_expired_session");
       }
     }, gracefulStopDelayMs);
     client.connect();
@@ -401,7 +420,7 @@ export function useLiveTranslation(
     ) {
       return;
     }
-    void receiveRealtimeEvent(event);
+    observeBackgroundOperation(receiveRealtimeEvent(event), "handle_realtime_event");
   }
 
   // This existing dispatcher mirrors the closed realtime event protocol in one place.
@@ -554,9 +573,12 @@ export function useLiveTranslation(
     clearCloseTimer(sessionTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     closeTimerRef.current = setTimeout(() => {
-      void finishSession("ended");
+      observeBackgroundOperation(finishSession("ended"), "finish_session_after_close_timeout");
     }, sessionCloseTimeoutMs);
-    void Promise.all([localCleanup.capture, localCleanup.playback]);
+    observeBackgroundOperation(
+      Promise.all([localCleanup.capture, localCleanup.playback]),
+      "stop_local_audio",
+    );
     return completionPromise;
   }
 

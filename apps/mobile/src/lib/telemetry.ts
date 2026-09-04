@@ -8,7 +8,6 @@ import {
   setAnonymousAnalyticsEnabled,
 } from "./anonymousAnalytics";
 import { getOrCreateInstallId } from "./installIdentity";
-import { captureMobileFailure } from "./observability/sentry";
 import { deliverMobileTelemetryRequest } from "./providers/mobileTelemetry";
 
 let anonymousAnalyticsEnabled = false;
@@ -58,11 +57,7 @@ async function deliverMobileTelemetry(payload: MobileTelemetryEvent): Promise<vo
 }
 
 async function deliverMobileTelemetryBestEffort(payload: MobileTelemetryEvent): Promise<void> {
-  try {
-    await deliverMobileTelemetry(payload);
-  } catch (failure) {
-    captureMobileFailure(failure, { operation: "mobile_telemetry_delivery" });
-  }
+  await Promise.allSettled([deliverMobileTelemetry(payload)]);
 }
 
 function createAppLifecycleEvent(
