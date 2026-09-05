@@ -18,9 +18,9 @@
     "better-auth": "1.7.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260516.1",
-    "@sentry/cli": "3.6.2",
-    "vitest": "^4.1.6",
-    "wrangler": "^4.92.0"
+    "@cloudflare/workers-types": "^5.20260902.1",
+    "@sentry/cli": "3.7.0",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.128.0"
   }
 }
