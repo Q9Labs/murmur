@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@better-auth/expo": "1.7.2",
-    "@better-auth/utils": "0.4.2",
+    "@better-auth/utils": "0.5.0",
     "@bradford-tech/supabase-integrity-attest": "^0.8.2",
     "@murmur/protocol": "workspace:*",
     "@sentry/cloudflare": "10.72.0",
