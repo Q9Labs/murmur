@@ -14,7 +14,7 @@
     "@better-auth/utils": "0.4.2",
     "@bradford-tech/supabase-integrity-attest": "^0.8.2",
     "@murmur/protocol": "workspace:*",
-    "@sentry/cloudflare": "10.72.0",
+    "@sentry/cloudflare": "10.73.0",
     "better-auth": "1.7.2"
   },
   "devDependencies": {
