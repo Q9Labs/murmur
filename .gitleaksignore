@@ -1,2 +1,4 @@
 4493469edd5b18b3e445b75521f302a9c362200a:scripts/validate-no-secrets.mjs:private-key:60
 3743f070ef43c814d603321268cda591a7a3e8b4:lib/installIdentity.ts:generic-api-key:5
+168cc85962c18c0febbc6c837d5869818450ff2c:release/manifest.json:generic-api-key:16
+aa783a737e3b8c5395b24ff29f4d83f15e42f200:release/manifest.json:generic-api-key:16

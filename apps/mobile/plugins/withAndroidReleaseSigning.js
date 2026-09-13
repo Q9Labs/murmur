@@ -12,7 +12,7 @@ def releaseSigningFileValue(String name) {
     if (!valueFile.isFile()) {
         throw new GradleException("Missing Android release signing value file for " + name)
     }
-    return valueFile.getText("UTF-8").trim()
+    return valueFile.getText("UTF-8").replaceFirst(/(?:\\r\\n|\\n|\\r)$/, "")
 }
 
 def releaseSigningValue(String name) {

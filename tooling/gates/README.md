@@ -21,6 +21,6 @@ The static and security layers are:
 - `pnpm run lint:spelling`: CSpell typo hygiene.
 - `pnpm run react:doctor`: pinned Expo Doctor 1.20.0 diagnostics for the React Native app stack.
 
-The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`.
+The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
 
 Excluded from the hook on purpose: `store:live`, `store:preflight`, live production smoke checks, Fastlane submission validation, release lanes, and any command that mutates files.

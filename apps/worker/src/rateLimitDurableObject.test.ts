@@ -61,6 +61,24 @@ describe("RateLimitDurableObject", () => {
     })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
   });
 
+  it("returns service-unavailable semantics when the Durable Object rejects the request", async () => {
+    const durableObjectId: DurableObjectId = {
+      equals: () => true,
+      toString: () => "rate-limiter-id",
+    };
+    const namespace: RateLimiterNamespace = {
+      get: () => ({ fetch: async () => new Response(null, { status: 503 }) }),
+      idFromName: () => durableObjectId,
+    };
+
+    await expect(createSessionIfAllowedDurable({
+      app_session_id: "session",
+      hashed_install_id: "install",
+      namespace,
+      now_ms: 1,
+    })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
+  });
+
   it("rejects malformed JSON", async () => {
     const durableObject = new RateLimitDurableObject(createState() as unknown as DurableObjectState);
     const response = await durableObject.fetch(new Request("https://limiter.test", {

@@ -35,6 +35,10 @@ describe("withAndroidReleaseSigning", () => {
     expect(patched).toContain("MURMUR_ANDROID_KEY_ALIAS");
     expect(patched).toContain("MURMUR_ANDROID_KEY_PASSWORD");
     expect(patched).toContain("MURMUR_REQUIRE_RELEASE_SIGNING");
+    expect(patched).toContain(
+      'getText("UTF-8").replaceFirst(/(?:\\r\\n|\\n|\\r)$/, "")',
+    );
+    expect(patched).not.toContain('getText("UTF-8").trim()');
     expect(patched).toContain("storeFile file(releaseKeystorePath)");
     expect(patched).toContain("signingConfig signingConfigs.release");
     expect(patched).toContain("Missing Android release signing credentials");

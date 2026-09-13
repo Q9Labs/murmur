@@ -55,5 +55,5 @@ pnpm run store:config
 # Validate iOS/Android store metadata and required store assets.
 pnpm run store:metadata
 
-# Validate release/submission blockers file state.
+# Validate the release/submission blocker ledger. The launch gate separately requires every P0 blocker to be closed.
 pnpm run store:blockers
