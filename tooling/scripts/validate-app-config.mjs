@@ -28,8 +28,8 @@ const productionWorkerUrl = "https://murmur.q9labs.ai";
 const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev";
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const releaseVersion = "1.2.3";
-const iosBuildNumber = "14";
-const androidVersionCode = 9;
+const iosBuildNumber = "16";
+const androidVersionCode = 11;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -62,7 +62,7 @@ assert(appConfig.splash?.backgroundColor === "#F8F4ED", "splash background must 
 assert(appConfig.ios?.bundleIdentifier === "com.q9labsai.murmur", "iOS bundle id must be com.q9labsai.murmur");
 assert(
   appConfig.ios?.buildNumber === iosBuildNumber,
-  `iOS build number must be ${iosBuildNumber} for the v${releaseVersion} sandbox release; got ${appConfig.ios?.buildNumber}`,
+  `iOS build number must be ${iosBuildNumber} for the v${releaseVersion} production release; got ${appConfig.ios?.buildNumber}`,
 );
 assert(
   appConfig.ios?.appStoreUrl === "https://apps.apple.com/app/id6756962206",
@@ -121,7 +121,7 @@ assert(
 );
 assert(
   appConfig.android?.versionCode === androidVersionCode,
-  `Android versionCode must be ${androidVersionCode} for the v${releaseVersion} sandbox release; got ${appConfig.android?.versionCode}`,
+  `Android versionCode must be ${androidVersionCode} for the v${releaseVersion} production release; got ${appConfig.android?.versionCode}`,
 );
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");

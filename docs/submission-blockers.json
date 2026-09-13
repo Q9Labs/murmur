@@ -5,11 +5,11 @@
     "ios_bundle_id": "com.q9labsai.murmur",
     "version": "1.2.3"
   },
-  "last_updated": "2026-09-13",
+  "last_updated": "2026-09-14",
   "status": "not_submission_ready",
   "readiness_notes": [
-    "Production release authorized on 2026-09-13; final source and Android API 35 lifecycle evidence pass.",
-    "Production D1 migration and billing catalog are complete. App Store submission remains blocked by the Account Holder legal-entity update and Paid Apps Agreement; paid lifecycle evidence is still incomplete."
+    "Production release authorized on 2026-09-13. The merged Worker revision is live, Android 1.2.3 code 11 is in production review, and iOS 1.2.3 build 16 is WAITING_FOR_REVIEW.",
+    "Production D1 migration, billing catalog, webhook authentication, and store privacy disclosures are complete. Usable OpenAI Realtime quota, Apple's Account Holder legal-entity/Paid Apps Agreement action, and real paid lifecycle evidence remain open."
   ],
   "policy_sources_checked": [
     {
@@ -57,12 +57,26 @@
       "status": "open",
       "why_blocking": "Apple will not permit paid apps or in-app purchases until the Account Holder updates the legal entity and signs the Paid Apps Agreement.",
       "current_evidence": [
-        "App Store Connect Business shows Paid Apps Agreement status New on 2026-09-13.",
+        "App Store Connect Business shows Paid Apps Agreement status New on 2026-09-14.",
         "Apple displays: update legal entity information prior to signing the Paid Apps Agreement."
       ],
       "exit_criteria": [
         "The Account Holder supplies and attests the required legal-entity information.",
         "The Account Holder signs the Paid Apps Agreement and App Store Connect reports it Active."
+      ]
+    },
+    {
+      "id": "production-realtime-quota",
+      "title": "Fund the OpenAI organization used by production Realtime translation",
+      "status": "open",
+      "why_blocking": "The production Worker is healthy and reaches OpenAI, but live translation cannot deliver Murmur's core value while both configured provider keys return credit_balance_exhausted.",
+      "current_evidence": [
+        "A production translation smoke on 2026-09-13 completed Murmur auth and session setup, reached OpenAI Realtime, and received HTTP 429 credit_balance_exhausted.",
+        "The fallback OpenAI key returned the same quota classification; no committed translation usage was charged in D1."
+      ],
+      "exit_criteria": [
+        "Add a user-approved credit balance to the OpenAI organization or install a funded production key.",
+        "Repeat the production translation smoke and record acknowledged audio, committed translated output, and a matching D1 usage debit."
       ]
     },
     {
@@ -88,9 +102,9 @@
       "status": "closed",
       "why_blocking": "Customers cannot buy Murmur Pro or credit packs until the exact products, prices, entitlement, offering, and packages exist and are linked across both stores and RevenueCat.",
       "current_evidence": [
-        "Apple monthly/annual subscriptions and all three consumable packs are READY_TO_SUBMIT at the approved prices.",
+        "Apple monthly/annual subscriptions and all three consumable packs are READY_FOR_REVIEW at the approved prices and attached to review submission 122a9fdc-8e39-46f3-aba7-473583e2c125.",
         "Google monthly/annual base plans are active in 173 regions; murmur_credits_60, murmur_credits_180, and murmur_credits_540 now have ACTIVE purchase options at USD 3.99, USD 10.99, and USD 31.99 with converted regional prices.",
-        "Play accepted and activated the billing-capable code 8 internal prerequisite under the replacement upload certificate.",
+        "Play accepted the billing-capable code 11 production artifact under the verified replacement upload certificate and the release is in production review.",
         "RevenueCat default offering has five packages, each attached to the matching active Apple and Google product; the Pro entitlement contains only subscription products."
       ],
       "exit_criteria": [
@@ -108,7 +122,7 @@
       "current_evidence": [
         "Local tests cover ledger idempotency, grants, reversals, reconciliation, account merge, and translation metering.",
         "A real development account flow transferred the August Free claim from a fresh guest to the verified company-email customer, committed the D1 merge and alias, revoked the guest principal, and preserved the 30-minute balance.",
-        "The development Worker is billing-active and ready. A real one-second PCM attempt reached the Worker, but OpenAI rejected it before acknowledgement because the organization balance is -$0.25; D1 recorded the failed usage session with no settled usage.",
+        "The development and production Workers are billing-active. Real PCM attempts reach OpenAI, but the organization returns credit_balance_exhausted before acknowledgement; D1 records no settled usage for those failures.",
         "iOS 1.2.2 build 13 is in internal TestFlight and awaits external Beta App Review. All Apple products are READY_TO_SUBMIT, but StoreKit product propagation has not completed and the RevenueCat simulator paywall still reports an empty offering.",
         "No completed App Store sandbox or Google Play licensed-tester purchase, renewal, expiry, or refund lifecycle run is recorded for the new catalog."
       ],
@@ -126,12 +140,14 @@
       "why_blocking": "The live Worker and mobile builds must use the verified production configuration before the paid offer can be released safely.",
       "current_evidence": [
         "Production D1 migration 0006 is applied after a Time Travel bookmark; pre/post aggregate counts and foreign-key verification match.",
-        "Production billing flags are enabled in the release source and the HMAC webhook secret is installed.",
-        "Production Worker deployment and the final Android/iOS uploads are in progress."
+        "Production billing enforcement, fulfillment, and purchase flags are enabled; the authenticated RevenueCat webhook secret is installed and a signed production test returned HTTP 200.",
+        "Merged master 5600d0aa8057 is deployed to the production Worker as version e1374780-845b-4d21-a3d8-4263908a0dea; health and live-store checks pass.",
+        "Android 1.2.3 code 11 is submitted for a 100% production rollout with the corrected Data Safety declaration and canonical privacy URL in the same review.",
+        "Signed iOS 1.2.3 build 16 passed artifact verification, is attached to the production version with both subscription versions, the subscription-group version, and all three IAP versions, and review submission 122a9fdc-8e39-46f3-aba7-473583e2c125 is WAITING_FOR_REVIEW."
       ],
       "exit_criteria": [
-        "Verify readiness, account recovery, entitlement reconciliation, metering, observability, and rollback controls live.",
-        "Release approved store builds in stages, enable purchases only after live proof, and verify the deployed revision."
+        "Verify readiness, account recovery, entitlement reconciliation, observability, and rollback controls live; complete metering proof after provider quota is restored.",
+        "Confirm both store reviews contain the intended production builds and metadata, then verify their final public rollout status after store approval."
       ]
     }
   ]
