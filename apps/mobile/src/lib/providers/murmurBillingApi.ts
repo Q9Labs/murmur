@@ -8,7 +8,7 @@ export async function requestMurmurCustomer(): Promise<Response> {
 }
 
 export async function requestMurmurReconciliation(
-  trigger: "purchase" | "restore",
+  trigger: "login" | "purchase" | "restore",
 ): Promise<Response> {
   return fetch(`${getWorkerBaseUrl()}/v3/billing/reconcile`, {
     headers: await authenticatedWorkerHeaders({

@@ -7,7 +7,8 @@ import {
 } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
-import type { Env } from "../env";
+import { areBillingPurchasesEnabled, isBillingFulfillmentEnabled, type Env } from "../env";
+import { revenueCatCustomerId } from "../billing/revenueCatIdentity";
 import { json } from "../http/response";
 
 export async function getCustomer(
@@ -52,8 +53,10 @@ export async function getCustomer(
       negative_ms: ledger.result.balance.negativeMs,
     },
     customer_id: session.user.id,
+    fulfillment_enabled: isBillingFulfillmentEnabled(env),
     is_registered: session.user.isAnonymous !== true,
     plan,
-    purchases_enabled: env.BILLING_PURCHASES_ENABLED === "true",
+    purchases_enabled: areBillingPurchasesEnabled(env),
+    revenuecat_customer_id: revenueCatCustomerId(env, session.user.id),
   });
 }

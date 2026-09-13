@@ -31,6 +31,7 @@ migrations_dir = "migrations"
 APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
 BILLING_ENFORCEMENT_ENABLED = "false"
+BILLING_FULFILLMENT_ENABLED = "false"
 BILLING_PURCHASES_ENABLED = "false"
 EMAIL_FROM = "Murmur <login@notifications.q9labs.ai>"
 MURMUR_ENV = "development"
@@ -69,6 +70,7 @@ migrations_dir = "migrations"
 APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "development"
 BILLING_ENFORCEMENT_ENABLED = "false"
+BILLING_FULFILLMENT_ENABLED = "true"
 BILLING_PURCHASES_ENABLED = "true"
 EMAIL_FROM = "Murmur <login@notifications.q9labs.ai>"
 MURMUR_ENV = "development"
@@ -112,11 +114,60 @@ migrations_dir = "migrations"
 [env.production.vars]
 APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
-BILLING_ENFORCEMENT_ENABLED = "false"
-BILLING_PURCHASES_ENABLED = "false"
+BILLING_ENFORCEMENT_ENABLED = "true"
+BILLING_FULFILLMENT_ENABLED = "true"
+BILLING_PURCHASES_ENABLED = "true"
 EMAIL_FROM = "Murmur <login@notifications.q9labs.ai>"
 MURMUR_ENV = "production"
 OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+REVENUECAT_PROJECT_ID = "projc52a5a19"
+GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
+GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
+
+[env.sandbox]
+name = "murmur-worker-sandbox"
+workers_dev = true
+
+[env.sandbox.triggers]
+crons = [ "17 3 * * *" ]
+
+[env.sandbox.observability]
+enabled = true
+head_sampling_rate = 1
+
+[[env.sandbox.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimitDurableObject"
+
+[[env.sandbox.durable_objects.bindings]]
+name = "CUSTOMER_LEDGER"
+class_name = "CustomerLedgerDurableObject"
+
+[[env.sandbox.migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[[env.sandbox.migrations]]
+tag = "v2"
+new_sqlite_classes = ["CustomerLedgerDurableObject"]
+
+[[env.sandbox.d1_databases]]
+binding = "BILLING_DB"
+database_name = "murmur-billing-sandbox"
+database_id = "b841dec2-93b6-4dea-94ee-8efabb5575d8"
+migrations_dir = "migrations"
+
+[env.sandbox.vars]
+APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_ENVIRONMENT = "production"
+BETTER_AUTH_URL = "https://murmur-worker-sandbox.msbilal.workers.dev/api/auth"
+BILLING_ENFORCEMENT_ENABLED = "true"
+BILLING_FULFILLMENT_ENABLED = "true"
+BILLING_PURCHASES_ENABLED = "true"
+EMAIL_FROM = "Murmur <login@notifications.q9labs.ai>"
+MURMUR_ENV = "sandbox"
+OPENAI_REALTIME_MODEL = "gpt-realtime-translate"
+REVENUECAT_CUSTOMER_NAMESPACE = "sandbox"
 REVENUECAT_PROJECT_ID = "projc52a5a19"
 GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
 GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"

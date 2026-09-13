@@ -16,9 +16,24 @@ class MurmurForegroundService : Service() {
   override fun onCreate() {
     super.onCreate()
     ensureNotificationChannel()
+    promoteToForeground()
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    return START_NOT_STICKY
+  }
+
+  override fun onDestroy() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      stopForeground(STOP_FOREGROUND_REMOVE)
+    } else {
+      @Suppress("DEPRECATION")
+      stopForeground(true)
+    }
+    super.onDestroy()
+  }
+
+  private fun promoteToForeground() {
     val notification = buildNotification()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       startForeground(
@@ -29,7 +44,6 @@ class MurmurForegroundService : Service() {
     } else {
       startForeground(MURMUR_CAPTURE_NOTIFICATION_ID, notification)
     }
-    return START_STICKY
   }
 
   override fun onBind(intent: Intent?): IBinder? = null

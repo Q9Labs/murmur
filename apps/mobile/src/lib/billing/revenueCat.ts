@@ -1,8 +1,8 @@
 import { Platform } from "react-native";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
-import RevenueCatUI from "react-native-purchases-ui";
+import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 
-import { getRevenueCatApiKeys } from "../config";
+import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -32,16 +32,32 @@ export async function configureRevenueCat(customerId: string): Promise<boolean> 
   return true;
 }
 
-export async function presentMurmurPaywall(): Promise<void> {
+export type MurmurPaywallOutcome = "cancelled" | "failed" | "not_presented" | "purchased" | "restored";
+
+export async function presentMurmurPaywall(): Promise<MurmurPaywallOutcome> {
   requireRevenueCat();
   const offerings = await Purchases.getOfferings();
-  if (!offerings.current) {
+  const offeringId = getRevenueCatOfferingId();
+  const offering = offeringId ? offerings.all[offeringId] : offerings.current;
+  if (!offering) {
     throw new Error("Murmur products are not available from the store yet.");
   }
-  await RevenueCatUI.presentPaywall({
+  const result = await RevenueCatUI.presentPaywall({
     displayCloseButton: true,
-    offering: offerings.current,
+    offering,
   });
+  switch (result) {
+    case PAYWALL_RESULT.PURCHASED:
+      return "purchased";
+    case PAYWALL_RESULT.RESTORED:
+      return "restored";
+    case PAYWALL_RESULT.CANCELLED:
+      return "cancelled";
+    case PAYWALL_RESULT.ERROR:
+      return "failed";
+    default:
+      return "not_presented";
+  }
 }
 
 export async function restoreMurmurPurchases(): Promise<void> {

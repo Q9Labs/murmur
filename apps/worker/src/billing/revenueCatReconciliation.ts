@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { type Env, isBillingEnforced } from "../env";
+import { type Env, isBillingFulfillmentEnabled } from "../env";
+import { revenueCatCustomerId } from "./revenueCatIdentity";
 import { findBillingProduct } from "./catalog";
 import {
   fetchRevenueCatCustomerState,
@@ -11,7 +12,7 @@ import {
 import type { RevenueCatEvent } from "./revenueCatEvent";
 import { processRevenueCatEvent } from "./revenueCatProcessor";
 
-export type ReconciliationTrigger = "daily" | "purchase" | "restore";
+export type ReconciliationTrigger = "daily" | "login" | "purchase" | "restore";
 
 type CursorRow = { last_customer_id: string | null };
 type CustomerRow = { customer_id: string };
@@ -53,7 +54,7 @@ export async function reconcileRevenueCatCustomer(params: {
     .run();
   try {
     const state = await fetchRevenueCatCustomerState({
-      appUserId: params.customerId,
+      appUserId: revenueCatCustomerId(params.env, params.customerId),
       env: params.env,
     });
     let subscriptionCount = 0;
@@ -100,7 +101,7 @@ export async function reconcileDailyRevenueCatBatch(
   nowMs: number,
 ): Promise<{ attempted: number; failed: number }> {
   const database = env.BILLING_DB;
-  if (!database || !isBillingEnforced(env)) {
+  if (!database || !isBillingFulfillmentEnabled(env)) {
     return { attempted: 0, failed: 0 };
   }
   const cursor = await database

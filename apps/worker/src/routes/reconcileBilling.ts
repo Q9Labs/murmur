@@ -1,6 +1,8 @@
+import * as Sentry from "@sentry/cloudflare";
+
 import { getMurmurSession } from "../auth/auth";
 import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation";
-import type { Env } from "../env";
+import { isBillingFulfillmentEnabled, type Env } from "../env";
 import { json } from "../http/response";
 
 export async function reconcileBilling(
@@ -15,8 +17,12 @@ export async function reconcileBilling(
   if (session.user.isAnonymous === true) {
     return json({ error: "registration_required" }, 403);
   }
-  const trigger = request.headers.get("x-murmur-reconciliation-trigger") === "restore"
-    ? "restore"
+  if (!isBillingFulfillmentEnabled(env)) {
+    return json({ error: "billing_fulfillment_disabled" }, 503);
+  }
+  const requestedTrigger = request.headers.get("x-murmur-reconciliation-trigger");
+  const trigger = requestedTrigger === "restore" || requestedTrigger === "login"
+    ? requestedTrigger
     : "purchase";
   try {
     const result = await reconcileRevenueCatCustomer({
@@ -37,4 +43,3 @@ export async function reconcileBilling(
     return json({ error: "reconciliation_failed" }, 503);
   }
 }
-import * as Sentry from "@sentry/cloudflare";

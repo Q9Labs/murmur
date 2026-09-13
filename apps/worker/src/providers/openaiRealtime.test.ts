@@ -72,11 +72,26 @@ describe("OpenAI realtime translation adapter", () => {
     }))).toEqual({
       kind: "event",
       event: {
-        code: "rate_limit_exceeded",
+        code: "provider_rate_limited",
         kind: "session_error",
         retryable: true,
       },
     });
+    expect(parseTranslationOutput(JSON.stringify({
+      type: "error",
+      error: { code: "credit_balance_exhausted", message: "private provider details" },
+    }))).toEqual({
+      kind: "event",
+      event: {
+        code: "provider_quota_exhausted",
+        kind: "session_error",
+        retryable: false,
+      },
+    });
+    expect(parseTranslationOutput(JSON.stringify({
+      type: "error",
+      error: { code: "unrecognized_private_code" },
+    }))).toMatchObject({ event: { code: "provider_error" } });
   });
 
   it("ignores malformed and unrelated provider messages", () => {

@@ -8,6 +8,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 const workerUrl = process.env.MURMUR_WORKER_URL ?? "https://murmur.q9labs.ai";
+const workerOrigin = new URL(workerUrl).origin;
 const sourceLanguage = process.env.MURMUR_SOURCE_LANGUAGE ?? "en";
 const targetLanguage = process.env.MURMUR_TARGET_LANGUAGE ?? "ar";
 const spokenText = process.env.MURMUR_SMOKE_TEXT ?? "Hello. How are you today?";
@@ -21,33 +22,61 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 
 async function runSmoke() {
   const pcm = createSmokePcm();
-  const sessionStartedAt = Date.now();
-  const session = await createSession();
-  const sessionCreatedAt = Date.now();
+  const identity = await createSmokeIdentity();
+  let sessionId = null;
+  let socket = null;
+  try {
+    const sessionStartedAt = Date.now();
+    const session = await createSession(identity);
+    sessionId = session.app_session_id;
+    const sessionCreatedAt = Date.now();
 
-  const socketStartedAt = Date.now();
-  const socket = new WebSocket(session.realtime_ws_url);
-  const resultPromise = collectResult(socket);
-  const sessionOpenedPromise = waitForSessionOpened(socket);
-  await waitForOpen(socket);
-  const socketOpenedAt = Date.now();
-  await sessionOpenedPromise;
-  const audioStartedAt = Date.now();
-  const inputChunksSent = await streamPcm(socket, pcm);
-  const audioFinishedAt = Date.now();
-  socket.send(JSON.stringify({ kind: "close_session" }));
-  const result = await resultPromise;
+    const socketStartedAt = Date.now();
+    socket = new WebSocket(session.realtime_ws_url);
+    const resultPromise = collectResult(socket);
+    const sessionOpenedPromise = waitForSessionOpened(socket);
+    await waitForOpen(socket);
+    const socketOpenedAt = Date.now();
+    await sessionOpenedPromise;
+    const audioStartedAt = Date.now();
+    const inputChunksSent = await streamPcm(socket, pcm);
+    const audioFinishedAt = Date.now();
+    socket.send(JSON.stringify({ kind: "close_session" }));
+    const result = await resultPromise;
 
-  await stopSession(session.app_session_id);
-  logSmokeResult({
-    audioFinishedAt,
-    audioStartedAt,
-    inputChunksSent,
-    result,
-    sessionCreatedAt,
-    sessionStartedAt,
-    socketOpenedAt,
-    socketStartedAt,
+    logSmokeResult({
+      audioFinishedAt,
+      audioStartedAt,
+      inputChunksSent,
+      result,
+      sessionCreatedAt,
+      sessionStartedAt,
+      socketOpenedAt,
+      socketStartedAt,
+    });
+  } finally {
+    await closeSmokeSocket(socket);
+    if (sessionId) {
+      await stopSession(sessionId);
+      await delay(1_000);
+    }
+    await deleteSmokeIdentity(identity);
+  }
+}
+
+async function closeSmokeSocket(socket) {
+  if (!socket || socket.readyState === WebSocket.CLOSED) {
+    return;
+  }
+  await new Promise((resolveClose) => {
+    const timeout = setTimeout(resolveClose, 2_000);
+    socket.addEventListener("close", () => {
+      clearTimeout(timeout);
+      resolveClose();
+    }, { once: true });
+    if (socket.readyState < WebSocket.CLOSING) {
+      socket.close(1000, "smoke_cleanup");
+    }
   });
 }
 
@@ -63,7 +92,39 @@ function createSmokePcm() {
   );
 }
 
-async function createSession() {
+async function createSmokeIdentity() {
+  const freeAllowanceId = `synthetic_translation_${crypto.randomUUID()}`;
+  const response = await fetch(`${workerUrl}/api/auth/sign-in/anonymous`, {
+    body: "{}",
+    headers: {
+      "Content-Type": "application/json",
+      origin: workerOrigin,
+      "x-murmur-free-allowance-id": freeAllowanceId,
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`anonymous_sign_in_http_${response.status}`);
+  }
+  return {
+    cookie: sessionCookieHeader(response.headers),
+    freeAllowanceId,
+  };
+}
+
+async function deleteSmokeIdentity(identity) {
+  const response = await fetch(`${workerUrl}/api/auth/delete-user`, {
+    body: "{}",
+    headers: authenticatedHeaders(identity, { "Content-Type": "application/json" }),
+    method: "POST",
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || result?.success !== true) {
+    throw new Error(`anonymous_cleanup_http_${response.status}`);
+  }
+}
+
+async function createSession(identity) {
   const sessionResponse = await fetch(`${workerUrl}/v2/session`, {
     body: JSON.stringify({
       app_install_id: `synthetic_latency_${Date.now()}`,
@@ -71,7 +132,7 @@ async function createSession() {
       source_language: sourceLanguage,
       target_language: targetLanguage,
     }),
-    headers: { "Content-Type": "application/json" },
+    headers: authenticatedHeaders(identity, { "Content-Type": "application/json" }),
     method: "POST",
   });
   const session = await sessionResponse.json();
@@ -81,12 +142,34 @@ async function createSession() {
   return session;
 }
 
+function authenticatedHeaders(identity, initial) {
+  const headers = new Headers(initial);
+  headers.set("cookie", identity.cookie);
+  headers.set("origin", workerOrigin);
+  headers.set("x-murmur-free-allowance-id", identity.freeAllowanceId);
+  return headers;
+}
+
+export function sessionCookieHeader(headers) {
+  const setCookies = typeof headers.getSetCookie === "function"
+    ? headers.getSetCookie()
+    : [headers.get("set-cookie")].filter(Boolean);
+  const cookies = setCookies.map((cookie) => cookie.split(";", 1)[0]).filter(Boolean);
+  if (cookies.length === 0) {
+    throw new Error("anonymous_sign_in_cookie_missing");
+  }
+  return cookies.join("; ");
+}
+
 async function stopSession(sessionId) {
-  await fetch(`${workerUrl}/v2/session/${sessionId}/stop`, {
+  const response = await fetch(`${workerUrl}/v2/session/${sessionId}/stop`, {
     body: JSON.stringify({ reason: "smoke_done" }),
     headers: { "Content-Type": "application/json" },
     method: "POST",
-  }).catch(() => null);
+  });
+  if (!response.ok) {
+    throw new Error(`session_cleanup_http_${response.status}`);
+  }
 }
 
 function logSmokeResult({
@@ -116,8 +199,8 @@ function logSmokeResult({
   console.log(`translated_audio_started_before_input_finished: ${
     result.firstAudioAt > 0 && result.firstAudioAt < audioFinishedAt
   }`);
-  console.log(`source: ${result.source}`);
-  console.log(`translation: ${result.translation}`);
+  console.log(`source_characters: ${result.source.length}`);
+  console.log(`translation_characters: ${result.translation.length}`);
 }
 
 function collectResult(socket) {

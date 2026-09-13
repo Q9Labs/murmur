@@ -12,6 +12,16 @@ export function getSentryDsn(): string | undefined {
   return process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined;
 }
 
+export type MurmurEnvironment = "development" | "preview" | "production" | "sandbox";
+
+export function getMurmurEnvironment(): MurmurEnvironment {
+  const value = process.env.EXPO_PUBLIC_MURMUR_ENV?.trim();
+  if (value === "development" || value === "preview" || value === "production" || value === "sandbox") {
+    return value;
+  }
+  return process.env.NODE_ENV === "development" ? "development" : "production";
+}
+
 export type RevenueCatApiKeys = {
   android?: string;
   ios?: string;
@@ -24,13 +34,31 @@ export function getRevenueCatApiKeys(): RevenueCatApiKeys {
   };
 }
 
-export type UiPreviewScreen = "picker" | "settings" | "translation" | "welcome";
+export function getRevenueCatOfferingId(): string | undefined {
+  return publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID);
+}
+
+export type UiPreviewScreen =
+  | "billing"
+  | "languages"
+  | "picker"
+  | "privacy"
+  | "settings"
+  | "source-picker"
+  | "translation"
+  | "translation-muted"
+  | "welcome";
 
 export function getUiPreviewScreen(): UiPreviewScreen | null {
   const previewScreen = process.env.EXPO_PUBLIC_MURMUR_UI_PREVIEW;
-  return previewScreen === "picker" ||
+  return previewScreen === "billing" ||
+    previewScreen === "languages" ||
+    previewScreen === "picker" ||
+    previewScreen === "privacy" ||
     previewScreen === "settings" ||
+    previewScreen === "source-picker" ||
     previewScreen === "translation" ||
+    previewScreen === "translation-muted" ||
     previewScreen === "welcome"
     ? previewScreen
     : null;

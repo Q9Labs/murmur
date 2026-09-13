@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatLiveError,
   formatReportError,
+  isAllowanceExhaustedError,
 } from "./errorCopy";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
@@ -56,6 +57,10 @@ describe("home status helpers", () => {
     expect(formatLiveError("provider_unavailable")).toContain("provider is unavailable");
     expect(formatLiveError("worker_session_http_503")).toContain("translation service");
     expect(formatLiveError("realtime_server_error")).toContain("unavailable");
+    expect(formatLiveError("realtime_provider_quota_exhausted")).toContain("temporarily exhausted");
+    expect(formatLiveError("realtime_provider_rate_limited")).toContain("busy");
+    expect(formatLiveError("realtime_allowance_exhausted")).toContain("Get more time");
+    expect(isAllowanceExhaustedError("realtime_allowance_exhausted")).toBe(true);
     expect(formatLiveError("unknown_code")).toContain("unknown_code");
 
     expect(formatReportError("report_rate_limited")).toContain("Too many reports");

@@ -18,7 +18,10 @@ if (!process.env.SENTRY_AUTH_TOKEN) {
 }
 
 const release = getMobileRelease(appConfig, platform);
-const environment = getBuildEnvironment(process.env.EAS_BUILD_PROFILE);
+const environment = getBuildEnvironment(
+  process.env.EAS_BUILD_PROFILE,
+  process.env.EXPO_PUBLIC_MURMUR_ENV,
+);
 const sentryEnvironment = {
   ...process.env,
   SENTRY_ORG: process.env.SENTRY_ORG ?? "q9labs",
@@ -38,11 +41,12 @@ function getMobileRelease(config, targetPlatform) {
   return `${config.ios.bundleIdentifier}@${config.version}+${config.ios.buildNumber}`;
 }
 
-function getBuildEnvironment(profile) {
-  if (profile === "development" || profile === "preview") {
-    return profile;
+function getBuildEnvironment(profile, configuredEnvironment) {
+  const environment = configuredEnvironment ?? profile;
+  if (["development", "preview", "sandbox", "production"].includes(environment)) {
+    return environment;
   }
-  return "production";
+  fail("EXPO_PUBLIC_MURMUR_ENV or EAS_BUILD_PROFILE must name a known environment.");
 }
 
 function ensureRelease(releaseName) {

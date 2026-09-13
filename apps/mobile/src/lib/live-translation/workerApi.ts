@@ -11,6 +11,8 @@ import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
+export const workerSessionRequestTimeoutMs = 15_000;
+
 export async function requestMicrophonePermission(): Promise<boolean> {
   if (Platform.OS === "android") {
     const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
@@ -79,15 +81,38 @@ export async function collectDeviceIntegrity(params: {
 }
 
 async function postWorkerJson<T>(url: string, body: unknown): Promise<T | { error: string }> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: await authenticatedWorkerHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
-  }).catch(() => null);
-  if (!response) {
+  const controller = new AbortController();
+  const request = (async (): Promise<{ payload: unknown; response: Response } | null> => {
+    const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
+    if (controller.signal.aborted) {
+      return null;
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    }).catch(() => null);
+    if (!response) {
+      return null;
+    }
+    return { payload: await response.json().catch(() => null), response };
+  })().catch(() => null);
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      resolve(null);
+    }, workerSessionRequestTimeoutMs);
+  });
+  const result = await Promise.race([request, timeout]);
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId);
+  }
+  if (!result) {
     return { error: "worker_session_network_error" };
   }
-  const payload = await response.json().catch(() => null);
+  const { payload, response } = result;
   if (isErrorPayload(payload)) {
     const missing = Array.isArray(payload.missing) ? `:${payload.missing.join(",")}` : "";
     return { error: `${payload.error}${missing}` };

@@ -1,4 +1,7 @@
-import type { Env } from "../env";
+import * as Sentry from "@sentry/cloudflare";
+
+import { isBillingFulfillmentEnabled, type Env } from "../env";
+import { localizeRevenueCatEvent } from "../billing/revenueCatIdentity";
 import {
   decodeIgnoredRevenueCatEvent,
   decodeRevenueCatEvent,
@@ -6,13 +9,21 @@ import {
 import { processRevenueCatEvent } from "../billing/revenueCatProcessor";
 import { verifyRevenueCatWebhook } from "../billing/revenueCatWebhookVerification";
 import { json } from "../http/response";
+import { queuePostHogEvent } from "../observability/posthog";
 
 const maxWebhookBodyBytes = 256 * 1_024;
 
-export async function receiveRevenueCatWebhook(request: Request, env: Env): Promise<Response> {
+export async function receiveRevenueCatWebhook(
+  request: Request,
+  env: Env,
+  context?: ExecutionContext,
+): Promise<Response> {
   const rawBody = await readWebhookBody(request);
   if (rawBody === null) {
     return json({ error: "webhook_payload_too_large" }, 413);
+  }
+  if (!isBillingFulfillmentEnabled(env)) {
+    return json({ error: "billing_fulfillment_disabled" }, 503);
   }
   const verified = await verifyRevenueCatWebhook({
     env,
@@ -24,7 +35,23 @@ export async function receiveRevenueCatWebhook(request: Request, env: Env): Prom
     return json({ error: "invalid_webhook_signature" }, 401);
   }
   const payload = parseJson(rawBody);
-  const event = decodeRevenueCatEvent(payload);
+  const decodedEvent = decodeRevenueCatEvent(payload);
+  const event = decodedEvent ? localizeRevenueCatEvent(env, decodedEvent) : null;
+  if (decodedEvent && !event) {
+    queuePostHogEvent({
+      context,
+      distinct_id: decodedEvent.eventId,
+      env,
+      payload: {
+        event: "worker_billing_fulfillment",
+        event_type: decodedEvent.type,
+        idempotent: false,
+        provider: decodedEvent.provider ?? "unknown",
+        status: "ignored",
+      },
+    });
+    return json({ event_id: decodedEvent.eventId, idempotent: false, ignored: true, ok: true });
+  }
   if (!event) {
     const ignored = decodeIgnoredRevenueCatEvent(payload);
     if (ignored) {
@@ -44,8 +71,32 @@ export async function receiveRevenueCatWebhook(request: Request, env: Env): Prom
     return null;
   });
   if (!result || result.status === "failed") {
+    queuePostHogEvent({
+      context,
+      distinct_id: event.eventId,
+      env,
+      payload: {
+        event: "worker_billing_fulfillment",
+        event_type: event.type,
+        idempotent: false,
+        provider: event.provider ?? "unknown",
+        status: "failed",
+      },
+    });
     return json({ error: result?.code ?? "webhook_processing_failed" }, 503);
   }
+  queuePostHogEvent({
+    context,
+    distinct_id: event.eventId,
+    env,
+    payload: {
+      event: "worker_billing_fulfillment",
+      event_type: event.type,
+      idempotent: result.idempotent,
+      provider: event.provider ?? "unknown",
+      status: result.status,
+    },
+  });
   return json({ event_id: result.eventId, idempotent: result.idempotent, ok: true });
 }
 
@@ -95,4 +146,3 @@ async function sha256(value: string): Promise<string> {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
-import * as Sentry from "@sentry/cloudflare";

@@ -25,6 +25,7 @@
     "worker:dev:raw": "pnpm --filter @murmur/worker dev",
     "worker:deploy:development": "pnpm --filter @murmur/worker deploy:development",
     "worker:deploy:production": "pnpm --filter @murmur/worker deploy:production",
+    "worker:deploy:sandbox": "pnpm --filter @murmur/worker deploy:sandbox",
     "gate": "bash tooling/gates/commit.sh",
     "gate:explain": "sed -n '1,240p' tooling/gates/README.md",
     "hooks:install": "lefthook install",
@@ -34,7 +35,7 @@
     "static:fallow:health": "fallow health --score --hotspots --targets --min-score ${FALLOW_MIN_SCORE:-45}",
     "static:semgrep": "node tooling/gates/require-tool.mjs semgrep \"Install the official Semgrep CLI, then rerun pnpm run static:semgrep.\" && semgrep scan --config .semgrep --error",
     "security:secrets": "node tooling/gates/require-tool.mjs gitleaks \"Install the official Gitleaks CLI, then rerun pnpm run security:secrets.\" && gitleaks detect --source . --redact --verbose",
-    "security:osv": "node tooling/gates/require-tool.mjs osv-scanner \"Install the official OSV-Scanner CLI, then rerun pnpm run security:osv.\" && osv-scanner scan source -r --experimental-exclude scratchpad .",
+    "security:osv": "node tooling/gates/require-tool.mjs osv-scanner \"Install the official OSV-Scanner CLI, then rerun pnpm run security:osv.\" && osv-scanner scan source -r --experimental-exclude scratchpad --experimental-exclude .worktrees .",
     "deps:syncpack": "syncpack lint --specifier-types missing,unsupported",
     "lint:spelling": "cspell apps/mobile/app apps/mobile/src apps/worker/src packages/protocol/src tooling package.json README.md AGENTS.md CONTRIBUTING.md docs/*.md docs/legal/*.md",
     "react:doctor": "cd apps/mobile && pnpm dlx expo-doctor@1.20.0",
@@ -48,7 +49,7 @@
     "store:blockers:closed": "node tooling/scripts/validate-submission-blockers.mjs --require-closed",
     "store:metadata": "node tooling/scripts/validate-ios-metadata.mjs && node tooling/scripts/validate-android-metadata.mjs && node tooling/scripts/validate-store-assets.mjs",
     "store:screenshots:test": "node --test tooling/scripts/build-store-screenshots.test.mjs tooling/scripts/store-screenshot-validation.test.mjs",
-    "store:preflight": "pnpm test && pnpm store:secrets && pnpm store:config && pnpm audit --audit-level moderate && pnpm react:doctor && pnpm store:metadata && (cd apps/mobile && fastlane ios validate_app_store_submission && fastlane android validate_play_submission)",
+    "store:preflight": "pnpm test && pnpm store:secrets && pnpm store:config && pnpm run security:osv && pnpm react:doctor && pnpm store:metadata && (cd apps/mobile && fastlane ios validate_app_store_submission && fastlane android validate_play_submission)",
     "store:submission-readiness": "pnpm store:preflight && pnpm store:live",
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers:closed",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
@@ -59,14 +60,14 @@
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.6",
+    "@vitest/coverage-v8": "4.1.11",
     "cspell": "10.0.1",
     "fallow": "2.96.0",
     "lefthook": "2.1.9",
     "syncpack": "15.3.1",
     "typescript": "~5.9.2",
     "vite": "^8.0.16",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.11"
   },
   "private": true,
   "workspaces": [

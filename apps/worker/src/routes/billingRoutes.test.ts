@@ -46,7 +46,7 @@ describe("billing routes", () => {
         body: "{}",
         method: "POST",
       }),
-      {},
+      { BILLING_FULFILLMENT_ENABLED: "true" },
     );
 
     expect(response.status).toBe(401);
@@ -59,7 +59,7 @@ describe("billing routes", () => {
         body: "x".repeat(257 * 1_024),
         method: "POST",
       }),
-      {},
+      { BILLING_FULFILLMENT_ENABLED: "true" },
     );
 
     expect(response.status).toBe(413);

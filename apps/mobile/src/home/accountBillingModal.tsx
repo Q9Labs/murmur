@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -6,11 +6,24 @@ import { type MurmurBillingContext, useMurmurBilling } from "../lib/billing/cont
 import { ModalSheet } from "./modalSheet";
 import { useMurmurTheme } from "./theme";
 
-export function AccountBillingModal(props: { onClose: () => void; open: boolean }): ReactNode {
-  const billing = useMurmurBilling();
+export function AccountBillingModal(props: {
+  billing?: MurmurBillingContext;
+  onClose: () => void;
+  open: boolean;
+}): ReactNode {
+  const billingContext = useMurmurBilling();
+  const billing = props.billing ?? billingContext;
   const colors = useMurmurTheme();
   const styles = createStyles(colors);
   const balance = billing.customer ? formatMinutes(billing.customer.availableMs) : "...";
+
+  useEffect(() => {
+    if (props.open) {
+      void import("../lib/telemetry").then(({ captureBillingTelemetry }) => {
+        captureBillingTelemetry("mobile_billing_screen_viewed");
+      });
+    }
+  }, [props.open]);
 
   return (
     <ModalSheet onClose={props.onClose} open={props.open} scroll title="Account & billing">
@@ -23,6 +36,12 @@ export function AccountBillingModal(props: { onClose: () => void; open: boolean 
       </View>
 
       <PurchaseActions billing={billing} styles={styles} />
+      <ActionButton
+        disabled={billing.busy}
+        label={billing.syncing ? "Syncing balance…" : "Refresh balance"}
+        onPress={() => void billing.refresh()}
+        styles={styles}
+      />
       <AccountRecovery billing={billing} colors={colors} styles={styles} />
 
       <ActionButton
@@ -35,7 +54,8 @@ export function AccountBillingModal(props: { onClose: () => void; open: boolean 
         Deleting your Murmur account does not cancel an App Store or Google Play subscription.
       </Text>
 
-      {billing.error ? <Text style={styles.error}>{billing.error}</Text> : null}
+      {billing.notice ? <Text style={styles.message}>{billing.notice}</Text> : null}
+      {billing.error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{billing.error}</Text> : null}
     </ModalSheet>
   );
 }
@@ -143,7 +163,20 @@ function AccountRecovery(props: {
   }
 
   if (props.billing.customer?.isRegistered) {
-    return <Text style={props.styles.caption}>This balance is protected by your Murmur account.</Text>;
+    return (
+      <View style={props.styles.accountSection}>
+        <Text style={props.styles.caption}>
+          This balance is protected by your Murmur account. On another device or after reinstalling,
+          sign in with the same email, then restore purchases if the balance has not appeared yet.
+        </Text>
+        <ActionButton
+          disabled={props.billing.busy}
+          label="Use a different Murmur account"
+          onPress={() => confirmAccountSwitch(props.billing.switchAccount)}
+          styles={props.styles}
+        />
+      </View>
+    );
   }
   return (
     <View style={props.styles.accountSection}>
@@ -183,6 +216,17 @@ function AccountRecovery(props: {
       />
       {message ? <Text style={props.styles.message}>{message}</Text> : null}
     </View>
+  );
+}
+
+function confirmAccountSwitch(switchAccount: () => Promise<void>): void {
+  Alert.alert(
+    "Use a different Murmur account?",
+    "This device will leave the current Murmur account. Its balance stays protected and can be recovered by signing in again.",
+    [
+      { style: "cancel", text: "Keep this account" },
+      { onPress: () => void switchAccount(), text: "Switch account" },
+    ],
   );
 }
 

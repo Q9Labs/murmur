@@ -1,1 +1,1 @@
-Adds a polished light and dark design, clearer live captions, improved language selection, optional translated audio, and direct privacy, terms, support, and local-data controls.
+Improves live translation and network recovery, stabilises background microphone sessions, adds subscriptions and credit packs with account recovery, and refreshes Murmur’s design and store presentation.

@@ -2,6 +2,7 @@ import { Redirect, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
 
 import { BloomPreview, type PreviewScreen } from "../src/home/preview";
+import { getUiPreviewScreen } from "../src/lib/config";
 
 type PreviewParams = {
   screen?: string | string[];
@@ -10,7 +11,7 @@ type PreviewParams = {
 export default function PreviewRoute(): ReactNode {
   const { screen } = useLocalSearchParams<PreviewParams>();
 
-  if (!__DEV__) {
+  if (!__DEV__ && getUiPreviewScreen() === null) {
     return <Redirect href="/" />;
   }
 
@@ -20,6 +21,7 @@ export default function PreviewRoute(): ReactNode {
 export function normalizePreviewScreen(screen: PreviewParams["screen"]): PreviewScreen {
   const requestedScreen = Array.isArray(screen) ? screen[0] : screen;
   return requestedScreen === "languages" ||
+    requestedScreen === "billing" ||
     requestedScreen === "picker" ||
     requestedScreen === "privacy" ||
     requestedScreen === "settings" ||

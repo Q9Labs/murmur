@@ -5,10 +5,11 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
-// cspell:ignore cada ciudad cuando diferente entiendes siente
+import type { MurmurBillingContext } from "../lib/billing/context";
 import type { LiveTranslationController } from "../lib/live-translation/types";
 import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
 import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
+import { AccountBillingModal } from "./accountBillingModal";
 import { LanguagePickerController } from "./languagePicker";
 import { SettingsModal } from "./settingsModals";
 import { buildHomeViewModel } from "./viewModel";
@@ -16,10 +17,41 @@ import { BloomOnboarding } from "./variants/bloom/onboarding";
 import { BloomShell } from "./variants/bloom";
 import type { VariantOnboardingProps, VariantShellProps } from "./variants/types";
 
-const previewSourceLanguage: SourceLanguageCode = "en";
-const previewTargetLanguage: LanguageCode = "es";
-const previewSourceCaption = "The city feels different when you understand every voice.";
-const previewTranslation = "La ciudad se siente diferente cuando entiendes cada voz.";
+const previewSourceLanguage: SourceLanguageCode = "ar";
+const previewTargetLanguage: LanguageCode = "en";
+const previewSourceCaption =
+  "مرحباً، المدينة تبدو مختلفة عندما تفهم كل صوت. الآن أستطيع متابعة الحديث مباشرة باللغة الإنجليزية.";
+const previewTranslation =
+  "Hello, the city feels different when you understand every voice. Now I can follow the conversation live in English.";
+
+const previewBilling: MurmurBillingContext = {
+  busy: false,
+  customer: {
+    allowanceMs: 30 * 60_000,
+    availableMs: 30 * 60_000,
+    creditMs: 0,
+    customerId: "preview-customer",
+    earliestExpiryAtMs: null,
+    fulfillmentEnabled: true,
+    isRegistered: false,
+    negativeMs: 0,
+    plan: "free",
+    purchasesEnabled: true,
+    revenueCatCustomerId: "preview:preview-customer",
+  },
+  deleteAccount: async () => undefined,
+  error: null,
+  manageSubscription: async () => undefined,
+  notice: null,
+  openPaywall: async () => undefined,
+  purchasesAvailable: true,
+  refresh: async () => undefined,
+  restorePurchases: async () => undefined,
+  sendSignInCode: async () => undefined,
+  switchAccount: async () => undefined,
+  syncing: false,
+  verifySignInCode: async () => undefined,
+};
 
 const previewLive: LiveTranslationController = {
   cancel: async () => undefined,
@@ -89,6 +121,7 @@ const previewSettingsLive: LiveTranslationController = {
 function noop(): void {}
 
 export type PreviewScreen =
+  | "billing"
   | "languages"
   | "picker"
   | "privacy"
@@ -99,6 +132,9 @@ export type PreviewScreen =
   | "welcome";
 
 export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
+  if (screen === "billing") {
+    return <AccountBillingModal billing={previewBilling} onClose={noop} open />;
+  }
   if (screen === "picker" || screen === "source-picker") {
     return <PickerPreview mode={screen === "source-picker" ? "source" : "target"} />;
   }
@@ -167,9 +203,9 @@ function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNo
     onStart: noop,
     onTogglePrivacyConsent: noop,
     privacyConsentChecked: false,
-    sourceLanguage: "English",
+    sourceLanguage: "Arabic",
     step,
-    targetLanguage: "Spanish",
+    targetLanguage: "English",
   };
 
   return <BloomOnboarding {...props} />;
@@ -184,9 +220,9 @@ function WelcomePreview(): ReactNode {
     onStart: noop,
     onTogglePrivacyConsent: noop,
     privacyConsentChecked: false,
-    sourceLanguage: "English",
+    sourceLanguage: "Arabic",
     step: "welcome",
-    targetLanguage: "Spanish",
+    targetLanguage: "English",
   };
 
   return <BloomOnboarding {...props} />;
@@ -213,6 +249,7 @@ function TranslationPreview(
     autoScrollRef,
     live: previewLive,
     onAudioPlaybackEnabledChange: noop,
+    onOpenAccountBilling: noop,
     onOpenPicker: noop,
     onOpenSettings: noop,
     onPrimaryAction: noop,
