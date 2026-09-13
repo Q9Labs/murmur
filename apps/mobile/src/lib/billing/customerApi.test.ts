@@ -22,10 +22,12 @@ describe("decodeCustomer", () => {
       creditMs: 0,
       customerId: "customer_1",
       earliestExpiryAtMs: 1_800_000_000_000,
+      fulfillmentEnabled: true,
       isRegistered: false,
       negativeMs: 0,
       plan: "free",
       purchasesEnabled: false,
+      revenueCatCustomerId: "customer_1",
     });
   });
 
@@ -44,5 +46,24 @@ describe("decodeCustomer", () => {
       plan: "free",
       purchases_enabled: false,
     })).toBeNull();
+  });
+
+  it("rejects empty or oversized store identities", () => {
+    const payload = {
+      balance: {
+        allowance_ms: 1,
+        available_ms: 1,
+        credit_ms: 0,
+        earliest_expiry_at_ms: null,
+        negative_ms: 0,
+      },
+      customer_id: "customer_1",
+      is_registered: true,
+      plan: "free",
+      purchases_enabled: true,
+    };
+
+    expect(decodeCustomer({ ...payload, revenuecat_customer_id: "" })).toBeNull();
+    expect(decodeCustomer({ ...payload, revenuecat_customer_id: "x".repeat(256) })).toBeNull();
   });
 });

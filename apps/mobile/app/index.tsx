@@ -7,7 +7,7 @@ import { getUiPreviewScreen } from "../src/lib/config";
 const previewScreen = getUiPreviewScreen();
 
 export default function IndexRoute(): ReactNode {
-  if (__DEV__ && previewScreen !== null) {
+  if (previewScreen !== null) {
     return <BloomPreview screen={previewScreen} />;
   }
 

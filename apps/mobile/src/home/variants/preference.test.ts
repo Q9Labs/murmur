@@ -1,20 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { platform, secureStore } = vi.hoisted(() => ({
+const testDoubles = vi.hoisted(() => ({
   platform: { OS: "ios" },
-  secureStore: { deleteItemAsync: vi.fn(), getItemAsync: vi.fn(), setItemAsync: vi.fn() },
+  secureStore: {
+    deleteItemAsync: vi.fn(),
+    getItemAsync: vi.fn(),
+    setItemAsync: vi.fn(),
+  },
 }));
+const { platform, secureStore } = testDoubles;
 
-vi.mock("expo-secure-store", () => secureStore);
-vi.mock("react-native", () => ({ Platform: platform }));
+vi.mock("expo-secure-store", () => testDoubles.secureStore);
+vi.mock("react-native", () => ({ Platform: testDoubles.platform }));
 
 import { deleteStoredUiVariant, getStoredUiVariant, setStoredUiVariant } from "./preference";
-
-type TestWebStorage = {
-  getItem(key: string): string | null;
-  removeItem(key: string): void;
-  setItem(key: string, value: string): void;
-};
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -50,11 +49,11 @@ describe("ui variant preference", () => {
   it("uses web storage on web", async () => {
     platform.OS = "web";
     const store = new Map<string, string>();
-    const webStorage: TestWebStorage = {
+    const webStorage = {
       getItem: (key) => store.get(key) ?? null,
       removeItem: (key) => void store.delete(key),
       setItem: (key, value) => void store.set(key, value),
-    };
+    } satisfies Pick<Storage, "getItem" | "removeItem" | "setItem">;
     Object.assign(globalThis, { localStorage: webStorage });
 
     await setStoredUiVariant("bloom");

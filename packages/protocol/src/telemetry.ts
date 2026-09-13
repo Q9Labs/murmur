@@ -8,7 +8,34 @@ import type { ReportTranslationCategory } from "./transport/types";
 
 export type TelemetryPlatform = "android" | "ios" | "web" | "unknown";
 
+export type MobileBillingTelemetryEventName =
+  | "mobile_allowance_exhausted"
+  | "mobile_billing_screen_viewed"
+  | "mobile_checkout_cancelled"
+  | "mobile_checkout_failed"
+  | "mobile_checkout_started"
+  | "mobile_checkout_succeeded"
+  | "mobile_low_balance_viewed"
+  | "mobile_paywall_failed"
+  | "mobile_paywall_opened"
+  | "mobile_reconciliation_failed"
+  | "mobile_reconciliation_succeeded"
+  | "mobile_registration_completed"
+  | "mobile_registration_started"
+  | "mobile_restore_failed"
+  | "mobile_restore_started"
+  | "mobile_restore_succeeded";
+
 export type MobileTelemetryEvent =
+  | {
+      app_version: string;
+      backend_environment: string;
+      build_number: string;
+      event: MobileBillingTelemetryEventName;
+      package_label: string | null;
+      platform: TelemetryPlatform;
+      result_category: string | null;
+    }
   | {
       app_version: string;
       build_number: string;
@@ -101,6 +128,7 @@ type TelemetryRequestCandidate = {
 type TelemetryEventCandidate = {
   app_session_id?: unknown;
   app_version?: unknown;
+  backend_environment?: unknown;
   build_number?: unknown;
   committed_translation?: unknown;
   duration_ms?: unknown;
@@ -114,9 +142,11 @@ type TelemetryEventCandidate = {
   input_audio_frames?: unknown;
   network_type?: unknown;
   outcome?: unknown;
+  package_label?: unknown;
   platform?: unknown;
   playback_enabled?: unknown;
   provider_elapsed_ms?: unknown;
+  result_category?: unknown;
   source_char_count?: unknown;
   source_language?: unknown;
   startup_latency_ms?: unknown;
@@ -126,7 +156,30 @@ type TelemetryEventCandidate = {
 
 type TelemetryEventParser = (value: TelemetryEventCandidate) => MobileTelemetryEvent | null;
 
+const billingEventNames: readonly MobileBillingTelemetryEventName[] = [
+  "mobile_allowance_exhausted",
+  "mobile_billing_screen_viewed",
+  "mobile_checkout_cancelled",
+  "mobile_checkout_failed",
+  "mobile_checkout_started",
+  "mobile_checkout_succeeded",
+  "mobile_low_balance_viewed",
+  "mobile_paywall_failed",
+  "mobile_paywall_opened",
+  "mobile_reconciliation_failed",
+  "mobile_reconciliation_succeeded",
+  "mobile_registration_completed",
+  "mobile_registration_started",
+  "mobile_restore_failed",
+  "mobile_restore_started",
+  "mobile_restore_succeeded",
+];
+
 const telemetryEventParsers = new Map<string, TelemetryEventParser>([
+  ...billingEventNames.map((event): [string, TelemetryEventParser] => [
+    event,
+    (value) => parseBillingEvent(value, event),
+  ]),
   ["mobile_app_opened", (value) => parseAppLifecycleEvent(value, "mobile_app_opened")],
   [
     "mobile_onboarding_completed",
@@ -157,6 +210,30 @@ export function parseMobileTelemetryEvent(value: unknown): MobileTelemetryEvent 
     return null;
   }
   return telemetryEventParsers.get(value.event)?.(value) ?? null;
+}
+
+function parseBillingEvent(
+  value: TelemetryEventCandidate,
+  event: MobileBillingTelemetryEventName,
+): MobileTelemetryEvent | null {
+  if (
+    !hasAppIdentity(value) ||
+    !isTelemetryPlatform(value.platform) ||
+    !isShortLabel(value.backend_environment) ||
+    !isNullableShortLabel(value.package_label) ||
+    !isNullableShortLabel(value.result_category)
+  ) {
+    return null;
+  }
+  return {
+    app_version: value.app_version,
+    backend_environment: value.backend_environment,
+    build_number: value.build_number,
+    event,
+    package_label: value.package_label,
+    platform: value.platform,
+    result_category: value.result_category,
+  };
 }
 
 function parseAppLifecycleEvent(
@@ -422,6 +499,10 @@ function isNullableFailureCode(value: unknown): value is string | null {
 
 function isShortLabel(value: unknown): value is string {
   return isBoundedString(value, 1, 64) && /^[a-zA-Z0-9_.:-]+$/.test(value);
+}
+
+function isNullableShortLabel(value: unknown): value is string | null {
+  return value === null || isShortLabel(value);
 }
 
 function isBoundedString(

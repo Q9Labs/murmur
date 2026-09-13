@@ -35,10 +35,12 @@ export function HomeExperience(props: {
   onCloseSettings: () => void;
   onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
+  onOpenAccountBilling: () => void;
   onDeleteLocalData: () => void;
   onOpenDiagnostics: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
+  onAccountBillingOpened: () => void;
   onPrimaryAction: () => void;
   onResetIdentity: () => void;
   onShare: () => void;
@@ -48,6 +50,7 @@ export function HomeExperience(props: {
   setTargetLanguageCode: (language: LanguageCode) => void;
   settingsMessage: string | null;
   settingsOpen: boolean;
+  openAccountBilling: boolean;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   timelineRef: MutableRefObject<ScrollView | null>;
@@ -63,6 +66,7 @@ export function HomeExperience(props: {
         autoScrollRef={props.autoScrollRef}
         live={props.live}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
+        onOpenAccountBilling={props.onOpenAccountBilling}
         onOpenPicker={props.onOpenPicker}
         onOpenSettings={props.onOpenSettings}
         onPrimaryAction={props.onPrimaryAction}
@@ -84,12 +88,14 @@ export function HomeExperience(props: {
         developerToolsEnabled={props.developerToolsEnabled}
         live={props.live}
         onClose={props.onCloseSettings}
+        onAccountBillingOpened={props.onAccountBillingOpened}
         onAnonymousAnalyticsEnabledChange={props.onAnonymousAnalyticsEnabledChange}
         onDeleteLocalData={props.onDeleteLocalData}
         onOpenDiagnostics={props.onOpenDiagnostics}
         onResetIdentity={props.onResetIdentity}
         onShare={props.onShare}
         open={props.settingsOpen}
+        openAccountBilling={props.openAccountBilling}
         settingsMessage={props.settingsMessage}
       />
       {props.developerToolsEnabled ? (

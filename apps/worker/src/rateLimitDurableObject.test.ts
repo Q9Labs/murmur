@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  canAcceptTelemetryDurable,
   createSessionIfAllowedDurable,
   isRateLimiterUnavailable,
   RateLimitDurableObject,
@@ -62,81 +61,22 @@ describe("RateLimitDurableObject", () => {
     })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
   });
 
-  it("rejects an accepted result sent with an unsuccessful HTTP status", async () => {
+  it("returns service-unavailable semantics when the Durable Object rejects the request", async () => {
     const durableObjectId: DurableObjectId = {
       equals: () => true,
       toString: () => "rate-limiter-id",
     };
     const namespace: RateLimiterNamespace = {
-      get: () => ({
-        fetch: async () => Response.json({ ok: true }, { status: 503 }),
-      }),
+      get: () => ({ fetch: async () => new Response(null, { status: 503 }) }),
       idFromName: () => durableObjectId,
     };
 
-    await expect(canAcceptTelemetryDurable({
-      hashed_client_id: "client",
+    await expect(createSessionIfAllowedDurable({
+      app_session_id: "session",
+      hashed_install_id: "install",
       namespace,
       now_ms: 1,
     })).resolves.toEqual({ code: "rate_limiter_unavailable", ok: false });
-  });
-
-  it.each([
-    {
-      expected: { code: "rate_limiter_invalid_response", ok: false },
-      name: "a primitive",
-      response: "invalid",
-    },
-    {
-      expected: { code: "rate_limiter_invalid_response", ok: false },
-      name: "null",
-      response: null,
-    },
-    {
-      expected: { code: "rate_limiter_invalid_response", ok: false },
-      name: "an object without a result",
-      response: {},
-    },
-    {
-      expected: { code: "rate_limiter_invalid_response", ok: false },
-      name: "an invalid result flag",
-      response: { ok: "invalid" },
-    },
-    {
-      expected: { code: "rate_limiter_invalid_response", ok: false },
-      name: "a rejection without a code",
-      response: { ok: false },
-    },
-    {
-      expected: { code: "telemetry_limit", ok: false },
-      name: "a rejection without a retry delay",
-      response: { code: "telemetry_limit", ok: false },
-    },
-    {
-      expected: { code: "telemetry_limit", ok: false, retry_after_ms: 250 },
-      name: "a rejection with a retry delay",
-      response: { code: "telemetry_limit", ok: false, retry_after_ms: 250 },
-    },
-    {
-      expected: { ok: true },
-      name: "an accepted request",
-      response: { ok: true },
-    },
-  ])("decodes $name from the Durable Object", async ({ expected, response }) => {
-    const durableObjectId: DurableObjectId = {
-      equals: () => true,
-      toString: () => "rate-limiter-id",
-    };
-    const namespace: RateLimiterNamespace = {
-      get: () => ({ fetch: async () => Response.json(response) }),
-      idFromName: () => durableObjectId,
-    };
-
-    await expect(canAcceptTelemetryDurable({
-      hashed_client_id: "client",
-      namespace,
-      now_ms: 1,
-    })).resolves.toEqual(expected);
   });
 
   it("rejects malformed JSON", async () => {

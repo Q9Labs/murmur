@@ -157,6 +157,7 @@ function shellProps(params: {
     autoScrollRef: { current: true },
     live: liveState as VariantShellProps["live"],
     onAudioPlaybackEnabledChange: vi.fn(),
+    onOpenAccountBilling: vi.fn(),
     onOpenPicker: vi.fn(),
     onOpenSettings: vi.fn(),
     onPrimaryAction: vi.fn(),

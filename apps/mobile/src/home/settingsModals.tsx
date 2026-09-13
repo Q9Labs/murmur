@@ -1,6 +1,6 @@
 import * as Linking from "expo-linking";
 import { ChevronRight } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -26,21 +26,36 @@ export function SettingsModal(props: {
   onResetIdentity: () => void;
   onShare: () => void;
   open: boolean;
+  openAccountBilling?: boolean;
+  onAccountBillingOpened?: () => void;
   settingsMessage: string | null;
 }): ReactNode {
   const { styles } = useSheetStyles();
   const [accountBillingOpen, setAccountBillingOpen] = useState(false);
   const disabled = props.live.status === "live";
+
+  useEffect(() => {
+    if (props.open && props.openAccountBilling) {
+      setAccountBillingOpen(true);
+      props.onAccountBillingOpened?.();
+    }
+  }, [props.open, props.openAccountBilling, props.onAccountBillingOpened]);
+
+  if (accountBillingOpen) {
+    return (
+      <AccountBillingModal onClose={() => setAccountBillingOpen(false)} open={props.open} />
+    );
+  }
+
   return (
-    <>
-      <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
-        <View style={styles.settingsList}>
-          <SettingsAction
-            disabled={disabled}
-            label="Account & billing"
-            onPress={() => setAccountBillingOpen(true)}
-          />
-          <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
+    <ModalSheet onClose={props.onClose} open={props.open} scroll title="Settings">
+      <View style={styles.settingsList}>
+        <SettingsAction
+          disabled={disabled}
+          label="Account & billing"
+          onPress={() => setAccountBillingOpen(true)}
+        />
+        <SettingsAction disabled={disabled} label="Share Murmur" onPress={props.onShare} />
         <SettingsAction
           disabled={disabled}
           label={`Anonymous analytics: ${props.anonymousAnalyticsEnabled ? "On" : "Off"}`}
@@ -50,7 +65,10 @@ export function SettingsModal(props: {
           label="Privacy policy"
           onPress={() => void Linking.openURL(legalUrls.privacy)}
         />
-        <SettingsAction label="Terms of use" onPress={() => void Linking.openURL(legalUrls.terms)} />
+        <SettingsAction
+          label="Terms of use"
+          onPress={() => void Linking.openURL(legalUrls.terms)}
+        />
         <SettingsAction
           label="Support & data requests"
           onPress={() => void Linking.openURL(legalUrls.support)}
@@ -69,16 +87,9 @@ export function SettingsModal(props: {
           label="Reset Murmur Identity"
           onPress={props.onResetIdentity}
         />
-        </View>
-        {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
-      </ModalSheet>
-      {props.open && accountBillingOpen ? (
-        <AccountBillingModal
-          onClose={() => setAccountBillingOpen(false)}
-          open
-        />
-      ) : null}
-    </>
+      </View>
+      {props.settingsMessage ? <Text style={styles.settingsMessage}>{props.settingsMessage}</Text> : null}
+    </ModalSheet>
   );
 }
 

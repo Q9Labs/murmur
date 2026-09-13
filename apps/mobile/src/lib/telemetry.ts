@@ -1,4 +1,8 @@
-import type { MobileTelemetryEvent, TelemetryPlatform } from "@murmur/protocol/telemetry";
+import type {
+  MobileBillingTelemetryEventName,
+  MobileTelemetryEvent,
+  TelemetryPlatform,
+} from "@murmur/protocol/telemetry";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
@@ -8,6 +12,7 @@ import {
   setAnonymousAnalyticsEnabled,
 } from "./anonymousAnalytics";
 import { getOrCreateInstallId } from "./installIdentity";
+import { getMurmurEnvironment } from "./config";
 import { deliverMobileTelemetryRequest } from "./providers/mobileTelemetry";
 
 let anonymousAnalyticsEnabled = false;
@@ -49,6 +54,20 @@ export function captureMobileTelemetry(payload: MobileTelemetryEvent): void {
 
 export function captureOnboardingCompleted(): void {
   captureMobileTelemetry(createAppLifecycleEvent("mobile_onboarding_completed"));
+}
+
+export function captureBillingTelemetry(
+  event: MobileBillingTelemetryEventName,
+  options: { packageLabel?: string; resultCategory?: string } = {},
+): void {
+  captureMobileTelemetry({
+    ...getAppIdentity(),
+    backend_environment: getMurmurEnvironment(),
+    event,
+    package_label: options.packageLabel ?? null,
+    platform: getTelemetryPlatform(),
+    result_category: options.resultCategory ?? null,
+  });
 }
 
 async function deliverMobileTelemetry(payload: MobileTelemetryEvent): Promise<void> {

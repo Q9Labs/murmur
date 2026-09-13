@@ -201,11 +201,19 @@ class MurmurAudioModule : Module() {
         } else {
           captureReadErrors.incrementAndGet()
           droppedFrames.incrementAndGet()
+          captureActive = false
           break
         }
       }
       if (offset == frame.size && captureActive) {
         emitFrame(frame.copyOf())
+      }
+    }
+    if (recorder === record && !captureActive) {
+      mainHandler.post {
+        if (recorder === record && !captureActive) {
+          stopCaptureSync("capture_read_failed")
+        }
       }
     }
   }

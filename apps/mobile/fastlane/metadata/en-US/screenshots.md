@@ -1,1 +1,1 @@
-The previous App Store screenshot set was removed intentionally while the screenshot redesign is in progress. Do not restore the old captures or compositions. Add the reviewed replacement set before store submission.
+The reviewed replacement App Store set contains seven 1320×2868 RGB images generated from the final 1.2.3 source. It covers live translation, caption following, language selection, free minutes/account recovery, privacy controls, audio choice, and translation direction. Do not restore the superseded captures.

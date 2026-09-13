@@ -1,1 +1,1 @@
-Adds a draggable live-caption bubble and keeps the newest translated text visible as captions fill.
+Improves live translation and network recovery, stabilizes background microphone sessions, adds subscriptions and credit packs with account recovery, and refreshes Murmur’s design and store presentation.

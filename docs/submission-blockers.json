@@ -3,13 +3,13 @@
     "name": "Murmur",
     "android_package": "com.q9labsai.murmur",
     "ios_bundle_id": "com.q9labsai.murmur",
-    "version": "1.2.0"
+    "version": "1.2.3"
   },
-  "last_updated": "2026-08-29",
+  "last_updated": "2026-09-13",
   "status": "not_submission_ready",
   "readiness_notes": [
-    "The billing implementation, local typechecks, billing tests, mobile customer API tests, and store metadata validators pass.",
-    "Billing enforcement and purchases remain disabled in deployed environments until credentials, store products, and sandbox lifecycle tests are complete."
+    "Production release authorized on 2026-09-13; final source and Android API 35 lifecycle evidence pass.",
+    "Production D1 migration and billing catalog are complete. App Store submission remains blocked by the Account Holder legal-entity update and Paid Apps Agreement; paid lifecycle evidence is still incomplete."
   ],
   "policy_sources_checked": [
     {
@@ -52,37 +52,52 @@
       ]
     },
     {
-      "id": "billing-production-credentials",
-      "title": "Create and install production billing credentials",
-      "status": "in_progress",
-      "why_blocking": "The Worker and RevenueCat cannot verify Apple or Google purchases or deliver account recovery email without production credentials and webhook secrets.",
+      "id": "apple-paid-apps-agreement",
+      "title": "Complete Apple legal entity and Paid Apps Agreement",
+      "status": "open",
+      "why_blocking": "Apple will not permit paid apps or in-app purchases until the Account Holder updates the legal entity and signs the Paid Apps Agreement.",
       "current_evidence": [
-        "RevenueCat secret API access and an authenticated, HMAC-signed Worker webhook are configured; their server secrets are installed in both Cloudflare environments.",
-        "The Google service-account file is stored in RevenueCat and can read the product catalogs. Purchase validation is awaiting propagation of the new app-level financial and order permissions.",
-        "The Resend sending-only key is installed for the verified notifications.q9labs.ai domain. The Apple In-App Purchase key still requires a manual one-time download from App Store Connect."
+        "App Store Connect Business shows Paid Apps Agreement status New on 2026-09-13.",
+        "Apple displays: update legal entity information prior to signing the Paid Apps Agreement."
       ],
       "exit_criteria": [
-        "Generate the minimum-scope Apple, Google, RevenueCat, and Resend credentials after explicit action-time approval.",
-        "Store credential material in 1Password and install only the required public values and Worker secrets in each environment.",
-        "Confirm RevenueCat-to-Worker webhook authentication and server-side customer verification in sandbox."
+        "The Account Holder supplies and attests the required legal-entity information.",
+        "The Account Holder signs the Paid Apps Agreement and App Store Connect reports it Active."
+      ]
+    },
+    {
+      "id": "billing-production-credentials",
+      "title": "Create and install production billing credentials",
+      "status": "closed",
+      "why_blocking": "The Worker and RevenueCat cannot verify Apple or Google purchases or deliver account recovery email without production credentials and webhook secrets.",
+      "current_evidence": [
+        "Apple IAP key A7RP99HN55 and the App Store Connect API credential are valid in RevenueCat; the IAP key is backed up in 1Password.",
+        "Google Play service-account purchase verification and RTDN delivery to RevenueCat are configured and verified.",
+        "Production RevenueCat webhook HMAC is enabled; its rotated secret is installed in the production Worker and backed up in 1Password.",
+        "Resend, OpenAI, PostHog, Sentry, auth, and reconciliation secrets are present in the production Worker."
+      ],
+      "exit_criteria": [
+        "Manually download Apple In-App Purchase key A7RP99HN55 once and install it in RevenueCat without exposing the private key.",
+        "Store the Apple key in 1Password and confirm Apple server-side customer verification in sandbox.",
+        "Retain the authenticated RevenueCat-to-Worker webhook and verified Google server-side purchase configuration."
       ]
     },
     {
       "id": "store-billing-catalog",
       "title": "Configure the Apple, Google, and RevenueCat product catalog",
-      "status": "open",
+      "status": "closed",
       "why_blocking": "Customers cannot buy Murmur Pro or credit packs until the exact products, prices, entitlement, offering, and packages exist and are linked across both stores and RevenueCat.",
       "current_evidence": [
-        "The source-controlled catalog and contribution-margin tests define the approved products and prices.",
-        "App Store Connect has the monthly and annual subscriptions plus all three consumable credit packs; review screenshots are still missing.",
-        "RevenueCat has ten store products, one Pro entitlement containing only subscription products, and one current offering with five cross-platform packages.",
-        "Google Play will not enable subscription or one-time product creation until a billing-enabled Android App Bundle is uploaded."
+        "Apple monthly/annual subscriptions and all three consumable packs are READY_TO_SUBMIT at the approved prices.",
+        "Google monthly/annual base plans are active in 173 regions; murmur_credits_60, murmur_credits_180, and murmur_credits_540 now have ACTIVE purchase options at USD 3.99, USD 10.99, and USD 31.99 with converted regional prices.",
+        "Play accepted and activated the billing-capable code 8 internal prerequisite under the replacement upload certificate.",
+        "RevenueCat default offering has five packages, each attached to the matching active Apple and Google product; the Pro entitlement contains only subscription products."
       ],
       "exit_criteria": [
-        "Upload a signed internal-test Android App Bundle that declares the Google Play Billing permission.",
-        "Configure Pro monthly at USD 12.99, Pro annual at USD 124.99, and credit packs at USD 3.99, USD 10.99, and USD 31.99 with approved localized tiers.",
-        "Link the Apple and Google products to RevenueCat entitlement pro and offering default with the documented package identifiers.",
-        "Complete store review metadata, tax, availability, and subscription disclosures for CollabEZ FZE LLC."
+        "After 2026-09-01 07:32:56 UTC, upload code 7 to internal testing and confirm Google Play accepts the replacement upload certificate and BILLING permission.",
+        "Create Google Pro monthly at USD 12.99, Pro annual at USD 124.99, and credit packs at USD 3.99, USD 10.99, and USD 31.99.",
+        "Verify the Google products remain linked to RevenueCat entitlement pro and offering default with the documented package identifiers.",
+        "Release the verified Android build only to internal, closed Alpha, and open testing tracks."
       ]
     },
     {
@@ -92,9 +107,13 @@
       "why_blocking": "The code is locally verified, but production release needs real store evidence for purchase, restore, renewal, expiry, refund, and metered balance behavior.",
       "current_evidence": [
         "Local tests cover ledger idempotency, grants, reversals, reconciliation, account merge, and translation metering.",
-        "No completed App Store sandbox or Google Play licensed-tester lifecycle run is recorded for the new catalog."
+        "A real development account flow transferred the August Free claim from a fresh guest to the verified company-email customer, committed the D1 merge and alias, revoked the guest principal, and preserved the 30-minute balance.",
+        "The development Worker is billing-active and ready. A real one-second PCM attempt reached the Worker, but OpenAI rejected it before acknowledgement because the organization balance is -$0.25; D1 recorded the failed usage session with no settled usage.",
+        "iOS 1.2.2 build 13 is in internal TestFlight and awaits external Beta App Review. All Apple products are READY_TO_SUBMIT, but StoreKit product propagation has not completed and the RevenueCat simulator paywall still reports an empty offering.",
+        "No completed App Store sandbox or Google Play licensed-tester purchase, renewal, expiry, or refund lifecycle run is recorded for the new catalog."
       ],
       "exit_criteria": [
+        "Fund the OpenAI organization and record successful acknowledged translation metering against the D1 ledger.",
         "Record successful purchase and restore tests for each platform and product class.",
         "Record renewal, cancellation, expiry, refund, refund reversal, duplicate webhook, reinstall, cross-device sign-in, and negative-balance behavior.",
         "Prove billing enforcement can stay enabled while the purchase kill switch disables new checkout."
@@ -103,14 +122,14 @@
     {
       "id": "billing-production-rollout",
       "title": "Deploy and verify the staged production billing release",
-      "status": "open",
+      "status": "in_progress",
       "why_blocking": "The live Worker and mobile builds must use the verified production configuration before the paid offer can be released safely.",
       "current_evidence": [
-        "Production billing enforcement and purchase flags remain false.",
-        "The additive reconciliation migrations are applied to development and production D1, but no billing-enabled Worker revision has been deployed."
+        "Production D1 migration 0006 is applied after a Time Travel bookmark; pre/post aggregate counts and foreign-key verification match.",
+        "Production billing flags are enabled in the release source and the HMAC webhook secret is installed.",
+        "Production Worker deployment and the final Android/iOS uploads are in progress."
       ],
       "exit_criteria": [
-        "Apply all additive D1 migrations and deploy the Worker with production secrets while purchases stay disabled.",
         "Verify readiness, account recovery, entitlement reconciliation, metering, observability, and rollback controls live.",
         "Release approved store builds in stages, enable purchases only after live proof, and verify the deployed revision."
       ]

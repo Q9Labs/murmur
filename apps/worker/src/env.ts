@@ -7,6 +7,7 @@ export type Env = {
   BETTER_AUTH_URL?: string;
   BILLING_DB?: D1Database;
   BILLING_ENFORCEMENT_ENABLED?: string;
+  BILLING_FULFILLMENT_ENABLED?: string;
   BILLING_PURCHASES_ENABLED?: string;
   CUSTOMER_LEDGER?: DurableObjectNamespace;
   EMAIL_FROM?: string;
@@ -29,6 +30,7 @@ export type Env = {
   SENTRY_RELEASE?: string;
   REVENUECAT_API_KEY?: string;
   REVENUECAT_PROJECT_ID?: string;
+  REVENUECAT_CUSTOMER_NAMESPACE?: string;
   REVENUECAT_WEBHOOK_AUTH?: string;
   REVENUECAT_WEBHOOK_SIGNING_SECRET?: string;
 };
@@ -69,7 +71,9 @@ const productionRequirements: ReadonlyArray<{ key: keyof Env; name: string }> = 
 
 export function getReadiness(env: Env): WorkerReadiness {
   const realtimeApiKey = getRealtimeApiKey(env);
-  const billingEnabled = isBillingEnforced(env);
+  const billingEnabled = isBillingEnforced(env) ||
+    isBillingFulfillmentEnabled(env) ||
+    areBillingPurchasesEnabled(env);
   const missingBilling = billingEnabled ? missingRequirements(env, billingRequirements) : [];
   const missingProduction = env.MURMUR_ENV === "production"
     ? missingRequirements(env, productionRequirements)
@@ -114,8 +118,15 @@ function missingRequirements(
 }
 
 export function isBillingEnforced(env: Env): boolean {
-  return env.BILLING_ENFORCEMENT_ENABLED === "true" ||
-    env.BILLING_PURCHASES_ENABLED === "true";
+  return env.BILLING_ENFORCEMENT_ENABLED === "true";
+}
+
+export function isBillingFulfillmentEnabled(env: Env): boolean {
+  return env.BILLING_FULFILLMENT_ENABLED === "true";
+}
+
+export function areBillingPurchasesEnabled(env: Env): boolean {
+  return env.BILLING_PURCHASES_ENABLED === "true";
 }
 
 export function getRealtimeApiKey(env: Env): string | null {

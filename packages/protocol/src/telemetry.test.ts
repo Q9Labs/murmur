@@ -80,6 +80,15 @@ const validEvents: MobileTelemetryEvent[] = [
     error_category: "inaccurate",
     event: "mobile_translation_reported",
   },
+  {
+    app_version: "1.2.3",
+    backend_environment: "sandbox",
+    build_number: "14",
+    event: "mobile_checkout_succeeded",
+    package_label: "store_paywall",
+    platform: "ios",
+    result_category: "purchased",
+  },
 ];
 
 describe("mobile telemetry parsing", () => {

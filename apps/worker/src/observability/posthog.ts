@@ -8,6 +8,20 @@ const postHogUsCaptureUrl = "https://us.i.posthog.com/i/v0/e/";
 
 export type WorkerTelemetryEvent =
   | {
+      event: "worker_billing_fulfillment";
+      event_type: string;
+      idempotent: boolean;
+      provider: string;
+      status: "applied" | "failed" | "ignored";
+    }
+  | {
+      event: "worker_billing_reconciliation";
+      purchase_count: number;
+      status: "failed" | "succeeded";
+      subscription_count: number;
+      trigger: "login" | "purchase" | "restore";
+    }
+  | {
       acquisition_campaign?: string;
       acquisition_content?: string;
       acquisition_landing?: string;

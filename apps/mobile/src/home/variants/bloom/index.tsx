@@ -1,5 +1,5 @@
 import { Settings as SettingsIcon } from "lucide-react-native";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   Animated,
   Image,
@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useMurmurBilling } from "../../../lib/billing/context";
+import { captureBillingTelemetry } from "../../../lib/telemetry";
+import { isAllowanceExhaustedError } from "../../errorCopy";
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
 import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
@@ -22,6 +25,23 @@ const brandLogo = require("../../../../assets/images/icon.png");
 export function BloomShell(props: VariantShellProps): ReactNode {
   const { live, viewModel } = props;
   const { colors, styles } = useBloomStyles();
+  const billing = useMurmurBilling();
+  const lowBalanceMinutes = billing.customer && billing.customer.availableMs > 0 &&
+      billing.customer.availableMs <= 5 * 60_000
+    ? Math.max(1, Math.ceil(billing.customer.availableMs / 60_000))
+    : null;
+
+  useEffect(() => {
+    if (lowBalanceMinutes) {
+      captureBillingTelemetry("mobile_low_balance_viewed");
+    }
+  }, [lowBalanceMinutes]);
+
+  useEffect(() => {
+    if (isAllowanceExhaustedError(live.error)) {
+      captureBillingTelemetry("mobile_allowance_exhausted");
+    }
+  }, [live.error]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -34,6 +54,13 @@ export function BloomShell(props: VariantShellProps): ReactNode {
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
+        {lowBalanceMinutes ? (
+          <Pressable accessibilityRole="button" onPress={props.onOpenAccountBilling}>
+            <Text style={styles.receipt}>
+              {lowBalanceMinutes} min left · Open Account & billing
+            </Text>
+          </Pressable>
+        ) : null}
         <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
           {viewModel.statusText}
         </Text>
@@ -52,7 +79,11 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel={live.error && live.error !== "microphone_permission_denied" ? "Try again" : "Listen"}
+          startLabel={isAllowanceExhaustedError(live.error)
+            ? "Get more time"
+            : live.error && live.error !== "microphone_permission_denied"
+              ? "Try again"
+              : "Listen"}
           stopLabel="Stop"
           style={styles.listenPill}
           textStyle={styles.listenPillText}

@@ -14,6 +14,7 @@ export type VariantShellProps = {
   autoScrollRef: MutableRefObject<boolean>;
   live: LiveTranslationController;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
+  onOpenAccountBilling: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
   onPrimaryAction: () => void;

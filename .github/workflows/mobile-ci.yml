@@ -108,8 +108,7 @@ jobs:
         run: pnpm exec expo prebuild --clean --no-install --platform ios
 
       - name: Install CocoaPods
-        working-directory: apps/mobile/ios
-        run: pod install
+        run: pod install --project-directory=apps/mobile/ios
 
       - name: Build unsigned iOS simulator app
         run: >-

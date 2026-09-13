@@ -11,6 +11,8 @@ import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
+export const workerSessionRequestTimeoutMs = 15_000;
+
 export async function requestMicrophonePermission(): Promise<boolean> {
   if (Platform.OS === "android") {
     const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
@@ -79,11 +81,30 @@ export async function collectDeviceIntegrity(params: {
 }
 
 async function postWorkerJson<T>(url: string, body: unknown): Promise<T | { error: string }> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: await authenticatedWorkerHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
-  }).catch(() => null);
+  const controller = new AbortController();
+  const request = (async (): Promise<Response | null> => {
+    const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
+    if (controller.signal.aborted) {
+      return null;
+    }
+    return fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    }).catch(() => null);
+  })().catch(() => null);
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      resolve(null);
+    }, workerSessionRequestTimeoutMs);
+  });
+  const response = await Promise.race([request, timeout]);
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId);
+  }
   if (!response) {
     return { error: "worker_session_network_error" };
   }

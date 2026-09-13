@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getReadiness, isBillingEnforced } from "./env";
+import {
+  areBillingPurchasesEnabled,
+  getReadiness,
+  isBillingEnforced,
+  isBillingFulfillmentEnabled,
+} from "./env";
 
 describe("worker env readiness", () => {
   it("reports the OpenAI key and production salt as required", () => {
@@ -74,10 +79,12 @@ describe("worker env readiness", () => {
     expect(isBillingEnforced({
       BILLING_ENFORCEMENT_ENABLED: "false",
       BILLING_PURCHASES_ENABLED: "true",
-    })).toBe(true);
+    })).toBe(false);
     expect(isBillingEnforced({
       BILLING_ENFORCEMENT_ENABLED: "false",
       BILLING_PURCHASES_ENABLED: "false",
     })).toBe(false);
+    expect(areBillingPurchasesEnabled({ BILLING_PURCHASES_ENABLED: "true" })).toBe(true);
+    expect(isBillingFulfillmentEnabled({ BILLING_FULFILLMENT_ENABLED: "true" })).toBe(true);
   });
 });

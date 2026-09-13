@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getMurmurEnvironment,
   getRevenueCatApiKeys,
+  getRevenueCatOfferingId,
   getSentryDsn,
   getUiPreviewScreen,
   getWorkerBaseUrl,
@@ -44,6 +46,20 @@ describe("Sentry config", () => {
   });
 });
 
+describe("Murmur environment config", () => {
+  it("uses an explicit isolated environment label", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "sandbox");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(getMurmurEnvironment()).toBe("sandbox");
+  });
+
+  it("does not accept arbitrary telemetry environment labels", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "customer-secret");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(getMurmurEnvironment()).toBe("production");
+  });
+});
+
 describe("RevenueCat config", () => {
   it("returns trimmed public store keys", () => {
     vi.stubEnv("EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY", " google-public-key ");
@@ -53,6 +69,11 @@ describe("RevenueCat config", () => {
       android: "google-public-key",
       ios: "apple-public-key",
     });
+  });
+
+  it("selects an explicitly isolated offering", () => {
+    vi.stubEnv("EXPO_PUBLIC_REVENUECAT_OFFERING_ID", " sandbox ");
+    expect(getRevenueCatOfferingId()).toBe("sandbox");
   });
 
   it("omits empty store keys", () => {
@@ -65,6 +86,9 @@ describe("RevenueCat config", () => {
 
 describe("UI preview config", () => {
   it("accepts only the deterministic development preview screens", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "billing");
+    expect(getUiPreviewScreen()).toBe("billing");
+
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "picker");
     expect(getUiPreviewScreen()).toBe("picker");
 
@@ -73,6 +97,9 @@ describe("UI preview config", () => {
 
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "translation");
     expect(getUiPreviewScreen()).toBe("translation");
+
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "translation-muted");
+    expect(getUiPreviewScreen()).toBe("translation-muted");
 
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "welcome");
     expect(getUiPreviewScreen()).toBe("welcome");
