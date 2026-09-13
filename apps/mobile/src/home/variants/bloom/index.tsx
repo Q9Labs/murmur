@@ -26,10 +26,19 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const { live, viewModel } = props;
   const { colors, styles } = useBloomStyles();
   const billing = useMurmurBilling();
-  const lowBalanceMinutes = billing.customer && billing.customer.availableMs > 0 &&
+  const wasLive = useRef(viewModel.isLive);
+  const lowBalanceMinutes = !viewModel.isLive && billing.customer &&
+      billing.customer.availableMs > 0 &&
       billing.customer.availableMs <= 5 * 60_000
     ? Math.max(1, Math.ceil(billing.customer.availableMs / 60_000))
     : null;
+
+  useEffect(() => {
+    if (wasLive.current && !viewModel.isLive) {
+      void billing.refresh();
+    }
+    wasLive.current = viewModel.isLive;
+  }, [billing.refresh, viewModel.isLive]);
 
   useEffect(() => {
     if (lowBalanceMinutes) {

@@ -82,17 +82,21 @@ export async function collectDeviceIntegrity(params: {
 
 async function postWorkerJson<T>(url: string, body: unknown): Promise<T | { error: string }> {
   const controller = new AbortController();
-  const request = (async (): Promise<Response | null> => {
+  const request = (async (): Promise<{ payload: unknown; response: Response } | null> => {
     const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
     if (controller.signal.aborted) {
       return null;
     }
-    return fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     }).catch(() => null);
+    if (!response) {
+      return null;
+    }
+    return { payload: await response.json().catch(() => null), response };
   })().catch(() => null);
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<null>((resolve) => {
@@ -101,14 +105,14 @@ async function postWorkerJson<T>(url: string, body: unknown): Promise<T | { erro
       resolve(null);
     }, workerSessionRequestTimeoutMs);
   });
-  const response = await Promise.race([request, timeout]);
+  const result = await Promise.race([request, timeout]);
   if (timeoutId !== null) {
     clearTimeout(timeoutId);
   }
-  if (!response) {
+  if (!result) {
     return { error: "worker_session_network_error" };
   }
-  const payload = await response.json().catch(() => null);
+  const { payload, response } = result;
   if (isErrorPayload(payload)) {
     const missing = Array.isArray(payload.missing) ? `:${payload.missing.join(",")}` : "";
     return { error: `${payload.error}${missing}` };

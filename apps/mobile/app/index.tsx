@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 
 import HomeScreen from "../src/home/homeScreen";
 import { BloomPreview } from "../src/home/preview";
-import { getUiPreviewScreen } from "../src/lib/config";
+import { getMurmurEnvironment, getUiPreviewScreen } from "../src/lib/config";
 
-const previewScreen = getUiPreviewScreen();
+const previewScreen = __DEV__ || getMurmurEnvironment() === "preview"
+  ? getUiPreviewScreen()
+  : null;
 
 export default function IndexRoute(): ReactNode {
   if (previewScreen !== null) {

@@ -165,10 +165,12 @@ assert(sandboxBuild?.ios?.simulator === false, "EAS sandbox iOS build must targe
 assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_ENV === "sandbox", "EAS sandbox build must label telemetry as sandbox");
 assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === sandboxWorkerUrl, "EAS sandbox Worker URL must target the isolated sandbox Worker");
 assert(sandboxBuild?.env?.EXPO_PUBLIC_REVENUECAT_OFFERING_ID === "sandbox", "EAS sandbox build must select the noncurrent sandbox offering");
+assert(sandboxBuild?.autoIncrement === true, "EAS sandbox builds must auto-increment store build identifiers");
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
+assert(productionBuild?.autoIncrement === true, "EAS production builds must auto-increment store build identifiers");
 assert(easConfig.submit?.["sandbox-internal"]?.android?.track === "internal", "EAS sandbox internal submit profile must target Play internal");
 assert(easConfig.submit?.["sandbox-alpha"]?.android?.track === "alpha", "EAS sandbox alpha submit profile must target Play alpha");
 assert(easConfig.submit?.["sandbox-internal"]?.ios?.ascAppId === "6756962206", "EAS sandbox iOS submit profile must target the Murmur App Store app");

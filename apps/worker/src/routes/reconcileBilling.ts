@@ -1,8 +1,9 @@
+import * as Sentry from "@sentry/cloudflare";
+
 import { getMurmurSession } from "../auth/auth";
 import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation";
 import { isBillingFulfillmentEnabled, type Env } from "../env";
 import { json } from "../http/response";
-import { queuePostHogEvent } from "../observability/posthog";
 
 export async function reconcileBilling(
   request: Request,
@@ -30,18 +31,6 @@ export async function reconcileBilling(
       nowMs: Date.now(),
       trigger,
     });
-    queuePostHogEvent({
-      context,
-      distinct_id: session.user.id,
-      env,
-      payload: {
-        event: "worker_billing_reconciliation",
-        purchase_count: result.purchaseCount,
-        status: "succeeded",
-        subscription_count: result.subscriptionCount,
-        trigger,
-      },
-    });
     return json({
       ok: true,
       purchase_count: result.purchaseCount,
@@ -51,19 +40,6 @@ export async function reconcileBilling(
     Sentry.captureException(failure, {
       tags: { operation: "reconcile_billing" },
     });
-    queuePostHogEvent({
-      context,
-      distinct_id: session.user.id,
-      env,
-      payload: {
-        event: "worker_billing_reconciliation",
-        purchase_count: 0,
-        status: "failed",
-        subscription_count: 0,
-        trigger,
-      },
-    });
     return json({ error: "reconciliation_failed" }, 503);
   }
 }
-import * as Sentry from "@sentry/cloudflare";

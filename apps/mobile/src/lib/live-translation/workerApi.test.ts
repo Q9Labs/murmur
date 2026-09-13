@@ -52,6 +52,21 @@ describe("createWorkerSession", () => {
     expect(requestSignal?.aborted).toBe(true);
   });
 
+  it("keeps the deadline active while reading a stalled response body", async () => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | undefined;
+    vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
+      requestSignal = init?.signal ?? undefined;
+      return Promise.resolve(new Response(new ReadableStream({ start: () => undefined })));
+    }));
+
+    const pending = createWorkerSession(request);
+    await vi.advanceTimersByTimeAsync(workerSessionRequestTimeoutMs);
+
+    await expect(pending).resolves.toEqual({ error: "worker_session_network_error" });
+    expect(requestSignal?.aborted).toBe(true);
+  });
+
   it("returns a successful response before the deadline", async () => {
     vi.useFakeTimers();
     const payload = {
