@@ -26,6 +26,10 @@ const assert = (condition, message) => {
 
 const productionWorkerUrl = "https://murmur.q9labs.ai";
 const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev";
+const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
+const releaseVersion = "1.2.3";
+const iosBuildNumber = "14";
+const androidVersionCode = 9;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -48,7 +52,7 @@ const linkedPrivacyTypes = new Set([
 assert(appConfig.name === "Murmur", `app name must be Murmur; got ${appConfig.name}`);
 assert(appConfig.owner === "q9labs", `Expo owner must be q9labs; got ${appConfig.owner}`);
 assert(appConfig.slug === "murmur", `Expo slug must be murmur; got ${appConfig.slug}`);
-assert(appConfig.version === "1.2.2", `app version must be 1.2.2 for this release; got ${appConfig.version}`);
+assert(appConfig.version === releaseVersion, `app version must be ${releaseVersion} for this release; got ${appConfig.version}`);
 assert(appConfig.orientation === "portrait", `orientation must be portrait; got ${appConfig.orientation}`);
 assert(appConfig.scheme === "murmur", `scheme must be murmur; got ${appConfig.scheme}`);
 assert(appConfig.icon === "./assets/images/icon.png", "app icon path must use the validated icon asset");
@@ -56,7 +60,10 @@ assert(appConfig.splash?.image === "./assets/images/splash-icon.png", "splash im
 assert(appConfig.splash?.backgroundColor === "#F8F4ED", "splash background must match the validated launch asset");
 
 assert(appConfig.ios?.bundleIdentifier === "com.q9labsai.murmur", "iOS bundle id must be com.q9labsai.murmur");
-assert(appConfig.ios?.buildNumber === "13", `iOS build number must be 13 for the v1.2.2 testing release; got ${appConfig.ios?.buildNumber}`);
+assert(
+  appConfig.ios?.buildNumber === iosBuildNumber,
+  `iOS build number must be ${iosBuildNumber} for the v${releaseVersion} sandbox release; got ${appConfig.ios?.buildNumber}`,
+);
 assert(
   appConfig.ios?.appStoreUrl === "https://apps.apple.com/app/id6756962206",
   "iOS store URL must target Murmur's App Store listing",
@@ -112,7 +119,10 @@ assert(
     "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
   "Android store URL must target Murmur's Google Play listing",
 );
-assert(appConfig.android?.versionCode === 7, `Android versionCode must be 7 for the v1.2.2 testing release; got ${appConfig.android?.versionCode}`);
+assert(
+  appConfig.android?.versionCode === androidVersionCode,
+  `Android versionCode must be ${androidVersionCode} for the v${releaseVersion} sandbox release; got ${appConfig.android?.versionCode}`,
+);
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
 const requiredAndroidPermissions = [
@@ -143,15 +153,25 @@ assert(!appUiSource.includes("Start Listening"), "First-session CTA must use can
 assert(appUiSource.includes(">Listen<"), "App UI must include the canonical Listen CTA");
 
 const productionBuild = easConfig.build?.production;
+const sandboxBuild = easConfig.build?.sandbox;
 const testingBuild = easConfig.build?.testing;
 assert(testingBuild?.distribution === "store", "EAS testing build must use store distribution");
 assert(testingBuild?.android?.buildType === "app-bundle", "EAS testing Android build must produce an app bundle");
 assert(testingBuild?.ios?.simulator === false, "EAS testing iOS build must target devices, not simulator");
 assert(testingBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === testingWorkerUrl, "EAS testing Worker URL must target the development Worker");
+assert(sandboxBuild?.distribution === "store", "EAS sandbox build must use store distribution");
+assert(sandboxBuild?.android?.buildType === "app-bundle", "EAS sandbox Android build must produce an app bundle");
+assert(sandboxBuild?.ios?.simulator === false, "EAS sandbox iOS build must target devices, not simulator");
+assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_ENV === "sandbox", "EAS sandbox build must label telemetry as sandbox");
+assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === sandboxWorkerUrl, "EAS sandbox Worker URL must target the isolated sandbox Worker");
+assert(sandboxBuild?.env?.EXPO_PUBLIC_REVENUECAT_OFFERING_ID === "sandbox", "EAS sandbox build must select the noncurrent sandbox offering");
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
+assert(easConfig.submit?.["sandbox-internal"]?.android?.track === "internal", "EAS sandbox internal submit profile must target Play internal");
+assert(easConfig.submit?.["sandbox-alpha"]?.android?.track === "alpha", "EAS sandbox alpha submit profile must target Play alpha");
+assert(easConfig.submit?.["sandbox-internal"]?.ios?.ascAppId === "6756962206", "EAS sandbox iOS submit profile must target the Murmur App Store app");
 assert(easConfig.submit?.production?.android?.track === "production", "EAS Android submit track should target production for this release");
 
 if (failures.length > 0) {

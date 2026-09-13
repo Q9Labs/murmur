@@ -44,6 +44,7 @@ import { HomeExperience } from "./experience";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
+import { isAllowanceExhaustedError } from "./errorCopy";
 
 const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
 const localDataDeletedMessage =
@@ -185,6 +186,7 @@ export default function HomeScreen(): ReactNode {
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [openAccountBilling, setOpenAccountBilling] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
@@ -393,6 +395,11 @@ export default function HomeScreen(): ReactNode {
       }
       return;
     }
+    if (isAllowanceExhaustedError(live.error)) {
+      setOpenAccountBilling(true);
+      setSettingsOpen(true);
+      return;
+    }
     if (!viewModel.canStart) {
       return;
     }
@@ -454,6 +461,10 @@ export default function HomeScreen(): ReactNode {
       onAudioPlaybackEnabledChange={(enabled) => {
         void audioPreferenceController.setEnabled(enabled);
       }}
+      onOpenAccountBilling={() => {
+        setOpenAccountBilling(true);
+        setSettingsOpen(true);
+      }}
       onDeleteLocalData={() => {
         void audioPreferenceController.deleteLocalData(
           () => deleteLocalData(live.cancel),
@@ -466,6 +477,7 @@ export default function HomeScreen(): ReactNode {
         );
       }}
       onOpenDiagnostics={() => setDiagnosticsOpen(true)}
+      onAccountBillingOpened={() => setOpenAccountBilling(false)}
       onOpenPicker={setPickerMode}
       onOpenSettings={() => setSettingsOpen(true)}
       onPrimaryAction={() => void handlePrimaryAction()}
@@ -477,6 +489,7 @@ export default function HomeScreen(): ReactNode {
       setTargetLanguageCode={setTargetLanguageCode}
       settingsMessage={settingsMessage}
       settingsOpen={settingsOpen}
+      openAccountBilling={openAccountBilling}
       sourceLanguageCode={sourceLanguageCode}
       targetLanguageCode={targetLanguageCode}
       timelineRef={timelineRef}

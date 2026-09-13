@@ -10,8 +10,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const workerRoot = resolve(repoRoot, "apps/worker");
 const environment = process.argv[2];
 
-if (environment !== "development" && environment !== "production") {
-  fail("Usage: deploy-worker-release.mjs <development|production>");
+if (environment !== "development" && environment !== "production" && environment !== "sandbox") {
+  fail("Usage: deploy-worker-release.mjs <development|production|sandbox>");
 }
 if (!process.env.SENTRY_AUTH_TOKEN) {
   fail("SENTRY_AUTH_TOKEN is required before a Worker release deployment.");

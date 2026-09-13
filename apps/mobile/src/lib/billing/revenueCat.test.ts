@@ -11,6 +11,7 @@ const store = vi.hoisted(() => ({
 
 vi.mock("../config", () => ({
   getRevenueCatApiKeys: () => ({ ios: "apple-public-key" }),
+  getRevenueCatOfferingId: () => "sandbox",
 }));
 vi.mock("react-native", () => ({
   Platform: {
@@ -32,6 +33,13 @@ vi.mock("react-native-purchases-ui", () => ({
     presentCustomerCenter: store.presentCustomerCenter,
     presentPaywall: store.presentPaywall,
   },
+  PAYWALL_RESULT: {
+    CANCELLED: "CANCELLED",
+    ERROR: "ERROR",
+    NOT_PRESENTED: "NOT_PRESENTED",
+    PURCHASED: "PURCHASED",
+    RESTORED: "RESTORED",
+  },
 }));
 
 import {
@@ -44,10 +52,13 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("__DEV__", false);
-  store.getOfferings.mockResolvedValue({ current: { identifier: "default" } });
+  store.getOfferings.mockResolvedValue({
+    all: { sandbox: { identifier: "sandbox" } },
+    current: { identifier: "default" },
+  });
   store.logIn.mockResolvedValue(undefined);
   store.presentCustomerCenter.mockResolvedValue(undefined);
-  store.presentPaywall.mockResolvedValue(undefined);
+  store.presentPaywall.mockResolvedValue("PURCHASED");
   store.restorePurchases.mockResolvedValue(undefined);
 });
 
@@ -65,13 +76,13 @@ describe("RevenueCat mobile adapter", () => {
 
   it("opens the configured paywall, restore flow, and customer center", async () => {
     await configureRevenueCat("customer-2");
-    await presentMurmurPaywall();
+    await expect(presentMurmurPaywall()).resolves.toBe("purchased");
     await restoreMurmurPurchases();
     await presentMurmurCustomerCenter();
 
     expect(store.presentPaywall).toHaveBeenCalledWith({
       displayCloseButton: true,
-      offering: { identifier: "default" },
+      offering: { identifier: "sandbox" },
     });
     expect(store.restorePurchases).toHaveBeenCalledOnce();
     expect(store.presentCustomerCenter).toHaveBeenCalledOnce();

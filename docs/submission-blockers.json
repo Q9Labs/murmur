@@ -3,13 +3,13 @@
     "name": "Murmur",
     "android_package": "com.q9labsai.murmur",
     "ios_bundle_id": "com.q9labsai.murmur",
-    "version": "1.2.2"
+    "version": "1.2.3"
   },
-  "last_updated": "2026-08-30",
+  "last_updated": "2026-09-13",
   "status": "not_submission_ready",
   "readiness_notes": [
-    "The billing implementation, canonical gate, D1 migrations, development account merge, free allowance, and Apple and RevenueCat catalogs are verified.",
-    "Development billing is active, but production billing and purchases remain disabled until the Apple credential, Google catalog, funded translation metering, and store lifecycle tests are complete."
+    "Production release authorized on 2026-09-13; final source and Android API 35 lifecycle evidence pass.",
+    "Production D1 migration and billing catalog are complete. App Store submission remains blocked by the Account Holder legal-entity update and Paid Apps Agreement; paid lifecycle evidence is still incomplete."
   ],
   "policy_sources_checked": [
     {
@@ -52,14 +52,29 @@
       ]
     },
     {
+      "id": "apple-paid-apps-agreement",
+      "title": "Complete Apple legal entity and Paid Apps Agreement",
+      "status": "open",
+      "why_blocking": "Apple will not permit paid apps or in-app purchases until the Account Holder updates the legal entity and signs the Paid Apps Agreement.",
+      "current_evidence": [
+        "App Store Connect Business shows Paid Apps Agreement status New on 2026-09-13.",
+        "Apple displays: update legal entity information prior to signing the Paid Apps Agreement."
+      ],
+      "exit_criteria": [
+        "The Account Holder supplies and attests the required legal-entity information.",
+        "The Account Holder signs the Paid Apps Agreement and App Store Connect reports it Active."
+      ]
+    },
+    {
       "id": "billing-production-credentials",
       "title": "Create and install production billing credentials",
-      "status": "in_progress",
+      "status": "closed",
       "why_blocking": "The Worker and RevenueCat cannot verify Apple or Google purchases or deliver account recovery email without production credentials and webhook secrets.",
       "current_evidence": [
-        "RevenueCat secret API access and an authenticated, HMAC-signed Worker webhook are configured; their server secrets are installed in both Cloudflare environments.",
-        "The Google service-account file is stored in RevenueCat, and Google purchase verification and Real-time Developer Notifications are valid.",
-        "The Resend sending-only key is installed for the verified notifications.q9labs.ai domain. The active Apple In-App Purchase key A7RP99HN55 still requires its one-time manual download before RevenueCat can verify Apple purchases."
+        "Apple IAP key A7RP99HN55 and the App Store Connect API credential are valid in RevenueCat; the IAP key is backed up in 1Password.",
+        "Google Play service-account purchase verification and RTDN delivery to RevenueCat are configured and verified.",
+        "Production RevenueCat webhook HMAC is enabled; its rotated secret is installed in the production Worker and backed up in 1Password.",
+        "Resend, OpenAI, PostHog, Sentry, auth, and reconciliation secrets are present in the production Worker."
       ],
       "exit_criteria": [
         "Manually download Apple In-App Purchase key A7RP99HN55 once and install it in RevenueCat without exposing the private key.",
@@ -70,19 +85,19 @@
     {
       "id": "store-billing-catalog",
       "title": "Configure the Apple, Google, and RevenueCat product catalog",
-      "status": "in_progress",
+      "status": "closed",
       "why_blocking": "Customers cannot buy Murmur Pro or credit packs until the exact products, prices, entitlement, offering, and packages exist and are linked across both stores and RevenueCat.",
       "current_evidence": [
-        "The source-controlled catalog and contribution-margin tests define the approved products and prices.",
-        "App Store Connect has the monthly and annual subscriptions plus all three consumable credit packs with localized metadata, review notes, review screenshots, prices, and worldwide availability; all five products are READY_TO_SUBMIT.",
-        "RevenueCat has ten store products, one Pro entitlement containing only subscription products, and one current offering with five cross-platform packages.",
-        "A signed billing-enabled Android App Bundle for version 1.2.2 code 7 is ready, but Google Play rejects the upload-key reset with HTTP 403 for an account-wide Admin; the Play account owner must submit the prepared reset before the bundle and Google products can be uploaded."
+        "Apple monthly/annual subscriptions and all three consumable packs are READY_TO_SUBMIT at the approved prices.",
+        "Google monthly/annual base plans are active in 173 regions; murmur_credits_60, murmur_credits_180, and murmur_credits_540 now have ACTIVE purchase options at USD 3.99, USD 10.99, and USD 31.99 with converted regional prices.",
+        "Play accepted and activated the billing-capable code 8 internal prerequisite under the replacement upload certificate.",
+        "RevenueCat default offering has five packages, each attached to the matching active Apple and Google product; the Pro entitlement contains only subscription products."
       ],
       "exit_criteria": [
-        "Submit the prepared upload-key reset while signed in as the Google Play account owner, then upload code 7 to internal testing.",
+        "After 2026-09-01 07:32:56 UTC, upload code 7 to internal testing and confirm Google Play accepts the replacement upload certificate and BILLING permission.",
         "Create Google Pro monthly at USD 12.99, Pro annual at USD 124.99, and credit packs at USD 3.99, USD 10.99, and USD 31.99.",
         "Verify the Google products remain linked to RevenueCat entitlement pro and offering default with the documented package identifiers.",
-        "Release the verified Android build only to internal, closed alpha, and closed beta testing tracks."
+        "Release the verified Android build only to internal, closed Alpha, and open testing tracks."
       ]
     },
     {
@@ -110,9 +125,9 @@
       "status": "in_progress",
       "why_blocking": "The live Worker and mobile builds must use the verified production configuration before the paid offer can be released safely.",
       "current_evidence": [
-        "The additive reconciliation migrations and billing-capable Worker revision are deployed to development and production D1 environments.",
-        "Development billing is active and ready; production billing enforcement and purchase flags remain false, so the deployed production revision is dark and reversible.",
-        "No production App Store or Google Play release has been submitted."
+        "Production D1 migration 0006 is applied after a Time Travel bookmark; pre/post aggregate counts and foreign-key verification match.",
+        "Production billing flags are enabled in the release source and the HMAC webhook secret is installed.",
+        "Production Worker deployment and the final Android/iOS uploads are in progress."
       ],
       "exit_criteria": [
         "Verify readiness, account recovery, entitlement reconciliation, metering, observability, and rollback controls live.",

@@ -95,3 +95,11 @@ export async function deleteMurmurAccount(): Promise<void> {
     throw new Error(result.error.message ?? "Murmur could not delete the account.");
   }
 }
+
+export async function switchMurmurAccount(): Promise<void> {
+  const signedOut = await murmurAuthClient.signOut();
+  if (signedOut.error) {
+    throw new Error(signedOut.error.message ?? "Murmur could not switch accounts.");
+  }
+  await ensureMurmurSession();
+}

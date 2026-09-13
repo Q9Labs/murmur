@@ -2,7 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setImmediate as nextTurn } from "node:timers/promises";
 
-import { collectResult } from "./smoke-latency.mjs";
+import { collectResult, sessionCookieHeader } from "./smoke-latency.mjs";
+
+test("sessionCookieHeader carries every Better Auth cookie without attributes", () => {
+  const headers = new Headers();
+  headers.getSetCookie = () => [
+    "murmur.session_token=secret-token; Path=/; HttpOnly; Secure",
+    "murmur.session_data=opaque; Path=/; HttpOnly; Secure",
+  ];
+
+  assert.equal(
+    sessionCookieHeader(headers),
+    "murmur.session_token=secret-token; murmur.session_data=opaque",
+  );
+});
+
+test("sessionCookieHeader rejects an authentication response without a cookie", () => {
+  assert.throws(() => sessionCookieHeader(new Headers()), /anonymous_sign_in_cookie_missing/);
+});
 
 test("collectResult drains a pending Blob byte length before session_closed", async () => {
   const socket = new FakeSocket();

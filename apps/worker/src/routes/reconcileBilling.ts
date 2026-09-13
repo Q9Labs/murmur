@@ -1,7 +1,8 @@
 import { getMurmurSession } from "../auth/auth";
 import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation";
-import type { Env } from "../env";
+import { isBillingFulfillmentEnabled, type Env } from "../env";
 import { json } from "../http/response";
+import { queuePostHogEvent } from "../observability/posthog";
 
 export async function reconcileBilling(
   request: Request,
@@ -15,8 +16,12 @@ export async function reconcileBilling(
   if (session.user.isAnonymous === true) {
     return json({ error: "registration_required" }, 403);
   }
-  const trigger = request.headers.get("x-murmur-reconciliation-trigger") === "restore"
-    ? "restore"
+  if (!isBillingFulfillmentEnabled(env)) {
+    return json({ error: "billing_fulfillment_disabled" }, 503);
+  }
+  const requestedTrigger = request.headers.get("x-murmur-reconciliation-trigger");
+  const trigger = requestedTrigger === "restore" || requestedTrigger === "login"
+    ? requestedTrigger
     : "purchase";
   try {
     const result = await reconcileRevenueCatCustomer({
@@ -24,6 +29,18 @@ export async function reconcileBilling(
       env,
       nowMs: Date.now(),
       trigger,
+    });
+    queuePostHogEvent({
+      context,
+      distinct_id: session.user.id,
+      env,
+      payload: {
+        event: "worker_billing_reconciliation",
+        purchase_count: result.purchaseCount,
+        status: "succeeded",
+        subscription_count: result.subscriptionCount,
+        trigger,
+      },
     });
     return json({
       ok: true,
@@ -33,6 +50,18 @@ export async function reconcileBilling(
   } catch (failure) {
     Sentry.captureException(failure, {
       tags: { operation: "reconcile_billing" },
+    });
+    queuePostHogEvent({
+      context,
+      distinct_id: session.user.id,
+      env,
+      payload: {
+        event: "worker_billing_reconciliation",
+        purchase_count: 0,
+        status: "failed",
+        subscription_count: 0,
+        trigger,
+      },
     });
     return json({ error: "reconciliation_failed" }, 503);
   }

@@ -160,8 +160,20 @@ function parseProviderErrorCode(error: unknown): string {
     return "provider_error";
   }
   const code = (error as Record<string, unknown>).code;
-  return typeof code === "string" && code.length <= 80 ? code : "provider_error";
+  if (typeof code !== "string") {
+    return "provider_error";
+  }
+  return providerErrorCodes[code] ?? "provider_error";
 }
+
+const providerErrorCodes: Readonly<Record<string, string>> = {
+  authentication_error: "provider_authentication_failed",
+  credit_balance_exhausted: "provider_quota_exhausted",
+  insufficient_quota: "provider_quota_exhausted",
+  invalid_api_key: "provider_authentication_failed",
+  rate_limit_exceeded: "provider_rate_limited",
+  server_error: "provider_unavailable",
+};
 
 function isRetryableProviderError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {

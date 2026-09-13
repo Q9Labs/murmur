@@ -1,12 +1,19 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-// cspell:ignore cada ciudad cuando diferente entiendes siente
 const harness = vi.hoisted(() => ({
+  billingProps: null as Record<string, unknown> | null,
   onboardingProps: null as Record<string, unknown> | null,
   pickerProps: null as Record<string, unknown> | null,
   settingsProps: null as Record<string, unknown> | null,
   shellProps: null as Record<string, unknown> | null,
+}));
+
+vi.mock("./accountBillingModal", () => ({
+  AccountBillingModal: (props: Record<string, unknown>) => {
+    harness.billingProps = props;
+    return null;
+  },
 }));
 
 vi.mock("./languagePicker", () => ({
@@ -40,13 +47,27 @@ vi.mock("./variants/bloom/onboarding", () => ({
 import { BloomPreview } from "./preview";
 
 describe("Bloom preview", () => {
+  it("renders billing with a stable 30-minute fixture", () => {
+    renderToStaticMarkup(<BloomPreview screen="billing" />);
+
+    expect(harness.billingProps?.["billing"]).toMatchObject({
+      busy: false,
+      customer: {
+        allowanceMs: 1_800_000,
+        availableMs: 1_800_000,
+        plan: "free",
+      },
+      error: null,
+    });
+  });
+
   it("opens the target-language picker over the translation screen", () => {
     renderToStaticMarkup(<BloomPreview screen="picker" />);
 
     expect(harness.pickerProps).toMatchObject({
       mode: "target",
-      sourceLanguageCode: "en",
-      targetLanguageCode: "es",
+      sourceLanguageCode: "ar",
+      targetLanguageCode: "en",
     });
   });
 
@@ -55,8 +76,8 @@ describe("Bloom preview", () => {
 
     expect(harness.pickerProps).toMatchObject({
       mode: "source",
-      sourceLanguageCode: "en",
-      targetLanguageCode: "es",
+      sourceLanguageCode: "ar",
+      targetLanguageCode: "en",
     });
   });
 
@@ -75,9 +96,9 @@ describe("Bloom preview", () => {
     renderToStaticMarkup(<BloomPreview screen="welcome" />);
 
     expect(harness.onboardingProps).toMatchObject({
-      sourceLanguage: "English",
+      sourceLanguage: "Arabic",
       step: "welcome",
-      targetLanguage: "Spanish",
+      targetLanguage: "English",
     });
   });
 
@@ -86,9 +107,9 @@ describe("Bloom preview", () => {
 
     expect(harness.onboardingProps).toMatchObject({
       privacyConsentChecked: false,
-      sourceLanguage: "English",
+      sourceLanguage: "Arabic",
       step: "privacy",
-      targetLanguage: "Spanish",
+      targetLanguage: "English",
     });
   });
 
@@ -97,13 +118,13 @@ describe("Bloom preview", () => {
 
     expect(harness.onboardingProps).toMatchObject({
       canStart: true,
-      sourceLanguage: "English",
+      sourceLanguage: "Arabic",
       step: "languages",
-      targetLanguage: "Spanish",
+      targetLanguage: "English",
     });
   });
 
-  it("renders a committed English-to-Spanish live translation", () => {
+  it("renders a committed Arabic-to-English live translation", () => {
     renderToStaticMarkup(<BloomPreview screen="translation" />);
 
     const live = harness.shellProps?.["live"] as {
@@ -112,8 +133,10 @@ describe("Bloom preview", () => {
     };
     expect(live.status).toBe("live");
     expect(live.spans[0]).toMatchObject({
-      source_caption: "The city feels different when you understand every voice.",
-      translated_caption: "La ciudad se siente diferente cuando entiendes cada voz.",
+      source_caption:
+        "مرحباً، المدينة تبدو مختلفة عندما تفهم كل صوت. الآن أستطيع متابعة الحديث مباشرة باللغة الإنجليزية.",
+      translated_caption:
+        "Hello, the city feels different when you understand every voice. Now I can follow the conversation live in English.",
     });
   });
 

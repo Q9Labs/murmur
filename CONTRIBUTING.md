@@ -23,7 +23,7 @@ Copy `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` for local Worker
 
 - Keep each change focused.
 - Add or update tests for behavior changes.
-- Preserve accessibility, privacy, and the accountless product contract.
+- Preserve accessibility, privacy, durable guest accounts, and the billing ledger contract.
 - Run `pnpm run gate` and include the observed result in the pull request.
 - Explain user-visible changes and any new environment variables.
 

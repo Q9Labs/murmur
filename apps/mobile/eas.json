@@ -11,6 +11,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_MURMUR_ENV": "development",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-development.msbilal.workers.dev",
@@ -26,6 +27,7 @@
       },
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_MURMUR_ENV": "preview",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
@@ -43,9 +45,31 @@
       "autoIncrement": false,
       "distribution": "store",
       "env": {
+        "EXPO_PUBLIC_MURMUR_ENV": "development",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-development.msbilal.workers.dev",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
+      },
+      "environment": "production",
+      "ios": {
+        "credentialsSource": "remote",
+        "simulator": false
+      }
+    },
+    "sandbox": {
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "remote"
+      },
+      "autoIncrement": false,
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_MURMUR_ENV": "sandbox",
+        "EXPO_PUBLIC_REVENUECAT_OFFERING_ID": "sandbox",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-sandbox.msbilal.workers.dev",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
       "environment": "production",
@@ -61,6 +85,7 @@
       "autoIncrement": false,
       "distribution": "store",
       "env": {
+        "EXPO_PUBLIC_MURMUR_ENV": "production",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
@@ -73,6 +98,21 @@
     }
   },
   "submit": {
+    "sandbox-alpha": {
+      "android": {
+        "releaseStatus": "completed",
+        "track": "alpha"
+      }
+    },
+    "sandbox-internal": {
+      "android": {
+        "releaseStatus": "completed",
+        "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "6756962206"
+      }
+    },
     "production": {
       "android": {
         "releaseStatus": "completed",

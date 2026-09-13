@@ -1,9 +1,9 @@
 [[IgnoredVulns]]
 id = "GHSA-5p2g-fcmc-qvqq"
-ignoreUntil = 2026-09-08
-reason = "No patched image-size release exists. The package is only used transitively by Metro while resolving local build assets."
+ignoreUntil = 2026-10-13
+reason = "No patched image-size release exists as of 2026-09-13. The package is only used transitively by Metro while resolving local build assets; reassess within 30 days."
 
 [[IgnoredVulns]]
 id = "GHSA-w3rx-r6r6-pgpr"
-ignoreUntil = 2026-09-08
-reason = "No patched image-size release exists. The package is only used transitively by Metro while resolving local build assets."
+ignoreUntil = 2026-10-13
+reason = "No patched image-size release exists as of 2026-09-13. The package is only used transitively by Metro while resolving local build assets; reassess within 30 days."

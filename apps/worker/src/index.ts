@@ -75,7 +75,7 @@ const handler = {
     }
 
     if (url.pathname === "/v3/webhooks/revenuecat" && request.method === "POST") {
-      return receiveRevenueCatWebhook(request, env);
+      return receiveRevenueCatWebhook(request, env, context);
     }
 
     if (url.pathname === "/v1/session" && request.method === "POST") {

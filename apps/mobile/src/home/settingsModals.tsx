@@ -1,6 +1,6 @@
 import * as Linking from "expo-linking";
 import { ChevronRight } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -26,11 +26,20 @@ export function SettingsModal(props: {
   onResetIdentity: () => void;
   onShare: () => void;
   open: boolean;
+  openAccountBilling?: boolean;
+  onAccountBillingOpened?: () => void;
   settingsMessage: string | null;
 }): ReactNode {
   const { styles } = useSheetStyles();
   const [accountBillingOpen, setAccountBillingOpen] = useState(false);
   const disabled = props.live.status === "live";
+
+  useEffect(() => {
+    if (props.open && props.openAccountBilling) {
+      setAccountBillingOpen(true);
+      props.onAccountBillingOpened?.();
+    }
+  }, [props.open, props.openAccountBilling, props.onAccountBillingOpened]);
 
   if (accountBillingOpen) {
     return (

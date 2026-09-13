@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/react-native";
 
-import { getSentryDsn } from "../config";
+import { getMurmurEnvironment, getSentryDsn } from "../config";
 
 export type MobileFailureContext = {
   app_session_id?: string;
@@ -30,7 +30,7 @@ export function initializeSentry(): void {
     enableAutoSessionTracking: true,
     enableCaptureFailedRequests: false,
     enableNativeCrashHandling: true,
-    environment: __DEV__ ? "development" : "production",
+    environment: getMurmurEnvironment(),
     profilesSampleRate: 0,
     replaysOnErrorSampleRate: 0,
     replaysSessionSampleRate: 0,
