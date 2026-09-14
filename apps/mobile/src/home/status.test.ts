@@ -61,6 +61,7 @@ describe("home status helpers", () => {
     expect(formatLiveError("realtime_provider_quota_exhausted")).toContain("temporarily exhausted");
     expect(formatLiveError("realtime_provider_rate_limited")).toContain("busy");
     expect(formatLiveError("realtime_allowance_exhausted")).toContain("Get more time");
+    expect(formatLiveError("realtime_session_silence_timeout")).toContain("two minutes");
     expect(formatLiveError("device_playback_permission_denied")).toContain("screen-sharing");
     expect(formatLiveError("device_playback_capture_revoked")).toContain("stopped");
     expect(formatLiveError("device_playback_capture_stopped")).toContain("ended");

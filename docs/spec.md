@@ -60,7 +60,7 @@ The source language may be `auto`. The response is:
 ```json
 {
   "app_session_id": "uuid",
-  "limits": { "expires_at_ms": 1785748500000, "max_session_seconds": 900 },
+  "limits": { "expires_at_ms": 1785748500000, "max_session_seconds": 300 },
   "realtime_ws_url": "wss://worker.example/v2/realtime?...",
   "session_epoch": 1
 }

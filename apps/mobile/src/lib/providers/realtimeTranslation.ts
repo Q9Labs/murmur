@@ -26,17 +26,61 @@ export type RealtimeTranslationClient = {
   sendAudio: (data: Uint8Array) => void;
 };
 
+const transportAckTimeoutMs = 15_000;
+
 export function createRealtimeTranslationClient(options: {
   onEvent: (event: RealtimeTranslationClientEvent) => void;
   shouldPlayAudio?: () => boolean;
   url: string;
 }): RealtimeTranslationClient {
   let socket: WebSocket | null = null;
+  let socketGeneration = 0;
   let acceptingMessages = true;
+  let acknowledgedInputChunks = 0;
+  let sentInputChunks = 0;
+  let ackTimer: ReturnType<typeof setTimeout> | null = null;
   let receiveQueue = Promise.resolve();
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
   let inputBufferedBytes = 0;
   const diagnostics = createEmptyRealtimeTransportDiagnostics();
+
+  function clearAckTimer(): void {
+    if (ackTimer) {
+      clearTimeout(ackTimer);
+      ackTimer = null;
+    }
+  }
+
+  function failTransport(): void {
+    const activeSocket = socket;
+    socket = null;
+    acceptingMessages = false;
+    inputBufferedBytes = 0;
+    diagnostics.input_buffered_bytes = 0;
+    clearAckTimer();
+    diagnostics.socket_transport_errors += 1;
+    options.onEvent({ kind: "transport_error" });
+    if (
+      activeSocket?.readyState === WebSocket.OPEN ||
+      activeSocket?.readyState === WebSocket.CONNECTING
+    ) {
+      activeSocket.close(1011, "transport_error");
+    }
+  }
+
+  function scheduleAckDeadline(acknowledgementAdvanced = false): void {
+    if (acknowledgedInputChunks >= sentInputChunks) {
+      clearAckTimer();
+      return;
+    }
+    if (acknowledgementAdvanced) {
+      clearAckTimer();
+    }
+    if (ackTimer) {
+      return;
+    }
+    ackTimer = setTimeout(failTransport, transportAckTimeoutMs);
+  }
 
   function sendBufferedAudio(allowPartial: boolean): void {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -50,6 +94,7 @@ export function createRealtimeTranslationClient(options: {
     }
     const chunk = inputBuffer.slice(0, inputBufferedBytes);
     socket.send(chunk);
+    sentInputChunks += 1;
     diagnostics.input_chunks_sent += 1;
     diagnostics.input_bytes_sent += chunk.byteLength;
     diagnostics.last_input_chunk_sent_at_ms = Date.now();
@@ -63,6 +108,7 @@ export function createRealtimeTranslationClient(options: {
     );
     inputBufferedBytes = 0;
     diagnostics.input_buffered_bytes = 0;
+    scheduleAckDeadline();
   }
 
   function recordServerEvent(event: RealtimeServerEvent): void {
@@ -72,6 +118,9 @@ export function createRealtimeTranslationClient(options: {
       diagnostics.worker_audio_bytes_received = event.bytes_received;
       diagnostics.last_worker_ack_at_ms = nowMs;
       diagnostics.last_worker_received_at_ms = event.worker_received_at_ms;
+      const previousAcknowledgedInputChunks = acknowledgedInputChunks;
+      acknowledgedInputChunks = Math.max(acknowledgedInputChunks, event.chunk_seq);
+      scheduleAckDeadline(acknowledgedInputChunks > previousAcknowledgedInputChunks);
       return;
     }
     if (event.kind === "source_delta") {
@@ -105,30 +154,38 @@ export function createRealtimeTranslationClient(options: {
       acceptingMessages = false;
       inputBufferedBytes = 0;
       diagnostics.input_buffered_bytes = 0;
+      clearAckTimer();
       if (
         activeSocket?.readyState === WebSocket.OPEN ||
         activeSocket?.readyState === WebSocket.CONNECTING
       ) {
         activeSocket.close(1000, reason);
       }
-      await receiveQueue;
+      await Promise.resolve();
     },
     connect(): void {
       if (socket) {
         return;
       }
       acceptingMessages = true;
+      acknowledgedInputChunks = 0;
+      sentInputChunks = 0;
+      const generation = ++socketGeneration;
       const nextSocket = new WebSocket(options.url);
       nextSocket.binaryType = "arraybuffer";
       nextSocket.onopen = () => {
         diagnostics.socket_opened_at_ms = Date.now();
       };
       nextSocket.onmessage = (event) => {
-        if (!acceptingMessages) {
+        if (!acceptingMessages || generation !== socketGeneration) {
           diagnostics.messages_skipped_client_closed += 1;
           return;
         }
         receiveQueue = receiveQueue.then(async () => {
+          if (!acceptingMessages || generation !== socketGeneration) {
+            diagnostics.messages_skipped_client_closed += 1;
+            return;
+          }
           await receive(
             event.data,
             diagnostics,
@@ -145,20 +202,40 @@ export function createRealtimeTranslationClient(options: {
         });
       };
       nextSocket.onerror = () => {
-        diagnostics.socket_transport_errors += 1;
-        options.onEvent({ kind: "transport_error" });
+        if (socket === nextSocket) {
+          failTransport();
+        }
       };
       nextSocket.onclose = () => {
         diagnostics.socket_closed_at_ms = Date.now();
+        if (socket !== nextSocket) {
+          return;
+        }
+        clearAckTimer();
+        const shouldDrainQueuedMessages = acceptingMessages;
         socket = null;
-        void receiveQueue.then(() => options.onEvent({ kind: "transport_closed" }));
+        void receiveQueue.then(() => {
+          if (shouldDrainQueuedMessages) {
+            acceptingMessages = false;
+          }
+          options.onEvent({ kind: "transport_closed" });
+        });
       };
       socket = nextSocket;
     },
     finish(): void {
-      if (socket?.readyState === WebSocket.OPEN) {
+      const activeSocket = socket;
+      if (activeSocket?.readyState === WebSocket.OPEN) {
         sendBufferedAudio(true);
-        socket.send(JSON.stringify({ kind: "close_session" }));
+      }
+      socket = null;
+      acceptingMessages = false;
+      clearAckTimer();
+      if (activeSocket?.readyState === WebSocket.OPEN) {
+        activeSocket.send(JSON.stringify({ kind: "close_session" }));
+        activeSocket.close(1000, "client_finish");
+      } else if (activeSocket?.readyState === WebSocket.CONNECTING) {
+        activeSocket.close(1000, "client_finish");
       }
     },
     getDiagnostics(): RealtimeTransportDiagnostics {

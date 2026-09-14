@@ -1,1 +1,1 @@
-Restores Phone audio translation on supported Android devices, including per-session screen-sharing permission and optional floating captions. Also improves live translation, network recovery, subscriptions, and account recovery.
+Stops translation safely when Murmur leaves the foreground, loses its connection, or hears no speech for two minutes. Sessions now have a five-minute safety limit. Includes Phone audio translation and floating captions on supported devices.
