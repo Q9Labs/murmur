@@ -25,6 +25,7 @@ class MockWebSocket {
   readyState = MockWebSocket.OPEN;
   sent: unknown[] = [];
   closeCalls: Array<{ code?: number; reason?: string }> = [];
+  emitCloseImmediately = true;
 
   constructor(readonly url: string) {
     MockWebSocket.instances.push(this);
@@ -33,7 +34,9 @@ class MockWebSocket {
   close(code?: number, reason?: string): void {
     this.closeCalls.push({ code, reason });
     this.readyState = 3;
-    this.onclose?.();
+    if (this.emitCloseImmediately) {
+      this.onclose?.();
+    }
   }
 
   send(value: unknown): void {
@@ -367,6 +370,38 @@ describe("RealtimeTranslationClient", () => {
       expect(onEvent).toHaveBeenLastCalledWith({ kind: "transport_closed" });
     });
     expect(client.getDiagnostics().messages_skipped_client_closed).toBe(0);
+  });
+
+  it("ignores a delayed close event from a replaced socket", async () => {
+    const onEvent = vi.fn();
+    const client = createRealtimeTranslationClient({
+      onEvent,
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    const replacedSocket = MockWebSocket.instances[0];
+    if (replacedSocket) {
+      replacedSocket.emitCloseImmediately = false;
+    }
+    await client.close("replace_socket");
+
+    client.connect();
+    const replacementSocket = MockWebSocket.instances[1];
+    replacedSocket?.onclose?.();
+    replacementSocket?.onmessage?.({
+      data: JSON.stringify({
+        kind: "session_opened",
+        provider_metadata: { model: "test", provider: "openai" },
+      }),
+    });
+
+    await vi.waitFor(() => {
+      expect(onEvent).toHaveBeenCalledWith({
+        kind: "session_opened",
+        provider_metadata: { model: "test", provider: "openai" },
+      });
+    });
+    expect(onEvent).not.toHaveBeenCalledWith({ kind: "transport_closed" });
   });
 
   it("rejects malformed server events", () => {

@@ -244,7 +244,9 @@ export function useLiveTranslation(
       (reason !== "activity_background" && reason !== "app_background") ||
       finishingRef.current ||
       permissionFlowRef.current ||
-      canStartSession(sessionRef.current.state)
+      canStartSession(sessionRef.current.state) ||
+      sessionRef.current.state === "cancelling" ||
+      sessionRef.current.state === "stopping"
     ) {
       return false;
     }

@@ -25,13 +25,16 @@ class FakeSocket extends EventTarget {
   closeCalls: Array<{ code?: number; reason?: string }> = [];
   readyState = 1;
   sent: unknown[] = [];
+  stayOpenOnClose = false;
   throwOnClose = false;
 
   accept(): void {}
 
   close(code?: number, reason?: string): void {
     this.closeCalls.push({ code, reason });
-    this.readyState = 3;
+    if (!this.stayOpenOnClose) {
+      this.readyState = 3;
+    }
     if (this.throwOnClose) {
       throw new Error("socket close failed");
     }
@@ -387,6 +390,20 @@ describe("app-facing realtime socket", () => {
       code: 1000,
       reason: "provider_session_closed",
     });
+  });
+
+  it("does not forward queued audio after termination even if provider close fails", async () => {
+    const { client, upstream } = await openTestRealtimeSession({ name: "late_audio" });
+    upstream.stayOpenOnClose = true;
+    upstream.throwOnClose = true;
+
+    client.dispatchEvent(new Event("close"));
+    client.dispatchEvent(new MessageEvent("message", {
+      data: new Uint8Array(960).buffer,
+    }));
+    await Promise.resolve();
+
+    expect(upstream.sent.map(String).join(" ")).not.toContain("input_audio_buffer.append");
   });
 
   it("closes the peer socket on transport shutdown", async () => {

@@ -202,14 +202,12 @@ export function createRealtimeTranslationClient(options: {
       };
       nextSocket.onclose = () => {
         diagnostics.socket_closed_at_ms = Date.now();
+        if (socket !== nextSocket) {
+          return;
+        }
         clearAckTimer();
-        const shouldDrainQueuedMessages = acceptingMessages && socket === nextSocket;
-        if (socket === nextSocket) {
-          socket = null;
-        }
-        if (!shouldDrainQueuedMessages) {
-          acceptingMessages = false;
-        }
+        const shouldDrainQueuedMessages = acceptingMessages;
+        socket = null;
         void receiveQueue.then(() => {
           if (shouldDrainQueuedMessages) {
             acceptingMessages = false;

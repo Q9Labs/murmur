@@ -135,7 +135,7 @@ public class MurmurAudioModule: Module {
 
     audioGenerationId += 1
     droppedFrames = 0
-    captureBuffer.removeAll(keepingCapacity: true)
+    clearCaptureBufferSync()
 
     do {
       try configureAndStartCaptureEngine()
@@ -192,9 +192,15 @@ public class MurmurAudioModule: Module {
     captureEngine.inputNode.removeTap(onBus: 0)
     captureEngine.stop()
     captureEngine.reset()
-    captureBuffer.removeAll(keepingCapacity: true)
+    clearCaptureBufferSync()
     converter = nil
     captureActive = false
+  }
+
+  private func clearCaptureBufferSync() {
+    audioQueue.sync {
+      captureBuffer.removeAll(keepingCapacity: true)
+    }
   }
 
   private func scheduleCaptureDeadline() {
@@ -429,9 +435,13 @@ public class MurmurAudioModule: Module {
     guard let dataPointer = audioBuffer.mData else {
       return
     }
+    let convertedData = Data(
+      bytes: dataPointer,
+      count: Int(audioBuffer.mDataByteSize)
+    )
 
     audioQueue.async {
-      self.captureBuffer.append(dataPointer.assumingMemoryBound(to: UInt8.self), count: Int(audioBuffer.mDataByteSize))
+      self.captureBuffer.append(convertedData)
       while self.captureBuffer.count >= murmurFrameBytes {
         let frame = self.captureBuffer.prefix(murmurFrameBytes)
         self.captureBuffer.removeFirst(murmurFrameBytes)

@@ -343,7 +343,15 @@ export async function proxyRealtimeSession(
     });
   }, 5_000);
   resetSilenceDeadline();
-  bindClientEvents(client, upstream, telemetry, terminate, usageMeter, resetSilenceDeadline);
+  bindClientEvents(
+    client,
+    upstream,
+    telemetry,
+    terminate,
+    usageMeter,
+    resetSilenceDeadline,
+    () => sessionFinished,
+  );
   bindProviderEvents(client, upstream, telemetry, terminate);
   try {
     upstream.send(createSessionUpdate(validated.targetLanguage));
@@ -503,6 +511,7 @@ function bindClientEvents(
   terminate: (termination: RealtimeTermination) => void,
   usageMeter: RealtimeUsageMeter,
   resetSilenceDeadline: () => void,
+  isSessionFinished: () => boolean,
 ): void {
   const forwardAudio = (audio: ArrayBuffer): void => {
     if (hasMeaningfulPcm16Audio(audio)) {
@@ -532,7 +541,7 @@ function bindClientEvents(
   };
   const queueAudio = (audio: ArrayBuffer): void => {
     audioQueue = audioQueue.then(async () => {
-      if (upstream.readyState !== WebSocket.OPEN) {
+      if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
         return;
       }
       let acceptance = usageMeter.checkAudio(audio.byteLength);
@@ -548,7 +557,7 @@ function bindClientEvents(
         stopForBilling("allowance_exhausted");
         return;
       }
-      if (upstream.readyState !== WebSocket.OPEN) {
+      if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
         return;
       }
       forwardAudio(audio);
