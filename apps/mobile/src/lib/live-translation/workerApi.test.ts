@@ -1,27 +1,37 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const permissionHarness = vi.hoisted(() => ({
+  permissionResult: "granted",
+  platform: { OS: "android" },
+  requestDevicePlaybackPermission: vi.fn(async () => true),
+  requestMicrophonePermission: vi.fn(async () => true),
+  requestPermission: vi.fn(async () => "granted"),
+}));
 
 vi.mock("react-native", () => ({
   PermissionsAndroid: {
     PERMISSIONS: { RECORD_AUDIO: "android.permission.RECORD_AUDIO" },
     RESULTS: { GRANTED: "granted" },
-    request: vi.fn(),
+    request: permissionHarness.requestPermission,
   },
-  Platform: { OS: "android" },
+  Platform: permissionHarness.platform,
 }));
 
 vi.mock("../../../modules/murmur-audio", () => ({
-  default: {},
+  default: {
+    requestDevicePlaybackPermission: permissionHarness.requestDevicePlaybackPermission,
+    requestMicrophonePermission: permissionHarness.requestMicrophonePermission,
+  },
 }));
 
-vi.mock("../auth/client", () => ({
-  authenticatedWorkerHeaders: vi.fn(async (headers: HeadersInit) => new Headers(headers)),
-}));
+vi.mock("../auth/client", () => ({ authenticatedWorkerHeaders: async (headers: HeadersInit) => new Headers(headers) }));
+vi.mock("../config", () => ({ getWorkerBaseUrl: () => "https://worker.example.test" }));
 
-vi.mock("../config", () => ({
-  getWorkerBaseUrl: () => "https://worker.example.test",
-}));
-
-import { createWorkerSession, workerSessionRequestTimeoutMs } from "./workerApi";
+import {
+  createWorkerSession,
+  requestCapturePermission,
+  workerSessionRequestTimeoutMs,
+} from "./workerApi";
 
 const request = {
   analytics_enabled: false,
@@ -31,9 +41,54 @@ const request = {
   target_language: "ar" as const,
 };
 
+beforeEach(() => {
+  permissionHarness.platform.OS = "android";
+  permissionHarness.permissionResult = "granted";
+  permissionHarness.requestPermission.mockReset().mockImplementation(
+    async () => permissionHarness.permissionResult,
+  );
+  permissionHarness.requestDevicePlaybackPermission.mockReset().mockResolvedValue(true);
+  permissionHarness.requestMicrophonePermission.mockReset().mockResolvedValue(true);
+});
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe("capture permission routing", () => {
+  it("uses Android audio recording permission for microphone capture", async () => {
+    await expect(requestCapturePermission("microphone")).resolves.toBe(true);
+
+    expect(permissionHarness.requestPermission).toHaveBeenCalledWith(
+      "android.permission.RECORD_AUDIO",
+    );
+    expect(permissionHarness.requestDevicePlaybackPermission).not.toHaveBeenCalled();
+  });
+
+  it("opens Android playback consent only after the runtime grant", async () => {
+    await expect(requestCapturePermission("device_playback")).resolves.toBe(true);
+
+    expect(permissionHarness.requestPermission).toHaveBeenCalledWith(
+      "android.permission.RECORD_AUDIO",
+    );
+    expect(permissionHarness.requestDevicePlaybackPermission).toHaveBeenCalledOnce();
+  });
+
+  it("does not open playback consent when the runtime grant is denied", async () => {
+    permissionHarness.permissionResult = "denied";
+
+    await expect(requestCapturePermission("device_playback")).resolves.toBe(false);
+    expect(permissionHarness.requestDevicePlaybackPermission).not.toHaveBeenCalled();
+  });
+
+  it("reports Phone audio as unavailable outside Android", async () => {
+    permissionHarness.platform.OS = "ios";
+
+    await expect(requestCapturePermission("device_playback")).resolves.toBe(false);
+    expect(permissionHarness.requestPermission).not.toHaveBeenCalled();
+    expect(permissionHarness.requestDevicePlaybackPermission).not.toHaveBeenCalled();
+  });
 });
 
 describe("createWorkerSession", () => {

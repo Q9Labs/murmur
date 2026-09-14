@@ -7,10 +7,12 @@ import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
 import type { RealtimeTransportDiagnostics } from "../providers/realtimeTranslation";
 import type { AudioCaptureDiagnostics } from "./audioDiagnostics";
 import type { SessionPreparationStatus } from "./sessionPreparation";
+import type { AudioCaptureSource } from "../../../modules/murmur-audio";
 
 export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
   analytics_enabled: boolean;
+  capture_source: AudioCaptureSource;
   network_type: string;
   playback_enabled: boolean;
   source_language: SourceLanguageCode;
@@ -43,6 +45,7 @@ export function createLiveTranslationCompletion(params: {
 export type LiveTranslationDiagnosticsSnapshot = {
   capture: AudioCaptureDiagnostics;
   runtime: {
+    capture_source: AudioCaptureSource;
     playback_enabled: boolean;
     realtime_socket_open: boolean;
     source_char_count: number;

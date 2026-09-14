@@ -1,3 +1,4 @@
+import { getLanguage } from "@murmur/protocol/languages";
 import {
   canStartSession,
   createConnectionId,
@@ -47,9 +48,11 @@ import {
   closeWorkerSession,
   collectDeviceIntegrity,
   createWorkerSession,
+  requestCapturePermission,
   requestMicrophonePermission,
 } from "./workerApi";
 import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
+import { getDevicePlaybackCaptureError } from "./captureLifecycle";
 import {
   createSessionPreparation,
   type SessionPreparation,
@@ -140,7 +143,7 @@ export function useLiveTranslation(
     sessionRef.current = next;
     setSession(next);
     setLiveError(null);
-  }, [params.source_language, params.target_language]);
+  }, [params.capture_source, params.source_language, params.target_language]);
 
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
@@ -167,6 +170,23 @@ export function useLiveTranslation(
         if ((generationOrder || eventOrder) >= 0) {
           lastAudioStateRef.current = state;
           playbackActiveRef.current = state.playback_active;
+        }
+        if (
+          state.capture_source === "device_playback" &&
+          sessionRef.current.state === "live"
+        ) {
+          if (state.reason === "notification_stop") {
+            observeBackgroundOperation(stop(), "stop_device_capture_from_notification");
+            return;
+          }
+          const captureError = getDevicePlaybackCaptureError(state.reason);
+          if (captureError) {
+            setLiveError(captureError);
+            observeBackgroundOperation(
+              finishSession("failed"),
+              "finish_stopped_device_capture",
+            );
+          }
         }
       },
     );
@@ -320,7 +340,11 @@ export function useLiveTranslation(
     localStopCleanupRef.current = null;
     workerClosePromiseRef.current = null;
     resetCompletionWaiter();
-    transition("requesting_mic_permission");
+    transition(
+      params.capture_source === "microphone"
+        ? "requesting_mic_permission"
+        : "requesting_audio_permission",
+    );
     const preparation = await preparationRef.current!.prepare();
     if (preparation.microphone_granted) {
       recordListenTiming("microphone_ready", preparation.microphone_ready_at_ms);
@@ -330,7 +354,9 @@ export function useLiveTranslation(
     }
     if (!preparation.microphone_granted) {
       failBeforeWorkerSession(
-        "microphone_permission_denied",
+        params.capture_source === "microphone"
+          ? "microphone_permission_denied"
+          : "device_playback_permission_denied",
         "microphone_permission",
         listenTappedAtMs,
       );
@@ -338,6 +364,17 @@ export function useLiveTranslation(
     }
     if (!preparation.app_install_id) {
       failBeforeWorkerSession("install_identity_failed", "identity", listenTappedAtMs);
+      return;
+    }
+    if (
+      params.capture_source === "device_playback" &&
+      !(await requestCapturePermission(params.capture_source))
+    ) {
+      failBeforeWorkerSession(
+        "device_playback_permission_denied",
+        "microphone_permission",
+        listenTappedAtMs,
+      );
       return;
     }
 
@@ -437,14 +474,20 @@ export function useLiveTranslation(
         updated_at_ms: Date.now(),
       }));
       try {
-        await MurmurAudioModule.startCapture();
+        await MurmurAudioModule.startCapture(params.capture_source);
       } catch (failure) {
         captureMobileFailure(failure, {
           app_session_id: sessionRef.current.identity.app_session_id,
-          operation: "start_microphone_capture",
+          operation: params.capture_source === "microphone"
+            ? "start_microphone_capture"
+            : "start_device_playback_capture",
           stage: "audio_capture",
         });
-        setLiveError("microphone_start_failed");
+        setLiveError(
+          params.capture_source === "microphone"
+            ? "microphone_start_failed"
+            : "device_playback_start_failed",
+        );
         await finishSession("failed");
         return;
       }
@@ -539,6 +582,15 @@ export function useLiveTranslation(
         };
       }
       const translatedCaption = `${span.translated_caption}${event.delta}`;
+      if (params.capture_source === "device_playback") {
+        observeBackgroundOperation(
+          MurmurAudioModule.updateOverlayCaption(
+            translatedCaption,
+            getLanguage(params.target_language).rtl,
+          ),
+          "update_device_audio_overlay_caption",
+        );
+      }
       return {
         ...span,
         partial_translated_caption: translatedCaption,
@@ -783,6 +835,7 @@ export function useLiveTranslation(
     return {
       capture: captureDiagnosticsRef.current.snapshot(),
       runtime: {
+        capture_source: params.capture_source,
         playback_enabled: playbackEnabledRef.current,
         realtime_socket_open:
           sessionRef.current.state === "live" || sessionRef.current.state === "stopping",

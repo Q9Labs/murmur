@@ -7,7 +7,7 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-08-29";
+const lastUpdated = "2026-09-14";
 const marketingUpdated = "2026-08-29";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
@@ -179,7 +179,7 @@ export const legalPages: Record<string, Page> = {
               <div class="mic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
             </div>
             <h3>Tap Listen</h3>
-            <p>Murmur uses your microphone only while a session is live.</p>
+            <p>Murmur captures only the audio source you choose while a session is live.</p>
           </div>
           <div class="step">
             <div class="stage stage-cream">
@@ -355,10 +355,11 @@ export const legalPages: Record<string, Page> = {
     html: `
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is a one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Speech output may play translated phrases when available.</p>
-      <p>Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.</p>
+      <p>Murmur is a one-way live translator. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Microphone mode can play translated phrases when available.</p>
+      <p>Before a live translation session starts, Murmur asks for permission to share the selected live audio with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or capture audio until this permission is granted.</p>
       <h2>Data Murmur Processes</h2>
-      <p><strong>Microphone audio.</strong> Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.</p>
+      <p><strong>Live audio.</strong> In Microphone mode, Murmur collects microphone audio only during a user-started live session. On supported Android phones, Phone audio mode captures eligible media playback after the user approves Android's audio-recording and screen-sharing prompts; Murmur does not record the microphone in this mode. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime. Murmur does not save captured audio by default.</p>
+      <p><strong>Floating captions.</strong> In Android Phone audio mode, translated captions can appear in a draggable system overlay after the user allows Murmur to display over other apps. The overlay is rendered locally and does not add another server copy of captions.</p>
       <p><strong>Source and translated captions.</strong> OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker for local display. Murmur does not save transcript history by default.</p>
 
       <p><strong>Account, entitlement, and purchase metadata.</strong> Murmur creates a random guest customer id so it can grant Free time and meter translation use. You can add an email address for account recovery; Murmur stores the email and sign-in records needed for that purpose. Murmur stores plan state, credit grants, usage debits, renewals, restores, refunds, and store transaction identifiers in an append-only entitlement ledger. Apple, Google, and RevenueCat process store purchases. Murmur does not receive or store your payment-card details.</p>
@@ -366,7 +367,7 @@ export const legalPages: Record<string, Page> = {
       <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
       <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
-      <p><strong>Product analytics, diagnostics, and latency telemetry.</strong> Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. Events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include microphone audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.</p>
+      <p><strong>Product analytics, diagnostics, and latency telemetry.</strong> Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. Events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include captured audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.</p>
       <p>The app sends analytics events to Murmur's Cloudflare Worker. The Worker validates a fixed event schema, hashes the anonymous install identifier, and forwards the allowed event properties to PostHog US. PostHog does not receive the raw install identifier or the device's IP address from Murmur. Murmur disables PostHog person profiles, geolocation, autocapture, and session replay.</p>
       <p>Murmur uses Sentry for crash, error, and sampled performance monitoring. Murmur disables screenshots, view hierarchy capture, session replay, request bodies, cookies, query strings, user fields, and default personally identifiable information. Sentry may receive a sanitized stack trace, operation and error categories, release, environment, app session identifier, and limited performance timing. Sentry does not receive conversation content from Murmur.</p>
       <h2>Third-Party Processors</h2>
@@ -396,7 +397,7 @@ export const legalPages: Record<string, Page> = {
     html: `
       <h1>Murmur Terms of Use</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is a one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions. Optional speech output may play translated phrases when available.</p>
+      <p>Murmur is a one-way live translation app. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Optional speech output may play translated phrases in Microphone mode when available.</p>
       <h2>Using Murmur</h2>
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>
@@ -419,7 +420,7 @@ export const legalPages: Record<string, Page> = {
       <h2>Privacy and Third-Party Services</h2>
       <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on Cloudflare and OpenAI Realtime for live translation, infrastructure, diagnostics, and support workflows. OpenAI Realtime or Cloudflare may be unavailable or may change independently from Murmur.</p>
       <h2>Availability</h2>
-      <p>Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
+      <p>Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, audio or screen-sharing permissions, protected playback, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
       <h2>No Warranty</h2>
       <p>Murmur is provided as-is and as-available. To the maximum extent allowed by law, Murmur disclaims warranties of accuracy, availability, fitness for a particular purpose, and non-infringement.</p>
       <h2>Limitation of Liability</h2>
@@ -443,7 +444,7 @@ export const legalPages: Record<string, Page> = {
       <p>The app stores anonymous install and Free allowance identifiers, interface preference, and rating-prompt eligibility state on the device. Use <strong>Reset Murmur Identity</strong> to replace the diagnostic install identifier without changing billing, or <strong>Delete Local Data</strong> to clear all local Murmur data and the privacy acknowledgement. The hashed current-month Free claim can remain on the server through that month for abuse prevention.</p>
       <h2>Server-Side Deletion Requests</h2>
       <p>Murmur may process rate-limit metadata, diagnostic records, and translation report receipts. Support can review deletion requests for records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.</p>
-      <p>Support will not ask users to send microphone recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.</p>
+      <p>Support will not ask users to send audio recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.</p>
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
       <h2>Store Submission Notes</h2>
@@ -1189,7 +1190,7 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
               name: "Does Murmur save audio or transcript history?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Murmur does not save microphone audio or transcript history by default. Audio is processed only while a live translation session is active.",
+                text: "Murmur does not save captured audio or transcript history by default. Audio is processed only while a live translation session is active.",
               },
             },
           ],

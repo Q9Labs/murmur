@@ -29,7 +29,7 @@ const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev"
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const releaseVersion = "1.2.3";
 const iosBuildNumber = "16";
-const androidVersionCode = 11;
+const androidVersionCode = 12;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -127,17 +127,18 @@ assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/ada
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
 const requiredAndroidPermissions = [
   "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
   "android.permission.RECORD_AUDIO",
+  "android.permission.SYSTEM_ALERT_WINDOW",
 ];
 assert(
   JSON.stringify(appConfig.android?.permissions ?? []) === JSON.stringify(requiredAndroidPermissions),
-  "Android explicit permissions must only include foreground microphone capture permissions",
+  "Android explicit permissions must only include live microphone and device-playback capture permissions",
 );
 const blockedPermissions = new Set(appConfig.android?.blockedPermissions ?? []);
 for (const blockedPermission of [
   "android.permission.READ_EXTERNAL_STORAGE",
-  "android.permission.SYSTEM_ALERT_WINDOW",
   "android.permission.USE_BIOMETRIC",
   "android.permission.USE_FINGERPRINT",
   "android.permission.VIBRATE",

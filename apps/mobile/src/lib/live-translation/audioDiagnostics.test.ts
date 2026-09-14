@@ -51,6 +51,7 @@ function frame({
 }) {
   return {
     audio_generation_id: generation,
+    capture_source: "microphone" as const,
     data: new Uint8Array(960),
     duration_ms: 20,
     event_seq: eventSeq,

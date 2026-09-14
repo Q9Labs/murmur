@@ -13,6 +13,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     diagnostics_snapshot: {
       capture: createAudioCaptureDiagnosticsTracker().snapshot(),
       runtime: {
+        capture_source: "microphone",
         playback_enabled: true,
         realtime_socket_open: false,
         source_char_count: 0,
@@ -24,6 +25,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     getDiagnosticsSnapshot: () => ({
       capture: createAudioCaptureDiagnosticsTracker().snapshot(),
       runtime: {
+        capture_source: "microphone",
         playback_enabled: true,
         realtime_socket_open: false,
         source_char_count: 0,
@@ -95,6 +97,17 @@ describe("home view model", () => {
     expect(model.latestTranslationIsPartial).toBe(true);
     expect(model.primaryCanvasText).toBe("أين");
     expect(model.secondaryCanvasText).toBe("where is the train");
+  });
+
+  it("prompts Device Audio users to play media instead of speaking", () => {
+    const model = buildHomeViewModel({
+      captureSource: "device_playback",
+      live: makeLive({ status: "live" }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+
+    expect(model.secondaryCanvasText).toContain("Play audio in another app");
   });
 
   it("blocks same-language starts unless source is auto-detect", () => {

@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
+import type { AudioCaptureSource } from "../../modules/murmur-audio";
 import {
   LanguagePickerController,
   type OnboardingStep,
@@ -15,7 +16,10 @@ const onboardingShells: Record<UiVariant, ComponentType<VariantOnboardingProps>>
 
 export function OnboardingScreen({
   canStart,
+  captureSource,
+  devicePlaybackSupported,
   onContinue,
+  onCaptureSourceChange,
   onOpenPicker,
   onPickerClose,
   onPrivacyAgree,
@@ -32,7 +36,10 @@ export function OnboardingScreen({
   setTargetLanguageCode,
 }: {
   canStart: boolean;
+  captureSource: AudioCaptureSource;
+  devicePlaybackSupported: boolean;
   onContinue: () => void;
+  onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenPicker: (mode: PickerMode) => void;
   onPickerClose: () => void;
   onPrivacyAgree: () => void;
@@ -53,7 +60,10 @@ export function OnboardingScreen({
     <>
       <OnboardingShell
         canStart={canStart}
+        captureSource={captureSource}
+        devicePlaybackSupported={devicePlaybackSupported}
         onContinue={onContinue}
+        onCaptureSourceChange={onCaptureSourceChange}
         onOpenPicker={onOpenPicker}
         onPrivacyAgree={onPrivacyAgree}
         onStart={onStart}

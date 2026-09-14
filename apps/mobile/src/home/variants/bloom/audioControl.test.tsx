@@ -76,4 +76,14 @@ describe("Bloom translated audio control", () => {
     }));
     expect(markup).toContain("volume-off");
   });
+
+  it("explains why translated audio is disabled during phone capture", () => {
+    renderToStaticMarkup(
+      <TranslatedAudioControl disabled enabled={false} onChange={vi.fn()} />,
+    );
+
+    expect(harness.controls).toContainEqual(expect.objectContaining({
+      accessibilityLabel: "Translated audio is off during phone audio capture",
+    }));
+  });
 });

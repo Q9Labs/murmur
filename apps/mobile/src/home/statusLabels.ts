@@ -55,6 +55,7 @@ const directStatusText: Record<string, string> = {
   ended: "Ended",
   live: "Health OK",
   network_degraded: "Network degraded",
+  requesting_audio_permission: "Audio access",
   recovering: "Recovering",
   checking_device: "Checking device",
   connecting_realtime: "Starting AI",
@@ -87,6 +88,9 @@ function getErrorStatusText(error: string): string {
   }
   if (error === "microphone_permission_denied") {
     return "Microphone access needed";
+  }
+  if (error === "device_playback_permission_denied") {
+    return "Phone audio access needed";
   }
   return "Needs setup";
 }

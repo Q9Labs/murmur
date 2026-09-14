@@ -54,6 +54,7 @@ function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
         audio_playback_active: params.audioState?.playback_active ?? null,
         capture_frames_received_by_js:
           params.diagnosticsSnapshot.capture.frames_received_by_js,
+        capture_source: params.diagnosticsSnapshot.runtime.capture_source,
         debug_log_count: params.debugLog.length,
         error: params.error,
         input_chunks_sent: params.diagnosticsSnapshot.transport.input_chunks_sent,

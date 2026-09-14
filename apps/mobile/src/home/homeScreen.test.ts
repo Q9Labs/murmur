@@ -9,6 +9,12 @@ vi.mock("expo-network", () => ({
 vi.mock("../../modules/murmur-audio", () => ({
   default: {
     addListener: () => ({ remove: vi.fn() }),
+    getCaptureCapabilities: vi.fn(async () => ({
+      device_playback_supported: true,
+      floating_overlay_supported: true,
+      microphone_supported: true,
+      overlay_permission_granted: false,
+    })),
     getAudioState: vi.fn(async () => ({
       audio_generation_id: 0,
       capture_active: false,
@@ -16,6 +22,7 @@ vi.mock("../../modules/murmur-audio", () => ({
       playback_active: false,
       playback_queued_ms: 0,
     })),
+    requestOverlayPermission: vi.fn(async () => true),
   },
 }));
 vi.mock("../lib/acquisition", () => ({ getAcquisitionContextFromUrl: () => undefined }));
