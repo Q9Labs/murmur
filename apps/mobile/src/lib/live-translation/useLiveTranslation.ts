@@ -12,7 +12,9 @@ import type {
   RealtimeServerEvent,
 } from "@murmur/protocol/transport/types";
 import type { MobileFailureStage } from "@murmur/protocol/telemetry";
+import * as Network from "expo-network";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 import MurmurAudioModule, {
   type AudioFrameEvent,
@@ -66,7 +68,9 @@ import {
 } from "./sessionTiming";
 
 const maxDebugEntries = 200;
+const meaningfulAudioRmsThreshold = 0.01;
 const sessionCloseTimeoutMs = 5_000;
+const silenceTimeoutMs = 120_000;
 
 type LocalStopCleanup = {
   capture: Promise<void>;
@@ -97,7 +101,11 @@ export function useLiveTranslation(
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectDeadlineRef = useRef<(() => void) | null>(null);
   const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastMeaningfulAudioAtRef = useRef<number | null>(null);
   const finishingRef = useRef(false);
+  const terminatedAtRef = useRef<number | null>(null);
+  const permissionFlowRef = useRef(false);
   const completionPromiseRef = useRef<Promise<LiveTranslationCompletion | undefined> | null>(null);
   const completionResolveRef = useRef<((completion: LiveTranslationCompletion | undefined) => void) | null>(null);
   const captureDiagnosticsRef = useRef(createAudioCaptureDiagnosticsTracker());
@@ -151,6 +159,9 @@ export function useLiveTranslation(
       (frame: AudioFrameEvent) => {
         captureDiagnosticsRef.current.recordFrame(frame, playbackActiveRef.current);
         if (sessionRef.current.state === "live") {
+          if (frame.rms >= meaningfulAudioRmsThreshold) {
+            resetSilenceDeadline();
+          }
           clientRef.current?.sendAudio(frame.data);
         }
       },
@@ -159,43 +170,119 @@ export function useLiveTranslation(
   }, []);
 
   useEffect(() => {
+    const subscription = Network.addNetworkStateListener((networkState) => {
+      if (
+        finishingRef.current ||
+        (networkState.isConnected !== false && networkState.isInternetReachable !== false)
+      ) {
+        return;
+      }
+      const state = sessionRef.current.state;
+      if (canStartSession(state) || state === "cancelling" || state === "stopping") {
+        return;
+      }
+      setLiveError("realtime_transport_error");
+      playbackSuppressedRef.current = true;
+      observeBackgroundOperation(
+        finishSession("failed"),
+        "finish_session_after_network_loss",
+      );
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus): void => {
+      if (nextState === "active" || finishingRef.current || permissionFlowRef.current) {
+        return;
+      }
+      const state = sessionRef.current.state;
+      if (canStartSession(state) || state === "cancelling" || state === "stopping") {
+        return;
+      }
+      setLiveError("session_backgrounded");
+      playbackSuppressedRef.current = true;
+      observeBackgroundOperation(
+        finishSession("failed"),
+        "finish_session_after_background",
+      );
+    };
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
       "onAudioState",
-      (state: AudioStateEvent) => {
-        const current = lastAudioStateRef.current;
-        const generationOrder = current
-          ? Math.sign(state.audio_generation_id - current.audio_generation_id)
-          : 1;
-        const eventOrder = current ? Math.sign(state.event_seq - current.event_seq) : 1;
-        if ((generationOrder || eventOrder) >= 0) {
-          lastAudioStateRef.current = state;
-          playbackActiveRef.current = state.playback_active;
-        }
-        if (
-          state.capture_source === "device_playback" &&
-          sessionRef.current.state === "live"
-        ) {
-          if (state.reason === "notification_stop") {
-            observeBackgroundOperation(stop(), "stop_device_capture_from_notification");
-            return;
-          }
-          const captureError = getDevicePlaybackCaptureError(state.reason);
-          if (captureError) {
-            setLiveError(captureError);
-            observeBackgroundOperation(
-              finishSession("failed"),
-              "finish_stopped_device_capture",
-            );
-          }
-        }
-      },
+      handleAudioState,
     );
     return () => subscription.remove();
   }, []);
 
+  function handleAudioState(state: AudioStateEvent): void {
+    recordLatestAudioState(state);
+    if (finishForNativeBackground(state.reason)) {
+      return;
+    }
+    handleDevicePlaybackState(state);
+  }
+
+  function recordLatestAudioState(state: AudioStateEvent): void {
+    const current = lastAudioStateRef.current;
+    const generationOrder = current
+      ? Math.sign(state.audio_generation_id - current.audio_generation_id)
+      : 1;
+    const eventOrder = current ? Math.sign(state.event_seq - current.event_seq) : 1;
+    if ((generationOrder || eventOrder) >= 0) {
+      lastAudioStateRef.current = state;
+      playbackActiveRef.current = state.playback_active;
+    }
+  }
+
+  function finishForNativeBackground(reason: string): boolean {
+    if (
+      (reason !== "activity_background" && reason !== "app_background") ||
+      finishingRef.current ||
+      permissionFlowRef.current ||
+      canStartSession(sessionRef.current.state)
+    ) {
+      return false;
+    }
+    setLiveError("session_backgrounded");
+    playbackSuppressedRef.current = true;
+    observeBackgroundOperation(
+      finishSession("failed"),
+      "finish_session_after_native_background",
+    );
+    return true;
+  }
+
+  function handleDevicePlaybackState(state: AudioStateEvent): void {
+    if (
+      state.capture_source !== "device_playback" ||
+      sessionRef.current.state !== "live"
+    ) {
+      return;
+    }
+    if (state.reason === "notification_stop") {
+      observeBackgroundOperation(stop(), "stop_device_capture_from_notification");
+      return;
+    }
+    const captureError = getDevicePlaybackCaptureError(state.reason);
+    if (!captureError) {
+      return;
+    }
+    setLiveError(captureError);
+    observeBackgroundOperation(
+      finishSession("failed"),
+      "finish_stopped_device_capture",
+    );
+  }
+
   useEffect(() => () => {
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
+    clearCloseTimer(silenceTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     activeRealtimeSessionTokenRef.current = null;
     preparationRef.current?.dispose();
@@ -205,6 +292,7 @@ export function useLiveTranslation(
       Promise.all([
         client?.close("hook_unmount"),
         MurmurAudioModule.stopCapture("hook_unmount"),
+        closeWorkerSession(sessionRef.current.identity.app_session_id, "hook_unmount"),
       ]).then(() => MurmurAudioModule.clearPlayback("hook_unmount")),
       "stop_audio_on_unmount",
     );
@@ -231,6 +319,54 @@ export function useLiveTranslation(
         stage: "session_runtime",
       });
     });
+  }
+
+  function resetSilenceDeadline(): void {
+    if (finishingRef.current || sessionRef.current.state !== "live") {
+      return;
+    }
+    lastMeaningfulAudioAtRef.current = Date.now();
+    if (silenceTimerRef.current) {
+      return;
+    }
+    const checkSilenceDeadline = (): void => {
+      silenceTimerRef.current = null;
+      if (finishingRef.current || sessionRef.current.state !== "live") {
+        return;
+      }
+      const lastMeaningfulAudioAtMs = lastMeaningfulAudioAtRef.current ?? Date.now();
+      const remainingMs = silenceTimeoutMs - (Date.now() - lastMeaningfulAudioAtMs);
+      if (remainingMs > 0) {
+        silenceTimerRef.current = setTimeout(checkSilenceDeadline, remainingMs);
+        return;
+      }
+      setLiveError("session_silence_timeout");
+      playbackSuppressedRef.current = true;
+      observeBackgroundOperation(
+        finishSession("failed"),
+        "finish_session_after_silence",
+      );
+    };
+    silenceTimerRef.current = setTimeout(checkSilenceDeadline, silenceTimeoutMs);
+  }
+
+  function isActiveRealtimeSession(realtimeSessionToken: string): boolean {
+    if (
+      finishingRef.current ||
+      activeRealtimeSessionTokenRef.current !== realtimeSessionToken
+    ) {
+      return false;
+    }
+    if (AppState.currentState === "background" || AppState.currentState === "inactive") {
+      setLiveError("session_backgrounded");
+      playbackSuppressedRef.current = true;
+      observeBackgroundOperation(
+        finishSession("failed"),
+        "finish_session_found_in_background",
+      );
+      return false;
+    }
+    return true;
   }
 
   function resetCompletionWaiter(): void {
@@ -330,6 +466,9 @@ export function useLiveTranslation(
     setReportReceiptId(null);
     setSpans([]);
     finishingRef.current = false;
+    terminatedAtRef.current = null;
+    clearCloseTimer(silenceTimerRef);
+    lastMeaningfulAudioAtRef.current = null;
     spanRef.current = null;
     firstSourceReceivedRef.current = false;
     firstTranslationReceivedRef.current = false;
@@ -345,55 +484,39 @@ export function useLiveTranslation(
         ? "requesting_mic_permission"
         : "requesting_audio_permission",
     );
-    const preparation = await preparationRef.current!.prepare();
-    if (preparation.microphone_granted) {
-      recordListenTiming("microphone_ready", preparation.microphone_ready_at_ms);
-    }
-    if (preparation.identity_ready_at_ms !== null) {
-      recordListenTiming("identity_ready", preparation.identity_ready_at_ms);
-    }
-    if (!preparation.microphone_granted) {
-      failBeforeWorkerSession(
-        params.capture_source === "microphone"
-          ? "microphone_permission_denied"
-          : "device_playback_permission_denied",
-        "microphone_permission",
-        listenTappedAtMs,
-      );
-      return;
-    }
-    if (!preparation.app_install_id) {
-      failBeforeWorkerSession("install_identity_failed", "identity", listenTappedAtMs);
-      return;
-    }
-    if (
-      params.capture_source === "device_playback" &&
-      !(await requestCapturePermission(params.capture_source))
-    ) {
-      failBeforeWorkerSession(
-        "device_playback_permission_denied",
-        "microphone_permission",
-        listenTappedAtMs,
-      );
+    const appInstallId = await prepareAudioInput(realtimeSessionToken, listenTappedAtMs);
+    if (!appInstallId) {
       return;
     }
 
     transition("checking_device");
     const deviceIntegrity = await collectDeviceIntegrity({
-      appInstallId: preparation.app_install_id,
+      appInstallId,
       sourceLanguage: params.source_language,
       targetLanguage: params.target_language,
     });
+    if (!isActiveRealtimeSession(realtimeSessionToken)) {
+      return;
+    }
     recordListenTiming("integrity_ready");
     transition("creating_session");
     const response = await createWorkerSession({
       acquisition: params.acquisition,
       analytics_enabled: params.analytics_enabled,
-      app_install_id: preparation.app_install_id,
+      app_install_id: appInstallId,
       device_integrity: deviceIntegrity,
       source_language: params.source_language,
       target_language: params.target_language,
     });
+    if (!isActiveRealtimeSession(realtimeSessionToken)) {
+      if (!("error" in response)) {
+        observeBackgroundOperation(
+          closeWorkerSession(response.app_session_id, "inactive_during_session_creation"),
+          "close_inactive_worker_session",
+        );
+      }
+      return;
+    }
     if ("error" in response) {
       failBeforeWorkerSession(response.error, "session_creation", listenTappedAtMs);
       return;
@@ -447,6 +570,58 @@ export function useLiveTranslation(
     recordDebug("realtime.connecting", "Connecting to live translation");
   }
 
+  async function prepareAudioInput(
+    realtimeSessionToken: string,
+    listenTappedAtMs: number,
+  ): Promise<string | null> {
+    permissionFlowRef.current = true;
+    const preparation = await preparationRef.current!.prepare().finally(() => {
+      permissionFlowRef.current = false;
+    });
+    if (!isActiveRealtimeSession(realtimeSessionToken)) {
+      return null;
+    }
+    if (preparation.microphone_granted) {
+      recordListenTiming("microphone_ready", preparation.microphone_ready_at_ms);
+    }
+    if (preparation.identity_ready_at_ms !== null) {
+      recordListenTiming("identity_ready", preparation.identity_ready_at_ms);
+    }
+    if (!preparation.microphone_granted) {
+      failBeforeWorkerSession(
+        params.capture_source === "microphone"
+          ? "microphone_permission_denied"
+          : "device_playback_permission_denied",
+        "microphone_permission",
+        listenTappedAtMs,
+      );
+      return null;
+    }
+    if (!preparation.app_install_id) {
+      failBeforeWorkerSession("install_identity_failed", "identity", listenTappedAtMs);
+      return null;
+    }
+    if (params.capture_source === "device_playback") {
+      permissionFlowRef.current = true;
+      const capturePermissionGranted = await requestCapturePermission(params.capture_source)
+        .finally(() => {
+          permissionFlowRef.current = false;
+        });
+      if (!isActiveRealtimeSession(realtimeSessionToken)) {
+        return null;
+      }
+      if (!capturePermissionGranted) {
+        failBeforeWorkerSession(
+          "device_playback_permission_denied",
+          "microphone_permission",
+          listenTappedAtMs,
+        );
+        return null;
+      }
+    }
+    return preparation.app_install_id;
+  }
+
   function receiveRealtimeEventIfActive(
     realtimeSessionToken: string,
     event: RealtimeTranslationClientEvent,
@@ -491,9 +666,14 @@ export function useLiveTranslation(
         await finishSession("failed");
         return;
       }
+      if (finishingRef.current) {
+        await MurmurAudioModule.stopCapture("session_terminated_during_capture_start");
+        return;
+      }
       captureStartedAtRef.current = Date.now();
       recordListenTiming("capture_started", captureStartedAtRef.current);
       transition("live");
+      resetSilenceDeadline();
       captureMobileTelemetry({
         app_session_id: sessionRef.current.identity.app_session_id,
         event: "mobile_session_live",
@@ -546,7 +726,8 @@ export function useLiveTranslation(
     }
     if (event.kind === "transport_error") {
       setLiveError("realtime_transport_error");
-      transition("network_degraded");
+      playbackSuppressedRef.current = true;
+      await finishSession("failed");
       return;
     }
     if (event.kind === "playback_error") {
@@ -606,6 +787,7 @@ export function useLiveTranslation(
     }
     const completionPromise = getCompletionPromise();
     timingRef.current!.beginStop();
+    terminatedAtRef.current ??= Date.now();
     playbackSuppressedRef.current = true;
     transition("stopping");
     const localCleanup = startLocalStopCleanup("user_stop");
@@ -623,6 +805,7 @@ export function useLiveTranslation(
     void startWorkerSessionClose("user_stop");
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
+    clearCloseTimer(silenceTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
     closeTimerRef.current = setTimeout(() => {
       observeBackgroundOperation(finishSession("ended"), "finish_session_after_close_timeout");
@@ -637,7 +820,9 @@ export function useLiveTranslation(
   async function cancel(): Promise<void> {
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
+    clearCloseTimer(silenceTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    finishingRef.current = true;
     activeRealtimeSessionTokenRef.current = null;
     playbackSuppressedRef.current = true;
     transition("cancelling");
@@ -670,17 +855,31 @@ export function useLiveTranslation(
       return getCompletionPromise() as Promise<LiveTranslationCompletion>;
     }
     finishingRef.current = true;
+    terminatedAtRef.current ??= Date.now();
+    const terminatedAtMs = terminatedAtRef.current;
     activeRealtimeSessionTokenRef.current = null;
     clearCloseTimer(closeTimerRef);
     clearCloseTimer(sessionTimerRef);
+    clearCloseTimer(silenceTimerRef);
     clearConnectionDeadline(connectDeadlineRef);
+    playbackSuppressedRef.current = true;
     const client = clientRef.current;
     clientRef.current = null;
     const localCleanup = localStopCleanupRef.current ?? startLocalStopCleanup("session_complete");
-    await client?.close("session_complete").catch(() => undefined);
+    const providerClose = settleCleanup(
+      "realtime.client_close_failed",
+      "Could not confirm the realtime transport closed",
+      () => client?.close("session_complete") ?? Promise.resolve(),
+    );
+    const workerClose = workerClosePromiseRef.current ?? startWorkerSessionClose(state);
+    await Promise.all([
+      providerClose,
+      localCleanup.capture,
+      localCleanup.playback,
+      workerClose,
+    ]);
     preserveClientDiagnostics(client);
     recordStopTiming("provider_client_closed");
-    await Promise.all([localCleanup.capture, localCleanup.playback]);
     await settleCleanup(
       "audio.final_clear_failed",
       "Could not confirm translated audio was cleared",
@@ -688,23 +887,11 @@ export function useLiveTranslation(
         state === "failed" ? "session_failed" : "session_complete",
       ),
     );
-    let finalizedSpan: TranslationSpan | null = null;
-    if (spanRef.current) {
-      finalizedSpan = {
-        ...spanRef.current,
-        committed_translated_caption: spanRef.current.translated_caption || null,
-        partial_translated_caption: null,
-        status: state === "failed" ? "failed" : "committed",
-        updated_at_ms: Date.now(),
-      };
-      spanRef.current = finalizedSpan;
-      setSpans([finalizedSpan]);
-    }
-    await (workerClosePromiseRef.current ?? startWorkerSessionClose(state));
+    const finalizedSpan = finalizeCurrentSpan(state);
     transition(state);
     recordStopTiming("ui_ended_start_enabled");
     const completion: LiveTranslationCompletion = createLiveTranslationCompletion({
-      completed_at_ms: Date.now(),
+      completed_at_ms: terminatedAtMs,
       error: errorRef.current,
       span: finalizedSpan,
       started_at_ms: sessionStartedAtRef.current ?? sessionRef.current.created_at_ms,
@@ -729,6 +916,23 @@ export function useLiveTranslation(
     });
     resolveCompletion(completion);
     return completion;
+  }
+
+  function finalizeCurrentSpan(state: "ended" | "failed"): TranslationSpan | null {
+    const current = spanRef.current;
+    if (!current) {
+      return null;
+    }
+    const finalized = {
+      ...current,
+      committed_translated_caption: current.translated_caption || null,
+      partial_translated_caption: null,
+      status: state === "failed" ? "failed" as const : "committed" as const,
+      updated_at_ms: Date.now(),
+    };
+    spanRef.current = finalized;
+    setSpans([finalized]);
+    return finalized;
   }
 
   function startLocalStopCleanup(reason: string): LocalStopCleanup {

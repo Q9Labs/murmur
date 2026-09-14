@@ -19,6 +19,12 @@ const exactLiveErrorCopy: Readonly<Record<string, string>> = {
     "Murmur’s translation capacity is temporarily exhausted. Please try again later.",
   realtime_provider_rate_limited:
     "Translation is busy right now. Wait a moment, then try again.",
+  realtime_session_silence_timeout:
+    "Translation stopped after two minutes without speech. Tap Listen to start again.",
+  session_backgrounded:
+    "Translation stopped when Murmur left the foreground. Return and tap Listen to start again.",
+  session_silence_timeout:
+    "Translation stopped after two minutes without speech. Tap Listen to start again.",
 };
 
 export function formatLiveError(error: string): string {

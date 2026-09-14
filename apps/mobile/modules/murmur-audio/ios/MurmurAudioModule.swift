@@ -6,6 +6,7 @@ import ExpoModulesCore
 private let murmurSampleRate = 24_000.0
 private let murmurFrameBytes = 960
 private let murmurFrameDurationMs = 20
+private let murmurMaxCaptureDurationSeconds = 300.0
 private let murmurAppAttestKeyId = "murmur.app_attest.key_id.v1"
 
 public class MurmurAudioModule: Module {
@@ -14,7 +15,9 @@ public class MurmurAudioModule: Module {
   private let playerNode = AVAudioPlayerNode()
   private let audioQueue = DispatchQueue(label: "murmur.audio.native")
   private var converter: AVAudioConverter?
+  private var captureDeadline: DispatchWorkItem?
   private var captureBuffer = Data()
+  private var appForeground = true
   private var captureActive = false
   private var captureSource = "microphone"
   private var playbackActive = false
@@ -95,7 +98,13 @@ public class MurmurAudioModule: Module {
     }
 
     OnAppEntersBackground {
-      self.emitState(reason: "app_background_preserved")
+      self.appForeground = false
+      self.stopCaptureSync(reason: "app_background")
+      self.clearPlaybackSync(reason: "app_background")
+    }
+
+    OnAppEntersForeground {
+      self.appForeground = true
     }
 
     OnDestroy {
@@ -107,6 +116,13 @@ public class MurmurAudioModule: Module {
   private func startCaptureSync(source: String) throws {
     if captureActive {
       return
+    }
+    guard appForeground else {
+      throw NSError(
+        domain: "MurmurAudio",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Audio capture requires the foreground"]
+      )
     }
     guard source == "microphone" else {
       throw NSError(
@@ -133,6 +149,7 @@ public class MurmurAudioModule: Module {
       }
     }
     captureActive = true
+    scheduleCaptureDeadline()
     emitState(reason: "capture_started")
   }
 
@@ -170,12 +187,30 @@ public class MurmurAudioModule: Module {
   }
 
   private func resetCaptureEngine() {
+    captureDeadline?.cancel()
+    captureDeadline = nil
     captureEngine.inputNode.removeTap(onBus: 0)
     captureEngine.stop()
     captureEngine.reset()
     captureBuffer.removeAll(keepingCapacity: true)
     converter = nil
     captureActive = false
+  }
+
+  private func scheduleCaptureDeadline() {
+    captureDeadline?.cancel()
+    let deadline = DispatchWorkItem { [weak self] in
+      guard let self, self.captureActive else {
+        return
+      }
+      self.stopCaptureSync(reason: "capture_deadline")
+      self.clearPlaybackSync(reason: "capture_deadline")
+    }
+    captureDeadline = deadline
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + murmurMaxCaptureDurationSeconds,
+      execute: deadline
+    )
   }
 
   private func startPlaybackSync() throws {

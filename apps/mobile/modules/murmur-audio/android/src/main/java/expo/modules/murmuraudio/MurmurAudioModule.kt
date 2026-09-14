@@ -37,10 +37,12 @@ import kotlin.math.sqrt
 private const val MURMUR_SAMPLE_RATE = 24_000
 private const val MURMUR_FRAME_BYTES = 960
 private const val MURMUR_FRAME_DURATION_MS = 20
+private const val MURMUR_MAX_CAPTURE_DURATION_MS = 300_000L
 private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 41_271
 private const val OVERLAY_PERMISSION_REQUEST_CODE = 41_272
 
 class MurmurAudioModule : Module(), MurmurCaptureListener {
+  @Volatile private var activityForeground = true
   @Volatile private var captureActive = false
   @Volatile private var playbackActive = false
   private var recorder: AudioRecord? = null
@@ -73,6 +75,12 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   private var playbackEndsAtMs = 0L
   private var playbackIdleGeneration = 0
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val captureDeadline = Runnable {
+    if (captureActive || pendingCaptureStart != null) {
+      stopCaptureSync("capture_deadline")
+      clearPlaybackSync("capture_deadline")
+    }
+  }
   @Volatile private var captureSource = CAPTURE_SOURCE_MICROPHONE
   @Volatile private var projectionResultData: Intent? = null
   @Volatile private var projectionResultCode = Activity.RESULT_CANCELED
@@ -141,10 +149,17 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     }
 
     OnActivityEntersBackground {
-      emitState("activity_background_preserved")
+      if (pendingProjectionPermission != null) {
+        emitState("activity_background_capture_permission")
+        return@OnActivityEntersBackground
+      }
+      activityForeground = false
+      stopCaptureSync("activity_background")
+      clearPlaybackSync("activity_background")
     }
 
     OnActivityEntersForeground {
+      activityForeground = true
       resolveOverlayPermissionIfReady()
       emitState("activity_foreground")
     }
@@ -171,6 +186,10 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     if (source != CAPTURE_SOURCE_MICROPHONE && source != CAPTURE_SOURCE_DEVICE_PLAYBACK) {
       throw IllegalArgumentException("Unknown capture source: $source")
     }
+    if (!activityForeground) {
+      promise.reject("E_CAPTURE_BACKGROUND", "Audio capture requires the foreground", null)
+      return
+    }
     if (captureActive) {
       promise.resolve(statePayload("capture_already_active"))
       return
@@ -191,6 +210,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
     try {
       startMicrophoneCapture()
+      scheduleCaptureDeadline()
       promise.resolve(statePayload("capture_started"))
     } catch (error: Throwable) {
       promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Microphone capture failed", error)
@@ -217,6 +237,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     projectionResultCode = Activity.RESULT_CANCELED
     pendingCaptureStart = promise
     resetCaptureDiagnostics(CAPTURE_SOURCE_DEVICE_PLAYBACK)
+    scheduleCaptureDeadline()
     try {
       startForegroundCaptureService(
         CAPTURE_SOURCE_DEVICE_PLAYBACK,
@@ -227,6 +248,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         if (pendingCaptureStart === promise) {
           pendingCaptureStart = null
           captureActive = false
+          mainHandler.removeCallbacks(captureDeadline)
           stopForegroundCaptureService("capture_start_timeout")
           promise.reject("E_CAPTURE_START_TIMEOUT", "Device playback capture did not start", null)
           emitState("capture_start_timeout")
@@ -234,6 +256,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       }, 10_000)
     } catch (error: Throwable) {
       pendingCaptureStart = null
+      mainHandler.removeCallbacks(captureDeadline)
       promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Device playback capture failed", error)
     }
   }
@@ -335,6 +358,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   }
 
   private fun stopCaptureSync(reason: String) {
+    mainHandler.removeCallbacks(captureDeadline)
     if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
       projectionResultData = null
       pendingCaptureStart?.reject("E_CAPTURE_STOPPED", "Capture stopped before startup completed", null)
@@ -773,6 +797,18 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   }
 
   override fun onServiceCaptureStarted(source: String) {
+    if (!activityForeground) {
+      pendingCaptureStart?.reject(
+        "E_CAPTURE_BACKGROUND",
+        "Audio capture cannot start in the background",
+        null
+      )
+      pendingCaptureStart = null
+      captureActive = false
+      stopForegroundCaptureService("activity_background")
+      emitState("activity_background")
+      return
+    }
     captureSource = source
     captureActive = true
     val promise = pendingCaptureStart
@@ -781,12 +817,18 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     promise?.resolve(statePayload("capture_started"))
   }
 
+  private fun scheduleCaptureDeadline() {
+    mainHandler.removeCallbacks(captureDeadline)
+    mainHandler.postDelayed(captureDeadline, MURMUR_MAX_CAPTURE_DURATION_MS)
+  }
+
   override fun onServiceCaptureFrame(source: String, data: ByteArray) {
     if (!captureActive) return
     emitFrame(data, source)
   }
 
   override fun onServiceCaptureStopped(source: String, reason: String) {
+    mainHandler.removeCallbacks(captureDeadline)
     projectionResultData = null
     if (source == CAPTURE_SOURCE_MICROPHONE) {
       captureActive = false
@@ -811,6 +853,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   }
 
   override fun onServiceCaptureError(source: String, reason: String, error: Throwable?) {
+    mainHandler.removeCallbacks(captureDeadline)
     projectionResultData = null
     captureActive = false
     pendingCaptureStart?.reject(

@@ -12,6 +12,7 @@ vi.mock("../providers/openaiRealtime", async (importOriginal) => ({
 import type { WorkerWebSocket } from "../http/response";
 import { createSessionRecordDurable } from "../rateLimitDurableObject";
 import {
+  hasMeaningfulPcm16Audio,
   isAcceptedAudioFrame,
   parseClientCommand,
   proxyRealtimeSession,
@@ -24,12 +25,16 @@ class FakeSocket extends EventTarget {
   closeCalls: Array<{ code?: number; reason?: string }> = [];
   readyState = 1;
   sent: unknown[] = [];
+  throwOnClose = false;
 
   accept(): void {}
 
   close(code?: number, reason?: string): void {
     this.closeCalls.push({ code, reason });
     this.readyState = 3;
+    if (this.throwOnClose) {
+      throw new Error("socket close failed");
+    }
   }
 
   send(value: unknown): void {
@@ -88,6 +93,12 @@ describe("app-facing realtime socket", () => {
     expect(isAcceptedAudioFrame(0)).toBe(false);
     expect(isAcceptedAudioFrame(959)).toBe(false);
     expect(isAcceptedAudioFrame(64 * 1024 + 1)).toBe(false);
+  });
+
+  it("distinguishes meaningful PCM from silence", () => {
+    expect(hasMeaningfulPcm16Audio(new Int16Array([0, 0, 0, 0]).buffer)).toBe(false);
+    expect(hasMeaningfulPcm16Audio(new Int16Array([1, -1, 2, -2]).buffer)).toBe(false);
+    expect(hasMeaningfulPcm16Audio(new Int16Array([2_000, -2_000]).buffer)).toBe(true);
   });
 
   it("closes invalid, unconfigured, and unknown sessions", async () => {
@@ -155,6 +166,72 @@ describe("app-facing realtime socket", () => {
     });
   });
 
+  it("aborts a stalled provider handshake before the session can linger", async () => {
+    vi.useFakeTimers();
+    const appSessionId = `session_handshake_${crypto.randomUUID()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: "install_hash",
+      now_ms: Date.now(),
+    });
+    providerMocks.openTranslationSocket.mockImplementationOnce(
+      ({ signal }: { signal: AbortSignal }) => new Promise((_, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason));
+      }),
+    );
+    const client = new FakeSocket();
+    const proxy = proxyRealtimeSession(
+      new Request(
+        `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=ar`,
+      ),
+      client as unknown as WorkerWebSocket,
+      { OPENAI_API_KEY: "test_key" },
+    );
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    await proxy;
+
+    expect(client.sent.map(String).join(" ")).toContain("provider_connection_timeout");
+    expect(client.closeCalls).toContainEqual({
+      code: 1011,
+      reason: "provider_connection_timeout",
+    });
+  });
+
+  it("closes a provider socket that arrives after the client has gone", async () => {
+    let releaseProvider = (_socket: WorkerWebSocket): void => {
+      throw new Error("provider handshake was not initialized");
+    };
+    const provider = new Promise<WorkerWebSocket>((resolve) => {
+      releaseProvider = resolve;
+    });
+    const appSessionId = `session_late_provider_${crypto.randomUUID()}`;
+    await createSessionRecordDurable({
+      app_session_id: appSessionId,
+      hashed_install_id: "install_hash",
+      now_ms: Date.now(),
+    });
+    providerMocks.openTranslationSocket.mockReturnValueOnce(provider);
+    const client = new FakeSocket();
+    const proxy = proxyRealtimeSession(
+      new Request(
+        `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=ar`,
+      ),
+      client as unknown as WorkerWebSocket,
+      { OPENAI_API_KEY: "test_key" },
+    );
+    await vi.waitFor(() => expect(providerMocks.openTranslationSocket).toHaveBeenCalledOnce());
+    client.dispatchEvent(new Event("close"));
+    const upstream = new FakeSocket();
+    releaseProvider(upstream as unknown as WorkerWebSocket);
+    await proxy;
+
+    expect(upstream.closeCalls).toContainEqual({
+      code: 1000,
+      reason: "session_already_terminated",
+    });
+  });
+
   it("allows one upstream connection per app session", async () => {
     const appSessionId = `session_once_${crypto.randomUUID()}`;
     await createSessionRecordDurable({
@@ -190,11 +267,37 @@ describe("app-facing realtime socket", () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000_000_000);
     const { client, upstream } = await openTestRealtimeSession({ name: "deadline" });
-    await vi.advanceTimersByTimeAsync(900_000);
+    for (let elapsedMs = 0; elapsedMs < 300_000; elapsedMs += 100_000) {
+      client.dispatchEvent(new MessageEvent("message", {
+        data: new Int16Array([2_000, -2_000]).buffer,
+      }));
+      await vi.advanceTimersByTimeAsync(100_000);
+    }
 
     expect(client.sent.map(String).join(" ")).toContain("session_expired");
     expect(client.closeCalls).toContainEqual({ code: 1008, reason: "session_expired" });
     expect(upstream.closeCalls).toContainEqual({ code: 1008, reason: "session_expired" });
+  });
+
+  it("closes silent sessions after 120 seconds even when silent PCM continues", async () => {
+    vi.useFakeTimers();
+    const { client, upstream } = await openTestRealtimeSession({ name: "silence" });
+    for (let elapsedMs = 0; elapsedMs < 120_000; elapsedMs += 30_000) {
+      client.dispatchEvent(new MessageEvent("message", {
+        data: new Int16Array([0, 0, 0, 0]).buffer,
+      }));
+      await vi.advanceTimersByTimeAsync(30_000);
+    }
+
+    expect(client.sent.map(String).join(" ")).toContain("session_silence_timeout");
+    expect(client.closeCalls).toContainEqual({
+      code: 1008,
+      reason: "session_silence_timeout",
+    });
+    expect(upstream.closeCalls).toContainEqual({
+      code: 1008,
+      reason: "session_silence_timeout",
+    });
   });
 
   it("proxies audio, transcripts, translated audio, close, and errors", async () => {
@@ -211,6 +314,7 @@ describe("app-facing realtime socket", () => {
       apiKey: "test_key",
       model: "gpt-realtime-translate-test",
       safetyIdentifier: "install_hash",
+      signal: expect.any(AbortSignal),
     });
     expect(JSON.parse(String(upstream.sent[0]))).toMatchObject({
       session: {
@@ -243,32 +347,45 @@ describe("app-facing realtime socket", () => {
     client.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ kind: "close_session" }),
     }));
-    await vi.waitFor(() => {
-      expect(JSON.parse(String(upstream.sent.at(-1)))).toEqual({ type: "session.close" });
+    expect(upstream.closeCalls).toContainEqual({
+      code: 1000,
+      reason: "client_close_session",
     });
+  });
 
+  it("forwards provider output and physically closes upstream on provider completion", async () => {
+    const { client, upstream } = await openTestRealtimeSession({ name: "provider_complete" });
     upstream.dispatchEvent(new MessageEvent("message", {
-      data: JSON.stringify({
-        delta: "hello",
-        type: "session.input_transcript.delta",
-      }),
+      data: JSON.stringify({ delta: "hello", type: "session.input_transcript.delta" }),
     }));
     expect(client.sent.map(String).join(" ")).toContain("source_delta");
-
     upstream.dispatchEvent(new MessageEvent("message", {
-      data: JSON.stringify({
-        delta: "AQID",
-        type: "session.output_audio.delta",
-      }),
+      data: JSON.stringify({ delta: "AQID", type: "session.output_audio.delta" }),
     }));
     expect(client.sent.at(-1)).toBeInstanceOf(ArrayBuffer);
-
     upstream.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ type: "session.closed" }),
     }));
+    expect(upstream.closeCalls).toContainEqual({
+      code: 1000,
+      reason: "provider_session_closed",
+    });
     expect(client.closeCalls).toContainEqual({
       code: 1000,
-      reason: "session_closed",
+      reason: "provider_session_closed",
+    });
+  });
+
+  it("closes the client even when closing the provider socket throws", async () => {
+    const { client, upstream } = await openTestRealtimeSession({ name: "close_failure" });
+    upstream.throwOnClose = true;
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.closed" }),
+    }));
+
+    expect(client.closeCalls).toContainEqual({
+      code: 1000,
+      reason: "provider_session_closed",
     });
   });
 
@@ -283,7 +400,7 @@ describe("app-facing realtime socket", () => {
     secondClient.dispatchEvent(new Event("close"));
     expect(secondUpstream.closeCalls).toContainEqual({
       code: 1000,
-      reason: "client_close",
+      reason: "client_transport_closed",
     });
 
     const { client: thirdClient, upstream: thirdUpstream } =

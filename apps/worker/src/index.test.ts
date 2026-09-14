@@ -222,7 +222,7 @@ describe("worker routes", () => {
       session_epoch: number;
     };
     expect(session.limits.expires_at_ms).toBeGreaterThan(Date.now());
-    expect(session.limits.max_session_seconds).toBeGreaterThan(0);
+    expect(session.limits.max_session_seconds).toBe(300);
     expect(session.realtime_ws_url).toContain(
       `app_session_id=${encodeURIComponent(session.app_session_id)}`,
     );

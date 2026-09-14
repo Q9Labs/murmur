@@ -37,7 +37,7 @@ export type LimitResult =
 
 export const defaultRateLimits: RateLimitConfig = {
   activeSessionsPerInstall: 1,
-  maxSessionSeconds: 900,
+  maxSessionSeconds: 300,
   sessionsPerDay: 30,
   sessionsPerHour: 6,
 };

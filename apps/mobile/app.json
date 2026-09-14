@@ -11,7 +11,7 @@
     "newArchEnabled": true,
     "ios": {
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
-      "buildNumber": "16",
+      "buildNumber": "17",
       "supportsTablet": false,
       "splash": {
         "backgroundColor": "#F8F4ED",
@@ -145,7 +145,7 @@
       ],
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
       "package": "com.q9labsai.murmur",
-      "versionCode": 12
+      "versionCode": 13
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
