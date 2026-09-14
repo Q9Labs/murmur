@@ -61,7 +61,7 @@ for (const path of ["/privacy", "/terms", "/support"]) {
 const privacyPage = await getText("/privacy");
 assert(privacyPage.body.includes("PostHog US"), "/privacy must disclose PostHog US");
 assert(privacyPage.body.includes("Sentry"), "/privacy must disclose Sentry");
-assert(privacyPage.body.includes("never include microphone audio"), "/privacy must prohibit conversation content in analytics");
+assert(privacyPage.body.includes("never include captured audio"), "/privacy must prohibit conversation content in analytics");
 
 if (failures.length > 0) {
   console.error(`Production Worker validation failed for ${baseUrl}:`);
