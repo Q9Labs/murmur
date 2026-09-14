@@ -392,6 +392,24 @@ describe("app-facing realtime socket", () => {
     });
   });
 
+  it("classifies malformed provider output as a provider failure", async () => {
+    const { client, upstream } = await openTestRealtimeSession({ name: "invalid_output" });
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ delta: "%%%", type: "session.output_audio.delta" }),
+    }));
+
+    expect(client.sent.map(String).join(" ")).toContain("provider_output_invalid");
+    expect(client.sent.map(String).join(" ")).not.toContain("client_transport_error");
+    expect(upstream.closeCalls).toContainEqual({
+      code: 1011,
+      reason: "provider_output_invalid",
+    });
+    expect(client.closeCalls).toContainEqual({
+      code: 1011,
+      reason: "provider_output_invalid",
+    });
+  });
+
   it("does not forward queued audio after termination even if provider close fails", async () => {
     const { client, upstream } = await openTestRealtimeSession({ name: "late_audio" });
     upstream.stayOpenOnClose = true;

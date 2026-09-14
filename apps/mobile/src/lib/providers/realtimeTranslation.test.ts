@@ -145,6 +145,40 @@ describe("RealtimeTranslationClient", () => {
     });
   });
 
+  it("resets acknowledgement progress for a replacement socket", async () => {
+    vi.useFakeTimers();
+    const onEvent = vi.fn();
+    const client = createRealtimeTranslationClient({
+      onEvent,
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    client.sendAudio(new Uint8Array(9_600));
+    MockWebSocket.instances[0]?.onmessage?.({
+      data: JSON.stringify({
+        bytes_received: 9_600,
+        chunk_seq: 1,
+        kind: "input_audio_ack",
+        worker_received_at_ms: Date.now(),
+      }),
+    });
+    await client.close("replace_socket");
+
+    client.connect();
+    client.sendAudio(new Uint8Array(9_600));
+    MockWebSocket.instances[1]?.onmessage?.({
+      data: JSON.stringify({
+        bytes_received: 9_600,
+        chunk_seq: 1,
+        kind: "input_audio_ack",
+        worker_received_at_ms: Date.now(),
+      }),
+    });
+    await vi.advanceTimersByTimeAsync(15_000);
+
+    expect(onEvent).not.toHaveBeenCalledWith({ kind: "transport_error" });
+  });
+
   it("batches ten 20 ms PCM frames into one 200 ms chunk", () => {
     const client = createRealtimeTranslationClient({
       onEvent: vi.fn(),
@@ -402,6 +436,44 @@ describe("RealtimeTranslationClient", () => {
       });
     });
     expect(onEvent).not.toHaveBeenCalledWith({ kind: "transport_closed" });
+  });
+
+  it("drops messages queued by a replaced socket", async () => {
+    const onEvent = vi.fn();
+    const { client, releaseAudio, socket: replacedSocket } =
+      connectClientWithBlockedPlayback(onEvent);
+    replacedSocket?.onmessage?.({
+      data: JSON.stringify({
+        code: "stale_provider_error",
+        kind: "session_error",
+        retryable: false,
+      }),
+    });
+    await vi.waitFor(() => {
+      expect(MurmurAudioModule.enqueuePcm16).toHaveBeenCalledTimes(1);
+    });
+    await client.close("replace_socket");
+
+    client.connect();
+    MockWebSocket.instances[1]?.onmessage?.({
+      data: JSON.stringify({
+        kind: "session_opened",
+        provider_metadata: { model: "replacement", provider: "openai" },
+      }),
+    });
+    releaseAudio();
+
+    await vi.waitFor(() => {
+      expect(onEvent).toHaveBeenCalledWith({
+        kind: "session_opened",
+        provider_metadata: { model: "replacement", provider: "openai" },
+      });
+    });
+    expect(onEvent).not.toHaveBeenCalledWith({
+      code: "stale_provider_error",
+      kind: "session_error",
+      retryable: false,
+    });
   });
 
   it("rejects malformed server events", () => {

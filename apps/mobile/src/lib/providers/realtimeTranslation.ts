@@ -34,8 +34,10 @@ export function createRealtimeTranslationClient(options: {
   url: string;
 }): RealtimeTranslationClient {
   let socket: WebSocket | null = null;
+  let socketGeneration = 0;
   let acceptingMessages = true;
   let acknowledgedInputChunks = 0;
+  let sentInputChunks = 0;
   let ackTimer: ReturnType<typeof setTimeout> | null = null;
   let receiveQueue = Promise.resolve();
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
@@ -67,7 +69,7 @@ export function createRealtimeTranslationClient(options: {
   }
 
   function scheduleAckDeadline(acknowledgementAdvanced = false): void {
-    if (acknowledgedInputChunks >= diagnostics.input_chunks_sent) {
+    if (acknowledgedInputChunks >= sentInputChunks) {
       clearAckTimer();
       return;
     }
@@ -92,6 +94,7 @@ export function createRealtimeTranslationClient(options: {
     }
     const chunk = inputBuffer.slice(0, inputBufferedBytes);
     socket.send(chunk);
+    sentInputChunks += 1;
     diagnostics.input_chunks_sent += 1;
     diagnostics.input_bytes_sent += chunk.byteLength;
     diagnostics.last_input_chunk_sent_at_ms = Date.now();
@@ -165,18 +168,21 @@ export function createRealtimeTranslationClient(options: {
         return;
       }
       acceptingMessages = true;
+      acknowledgedInputChunks = 0;
+      sentInputChunks = 0;
+      const generation = ++socketGeneration;
       const nextSocket = new WebSocket(options.url);
       nextSocket.binaryType = "arraybuffer";
       nextSocket.onopen = () => {
         diagnostics.socket_opened_at_ms = Date.now();
       };
       nextSocket.onmessage = (event) => {
-        if (!acceptingMessages) {
+        if (!acceptingMessages || generation !== socketGeneration) {
           diagnostics.messages_skipped_client_closed += 1;
           return;
         }
         receiveQueue = receiveQueue.then(async () => {
-          if (!acceptingMessages) {
+          if (!acceptingMessages || generation !== socketGeneration) {
             diagnostics.messages_skipped_client_closed += 1;
             return;
           }

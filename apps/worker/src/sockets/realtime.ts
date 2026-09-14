@@ -654,10 +654,10 @@ function bindProviderEvents(
         tags: { app_session_id: telemetry.appSessionId, operation: "forward_provider_output" },
       });
       terminate({
-        errorCode: "client_transport_error",
-        failureCode: "client_transport_error",
+        errorCode: "provider_output_invalid",
+        failureCode: "provider_output_invalid",
         outcome: "failed",
-        reason: "client_transport_error",
+        reason: "provider_output_invalid",
         retryable: true,
         socketCode: 1011,
       });
