@@ -198,7 +198,10 @@ function SettingsPreview(): ReactNode {
 function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNode {
   const props: VariantOnboardingProps = {
     canStart: true,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     onContinue: noop,
+    onCaptureSourceChange: noop,
     onOpenPicker: noop,
     onPrivacyAgree: noop,
     onStart: noop,
@@ -215,7 +218,10 @@ function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNo
 function WelcomePreview(): ReactNode {
   const props: VariantOnboardingProps = {
     canStart: true,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     onContinue: noop,
+    onCaptureSourceChange: noop,
     onOpenPicker: noop,
     onPrivacyAgree: noop,
     onStart: noop,

@@ -29,7 +29,7 @@ const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev"
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const releaseVersion = "1.2.3";
 const iosBuildNumber = "16";
-const androidVersionCode = 11;
+const androidVersionCode = 12;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",

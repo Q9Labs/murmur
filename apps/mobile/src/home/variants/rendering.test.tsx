@@ -136,15 +136,18 @@ function shellProps(params: {
     tentative_source_caption: params.hasTimeline ? "tentative caption" : "",
   };
   const viewModel = buildHomeViewModel({
+    captureSource: "microphone",
     live: liveState,
     sourceLanguageCode: "en",
     targetLanguageCode: "ar",
   });
 
   return {
+    audioPlaybackAvailable: true,
     audioPlaybackEnabled: true,
     audioState: {
       audio_generation_id: 1,
+      capture_source: "microphone",
       capture_active: params.isLive,
       dropped_frames: 0,
       event_seq: 1,
@@ -155,6 +158,8 @@ function shellProps(params: {
       sample_rate: 24000,
     },
     autoScrollRef: { current: true },
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     live: liveState as VariantShellProps["live"],
     onAudioPlaybackEnabledChange: vi.fn(),
     onCaptureSourceChange: vi.fn(),
@@ -172,7 +177,10 @@ function shellProps(params: {
 function onboardingProps(step: VariantOnboardingProps["step"]): VariantOnboardingProps {
   return {
     canStart: true,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     onContinue: vi.fn(),
+    onCaptureSourceChange: vi.fn(),
     onOpenPicker: vi.fn(),
     onPrivacyAgree: vi.fn(),
     onStart: vi.fn(),
