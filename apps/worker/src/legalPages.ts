@@ -8,7 +8,7 @@ type Page = {
 };
 
 const lastUpdated = "2026-09-14";
-const marketingUpdated = "2026-08-29";
+const marketingUpdated = "2026-09-21";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
@@ -37,7 +37,32 @@ function icon(name: keyof typeof icons): string {
   return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 }
 
-const heroStage = `
+type HeroStageCaption = {
+  source: string;
+  sourceDirection?: "rtl";
+  sourceLocale: string;
+  target: string;
+  targetDirection?: "rtl";
+  targetLocale: string;
+};
+
+type HeroStage = {
+  captions: HeroStageCaption[];
+  sourceLanguage: string;
+  targetLanguage: string;
+};
+
+function renderHeroStage(stage: HeroStage): string {
+  const captions = stage.captions
+    .map((caption, index) => {
+      const sourceDirection = caption.sourceDirection ? ` dir="${caption.sourceDirection}"` : "";
+      const targetDirection = caption.targetDirection ? ` dir="${caption.targetDirection}"` : "";
+
+      return `<p class="feed-item feed-${index + 1}"><strong lang="${caption.sourceLocale}"${sourceDirection}>${escapeHtml(caption.source)}</strong><span lang="${caption.targetLocale}"${targetDirection}>${escapeHtml(caption.target)}</span></p>`;
+    })
+    .join("");
+
+  return `
         <div class="bloom-stage">
           <span class="bloom" aria-hidden="true"></span>
           <img class="stage-art" src="/site/hero.webp" alt="" width="1200" height="800" decoding="async">
@@ -51,12 +76,8 @@ const heroStage = `
           </div>
           <div class="phone">
             <div class="phone-screen">
-              <div class="pick"><span class="pill">Italian</span><span class="pick-arrow">${icon("arrow")}</span><span class="pill pill-alt">English</span></div>
-              <div class="feed">
-                <p class="feed-item feed-1"><strong>Welcome to the Colosseum.</strong><span lang="it">Benvenuti al Colosseo.</span></p>
-                <p class="feed-item feed-2"><strong>It was built almost two thousand years ago.</strong><span lang="it">Fu costruito quasi duemila anni fa.</span></p>
-                <p class="feed-item feed-3"><strong>Follow me toward the arena.</strong><span lang="it">Seguitemi verso l&rsquo;arena.</span></p>
-              </div>
+              <div class="pick"><span class="pill">${escapeHtml(stage.sourceLanguage)}</span><span class="pick-arrow">${icon("arrow")}</span><span class="pill pill-alt">${escapeHtml(stage.targetLanguage)}</span></div>
+              <div class="feed">${captions}</div>
               <div class="listen" aria-hidden="true">
                 <div class="eq"><i></i><i></i><i></i><i></i></div>
                 <div class="mic-wrap"><span class="mic-pulse"></span><span class="mic-pulse"></span><div class="mic-btn mic-btn-live">${icon("mic")}</div></div>
@@ -65,6 +86,88 @@ const heroStage = `
             </div>
           </div>
         </div>`;
+}
+
+const heroStage = renderHeroStage({
+  sourceLanguage: "Italian",
+  targetLanguage: "English",
+  captions: [
+    {
+      source: "Benvenuti al Colosseo.",
+      sourceLocale: "it",
+      target: "Welcome to the Colosseum.",
+      targetLocale: "en",
+    },
+    {
+      source: "Fu costruito quasi duemila anni fa.",
+      sourceLocale: "it",
+      target: "It was built almost two thousand years ago.",
+      targetLocale: "en",
+    },
+    {
+      source: "Seguitemi verso l'arena.",
+      sourceLocale: "it",
+      target: "Follow me toward the arena.",
+      targetLocale: "en",
+    },
+  ],
+});
+
+const englishToArabicHeroStage = renderHeroStage({
+  sourceLanguage: "English",
+  targetLanguage: "Arabic",
+  captions: [
+    {
+      source: "Welcome to the old city.",
+      sourceLocale: "en",
+      target: "مرحبًا بكم في المدينة القديمة.",
+      targetDirection: "rtl",
+      targetLocale: "ar",
+    },
+    {
+      source: "The museum opens at ten.",
+      sourceLocale: "en",
+      target: "يفتح المتحف في الساعة العاشرة.",
+      targetDirection: "rtl",
+      targetLocale: "ar",
+    },
+    {
+      source: "Please follow me this way.",
+      sourceLocale: "en",
+      target: "يرجى اتباعي من هذا الطريق.",
+      targetDirection: "rtl",
+      targetLocale: "ar",
+    },
+  ],
+});
+
+const arabicToEnglishHeroStage = renderHeroStage({
+  sourceLanguage: "Arabic",
+  targetLanguage: "English",
+  captions: [
+    {
+      source: "مرحبًا بكم في المدينة القديمة.",
+      sourceDirection: "rtl",
+      sourceLocale: "ar",
+      target: "Welcome to the old city.",
+      targetLocale: "en",
+    },
+    {
+      source: "يفتح المتحف في الساعة العاشرة.",
+      sourceDirection: "rtl",
+      sourceLocale: "ar",
+      target: "The museum opens at ten.",
+      targetLocale: "en",
+    },
+    {
+      source: "يرجى اتباعي من هذا الطريق.",
+      sourceDirection: "rtl",
+      sourceLocale: "ar",
+      target: "Please follow me this way.",
+      targetLocale: "en",
+    },
+  ],
+});
 
 const defaultKeywords = [
   "live speech translation app",
@@ -83,6 +186,7 @@ type MarketingLandingPageOptions = {
   description: string;
   examples: string[];
   heading: string;
+  heroStage?: string;
   keywords: string;
   lede: string;
   useCaseBody: string;
@@ -112,7 +216,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
         <div class="hero-actions">
           <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-        </div>${heroStage}
+        </div>${options.heroStage ?? heroStage}
       </section>
 
       <section class="section landing-copy">${art}
@@ -241,7 +345,7 @@ export const legalPages: Record<string, Page> = {
         <div class="value">
           <span class="icon-tile tone-teal">${icon("user")}</span>
           <h3>Guest first</h3>
-          <p>Start without sign-up. Add an email only so purchases can be recovered across devices.</p>
+          <p>Start without sign-up. Verify an email before purchase so a plan or credit balance can be recovered across devices.</p>
         </div>
         <div class="value">
           <span class="icon-tile tone-violet">${icon("lock")}</span>
@@ -328,6 +432,7 @@ export const legalPages: Record<string, Page> = {
   }),
   "/english-to-arabic-live-captions": buildMarketingLandingPage({
     campaignToken: "english-arabic",
+    heroStage: englishToArabicHeroStage,
     path: "/english-to-arabic-live-captions",
     title: "English to Arabic Live Captions | Murmur",
     description:
@@ -347,6 +452,7 @@ export const legalPages: Record<string, Page> = {
   }),
   "/arabic-to-english-live-captions": buildMarketingLandingPage({
     campaignToken: "arabic-english",
+    heroStage: arabicToEnglishHeroStage,
     path: "/arabic-to-english-live-captions",
     title: "Arabic to English Live Captions | Murmur",
     description:
@@ -558,7 +664,7 @@ function renderHtml(page: Page): string {
       }
 
       * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; overflow-x: clip; }
+      html { scroll-behavior: smooth; }
       body {
         margin: 0;
         background: var(--canvas);
@@ -567,10 +673,9 @@ function renderHtml(page: Page): string {
         font-size: 1.0625rem;
         line-height: 1.55;
         -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
       }
       h1, h2, h3, p { margin: 0; }
-      a:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 6px; }
+      a:focus-visible { outline: 3px solid var(--canvas); outline-offset: 2px; border-radius: 6px; box-shadow: 0 0 0 6px var(--ink); }
 
       .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
@@ -595,9 +700,13 @@ function renderHtml(page: Page): string {
       nav { display: flex; gap: 24px; }
       nav a { text-decoration: none; color: var(--ink-soft); font-size: 0.95rem; transition: color 0.2s; }
       nav a:hover { color: var(--ink); }
-      @media (max-width: 520px) { nav { gap: 16px; } nav a { font-size: 0.88rem; } }
+      @media (max-width: 520px) {
+        header { align-items: flex-start; flex-direction: column; }
+        nav { flex-wrap: wrap; gap: 16px; }
+        nav a { font-size: 0.88rem; }
+      }
 
-      main { padding-bottom: 96px; }
+      main { overflow-x: clip; padding-bottom: 96px; }
 
       /* Bloom: the soft four-color glow from the app's brand direction */
       .bloom {
@@ -887,8 +996,8 @@ function renderHtml(page: Page): string {
       .landing-examples li { font-weight: 500; }
       .landing-steps { list-style: none; margin: 28px 0 0; padding: 0; font-weight: 500; display: grid; gap: 12px; counter-reset: step; line-height: 1.4; }
       .landing-steps li { counter-increment: step; display: flex; align-items: center; gap: 14px; }
-      .landing-steps li::before { content: counter(step); flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: #FFE9E4; color: #D63A2E; }
-      .landing-steps li:nth-child(2)::before { background: #DDF5F3; color: #12827E; }
+      .landing-steps li::before { content: counter(step); flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: #FFE9E4; color: #9E2C24; }
+      .landing-steps li:nth-child(2)::before { background: #DDF5F3; color: #0A615E; }
       .landing-steps li:nth-child(3)::before { background: #ECE6FB; color: #6543CC; }
 
       /* Closing CTA */
