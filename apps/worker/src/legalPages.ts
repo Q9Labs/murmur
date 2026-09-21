@@ -535,7 +535,12 @@ function renderHtml(page: Page): string {
     <meta property="og:title" content="${escapeHtml(socialTitle)}">
     <meta property="og:description" content="${escapeHtml(socialDescription)}">
     <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="${escapeHtml(canonicalFor("/site/og.jpg"))}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Murmur showing live translated captions on a phone">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="${escapeHtml(canonicalFor("/site/og.jpg"))}">
     <meta name="twitter:title" content="${escapeHtml(socialTitle)}">
     <meta name="twitter:description" content="${escapeHtml(socialDescription)}">
     <title>${escapeHtml(page.title)}</title>
