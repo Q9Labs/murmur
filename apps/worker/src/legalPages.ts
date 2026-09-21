@@ -16,6 +16,55 @@ const appStoreUrl = "https://apps.apple.com/app/id6756962206";
 const googlePlayUrl = "https://play.google.com/store/apps/details?id=com.q9labsai.murmur";
 const appleLogoSvg = `<svg class="store-logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.564 13.02c-.012-2.17 1.77-3.21 1.85-3.26-1.01-1.48-2.58-1.68-3.14-1.7-1.34-.13-2.61.79-3.29.79-.68 0-1.72-.77-2.83-.75-1.46.02-2.8.85-3.55 2.16-1.51 2.62-.39 6.5 1.08 8.63.72 1.04 1.58 2.21 2.71 2.17 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.83.68 1.17-.02 1.91-1.06 2.62-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.28-.88-2.3-3.48M15.37 6.65c.6-.73 1.01-1.74.9-2.75-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.22"/></svg>`;
 const playLogoSvg = `<svg class="store-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="#00D7FE" d="M3.27 2.6a1.2 1.2 0 0 0-.32.86v17.08c0 .35.12.65.33.86l.06.05 9.46-9.46v-.22L3.33 2.55z"/><path fill="#FFC107" d="m16.07 15.06-3.16-3.16v-.22l3.16-3.16.07.04 3.74 2.13c1.07.6 1.07 1.6 0 2.21l-3.81 2.16z"/><path fill="#FF3D49" d="m16.14 15.02-3.23-3.23-9.64 9.64c.35.37.93.42 1.59.05l11.28-6.46"/><path fill="#00F076" d="M16.14 8.56 4.86 2.11C4.2 1.73 3.62 1.78 3.27 2.16l9.64 9.63z"/></svg>`;
+
+// cspell:ignore Hugeicons Benvenuti Colosseo costruito duemila anni Seguitemi
+// Icon paths from Hugeicons (free set); stroke attributes live on the wrapping svg.
+const icons = {
+  mic: `<path d="M7 6.5C7 4.01472 9.01472 2 11.5 2C13.9853 2 16 4.01472 16 6.5V11.5C16 13.9853 13.9853 16 11.5 16C9.01472 16 7 13.9853 7 11.5V6.5Z"/><path d="M11.5 19H11.0828C7.57267 19 4.57706 16.4623 4 13M11.5 19H11.9172C15.4273 19 18.4229 16.4623 19 13M11.5 19V22"/>`,
+  captions: `<path d="M2 12C2 8.02033 2 6.03049 3.0528 4.70201C3.22119 4.48953 3.40678 4.29302 3.60746 4.11473C4.86213 3 6.74142 3 10.5 3H13.5C17.2586 3 19.1379 3 20.3925 4.11473C20.5932 4.29302 20.7788 4.48953 20.9472 4.70201C22 6.03049 22 8.02033 22 12C22 15.9797 22 17.9695 20.9472 19.298C20.7788 19.5105 20.5932 19.707 20.3925 19.8853C19.1379 21 17.2586 21 13.5 21H10.5C6.74142 21 4.86213 21 3.60746 19.8853C3.40678 19.707 3.22119 19.5105 3.0528 19.298C2 17.9695 2 15.9797 2 12Z"/><path d="M10.5 9H10C9.06812 9 8.60218 9 8.23463 9.15224C7.74458 9.35523 7.35523 9.74458 7.15224 10.2346C7 10.6022 7 11.0681 7 12C7 12.9319 7 13.3978 7.15224 13.7654C7.35523 14.2554 7.74458 14.6448 8.23463 14.8478C8.60218 15 9.06812 15 10 15H10.5M17 9H16.5C15.5681 9 15.1022 9 14.7346 9.15224C14.2446 9.35523 13.8552 9.74458 13.6522 10.2346C13.5 10.6022 13.5 11.0681 13.5 12C13.5 12.9319 13.5 13.3978 13.6522 13.7654C13.8552 14.2554 14.2446 14.6448 14.7346 14.8478C15.1022 15 15.5681 15 16.5 15H17"/>`,
+  user: `<path d="M20 21.0001C19.713 17.269 16.7289 14.3151 12.995 14.0662L12 13.9999C11.6446 14.0096 11.3134 14.0225 11.0008 14.0378C7.3 14.2192 4.28417 17.3057 4 21.0001"/><circle cx="12" cy="6.99988" r="4"/>`,
+  lock: `<path d="M12 14.5V17.5M13 14.5C13 15.0523 12.5523 15.5 12 15.5C11.4477 15.5 11 15.0523 11 14.5C11 13.9477 11.4477 13.5 12 13.5C12.5523 13.5 13 13.9477 13 14.5Z"/><path d="M16.5 9V6.5C16.5 4.01472 14.4853 2 12 2C9.51471 2 7.49999 4.01472 7.49999 6.5V9"/><path d="M4.2678 18.8447C4.49268 20.515 5.87612 21.8235 7.55965 21.9009C8.97627 21.966 10.4153 22 12 22C13.5847 22 15.0237 21.966 16.4403 21.9009C18.1239 21.8235 19.5073 20.515 19.7322 18.8447C19.8789 17.7547 20 16.6376 20 15.5C20 14.3624 19.8789 13.2453 19.7322 12.1553C19.5073 10.485 18.1239 9.17649 16.4403 9.09909C15.0237 9.03397 13.5847 9 12 9C10.4153 9 8.97627 9.03397 7.55965 9.09909C5.87612 9.17649 4.49268 10.485 4.2678 12.1553C4.12104 13.2453 3.99999 14.3624 3.99999 15.5C3.99999 16.6376 4.12104 17.7547 4.2678 18.8447Z"/>`,
+  gift: `<path d="M4 11V15C4 18.2998 4 19.9497 5.02513 20.9749C6.05025 22 7.70017 22 11 22H13C16.2998 22 17.9497 22 18.9749 20.9749C20 19.9497 20 18.2998 20 15V11"/><path d="M3 9C3 8.25231 3 7.87846 3.20096 7.6C3.33261 7.41758 3.52197 7.26609 3.75 7.16077C4.09808 7 4.56538 7 5.5 7H18.5C19.4346 7 19.9019 7 20.25 7.16077C20.478 7.26609 20.6674 7.41758 20.799 7.6C21 7.87846 21 8.25231 21 9C21 9.74769 21 10.1215 20.799 10.4C20.6674 10.5824 20.478 10.7339 20.25 10.8392C19.9019 11 19.4346 11 18.5 11H5.5C4.56538 11 4.09808 11 3.75 10.8392C3.52197 10.7339 3.33261 10.5824 3.20096 10.4C3 10.1215 3 9.74769 3 9Z"/><path d="M6 3.78571C6 2.79949 6.79949 2 7.78571 2H8.14286C10.2731 2 12 3.7269 12 5.85714V7H9.21429C7.43908 7 6 5.56091 6 3.78571Z"/><path d="M18 3.78571C18 2.79949 17.2005 2 16.2143 2H15.8571C13.7269 2 12 3.7269 12 5.85714V7H14.7857C16.5609 7 18 5.56091 18 3.78571Z"/><path d="M12 11L12 22"/>`,
+  sparkles: `<path d="M15 2L15.5387 4.39157C15.9957 6.42015 17.5798 8.00431 19.6084 8.46127L22 9L19.6084 9.53873C17.5798 9.99569 15.9957 11.5798 15.5387 13.6084L15 16L14.4613 13.6084C14.0043 11.5798 12.4202 9.99569 10.3916 9.53873L8 9L10.3916 8.46127C12.4201 8.00431 14.0043 6.42015 14.4613 4.39158L15 2Z"/><path d="M7 12L7.38481 13.7083C7.71121 15.1572 8.84275 16.2888 10.2917 16.6152L12 17L10.2917 17.3848C8.84275 17.7112 7.71121 18.8427 7.38481 20.2917L7 22L6.61519 20.2917C6.28879 18.8427 5.15725 17.7112 3.70827 17.3848L2 17L3.70827 16.6152C5.15725 16.2888 6.28879 15.1573 6.61519 13.7083L7 12Z"/>`,
+  coins: `<ellipse cx="15.5" cy="11" rx="6.5" ry="2"/><path d="M22 15.5C22 16.6046 19.0899 17.5 15.5 17.5C11.9101 17.5 9 16.6046 9 15.5"/><path d="M22 11V19.8C22 21.015 19.0899 22 15.5 22C11.9101 22 9 21.015 9 19.8V11"/><ellipse cx="8.5" cy="4" rx="6.5" ry="2"/><path d="M6 11C4.10819 10.7698 2.36991 10.1745 2 9M6 16C4.10819 15.7698 2.36991 15.1745 2 14"/><path d="M6 21C4.10819 20.7698 2.36991 20.1745 2 19L2 4"/><path d="M15 6V4"/>`,
+  alert: `<path d="M13.9248 21H10.0752C5.44476 21 3.12955 21 2.27636 19.4939C1.42317 17.9879 2.60736 15.9914 4.97574 11.9985L6.90057 8.75333C9.17559 4.91778 10.3131 3 12 3C13.6869 3 14.8244 4.91777 17.0994 8.75332L19.0243 11.9985C21.3926 15.9914 22.5768 17.9879 21.7236 19.4939C20.8704 21 18.5552 21 13.9248 21Z"/><path d="M12 9V13"/><path d="M12.125 16.75H12M12.25 16.75C12.25 16.8881 12.1381 17 12 17C11.8619 17 11.75 16.8881 11.75 16.75C11.75 16.6119 11.8619 16.5 12 16.5C12.1381 16.5 12.25 16.6119 12.25 16.75Z"/>`,
+  phone: `<path d="M13.5 2H10.5C8.14298 2 6.96447 2 6.23223 2.73223C5.5 3.46447 5.5 4.64298 5.5 7V17C5.5 19.357 5.5 20.5355 6.23223 21.2678C6.96447 22 8.14298 22 10.5 22H13.5C15.857 22 17.0355 22 17.7678 21.2678C18.5 20.5355 18.5 19.357 18.5 17V7C18.5 4.64298 18.5 3.46447 17.7678 2.73223C17.0355 2 15.857 2 13.5 2Z"/><path d="M12.125 19H12M12.25 19C12.25 19.1381 12.1381 19.25 12 19.25C11.8619 19.25 11.75 19.1381 11.75 19C11.75 18.8619 11.8619 18.75 12 18.75C12.1381 18.75 12.25 18.8619 12.25 19Z"/>`,
+  arrow: `<path d="M18.5 12L4.99997 12"/><path d="M13 18C13 18 19 13.5811 19 12C19 10.4188 13 6 13 6"/>`,
+  tick: `<path d="M5 14L8.5 17.5L19 6.5"/>`,
+} as const;
+
+function icon(name: keyof typeof icons): string {
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
+}
+
+const heroStage = `
+        <div class="bloom-stage">
+          <span class="bloom" aria-hidden="true"></span>
+          <div class="chips" aria-hidden="true">
+            <span class="chip chip-1">Hola</span>
+            <span class="chip chip-2" dir="rtl">مرحبا</span>
+            <span class="chip chip-3">&#12371;&#12435;&#12395;&#12385;&#12399;</span>
+            <span class="chip chip-4">Bonjour</span>
+            <span class="chip chip-5">&#20320;&#22909;</span>
+            <span class="chip chip-6">Ciao</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="pick"><span class="pill">Italian</span><span class="pick-arrow">${icon("arrow")}</span><span class="pill pill-alt">English</span></div>
+              <div class="feed">
+                <p class="feed-item feed-1"><strong>Welcome to the Colosseum.</strong><span lang="it">Benvenuti al Colosseo.</span></p>
+                <p class="feed-item feed-2"><strong>It was built almost two thousand years ago.</strong><span lang="it">Fu costruito quasi duemila anni fa.</span></p>
+                <p class="feed-item feed-3"><strong>Follow me toward the arena.</strong><span lang="it">Seguitemi verso l&rsquo;arena.</span></p>
+              </div>
+              <div class="listen" aria-hidden="true">
+                <div class="eq"><i></i><i></i><i></i><i></i></div>
+                <div class="mic-wrap"><span class="mic-pulse"></span><span class="mic-pulse"></span><div class="mic-btn mic-btn-live">${icon("mic")}</div></div>
+                <div class="eq"><i></i><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
 const defaultKeywords = [
   "live speech translation app",
   "live voice translator",
@@ -42,7 +91,7 @@ type MarketingLandingPageOptions = {
 
 function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
   const examples = options.examples
-    .map((example) => `<li>${escapeHtml(example)}</li>`)
+    .map((example) => `<li><span class="icon-tile tone-teal">${icon("tick")}</span>${escapeHtml(example)}</li>`)
     .join("");
   const campaignToken = options.campaignToken;
   const trackedAppStoreUrl = `${appStoreUrl}?ct=${encodeURIComponent(campaignToken)}&mt=8`;
@@ -58,14 +107,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
         <div class="hero-actions">
           <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-        </div>
-        <div class="bloom-stage">
-          <span class="bloom" aria-hidden="true"></span>
-          <div class="caption-card caption-card-static">
-            <p class="cap-translation">Where is the next stop?</p>
-            <p class="cap-source" dir="rtl">أين المحطة التالية؟</p>
-          </div>
-        </div>
+        </div>${heroStage}
       </section>
 
       <section class="section landing-copy">
@@ -85,14 +127,17 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
 
       <section class="section values">
         <div class="value">
+          <span class="icon-tile tone-coral">${icon("captions")}</span>
           <h3>Captions first</h3>
           <p>Readable translated text remains useful when speech output is unavailable.</p>
         </div>
         <div class="value">
+          <span class="icon-tile tone-teal">${icon("phone")}</span>
           <h3>No event setup</h3>
           <p>Start from your own phone without waiting for an organizer or host to configure a feed.</p>
         </div>
         <div class="value">
+          <span class="icon-tile tone-yellow">${icon("alert")}</span>
           <h3>Know the limits</h3>
           <p>AI output can be delayed, incomplete, or inaccurate. Use a qualified human interpreter for high-stakes decisions.</p>
         </div>
@@ -129,18 +174,7 @@ export const legalPages: Record<string, Page> = {
         <div class="hero-actions">
           <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-        </div>
-        <div class="bloom-stage">
-          <span class="bloom" aria-hidden="true"></span>
-          <div class="caption-card">
-            <div class="cap-stack">
-              <div class="cap-slide cap-1"><p class="cap-translation" dir="rtl">أين محطة القطار؟</p><p class="cap-source">Where is the train station?</p></div>
-              <div class="cap-slide cap-2"><p class="cap-translation">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n de tren?</p><p class="cap-source">Where is the train station?</p></div>
-              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39365;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">Where is the train station?</p></div>
-            </div>
-            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </div>
-        </div>
+        </div>${heroStage}
       </section>
 
       <section class="section">
@@ -148,7 +182,7 @@ export const legalPages: Record<string, Page> = {
         <div class="steps">
           <div class="step">
             <div class="stage stage-coral">
-              <div class="pick"><span class="pill">English</span><span class="pick-arrow">&rarr;</span><span class="pill pill-alt">Arabic</span></div>
+              <div class="pick"><span class="pill">English</span><span class="pick-arrow">${icon("arrow")}</span><span class="pill pill-alt">Arabic</span></div>
             </div>
             <h3>Pick a direction</h3>
             <p>Choose the language you&rsquo;ll hear and the one you want to read.</p>
@@ -156,7 +190,7 @@ export const legalPages: Record<string, Page> = {
           <div class="step">
             <div class="stage stage-teal">
               <span class="mic-pulse"></span><span class="mic-pulse"></span>
-              <div class="mic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
+              <div class="mic-btn">${icon("mic")}</div>
             </div>
             <h3>Tap Listen</h3>
             <p>Murmur captures only the audio source you choose while a session is live.</p>
@@ -175,10 +209,20 @@ export const legalPages: Record<string, Page> = {
         <h2>For quick moments and full talks.</h2>
         <div class="use-case-links">
           <a class="use-case-link" href="/live-translation-for-travel">
+            <div class="scene scene-travel" aria-hidden="true">
+              <svg viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice"><path class="route-path" d="M44 140C120 140 120 62 200 72S300 136 356 46"/><circle class="route-start" cx="44" cy="140" r="8"/><circle class="route-ring" cx="356" cy="46" r="10"/><circle class="route-end" cx="356" cy="46" r="9"/></svg>
+              <span class="bubble">Turn left at the fountain.</span>
+              <span class="go">${icon("arrow")}</span>
+            </div>
             <strong>Read along with a guide.</strong>
             <span>Follow explanations, directions, and short conversations without passing the phone back and forth.</span>
           </a>
           <a class="use-case-link" href="/live-translation-for-talks">
+            <div class="scene scene-talks" aria-hidden="true">
+              <div class="talk-screen"><i></i><i></i><i></i><i></i></div>
+              <div class="caption-demo"><span class="cap-line">Here are the results.</span><span class="cap-line">Growth doubled.</span></div>
+              <span class="go">${icon("arrow")}</span>
+            </div>
             <strong>Keep up while the speaker continues.</strong>
             <span>A rolling caption timeline for lectures, workshops, demonstrations, and conference talks.</span>
           </a>
@@ -187,14 +231,17 @@ export const legalPages: Record<string, Page> = {
 
       <section class="section values">
         <div class="value">
+          <span class="icon-tile tone-coral">${icon("captions")}</span>
           <h3>Captions first</h3>
           <p>Clear, readable text &mdash; even when spoken output isn&rsquo;t available.</p>
         </div>
         <div class="value">
+          <span class="icon-tile tone-teal">${icon("user")}</span>
           <h3>Guest first</h3>
           <p>Start without sign-up. Add an email only so purchases can be recovered across devices.</p>
         </div>
         <div class="value">
+          <span class="icon-tile tone-violet">${icon("lock")}</span>
           <h3>Yours alone</h3>
           <p>No audio or transcript history saved by default.</p>
         </div>
@@ -204,16 +251,20 @@ export const legalPages: Record<string, Page> = {
         <h2>Start free. Add time when you need it.</h2>
         <div class="price-grid">
           <article class="price-card">
+            <span class="icon-tile tone-teal">${icon("gift")}</span>
             <h3>Free</h3>
             <p class="price">$0</p>
             <p>30 minutes every month.</p>
           </article>
           <article class="price-card price-card-featured">
+            <span class="bloom" aria-hidden="true"></span>
+            <span class="icon-tile tone-yellow">${icon("sparkles")}</span>
             <h3>Murmur Pro</h3>
             <p class="price">$12.99 <span>/ month</span></p>
             <p>3 hours every month, or $124.99 yearly.</p>
           </article>
           <article class="price-card">
+            <span class="icon-tile tone-violet">${icon("coins")}</span>
             <h3>Credit packs</h3>
             <p class="price">From $3.99</p>
             <p>60, 180, or 540 minutes that never expire.</p>
@@ -600,45 +651,100 @@ function renderHtml(page: Page): string {
       .store-button-primary:hover { box-shadow: 0 14px 30px rgba(255, 90, 78, 0.34); }
       .store-button-secondary { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line), 0 8px 20px rgba(26, 16, 51, 0.06); }
 
+      .hero h1, .lede, .hero-actions, .bloom-stage { animation: enter 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+      .lede { animation-delay: 0.08s; }
+      .hero-actions { animation-delay: 0.16s; }
+      .bloom-stage { animation-delay: 0.28s; }
+      @keyframes enter { from { opacity: 0; translate: 0 24px; } to { opacity: 1; translate: 0 0; } }
+
       .bloom-stage {
         position: relative;
-        max-width: 640px;
-        margin: clamp(56px, 8vw, 88px) auto 0;
-        padding: clamp(28px, 6vw, 64px) 0;
+        max-width: 780px;
+        margin: clamp(48px, 7vw, 72px) auto 0;
+        padding: clamp(24px, 5vw, 48px) 0;
       }
-      .caption-card {
-        position: relative;
-        background: rgba(255, 255, 255, 0.86);
-        -webkit-backdrop-filter: blur(18px);
-        backdrop-filter: blur(18px);
-        border: 1px solid rgba(255, 255, 255, 0.9);
-        border-radius: 32px;
-        padding: clamp(28px, 5vw, 44px);
-        box-shadow: 0 30px 70px rgba(26, 16, 51, 0.12);
-      }
-      .cap-stack { position: relative; min-height: 150px; }
-      .cap-slide {
+      .bloom-stage .bloom { inset: 6% 8%; }
+
+      .chip {
         position: absolute;
-        inset: 0;
+        z-index: 2;
+        background: var(--surface);
+        border-radius: 999px;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        box-shadow: 0 12px 28px rgba(26, 16, 51, 0.12);
+        animation: float 6s ease-in-out infinite alternate;
+      }
+      .chip::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--coral); margin-inline-end: 9px; }
+      .chip-1 { top: 14%; left: 6%; }
+      .chip-2 { top: 40%; left: 0; animation-delay: -2s; }
+      .chip-2::before { background: var(--teal); }
+      .chip-3 { bottom: 16%; left: 5%; animation-delay: -4s; }
+      .chip-3::before { background: var(--violet); }
+      .chip-4 { top: 18%; right: 4%; animation-delay: -1s; }
+      .chip-4::before { background: var(--yellow); }
+      .chip-5 { top: 47%; right: 0; animation-delay: -3s; }
+      .chip-5::before { background: var(--violet); }
+      .chip-6 { bottom: 13%; right: 8%; animation-delay: -5s; }
+      .chip-6::before { background: var(--teal); }
+      @keyframes float { from { translate: 0 -7px; } to { translate: 0 7px; } }
+      @media (max-width: 760px) {
+        .chip { font-size: 0.92rem; padding: 8px 15px; }
+        .chip-2, .chip-3, .chip-4, .chip-5 { display: none; }
+        .chip-1 { top: 9%; left: 0; }
+        .chip-6 { bottom: 20%; right: 0; }
+      }
+
+      .phone {
+        position: relative;
+        width: min(320px, 80vw);
+        margin: 0 auto;
+        padding: 10px;
+        border-radius: 50px;
+        background: var(--ink);
+        box-shadow: 0 40px 90px rgba(26, 16, 51, 0.3);
+      }
+      .phone::before { content: ""; position: absolute; top: 22px; left: 50%; translate: -50% 0; width: 86px; height: 24px; border-radius: 999px; background: var(--ink); }
+      .phone-screen {
+        height: 560px;
+        border-radius: 40px;
+        background: var(--canvas);
+        padding: 66px 16px 24px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        gap: 12px;
+        text-align: left;
+        overflow: hidden;
+      }
+      .phone .pick { justify-content: center; font-size: 0.9rem; }
+      .phone .pill { padding: 8px 16px; }
+      .feed { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+      .feed-item {
+        display: grid;
+        gap: 4px;
+        background: var(--surface);
+        border-radius: 22px 22px 22px 6px;
+        padding: 14px 16px;
+        box-shadow: 0 10px 24px rgba(26, 16, 51, 0.07);
         opacity: 0;
-        animation: capcycle 10.5s ease-in-out infinite;
+        animation: feed-1 11s ease-in-out infinite;
       }
-      .cap-2 { animation-delay: 3.5s; }
-      .cap-3 { animation-delay: 7s; }
-      @keyframes capcycle {
-        0% { opacity: 0; transform: translateY(10px); }
-        5%, 29% { opacity: 1; transform: translateY(0); }
-        33.3%, 100% { opacity: 0; transform: translateY(-10px); }
-      }
-      .cap-translation { font-size: clamp(1.7rem, 4.6vw, 2.5rem); font-weight: 600; line-height: 1.18; letter-spacing: -0.02em; }
-      .cap-source { color: var(--ink-soft); font-size: 1.05rem; }
-      .caption-card-static { display: grid; gap: 12px; }
+      .feed-item strong { font-size: 1.12rem; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+      .feed-item span { color: var(--ink-soft); font-size: 0.86rem; }
+      .feed-2 { animation-name: feed-2; }
+      .feed-3 { animation-name: feed-3; }
+      @keyframes feed-1 { 0%, 3% { opacity: 0; translate: 0 14px; } 8%, 90% { opacity: 1; translate: 0 0; } 96%, 100% { opacity: 0; translate: 0 -8px; } }
+      @keyframes feed-2 { 0%, 30% { opacity: 0; translate: 0 14px; } 35%, 90% { opacity: 1; translate: 0 0; } 96%, 100% { opacity: 0; translate: 0 -8px; } }
+      @keyframes feed-3 { 0%, 57% { opacity: 0; translate: 0 14px; } 62%, 90% { opacity: 1; translate: 0 0; } 96%, 100% { opacity: 0; translate: 0 -8px; } }
 
-      .eq { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; margin-top: 20px; }
+      .listen { display: flex; align-items: center; justify-content: center; gap: 18px; }
+      .mic-wrap { display: grid; place-items: center; }
+      .mic-wrap > * { grid-area: 1 / 1; }
+      .mic-wrap .mic-pulse { background: var(--coral); }
+      .mic-wrap .mic-btn-live { width: 68px; height: 68px; background: var(--coral); color: #FFFFFF; box-shadow: 0 12px 26px rgba(255, 90, 78, 0.4); }
+      .mic-wrap .mic-pulse { width: 68px; height: 68px; }
+
+      .eq { display: flex; align-items: center; justify-content: center; gap: 5px; height: 26px; }
       .eq i { width: 5px; height: 100%; border-radius: 999px; background: var(--coral); animation: eq 1.2s ease-in-out infinite; }
       .eq i:nth-child(4n + 2) { background: var(--teal); animation-delay: -0.9s; }
       .eq i:nth-child(4n + 3) { background: var(--yellow); animation-delay: -0.5s; }
@@ -673,11 +779,19 @@ function renderHtml(page: Page): string {
       .pick { display: flex; align-items: center; gap: 12px; }
       .pill { background: var(--surface); color: var(--ink); font-weight: 600; padding: 12px 20px; border-radius: 999px; box-shadow: 0 8px 18px rgba(26, 16, 51, 0.08); }
       .pill-alt { background: var(--ink); color: #FFFFFF; }
-      .pick-arrow { color: var(--coral); font-size: 1.3rem; animation: nudge 1.6s ease-in-out infinite; }
+      .pick-arrow { color: var(--coral); display: grid; animation: nudge 1.6s ease-in-out infinite; }
       @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
 
       .mic-btn { width: 84px; height: 84px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; color: var(--ink); box-shadow: 0 12px 26px rgba(26, 16, 51, 0.14); z-index: 1; }
+      .pick-arrow svg { width: 22px; height: 22px; }
       .mic-btn svg { width: 32px; height: 32px; }
+
+      .icon-tile { width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center; margin-bottom: 14px; flex: 0 0 auto; }
+      .icon-tile svg { width: 26px; height: 26px; }
+      .tone-coral { background: #FFE9E4; color: #D63A2E; }
+      .tone-teal { background: #DDF5F3; color: #12827E; }
+      .tone-violet { background: #ECE6FB; color: #6543CC; }
+      .tone-yellow { background: #FFF1D6; color: #A86A00; }
       .mic-pulse { width: 84px; height: 84px; border-radius: 50%; background: var(--teal); opacity: 0; animation: pulse-ring 2.4s ease-out infinite; }
       .mic-pulse:nth-child(2) { animation-delay: 1.2s; }
       @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.45; } 100% { transform: scale(2); opacity: 0; } }
@@ -709,10 +823,9 @@ function renderHtml(page: Page): string {
         padding: 32px;
       }
       .use-case-link {
-        min-height: 190px;
+        padding: 14px 14px 30px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
         gap: 10px;
         color: var(--ink);
         text-decoration: none;
@@ -720,11 +833,57 @@ function renderHtml(page: Page): string {
       }
       .use-case-link:hover { transform: translateY(-3px); box-shadow: 0 22px 44px rgba(26, 16, 51, 0.09); }
       .use-case-link strong { font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
-      .use-case-link span { color: var(--ink-soft); max-width: 30em; }
+      .use-case-link > strong, .use-case-link > span { padding: 0 18px; }
+      .use-case-link > span { color: var(--ink-soft); max-width: 32em; }
 
-      .value { display: grid; gap: 8px; align-content: start; }
+      .scene { position: relative; height: 210px; border-radius: 20px; overflow: hidden; margin-bottom: 14px; display: grid; place-items: center; }
+      .scene-travel { background: #DDF5F3; }
+      .scene-talks { background: #ECE6FB; grid-template-columns: auto 1fr; gap: 22px; padding: 0 28px; }
+      .scene > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .route-path { fill: none; stroke: var(--teal); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 13; animation: dash 1.4s linear infinite; }
+      @keyframes dash { to { stroke-dashoffset: -28; } }
+      .route-start { fill: var(--surface); stroke: var(--teal); stroke-width: 5; }
+      .route-end { fill: var(--coral); stroke: var(--surface); stroke-width: 4; }
+      .route-ring { fill: var(--coral); transform-box: fill-box; transform-origin: center; animation: pulse-ring 2.4s ease-out infinite; }
+      .bubble {
+        position: relative;
+        background: var(--surface);
+        border-radius: 18px 18px 18px 5px;
+        padding: 11px 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 22px rgba(26, 16, 51, 0.1);
+        animation: float 5s ease-in-out infinite alternate;
+      }
+      .talk-screen { width: 120px; height: 96px; border-radius: 16px; background: var(--surface); box-shadow: 0 10px 22px rgba(26, 16, 51, 0.1); display: flex; align-items: flex-end; justify-content: center; gap: 9px; padding: 18px; }
+      .talk-screen i { flex: 1; border-radius: 5px 5px 2px 2px; background: var(--violet); height: 40%; transform-origin: bottom; animation: eq 2.6s ease-in-out infinite; }
+      .talk-screen i:nth-child(2) { background: var(--coral); height: 70%; animation-delay: -0.6s; }
+      .talk-screen i:nth-child(3) { background: var(--yellow); height: 55%; animation-delay: -1.2s; }
+      .talk-screen i:nth-child(4) { background: var(--teal); height: 100%; animation-delay: -1.8s; }
+      .scene-talks .caption-demo { width: 100%; }
+      @media (max-width: 520px) { .scene-talks { gap: 14px; padding: 0 18px; } .talk-screen { width: 96px; height: 84px; padding: 14px; gap: 7px; } }
+      .go {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--surface);
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 8px 18px rgba(26, 16, 51, 0.1);
+        transition: transform 0.25s, background 0.25s, color 0.25s;
+      }
+      .go svg { width: 20px; height: 20px; }
+      .use-case-link:hover .go { transform: rotate(-35deg); background: var(--ink); color: #FFFFFF; }
 
-      .price-card { display: grid; gap: 6px; align-content: start; }
+      .value { display: grid; gap: 8px; align-content: start; justify-items: start; }
+
+      .price-card { position: relative; overflow: hidden; display: grid; gap: 6px; align-content: start; justify-items: start; }
+      .price-card > * { position: relative; }
+      .price-card .bloom { position: absolute; inset: -30% -30% 35% 35%; opacity: 0.5; }
+      .price-card-featured .icon-tile { background: rgba(255, 255, 255, 0.12); color: var(--yellow); }
       .price-card p:last-child { color: var(--ink-soft); }
       .price { font-size: 2.3rem; font-weight: 600; letter-spacing: -0.03em; margin: 10px 0 6px; }
       .price span { font-size: 1rem; font-weight: 400; letter-spacing: 0; color: var(--ink-soft); }
@@ -734,26 +893,47 @@ function renderHtml(page: Page): string {
 
       /* Use-case landing pages */
       .landing-copy > p { color: var(--ink-soft); font-size: 1.15rem; max-width: 40em; margin-top: -24px; }
-      .landing-steps { margin: 28px 0 0; padding-left: 22px; font-weight: 500; line-height: 2; }
       .landing-examples ul { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none; margin: 0; padding: 0; }
       @media (max-width: 800px) { .landing-examples ul { grid-template-columns: 1fr; } }
       .landing-examples li { font-weight: 500; }
+      .landing-steps { list-style: none; margin: 28px 0 0; padding: 0; font-weight: 500; display: grid; gap: 12px; counter-reset: step; line-height: 1.4; }
+      .landing-steps li { counter-increment: step; display: flex; align-items: center; gap: 14px; }
+      .landing-steps li::before { content: counter(step); flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: #FFE9E4; color: #D63A2E; }
+      .landing-steps li:nth-child(2)::before { background: #DDF5F3; color: #12827E; }
+      .landing-steps li:nth-child(3)::before { background: #ECE6FB; color: #6543CC; }
 
       /* Closing CTA */
       .cta {
         position: relative;
+        overflow: hidden;
         margin-top: clamp(88px, 12vw, 144px);
         padding: clamp(72px, 11vw, 128px) 24px;
+        border-radius: 40px;
+        background: var(--ink);
+        color: #FFFFFF;
         text-align: center;
       }
       .cta h2 { position: relative; margin: 0 auto; }
       .cta .hero-actions { position: relative; }
-      .cta .bloom { inset: 10% 12%; opacity: 0.42; }
+      .cta .bloom { inset: 35% 5% -45%; opacity: 0.6; }
+      .cta .store-button-secondary { box-shadow: none; }
+
+      /* Scroll reveals, where the browser supports scroll-driven animation */
+      @keyframes reveal { from { opacity: 0; translate: 0 32px; } to { opacity: 1; translate: 0 0; } }
+      @supports (animation-timeline: view()) {
+        @media (prefers-reduced-motion: no-preference) {
+          .section > h2, .step, .use-case-link, .value, .price-card, .landing-copy > p, .landing-steps, .landing-examples li, .cta {
+            animation: reveal linear both;
+            animation-timeline: view();
+            animation-range: entry 5% entry 45%;
+          }
+        }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
         *, *::before, *::after { animation: none !important; transition: none !important; }
-        .cap-line, .cap-slide.cap-1 { opacity: 1; }
+        .cap-line, .feed-item { opacity: 1; }
         .eq i { transform: scaleY(0.6); }
       }
 
