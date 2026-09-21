@@ -946,16 +946,13 @@ function renderHtml(page: Page): string {
       .legal-content a { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
 
       footer {
-        padding: 40px 0 56px;
+        padding: 48px 0;
         border-top: 1px solid var(--line);
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: 16px 32px;
+        text-align: center;
         font-size: 0.92rem;
         color: var(--ink-soft);
       }
-      .footer-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+      .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-bottom: 18px; font-weight: 500; }
       .footer-links a { color: var(--ink-soft); text-decoration: none; transition: color 0.2s; }
       .footer-links a:hover { color: var(--ink); }
     </style>
@@ -986,7 +983,7 @@ function renderHtml(page: Page): string {
           <a href="/english-to-arabic-live-captions">English to Arabic</a>
           <a href="/arabic-to-english-live-captions">Arabic to English</a>
         </div>
-        <span>&copy; 2026 Q9 Labs</span>
+        &copy; 2026 Q9 Labs. Murmur is a privacy-first AI translation service.
       </footer>
     </div>
   </body>
