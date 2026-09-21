@@ -31,7 +31,6 @@ type MarketingLandingPageOptions = {
   campaignToken: string;
   description: string;
   examples: string[];
-  eyebrow: string;
   heading: string;
   keywords: string;
   lede: string;
@@ -53,64 +52,58 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
   return {
     description: options.description,
     html: `
-      <section class="landing-hero">
-        <p class="landing-eyebrow">${escapeHtml(options.eyebrow)}</p>
+      <section class="hero">
         <h1>${escapeHtml(options.heading)}</h1>
         <p class="lede">${escapeHtml(options.lede)}</p>
         <div class="hero-actions">
           <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
-        <p class="hero-points">Live translated captions · 30 free minutes · No saved transcript history</p>
-      </section>
-
-      <section class="landing-grid">
-        <div class="landing-copy">
-          <p class="landing-eyebrow">How to use Murmur</p>
-          <h2>${escapeHtml(options.useCaseTitle)}</h2>
-          <p>${escapeHtml(options.useCaseBody)}</p>
-          <ol class="landing-steps">
-            <li>Choose the language being spoken.</li>
-            <li>Choose the language you want to read.</li>
-            <li>Tap Listen to start live translated captions.</li>
-          </ol>
-        </div>
-        <div class="landing-caption-card">
-          <span class="landing-live"><span class="dot-live"></span> Translating live</span>
-          <p class="landing-translation">Where is the next stop?</p>
-          <p class="landing-source" dir="rtl">أين المحطة التالية؟</p>
+        <div class="bloom-stage">
+          <span class="bloom" aria-hidden="true"></span>
+          <div class="caption-card caption-card-static">
+            <p class="cap-translation">Where is the next stop?</p>
+            <p class="cap-source" dir="rtl">أين المحطة التالية؟</p>
+          </div>
         </div>
       </section>
 
-      <section class="landing-examples">
-        <p class="landing-eyebrow">Good fits</p>
+      <section class="section landing-copy">
+        <h2>${escapeHtml(options.useCaseTitle)}</h2>
+        <p>${escapeHtml(options.useCaseBody)}</p>
+        <ol class="landing-steps">
+          <li>Choose the language being spoken.</li>
+          <li>Choose the language you want to read.</li>
+          <li>Tap Listen to start live translated captions.</li>
+        </ol>
+      </section>
+
+      <section class="section landing-examples">
         <h2>Use live captions when you need to keep listening.</h2>
         <ul>${examples}</ul>
       </section>
 
-      <section class="values landing-values">
+      <section class="section values">
         <div class="value">
-          <h4>Captions first</h4>
+          <h3>Captions first</h3>
           <p>Readable translated text remains useful when speech output is unavailable.</p>
         </div>
         <div class="value">
-          <h4>No event setup</h4>
+          <h3>No event setup</h3>
           <p>Start from your own phone without waiting for an organizer or host to configure a feed.</p>
         </div>
         <div class="value">
-          <h4>Know the limits</h4>
+          <h3>Know the limits</h3>
           <p>AI output can be delayed, incomplete, or inaccurate. Use a qualified human interpreter for high-stakes decisions.</p>
         </div>
       </section>
 
       <section class="cta">
-        <div class="cta-inner">
-          <h2>Follow spoken language through live captions.</h2>
-          <p>Download Murmur for iOS or Android. Start as a guest and add email only for account recovery.</p>
-          <div class="hero-actions">
-            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
-            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-          </div>
+        <span class="bloom" aria-hidden="true"></span>
+        <h2>Follow spoken language through live captions.</h2>
+        <div class="hero-actions">
+          <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+          <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
       </section>
     `,
@@ -131,44 +124,31 @@ export const legalPages: Record<string, Page> = {
     keywords: defaultKeywords,
     html: `
       <section class="hero">
-        <div class="hero-copy">
-          <h1>Follow every word,<br><em>in your language.</em></h1>
-          <p class="lede">Murmur turns a guide, speaker, or lecturer into live translated captions on your phone. Pick a language direction, tap Listen, and read along.</p>
-          <div class="hero-actions">
-            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
-            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-          </div>
-          <p class="hero-points">Real-time captions · 30 free minutes monthly · Nothing saved by default</p>
+        <h1>Follow every word, in your language.</h1>
+        <p class="lede">Murmur turns a guide, speaker, or lecturer into live translated captions on your phone.</p>
+        <div class="hero-actions">
+          <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+          <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
-        <div class="hero-card">
-          <span class="hero-card-glow"></span>
-          <div class="hero-inner">
-            <div class="lang-row"><span class="dot-live"></span> Translating live</div>
+        <div class="bloom-stage">
+          <span class="bloom" aria-hidden="true"></span>
+          <div class="caption-card">
             <div class="cap-stack">
-              <div class="cap-slide cap-1"><p class="cap-translation" dir="rtl">أين محطة القطار؟</p><p class="cap-source">English &rarr; Arabic &middot; &ldquo;Where is the train station?&rdquo;</p></div>
-              <div class="cap-slide cap-2"><p class="cap-translation">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</p><p class="cap-source">English &rarr; Spanish &middot; &ldquo;Where is the station?&rdquo;</p></div>
-              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39365;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">English &rarr; Japanese &middot; &ldquo;Where is the train station?&rdquo;</p></div>
+              <div class="cap-slide cap-1"><p class="cap-translation" dir="rtl">أين محطة القطار؟</p><p class="cap-source">Where is the train station?</p></div>
+              <div class="cap-slide cap-2"><p class="cap-translation">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n de tren?</p><p class="cap-source">Where is the train station?</p></div>
+              <div class="cap-slide cap-3"><p class="cap-translation">&#38651;&#36554;&#12398;&#39365;&#12399;&#12393;&#12371;&#12391;&#12377;&#12363;&#65311;</p><p class="cap-source">Where is the train station?</p></div>
             </div>
-            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
       </section>
 
-      <div class="ticker" aria-hidden="true">
-        <div class="ticker-row">
-          <span>English</span><span>Espa&ntilde;ol</span><span>&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</span><span>&#26085;&#26412;&#35486;</span><span>Fran&ccedil;ais</span><span>&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</span><span>Deutsch</span><span>&#20013;&#25991;</span><span>Portugu&ecirc;s</span><span>&#54620;&#44397;&#50612;</span><span>Italiano</span><span>T&uuml;rk&ccedil;e</span><span>English</span><span>Espa&ntilde;ol</span><span>&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</span><span>&#26085;&#26412;&#35486;</span><span>Fran&ccedil;ais</span><span>&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</span><span>Deutsch</span><span>&#20013;&#25991;</span><span>Portugu&ecirc;s</span><span>&#54620;&#44397;&#50612;</span><span>Italiano</span><span>T&uuml;rk&ccedil;e</span>
-        </div>
-      </div>
-
       <section class="section">
-        <div class="section-head">
-          <h2>From spoken words to readable captions.</h2>
-          <p>No phrasebook or organizer setup. Murmur listens to the person in front of you and writes what they say in your language.</p>
-        </div>
+        <h2>From spoken words to readable captions.</h2>
         <div class="steps">
           <div class="step">
-            <div class="stage stage-mint">
-              <div class="pick"><span class="pill">English</span><span class="pick-arrow">→</span><span class="pill pill-alt">Arabic</span></div>
+            <div class="stage stage-coral">
+              <div class="pick"><span class="pill">English</span><span class="pick-arrow">&rarr;</span><span class="pill pill-alt">Arabic</span></div>
             </div>
             <h3>Pick a direction</h3>
             <p>Choose the language you&rsquo;ll hear and the one you want to read.</p>
@@ -176,13 +156,13 @@ export const legalPages: Record<string, Page> = {
           <div class="step">
             <div class="stage stage-teal">
               <span class="mic-pulse"></span><span class="mic-pulse"></span>
-              <div class="mic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
+              <div class="mic-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
             </div>
             <h3>Tap Listen</h3>
             <p>Murmur captures only the audio source you choose while a session is live.</p>
           </div>
           <div class="step">
-            <div class="stage stage-cream">
+            <div class="stage stage-violet">
               <div class="caption-demo"><span class="cap-line">&iquest;D&oacute;nde est&aacute; la estaci&oacute;n?</span><span class="cap-line">Where is the station?</span></div>
             </div>
             <h3>Read along</h3>
@@ -192,78 +172,62 @@ export const legalPages: Record<string, Page> = {
       </section>
 
       <section class="section">
-        <div class="section-head">
-          <h2>One app for quick moments and full talks.</h2>
-          <p>Use Murmur for a short exchange or keep live translated captions moving while a guide, lecturer, or conference speaker continues.</p>
-        </div>
+        <h2>For quick moments and full talks.</h2>
         <div class="use-case-links">
-          <a class="use-case-link use-case-link-travel" href="/live-translation-for-travel">
-            <span class="use-case-kicker">Tours and travel</span>
+          <a class="use-case-link" href="/live-translation-for-travel">
             <strong>Read along with a guide.</strong>
             <span>Follow explanations, directions, and short conversations without passing the phone back and forth.</span>
           </a>
-          <a class="use-case-link use-case-link-talks" href="/live-translation-for-talks">
-            <span class="use-case-kicker">Talks and lectures</span>
+          <a class="use-case-link" href="/live-translation-for-talks">
             <strong>Keep up while the speaker continues.</strong>
-            <span>Use a rolling translated-caption timeline for lectures, workshops, demonstrations, and conference talks.</span>
+            <span>A rolling caption timeline for lectures, workshops, demonstrations, and conference talks.</span>
           </a>
         </div>
       </section>
 
-      <section class="values">
+      <section class="section values">
         <div class="value">
-          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10h4M7 14h7M15 10h2"/></svg></div>
-          <h4>Captions first</h4>
+          <h3>Captions first</h3>
           <p>Clear, readable text &mdash; even when spoken output isn&rsquo;t available.</p>
         </div>
         <div class="value">
-          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M17 9l4 4M21 9l-4 4"/></svg></div>
-          <h4>Guest first</h4>
-          <p>Start without sign-up. Verify an email before purchase so a plan or credit balance can be recovered across devices.</p>
+          <h3>Guest first</h3>
+          <p>Start without sign-up. Add an email only so purchases can be recovered across devices.</p>
         </div>
         <div class="value">
-          <div class="value-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
-          <h4>Yours alone</h4>
+          <h3>Yours alone</h3>
           <p>No audio or transcript history saved by default.</p>
         </div>
       </section>
 
-      <section class="pricing" id="pricing">
-        <div class="section-head">
-          <h2>Start free. Add time when you need it.</h2>
-          <p>Allowances reset each month. Credit packs never expire and are used after plan time.</p>
-        </div>
+      <section class="section" id="pricing">
+        <h2>Start free. Add time when you need it.</h2>
         <div class="price-grid">
           <article class="price-card">
-            <span class="price-kicker">Free</span>
-            <h3>30 minutes</h3>
-            <p class="price">$0 <span>/ month</span></p>
-            <p>For quick questions, directions, and short explanations.</p>
+            <h3>Free</h3>
+            <p class="price">$0</p>
+            <p>30 minutes every month.</p>
           </article>
           <article class="price-card price-card-featured">
-            <span class="price-kicker">Murmur Pro</span>
-            <h3>3 hours monthly</h3>
+            <h3>Murmur Pro</h3>
             <p class="price">$12.99 <span>/ month</span></p>
-            <p>Or $124.99 yearly, about 20% less for the same 3-hour monthly allowance.</p>
+            <p>3 hours every month, or $124.99 yearly.</p>
           </article>
           <article class="price-card">
-            <span class="price-kicker">Credit packs</span>
-            <h3>Time that stays</h3>
+            <h3>Credit packs</h3>
             <p class="price">From $3.99</p>
-            <p>60 minutes for $3.99, 180 for $10.99, or 540 for $31.99. Packs never expire.</p>
+            <p>60, 180, or 540 minutes that never expire.</p>
           </article>
         </div>
         <p class="pricing-note">Purchases use Apple App Store or Google Play billing. Taxes and localized prices can vary by storefront.</p>
       </section>
 
       <section class="cta">
-        <div class="cta-inner">
-          <h2>Take Murmur to your next tour or talk.</h2>
-          <p>Start with 30 free minutes each month. Upgrade or add non-expiring time inside the app.</p>
-          <div class="hero-actions">
-            <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
-            <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
-          </div>
+        <span class="bloom" aria-hidden="true"></span>
+        <h2>Take Murmur to your next tour or talk.</h2>
+        <div class="hero-actions">
+          <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
+          <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
       </section>
     `,
@@ -275,7 +239,6 @@ export const legalPages: Record<string, Page> = {
     description:
       "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 30 free minutes each month.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
-    eyebrow: "Live translation for travel",
     heading: "Understand the guide without interrupting the tour.",
     lede:
       "Choose the language you hear and the language you want to read. Murmur turns the guide's speech into live translated captions while the tour keeps moving.",
@@ -295,7 +258,6 @@ export const legalPages: Record<string, Page> = {
     description:
       "Read live translated captions while a lecturer, workshop host, or conference speaker continues talking. No event setup is required.",
     keywords: "conference speech translator, live translation for lectures, translated captions for talks, event voice translator",
-    eyebrow: "Live translation for talks",
     heading: "Read the talk live on your own phone.",
     lede:
       "Murmur is for the attendee who needs translated captions now. Select the spoken and reading languages, tap Listen, and follow the speaker without an event code or organizer-managed feed.",
@@ -315,7 +277,6 @@ export const legalPages: Record<string, Page> = {
     description:
       "Turn spoken English into live Arabic captions for tours, talks, lectures, and short phrases with Murmur.",
     keywords: "English to Arabic live captions, English Arabic voice translator, live English Arabic translation",
-    eyebrow: "English to Arabic",
     heading: "Hear English. Read Arabic live.",
     lede:
       "Set English as the spoken language and Arabic as the caption language. Murmur displays right-to-left translated captions as stable speech is recognized.",
@@ -335,7 +296,6 @@ export const legalPages: Record<string, Page> = {
     description:
       "Turn spoken Arabic into live English captions for tours, talks, lectures, and short phrases with Murmur.",
     keywords: "Arabic to English live captions, Arabic English voice translator, live Arabic English translation",
-    eyebrow: "Arabic to English",
     heading: "Hear Arabic. Read English live.",
     lede:
       "Set Arabic as the spoken language and English as the caption language. Murmur turns stable speech into readable translated captions on your phone.",
@@ -526,534 +486,298 @@ function renderHtml(page: Page): string {
     ${jsonLd}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
       :root {
-        --canvas: #F4FFF9;
-        --mint: #EFFAF6;
-        --mint-border: #D8F3E8;
-        --cream: #F8F4ED;
-        --deep-teal: #0D7C66;
-        --deep-teal-text: #123D35;
-        --coral: #FF6B4A;
-        --yellow: #FFD166;
-        --text-primary: #151513;
-        --text-secondary: #6B7B72;
-        --font-main: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        --font-display: "Bricolage Grotesque", ui-rounded, "Segoe UI", system-ui, sans-serif;
+        --canvas: #FDF9F5;
+        --surface: #FFFFFF;
+        --line: #EFE7DF;
+        --ink: #1A1033;
+        --ink-soft: #5E5873;
+        --coral: #FF5A4E;
+        --teal: #2FC4BF;
+        --yellow: #FFB43B;
+        --violet: #8768E0;
+        --font-main: "Outfit", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
       }
 
       * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
       body {
         margin: 0;
         background: var(--canvas);
-        color: var(--text-primary);
+        color: var(--ink);
         font-family: var(--font-main);
-        line-height: 1.5;
+        font-size: 1.0625rem;
+        line-height: 1.55;
         -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
       }
+      h1, h2, h3, p { margin: 0; }
+      a:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 6px; }
 
-      .container {
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 0 28px;
-      }
+      .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
       header {
-        padding: 24px 0;
+        padding: 22px 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 16px;
       }
-
       .logo-link {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         text-decoration: none;
-        color: var(--deep-teal-text);
-        font-weight: 900;
-        font-size: 1.25rem;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 1.2rem;
+        letter-spacing: -0.01em;
+      }
+      .logo-link svg { border-radius: 9px; flex: 0 0 auto; }
+      nav { display: flex; gap: 24px; }
+      nav a { text-decoration: none; color: var(--ink-soft); font-size: 0.95rem; transition: color 0.2s; }
+      nav a:hover { color: var(--ink); }
+      @media (max-width: 520px) { nav { gap: 16px; } nav a { font-size: 0.88rem; } }
+
+      main { padding-bottom: 96px; }
+
+      /* Bloom: the soft four-color glow from the app's brand direction */
+      .bloom {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        filter: blur(56px);
+        opacity: 0.55;
+        background:
+          radial-gradient(38% 46% at 28% 30%, var(--coral), transparent 70%),
+          radial-gradient(36% 44% at 74% 34%, var(--teal), transparent 70%),
+          radial-gradient(34% 42% at 66% 78%, var(--yellow), transparent 70%),
+          radial-gradient(38% 46% at 30% 76%, var(--violet), transparent 70%);
+        animation: drift 14s ease-in-out infinite alternate;
+      }
+      @keyframes drift {
+        from { transform: rotate(0deg) scale(1); }
+        to { transform: rotate(14deg) scale(1.08); }
       }
 
-      nav {
-        display: flex;
-        gap: 20px;
-      }
-
-      nav a {
-        text-decoration: none;
-        color: var(--text-secondary);
-        font-weight: 700;
-        font-size: 0.9rem;
-        transition: color 0.2s;
-      }
-
-      nav a:hover { color: var(--deep-teal); }
-
-      main { padding-bottom: 80px; }
-
-      /* Marketing Styles */
-      .hero {
-        display: flex;
-        flex-direction: column;
-        gap: 44px;
-        padding-top: 40px;
-      }
-
-      @media (min-width: 880px) {
-        .hero {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-          gap: 72px;
-          padding-top: 72px;
-        }
-        .hero-copy { flex: 1.05; }
-        .hero-card { flex: 1; max-width: 480px; }
-      }
-
-      .hero-copy h1 {
-        font-family: var(--font-display);
-        font-size: clamp(2.8rem, 7.5vw, 5.2rem);
-        font-weight: 800;
-        line-height: 0.98;
+      /* Hero */
+      .hero { padding-top: clamp(48px, 9vw, 104px); text-align: center; }
+      .hero h1 {
+        font-size: clamp(2.7rem, 7.4vw, 5rem);
+        font-weight: 600;
+        line-height: 1.02;
         letter-spacing: -0.035em;
-        margin: 0 0 24px;
+        max-width: 14ch;
+        margin: 0 auto;
+        text-wrap: balance;
       }
-      .hero-copy h1 em { font-style: normal; color: var(--coral); }
-
       .lede {
+        color: var(--ink-soft);
         font-size: clamp(1.1rem, 2.2vw, 1.3rem);
-        color: var(--text-secondary);
-        line-height: 1.55;
-        max-width: 480px;
-        margin: 0 0 30px;
-        font-weight: 500;
+        max-width: 34em;
+        margin: 24px auto 0;
+        text-wrap: balance;
       }
-
-      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-
-      .hero-points {
-        margin: 26px 0 0;
-        color: var(--text-secondary);
-        font-weight: 700;
-        font-size: 0.95rem;
-      }
+      .hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 36px; }
 
       .store-button {
-        border-radius: 999px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
         min-height: 54px;
-        padding: 14px 26px;
+        padding: 0 26px;
+        border-radius: 18px;
         text-decoration: none;
-        font-size: 1rem;
-        font-weight: 800;
-        line-height: 1.2;
+        font-weight: 600;
         transition: transform 0.2s, box-shadow 0.2s;
       }
       .store-button:hover { transform: translateY(-2px); }
-      .store-logo { width: 22px; height: 22px; flex: 0 0 auto; }
-      .store-button-primary {
-        background: var(--coral);
-        color: #FFFFFF;
-        box-shadow: 0 12px 24px rgba(255, 107, 74, 0.28);
-      }
-      .store-button-secondary {
-        background: #FFFFFF;
-        border: 1px solid var(--mint-border);
-        color: var(--deep-teal-text);
-        box-shadow: 0 10px 18px rgba(13, 124, 102, 0.12);
-      }
+      .store-logo { width: 21px; height: 21px; flex: 0 0 auto; }
+      .store-button-primary { background: var(--coral); color: #FFFFFF; box-shadow: 0 10px 24px rgba(255, 90, 78, 0.28); }
+      .store-button-primary:hover { box-shadow: 0 14px 30px rgba(255, 90, 78, 0.34); }
+      .store-button-secondary { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line), 0 8px 20px rgba(26, 16, 51, 0.06); }
 
-      /* Hero live preview */
-      .hero-card {
+      .bloom-stage {
         position: relative;
-        overflow: hidden;
-        background: var(--deep-teal);
+        max-width: 640px;
+        margin: clamp(56px, 8vw, 88px) auto 0;
+        padding: clamp(28px, 6vw, 64px) 0;
+      }
+      .caption-card {
+        position: relative;
+        background: rgba(255, 255, 255, 0.86);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 32px;
-        padding: 30px 26px;
-        min-height: 340px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.28);
+        padding: clamp(28px, 5vw, 44px);
+        box-shadow: 0 30px 70px rgba(26, 16, 51, 0.12);
       }
-      .hero-card-glow {
-        position: absolute;
-        width: 280px;
-        height: 280px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(127, 231, 212, 0.42), transparent 68%);
-        top: -100px;
-        right: -80px;
-        pointer-events: none;
-      }
-
-      .hero-inner { position: relative; z-index: 2; }
-      .dot-live {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--coral);
-        box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.22);
-        animation: blink 1.4s ease-in-out infinite;
-      }
-      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-      .lang-row {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        margin: 0 0 16px;
-        color: #BFEFE2;
-        font-weight: 800;
-        font-size: 0.78rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .cap-stack { position: relative; min-height: 132px; }
+      .cap-stack { position: relative; min-height: 150px; }
       .cap-slide {
         position: absolute;
         inset: 0;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 18px;
-        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 12px;
         opacity: 0;
-        animation: capcycle 9s ease-in-out infinite;
+        animation: capcycle 10.5s ease-in-out infinite;
       }
-      .cap-2 { animation-delay: 3s; }
-      .cap-3 { animation-delay: 6s; }
+      .cap-2 { animation-delay: 3.5s; }
+      .cap-3 { animation-delay: 7s; }
       @keyframes capcycle {
-        0% { opacity: 0; transform: translateY(12px); }
-        4% { opacity: 1; transform: translateY(0); }
-        28% { opacity: 1; transform: translateY(0); }
-        33% { opacity: 0; transform: translateY(-12px); }
-        100% { opacity: 0; transform: translateY(-12px); }
+        0% { opacity: 0; transform: translateY(10px); }
+        5%, 29% { opacity: 1; transform: translateY(0); }
+        33.3%, 100% { opacity: 0; transform: translateY(-10px); }
       }
-      .cap-translation {
-        color: #FFFFFF;
-        font-size: clamp(1.6rem, 4.6vw, 2rem);
-        font-weight: 800;
-        line-height: 1.2;
-        margin: 0 0 10px;
-      }
-      .cap-source { color: #BFEFE2; font-size: 0.92rem; font-weight: 600; margin: 0; line-height: 1.45; }
+      .cap-translation { font-size: clamp(1.7rem, 4.6vw, 2.5rem); font-weight: 600; line-height: 1.18; letter-spacing: -0.02em; }
+      .cap-source { color: var(--ink-soft); font-size: 1.05rem; }
+      .caption-card-static { display: grid; gap: 12px; }
 
-      .eq { display: flex; align-items: flex-end; justify-content: center; gap: 5px; height: 40px; margin-top: 22px; }
-      .eq i {
-        width: 6px;
-        height: 100%;
-        background: var(--yellow);
-        border-radius: 999px;
-        transform-origin: bottom;
-        animation: eq 1.1s ease-in-out infinite;
-      }
-      .eq i:nth-child(odd) { background: #7FE7D4; }
-      .eq i:nth-child(2) { animation-delay: -0.9s; }
-      .eq i:nth-child(3) { animation-delay: -0.6s; }
-      .eq i:nth-child(4) { animation-delay: -0.3s; }
-      .eq i:nth-child(5) { animation-delay: -0.75s; }
-      .eq i:nth-child(6) { animation-delay: -0.15s; }
-      .eq i:nth-child(7) { animation-delay: -0.5s; }
-      .eq i:nth-child(8) { animation-delay: -0.85s; }
-      .eq i:nth-child(9) { animation-delay: -0.35s; }
-      @keyframes eq { 0%, 100% { transform: scaleY(0.28); } 50% { transform: scaleY(1); } }
+      .eq { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; margin-top: 20px; }
+      .eq i { width: 5px; height: 100%; border-radius: 999px; background: var(--coral); animation: eq 1.2s ease-in-out infinite; }
+      .eq i:nth-child(4n + 2) { background: var(--teal); animation-delay: -0.9s; }
+      .eq i:nth-child(4n + 3) { background: var(--yellow); animation-delay: -0.5s; }
+      .eq i:nth-child(4n) { background: var(--violet); animation-delay: -0.25s; }
+      @keyframes eq { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
 
-      /* Languages ticker */
-      .ticker {
-        margin-top: 64px;
-        overflow: hidden;
-        -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      /* Sections */
+      .section { padding-top: clamp(88px, 12vw, 144px); }
+      .section > h2, .cta h2 {
+        font-size: clamp(2rem, 4.8vw, 3.1rem);
+        font-weight: 600;
+        line-height: 1.06;
+        letter-spacing: -0.03em;
+        max-width: 18ch;
+        margin-bottom: clamp(36px, 5vw, 56px);
+        text-wrap: balance;
       }
-      .ticker-row {
-        display: inline-flex;
-        gap: 44px;
-        white-space: nowrap;
-        will-change: transform;
-        animation: ticker 34s linear infinite;
-      }
-      .ticker-row span {
-        font-family: var(--font-display);
-        font-weight: 700;
-        font-size: clamp(1.3rem, 3vw, 1.9rem);
-        color: var(--deep-teal-text);
-        opacity: 0.4;
-      }
-      .ticker-row span:nth-child(3n) { color: var(--coral); opacity: 0.75; }
-      .ticker-row span:nth-child(5n) { color: var(--deep-teal); opacity: 0.7; }
-      @keyframes ticker { to { transform: translateX(-50%); } }
 
-      /* How it works */
-      .section { padding-top: 84px; }
-      .section-head { max-width: 620px; margin: 0 0 44px; }
-      .section-head h2 {
-        font-family: var(--font-display);
-        font-size: clamp(2rem, 5vw, 3rem);
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        line-height: 1.05;
-        color: var(--text-primary);
-        margin: 0 0 14px;
-      }
-      .section-head p { font-size: 1.1rem; color: var(--text-secondary); font-weight: 500; margin: 0; line-height: 1.55; }
+      .steps, .values, .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+      @media (max-width: 800px) { .steps, .values, .price-grid { grid-template-columns: 1fr; } }
 
-      .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-      @media (max-width: 760px) { .steps { grid-template-columns: 1fr; max-width: 420px; } }
-      .stage {
-        aspect-ratio: 5 / 4;
-        border-radius: 26px;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-      }
+      .stage { aspect-ratio: 5 / 4; border-radius: 28px; display: grid; place-items: center; overflow: hidden; }
       .stage > * { grid-area: 1 / 1; }
-      .stage-mint { background: var(--mint); border: 1px solid var(--mint-border); }
-      .stage-teal { background: var(--deep-teal); }
-      .stage-cream { background: var(--cream); }
-      .step h3 { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; margin: 22px 0 6px; color: var(--deep-teal-text); }
-      .step p { color: var(--text-secondary); font-weight: 500; margin: 0; font-size: 0.98rem; line-height: 1.5; }
+      .stage-coral { background: #FFE9E4; }
+      .stage-teal { background: #DDF5F3; }
+      .stage-violet { background: #ECE6FB; }
+      @media (max-width: 800px) { .stage { aspect-ratio: 16 / 9; } }
+      .step h3, .value h3, .price-card h3 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+      .step h3 { margin: 24px 0 6px; }
+      .step p, .value p { color: var(--ink-soft); }
 
       .pick { display: flex; align-items: center; gap: 12px; }
-      .pill { background: #FFFFFF; border: 1px solid var(--mint-border); color: var(--deep-teal-text); font-weight: 800; font-size: 0.95rem; padding: 12px 18px; border-radius: 999px; box-shadow: 0 8px 16px rgba(13, 124, 102, 0.08); }
-      .pill-alt { background: var(--deep-teal); color: #FFFFFF; border-color: var(--deep-teal); }
-      .pick-arrow { color: var(--coral); font-weight: 900; font-size: 1.3rem; animation: nudge 1.4s ease-in-out infinite; }
+      .pill { background: var(--surface); color: var(--ink); font-weight: 600; padding: 12px 20px; border-radius: 999px; box-shadow: 0 8px 18px rgba(26, 16, 51, 0.08); }
+      .pill-alt { background: var(--ink); color: #FFFFFF; }
+      .pick-arrow { color: var(--coral); font-size: 1.3rem; animation: nudge 1.6s ease-in-out infinite; }
       @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
 
-      .mic-btn { width: 84px; height: 84px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; color: var(--deep-teal); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18); z-index: 2; }
-      .mic-btn svg { width: 34px; height: 34px; }
-      .mic-pulse { width: 84px; height: 84px; border-radius: 50%; background: var(--yellow); opacity: 0; animation: pulse-ring 2s ease-out infinite; }
-      .mic-pulse:nth-child(2) { animation-delay: 1s; }
-      @keyframes pulse-ring { 0% { transform: scale(0.7); opacity: 0.5; } 100% { transform: scale(1.9); opacity: 0; } }
+      .mic-btn { width: 84px; height: 84px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; color: var(--ink); box-shadow: 0 12px 26px rgba(26, 16, 51, 0.14); z-index: 1; }
+      .mic-btn svg { width: 32px; height: 32px; }
+      .mic-pulse { width: 84px; height: 84px; border-radius: 50%; background: var(--teal); opacity: 0; animation: pulse-ring 2.4s ease-out infinite; }
+      .mic-pulse:nth-child(2) { animation-delay: 1.2s; }
+      @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.45; } 100% { transform: scale(2); opacity: 0; } }
 
       .caption-demo { width: 78%; display: grid; gap: 10px; }
       .cap-line {
-        background: #FFFFFF;
-        border: 1px solid var(--mint-border);
-        border-radius: 14px 14px 14px 4px;
-        padding: 10px 14px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: var(--deep-teal-text);
-        box-shadow: 0 6px 14px rgba(13, 124, 102, 0.08);
+        background: var(--surface);
+        border-radius: 16px 16px 16px 5px;
+        padding: 11px 16px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        box-shadow: 0 8px 18px rgba(26, 16, 51, 0.08);
         opacity: 0;
-        animation: rise 3.6s ease-in-out infinite;
+        animation: rise 4s ease-in-out infinite;
       }
-      .cap-line:nth-child(2) { animation-delay: 1.8s; }
+      .cap-line:nth-child(2) { animation-delay: 2s; }
       @keyframes rise {
         0% { opacity: 0; transform: translateY(10px); }
         14%, 72% { opacity: 1; transform: translateY(0); }
         92%, 100% { opacity: 0; transform: translateY(-6px); }
       }
 
-      .use-case-links {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 24px;
-      }
-      @media (max-width: 760px) { .use-case-links { grid-template-columns: 1fr; } }
-      .use-case-link {
-        min-height: 240px;
+      .use-case-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+      @media (max-width: 800px) { .use-case-links { grid-template-columns: 1fr; } }
+      .use-case-link, .value, .price-card, .landing-examples li {
+        background: var(--surface);
+        border: 1px solid var(--line);
         border-radius: 28px;
+        padding: 32px;
+      }
+      .use-case-link {
+        min-height: 190px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         gap: 10px;
-        padding: 30px;
+        color: var(--ink);
         text-decoration: none;
         transition: transform 0.2s, box-shadow 0.2s;
       }
-      .use-case-link:hover { transform: translateY(-3px); box-shadow: 0 18px 32px rgba(13, 124, 102, 0.14); }
-      .use-case-link-travel { background: var(--cream); color: var(--deep-teal-text); }
-      .use-case-link-talks { background: var(--deep-teal); color: #FFFFFF; }
-      .use-case-kicker { font-size: 0.82rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.72; }
-      .use-case-link strong { font-family: var(--font-display); font-size: 1.7rem; line-height: 1.1; }
-      .use-case-link > span:last-child { max-width: 480px; font-weight: 600; line-height: 1.55; opacity: 0.78; }
+      .use-case-link:hover { transform: translateY(-3px); box-shadow: 0 22px 44px rgba(26, 16, 51, 0.09); }
+      .use-case-link strong { font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
+      .use-case-link span { color: var(--ink-soft); max-width: 30em; }
 
-      .landing-hero {
-        max-width: 830px;
-        padding: 80px 0 48px;
-      }
-      .landing-hero h1 {
-        font-family: var(--font-display);
-        font-size: clamp(2.8rem, 7vw, 5rem);
-        font-weight: 800;
-        line-height: 0.98;
-        letter-spacing: -0.035em;
-        margin: 0 0 24px;
-      }
-      .landing-eyebrow {
-        color: var(--coral);
-        font-size: 0.84rem;
-        font-weight: 800;
-        letter-spacing: 0.1em;
-        margin: 0 0 14px;
-        text-transform: uppercase;
-      }
-      .landing-grid {
-        align-items: stretch;
-        display: grid;
-        gap: 32px;
-        grid-template-columns: 1.15fr 0.85fr;
-        padding-top: 50px;
-      }
-      @media (max-width: 760px) { .landing-grid { grid-template-columns: 1fr; } }
-      .landing-copy, .landing-caption-card, .landing-examples {
-        border-radius: 28px;
-        padding: clamp(28px, 5vw, 48px);
-      }
-      .landing-copy { background: var(--cream); }
-      .landing-copy h2, .landing-examples h2 {
-        font-family: var(--font-display);
-        font-size: clamp(2rem, 4.5vw, 3rem);
-        line-height: 1.05;
-        margin: 0 0 18px;
-      }
-      .landing-copy > p:not(.landing-eyebrow), .landing-examples li {
-        color: var(--text-secondary);
-        font-size: 1.05rem;
-        font-weight: 500;
-      }
-      .landing-steps { color: var(--deep-teal-text); font-weight: 700; line-height: 1.8; padding-left: 24px; }
-      .landing-caption-card {
-        background: var(--deep-teal);
-        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.22);
-        color: #FFFFFF;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-height: 340px;
-      }
-      .landing-live {
-        align-items: center;
-        color: #BFEFE2;
-        display: flex;
-        font-size: 0.78rem;
-        font-weight: 800;
-        gap: 9px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .landing-translation {
-        font-family: var(--font-display);
-        font-size: clamp(2rem, 5vw, 3.4rem);
-        font-weight: 800;
-        line-height: 1.05;
-        margin: 44px 0 18px;
-      }
-      .landing-source { color: #BFEFE2; font-size: 1.3rem; font-weight: 700; margin: 0; }
-      .landing-examples { background: var(--mint); margin-top: 32px; }
-      .landing-examples ul {
-        display: grid;
-        gap: 14px;
-        grid-template-columns: repeat(3, 1fr);
-        list-style: none;
-        margin: 28px 0 0;
-        padding: 0;
-      }
-      @media (max-width: 760px) { .landing-examples ul { grid-template-columns: 1fr; } }
-      .landing-examples li {
-        background: #FFFFFF;
-        border: 1px solid var(--mint-border);
-        border-radius: 18px;
-        color: var(--deep-teal-text);
-        padding: 22px;
-      }
-      .landing-values { padding-top: 64px; }
+      .value { display: grid; gap: 8px; align-content: start; }
 
-      /* Value props */
-      .values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding-top: 84px; }
-      @media (max-width: 760px) { .values { grid-template-columns: 1fr; max-width: 420px; } }
-      .value { display: flex; flex-direction: column; }
-      .value-ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--mint); color: var(--deep-teal); margin-bottom: 14px; }
-      .value-ico svg { width: 22px; height: 22px; }
-      .value h4 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--deep-teal-text); margin: 0 0 6px; }
-      .value p { color: var(--text-secondary); font-weight: 500; margin: 0; font-size: 0.98rem; line-height: 1.5; }
+      .price-card { display: grid; gap: 6px; align-content: start; }
+      .price-card p:last-child { color: var(--ink-soft); }
+      .price { font-size: 2.3rem; font-weight: 600; letter-spacing: -0.03em; margin: 10px 0 6px; }
+      .price span { font-size: 1rem; font-weight: 400; letter-spacing: 0; color: var(--ink-soft); }
+      .price-card-featured { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+      .price-card-featured p:last-child, .price-card-featured .price span { color: #C9C3DB; }
+      .pricing-note { color: var(--ink-soft); font-size: 0.9rem; margin-top: 24px; }
 
-      /* Pricing */
-      .pricing { padding-top: 96px; }
-      .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-      @media (max-width: 820px) { .price-grid { grid-template-columns: 1fr; max-width: 520px; } }
-      .price-card { background: #FFFFFF; border: 1px solid var(--mint-border); border-radius: 26px; padding: 30px; }
-      .price-card-featured { background: var(--deep-teal); border-color: var(--deep-teal); color: #FFFFFF; box-shadow: 0 20px 42px rgba(13, 124, 102, 0.2); }
-      .price-kicker { color: var(--coral); font-size: 0.78rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
-      .price-card h3 { font-family: var(--font-display); font-size: 1.5rem; margin: 14px 0 4px; }
-      .price-card > p:last-child { color: var(--text-secondary); font-weight: 600; line-height: 1.55; }
-      .price-card-featured > p:last-child { color: #CFF6EB; }
-      .price { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin: 8px 0 20px; }
-      .price span { font-family: var(--font-main); font-size: 0.9rem; font-weight: 700; opacity: 0.72; }
-      .pricing-note { color: var(--text-secondary); font-size: 0.86rem; font-weight: 600; margin: 18px 0 0; }
+      /* Use-case landing pages */
+      .landing-copy > p { color: var(--ink-soft); font-size: 1.15rem; max-width: 40em; margin-top: -24px; }
+      .landing-steps { margin: 28px 0 0; padding-left: 22px; font-weight: 500; line-height: 2; }
+      .landing-examples ul { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none; margin: 0; padding: 0; }
+      @media (max-width: 800px) { .landing-examples ul { grid-template-columns: 1fr; } }
+      .landing-examples li { font-weight: 500; }
 
       /* Closing CTA */
-      .cta { margin-top: 84px; }
-      .cta-inner {
+      .cta {
         position: relative;
-        overflow: hidden;
-        background: var(--deep-teal);
-        border-radius: 32px;
-        padding: clamp(40px, 6vw, 72px) 32px;
+        margin-top: clamp(88px, 12vw, 144px);
+        padding: clamp(72px, 11vw, 128px) 24px;
         text-align: center;
-        box-shadow: 0 24px 48px rgba(13, 124, 102, 0.26);
       }
-      .cta-inner h2 {
-        position: relative;
-        z-index: 2;
-        font-family: var(--font-display);
-        font-size: clamp(2rem, 5vw, 3rem);
-        font-weight: 800;
-        color: #FFFFFF;
-        letter-spacing: -0.02em;
-        line-height: 1.05;
-        margin: 0 0 14px;
-      }
-      .cta-inner p { position: relative; z-index: 2; color: #CFF6EB; font-size: 1.1rem; font-weight: 500; max-width: 440px; margin: 0 auto 28px; }
-      .cta-inner .hero-actions { position: relative; z-index: 2; justify-content: center; }
-      .cta-inner .store-button-secondary { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); color: #FFFFFF; box-shadow: none; }
+      .cta h2 { position: relative; margin: 0 auto; }
+      .cta .hero-actions { position: relative; }
+      .cta .bloom { inset: 10% 12%; opacity: 0.42; }
 
       @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { animation: none !important; }
-        .cap-line { opacity: 1; }
-        .cap-slide { opacity: 0; }
-        .cap-slide.cap-1 { opacity: 1; }
-        .eq i { transform: scaleY(0.7); }
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+        .cap-line, .cap-slide.cap-1 { opacity: 1; }
+        .eq i { transform: scaleY(0.6); }
       }
 
       /* Legal Styles */
-      .legal-content {
-        max-width: 760px;
-        margin: 40px auto 0;
-        line-height: 1.6;
-      }
-
-      .legal-content h1 { font-size: 3rem; font-weight: 800; margin-bottom: 24px; line-height: 1.1; }
-      .legal-content h2 { font-size: 1.5rem; font-weight: 800; margin-top: 48px; color: var(--deep-teal-text); }
-      .legal-content p, .legal-content li { font-size: 1.05rem; color: #444; }
+      .legal-content { max-width: 720px; margin: 56px auto 0; line-height: 1.65; }
+      .legal-content h1 { font-size: clamp(2.2rem, 5vw, 3rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 24px; }
+      .legal-content h2 { font-size: 1.45rem; font-weight: 600; letter-spacing: -0.01em; margin: 48px 0 12px; }
+      .legal-content p, .legal-content li { color: #3F3A52; margin: 0 0 16px; }
       .legal-content ul { padding-left: 20px; }
-      .legal-content a { color: var(--deep-teal); font-weight: 700; }
+      .legal-content a { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
 
       footer {
-        padding: 48px 0;
-        border-top: 1px solid var(--mint-border);
-        text-align: center;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        font-weight: 600;
-      }
-      .footer-links {
+        padding: 40px 0 56px;
+        border-top: 1px solid var(--line);
         display: flex;
         flex-wrap: wrap;
-        gap: 8px 18px;
-        justify-content: center;
-        margin-bottom: 18px;
+        justify-content: space-between;
+        gap: 16px 32px;
+        font-size: 0.92rem;
+        color: var(--ink-soft);
       }
-      .footer-links a { color: var(--deep-teal); text-decoration: none; }
-      .footer-links a:hover { text-decoration: underline; }
+      .footer-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+      .footer-links a { color: var(--ink-soft); text-decoration: none; transition: color 0.2s; }
+      .footer-links a:hover { color: var(--ink); }
     </style>
   </head>
   <body>
@@ -1061,7 +785,7 @@ function renderHtml(page: Page): string {
       <header>
         <a href="/" class="logo-link">
           ${renderHeaderLogoSvg()}
-          <span>${siteName}</span>
+          <span>Murmur</span>
         </a>
         <nav aria-label="Main navigation">
           <a href="/#pricing">Pricing</a>
@@ -1082,7 +806,7 @@ function renderHtml(page: Page): string {
           <a href="/english-to-arabic-live-captions">English to Arabic</a>
           <a href="/arabic-to-english-live-captions">Arabic to English</a>
         </div>
-        &copy; 2026 Q9 Labs. Murmur is a privacy-first AI translation service.
+        <span>&copy; 2026 Q9 Labs</span>
       </footer>
     </div>
   </body>
