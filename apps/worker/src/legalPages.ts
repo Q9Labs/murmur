@@ -40,6 +40,7 @@ function icon(name: keyof typeof icons): string {
 const heroStage = `
         <div class="bloom-stage">
           <span class="bloom" aria-hidden="true"></span>
+          <img class="stage-art" src="/site/hero.webp" alt="" width="1200" height="800" decoding="async">
           <div class="chips" aria-hidden="true">
             <span class="chip chip-1">Hola</span>
             <span class="chip chip-2" dir="rtl">مرحبا</span>
@@ -77,6 +78,7 @@ const defaultKeywords = [
 ].join(", ");
 
 type MarketingLandingPageOptions = {
+  art?: "talks" | "travel";
   campaignToken: string;
   description: string;
   examples: string[];
@@ -93,6 +95,9 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
   const examples = options.examples
     .map((example) => `<li><span class="icon-tile tone-teal">${icon("tick")}</span>${escapeHtml(example)}</li>`)
     .join("");
+  const art = options.art
+    ? `<img class="landing-art" src="/site/${options.art}.webp" alt="" width="1200" height="800" loading="lazy" decoding="async">`
+    : "";
   const campaignToken = options.campaignToken;
   const trackedAppStoreUrl = `${appStoreUrl}?ct=${encodeURIComponent(campaignToken)}&mt=8`;
   const trackedGooglePlayUrl =
@@ -110,7 +115,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
         </div>${heroStage}
       </section>
 
-      <section class="section landing-copy">
+      <section class="section landing-copy">${art}
         <h2>${escapeHtml(options.useCaseTitle)}</h2>
         <p>${escapeHtml(options.useCaseBody)}</p>
         <ol class="landing-steps">
@@ -210,8 +215,7 @@ export const legalPages: Record<string, Page> = {
         <div class="use-case-links">
           <a class="use-case-link" href="/live-translation-for-travel">
             <div class="scene scene-travel" aria-hidden="true">
-              <svg viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice"><path class="route-path" d="M44 140C120 140 120 62 200 72S300 136 356 46"/><circle class="route-start" cx="44" cy="140" r="8"/><circle class="route-ring" cx="356" cy="46" r="10"/><circle class="route-end" cx="356" cy="46" r="9"/></svg>
-              <span class="bubble">Turn left at the fountain.</span>
+              <img src="/site/travel.webp" alt="" width="1200" height="800" loading="lazy" decoding="async">
               <span class="go">${icon("arrow")}</span>
             </div>
             <strong>Read along with a guide.</strong>
@@ -219,8 +223,7 @@ export const legalPages: Record<string, Page> = {
           </a>
           <a class="use-case-link" href="/live-translation-for-talks">
             <div class="scene scene-talks" aria-hidden="true">
-              <div class="talk-screen"><i></i><i></i><i></i><i></i></div>
-              <div class="caption-demo"><span class="cap-line">Here are the results.</span><span class="cap-line">Growth doubled.</span></div>
+              <img src="/site/talks.webp" alt="" width="1200" height="800" loading="lazy" decoding="async">
               <span class="go">${icon("arrow")}</span>
             </div>
             <strong>Keep up while the speaker continues.</strong>
@@ -284,6 +287,7 @@ export const legalPages: Record<string, Page> = {
     `,
   },
   "/live-translation-for-travel": buildMarketingLandingPage({
+    art: "travel",
     campaignToken: "travel",
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
@@ -303,6 +307,7 @@ export const legalPages: Record<string, Page> = {
     ],
   }),
   "/live-translation-for-talks": buildMarketingLandingPage({
+    art: "talks",
     campaignToken: "talks",
     path: "/live-translation-for-talks",
     title: "Live Translation for Talks, Lectures, and Conferences | Murmur",
@@ -553,7 +558,7 @@ function renderHtml(page: Page): string {
       }
 
       * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
+      html { scroll-behavior: smooth; overflow-x: clip; }
       body {
         margin: 0;
         background: var(--canvas);
@@ -664,6 +669,7 @@ function renderHtml(page: Page): string {
         padding: clamp(24px, 5vw, 48px) 0;
       }
       .bloom-stage .bloom { inset: 6% 8%; }
+      .stage-art { position: absolute; top: 50%; left: 50%; translate: -50% -50%; width: 128%; height: auto; max-width: none; mix-blend-mode: multiply; pointer-events: none; }
 
       .chip {
         position: absolute;
@@ -689,7 +695,9 @@ function renderHtml(page: Page): string {
       .chip-6 { bottom: 13%; right: 8%; animation-delay: -5s; }
       .chip-6::before { background: var(--teal); }
       @keyframes float { from { translate: 0 -7px; } to { translate: 0 7px; } }
+      @media (min-width: 761px) { .chips { display: none; } }
       @media (max-width: 760px) {
+        .stage-art { display: none; }
         .chip { font-size: 0.92rem; padding: 8px 15px; }
         .chip-2, .chip-3, .chip-4, .chip-5 { display: none; }
         .chip-1 { top: 9%; left: 0; }
@@ -836,31 +844,9 @@ function renderHtml(page: Page): string {
       .use-case-link > strong, .use-case-link > span { padding: 0 18px; }
       .use-case-link > span { color: var(--ink-soft); max-width: 32em; }
 
-      .scene { position: relative; height: 210px; border-radius: 20px; overflow: hidden; margin-bottom: 14px; display: grid; place-items: center; }
-      .scene-travel { background: #DDF5F3; }
-      .scene-talks { background: #ECE6FB; grid-template-columns: auto 1fr; gap: 22px; padding: 0 28px; }
-      .scene > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-      .route-path { fill: none; stroke: var(--teal); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 13; animation: dash 1.4s linear infinite; }
-      @keyframes dash { to { stroke-dashoffset: -28; } }
-      .route-start { fill: var(--surface); stroke: var(--teal); stroke-width: 5; }
-      .route-end { fill: var(--coral); stroke: var(--surface); stroke-width: 4; }
-      .route-ring { fill: var(--coral); transform-box: fill-box; transform-origin: center; animation: pulse-ring 2.4s ease-out infinite; }
-      .bubble {
-        position: relative;
-        background: var(--surface);
-        border-radius: 18px 18px 18px 5px;
-        padding: 11px 16px;
-        font-weight: 600;
-        box-shadow: 0 10px 22px rgba(26, 16, 51, 0.1);
-        animation: float 5s ease-in-out infinite alternate;
-      }
-      .talk-screen { width: 120px; height: 96px; border-radius: 16px; background: var(--surface); box-shadow: 0 10px 22px rgba(26, 16, 51, 0.1); display: flex; align-items: flex-end; justify-content: center; gap: 9px; padding: 18px; }
-      .talk-screen i { flex: 1; border-radius: 5px 5px 2px 2px; background: var(--violet); height: 40%; transform-origin: bottom; animation: eq 2.6s ease-in-out infinite; }
-      .talk-screen i:nth-child(2) { background: var(--coral); height: 70%; animation-delay: -0.6s; }
-      .talk-screen i:nth-child(3) { background: var(--yellow); height: 55%; animation-delay: -1.2s; }
-      .talk-screen i:nth-child(4) { background: var(--teal); height: 100%; animation-delay: -1.8s; }
-      .scene-talks .caption-demo { width: 100%; }
-      @media (max-width: 520px) { .scene-talks { gap: 14px; padding: 0 18px; } .talk-screen { width: 96px; height: 84px; padding: 14px; gap: 7px; } }
+      .scene { position: relative; aspect-ratio: 16 / 10; border-radius: 20px; overflow: hidden; margin-bottom: 14px; background: var(--canvas); }
+      .scene img { width: 100%; height: 100%; object-fit: cover; display: block; transition: scale 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+      .use-case-link:hover .scene img { scale: 1.04; }
       .go {
         position: absolute;
         top: 14px;
@@ -892,6 +878,9 @@ function renderHtml(page: Page): string {
       .pricing-note { color: var(--ink-soft); font-size: 0.9rem; margin-top: 24px; }
 
       /* Use-case landing pages */
+      .landing-art { float: right; width: min(46%, 480px); height: auto; margin: -32px 0 24px 40px; border-radius: 28px; }
+      @media (max-width: 800px) { .landing-art { float: none; width: 100%; margin: 0 0 32px; } }
+      .landing-copy::after { content: ""; display: block; clear: both; }
       .landing-copy > p { color: var(--ink-soft); font-size: 1.15rem; max-width: 40em; margin-top: -24px; }
       .landing-examples ul { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none; margin: 0; padding: 0; }
       @media (max-width: 800px) { .landing-examples ul { grid-template-columns: 1fr; } }

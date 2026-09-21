@@ -5,6 +5,10 @@ compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
 workers_dev = true
 
+# Static files for the marketing site; requests that match no file fall through to the Worker.
+[assets]
+directory = "./public"
+
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimitDurableObject"
