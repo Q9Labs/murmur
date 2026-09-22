@@ -1,7 +1,9 @@
 import {
+  requestMurmurAppConfig,
   requestMurmurCustomer,
   requestMurmurReconciliation,
 } from "../providers/murmurBillingApi";
+import { decodeAppConfig, type MurmurAppConfig } from "./appConfig";
 import { decodeCustomer, readCustomerError, type MurmurCustomer } from "./customerResponse";
 
 export async function fetchMurmurCustomer(): Promise<MurmurCustomer> {
@@ -42,4 +44,16 @@ export async function reconcileMurmurCustomer(
     purchaseCount: purchaseCount as number,
     subscriptionCount: subscriptionCount as number,
   };
+}
+
+export async function fetchMurmurAppConfig(): Promise<MurmurAppConfig> {
+  const response = await requestMurmurAppConfig();
+  if (!response.ok) {
+    throw new Error(`Murmur config request failed (${response.status}).`);
+  }
+  const config = decodeAppConfig(await response.json());
+  if (!config) {
+    throw new Error("Murmur returned an invalid config response.");
+  }
+  return config;
 }

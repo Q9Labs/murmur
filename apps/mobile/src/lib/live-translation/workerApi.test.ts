@@ -32,6 +32,9 @@ vi.mock("../../../modules/murmur-audio", () => ({
 
 vi.mock("../auth/client", () => import("../__tests__/workerClientMocks"));
 vi.mock("../config", () => import("../__tests__/workerClientMocks"));
+vi.mock("../appRelease", () => ({
+  getAppRelease: () => ({ app_platform: "android", app_version: "1.2.3" }),
+}));
 
 import {
   closeWorkerSession,
@@ -163,6 +166,21 @@ describe("createWorkerSession", () => {
     await expect(createWorkerSession({ ...request, playback_enabled: false })).resolves.toEqual(payload);
     const fetchCall = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(String(fetchCall?.[1]?.body))).toMatchObject({ playback_enabled: false });
+  });
+
+  it("sends the playback preference and app release the worker gates on", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ error: "app_version_unsupported" }, { status: 426 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(createWorkerSession(request)).resolves.toEqual({ error: "app_version_unsupported" });
+    const body: unknown = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      app_platform: "android",
+      app_version: "1.2.3",
+      playback_enabled: true,
+    });
   });
 });
 

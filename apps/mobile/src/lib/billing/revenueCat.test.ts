@@ -6,6 +6,7 @@ const store = vi.hoisted(() => ({
   logIn: vi.fn(),
   presentCustomerCenter: vi.fn(),
   presentPaywall: vi.fn(),
+  purchasePackage: vi.fn(),
   restorePurchases: vi.fn(),
 }));
 
@@ -23,10 +24,12 @@ vi.mock("react-native-purchases", () => ({
     configure: store.configure,
     getOfferings: store.getOfferings,
     logIn: store.logIn,
+    purchasePackage: store.purchasePackage,
     restorePurchases: store.restorePurchases,
     setLogLevel: vi.fn(),
   },
   LOG_LEVEL: { DEBUG: "DEBUG" },
+  PRODUCT_CATEGORY: { NON_SUBSCRIPTION: "NON_SUBSCRIPTION", SUBSCRIPTION: "SUBSCRIPTION" },
 }));
 vi.mock("react-native-purchases-ui", () => ({
   default: {
@@ -44,16 +47,46 @@ vi.mock("react-native-purchases-ui", () => ({
 
 import {
   configureRevenueCat,
+  loadMurmurPlans,
   presentMurmurCustomerCenter,
   presentMurmurPaywall,
+  purchaseMurmurPlan,
   restoreMurmurPurchases,
 } from "./revenueCat";
+
+function storePackage(params: {
+  category: "NON_SUBSCRIPTION" | "SUBSCRIPTION";
+  identifier: string;
+  period?: string;
+  price: string;
+  title: string;
+}) {
+  return {
+    identifier: params.identifier,
+    product: {
+      identifier: `product.${params.identifier}`,
+      priceString: params.price,
+      productCategory: params.category,
+      subscriptionPeriod: params.period ?? null,
+      title: params.title,
+    },
+  };
+}
+
+const launchPackages = [
+  storePackage({ category: "NON_SUBSCRIPTION", identifier: "pack_60", price: "$7.99", title: "1 hour (Murmur - Live Translate)" }),
+  storePackage({ category: "SUBSCRIPTION", identifier: "$rc_monthly", period: "P1M", price: "$9.99", title: "Murmur Pro" }),
+  storePackage({ category: "SUBSCRIPTION", identifier: "$rc_annual", period: "P1Y", price: "$99.99", title: "Murmur Pro Annual" }),
+];
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("__DEV__", false);
   store.getOfferings.mockResolvedValue({
-    all: { sandbox: { identifier: "sandbox" } },
+    all: {
+      launch: { availablePackages: launchPackages, identifier: "launch" },
+      sandbox: { availablePackages: [], identifier: "sandbox" },
+    },
     current: { identifier: "default" },
   });
   store.logIn.mockResolvedValue(undefined);
@@ -82,9 +115,34 @@ describe("RevenueCat mobile adapter", () => {
 
     expect(store.presentPaywall).toHaveBeenCalledWith({
       displayCloseButton: true,
-      offering: { identifier: "sandbox" },
+      offering: { availablePackages: [], identifier: "sandbox" },
     });
     expect(store.restorePurchases).toHaveBeenCalledOnce();
     expect(store.presentCustomerCenter).toHaveBeenCalledOnce();
+  });
+
+  it("lists Pro plans before top-ups with store prices from the server-chosen offering", async () => {
+    await configureRevenueCat("customer-2");
+
+    await expect(loadMurmurPlans("launch")).resolves.toEqual([
+      { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro" },
+      { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Murmur Pro Annual" },
+      { id: "pack_60", kind: "top_up", price: "$7.99", title: "1 hour" },
+    ]);
+  });
+
+  it("buys the chosen package and reports a store cancellation separately", async () => {
+    await configureRevenueCat("customer-2");
+    store.purchasePackage.mockResolvedValueOnce({});
+    store.purchasePackage.mockRejectedValueOnce({ userCancelled: true });
+    store.purchasePackage.mockRejectedValueOnce(new Error("store down"));
+
+    await expect(purchaseMurmurPlan("pack_60", "launch")).resolves.toBe("purchased");
+    await expect(purchaseMurmurPlan("pack_60", "launch")).resolves.toBe("cancelled");
+    await expect(purchaseMurmurPlan("pack_60", "launch")).rejects.toThrow("store down");
+    await expect(purchaseMurmurPlan("missing", "launch")).rejects.toThrow(
+      "That plan is no longer available from the store.",
+    );
+    expect(store.purchasePackage).toHaveBeenCalledWith(launchPackages[0]);
   });
 });

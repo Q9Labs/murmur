@@ -9,6 +9,7 @@ import MurmurAudioModule, {
   type DeviceIntegrityPayload,
 } from "../../../modules/murmur-audio";
 import type { AcquisitionContext } from "@murmur/protocol/acquisition";
+import { getAppRelease } from "../appRelease";
 import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
@@ -50,7 +51,10 @@ export async function createWorkerSession(body: {
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
 }): Promise<CreateSessionResponse | { error: string }> {
-  return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, body);
+  return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, {
+    ...body,
+    ...getAppRelease(),
+  });
 }
 
 export async function closeWorkerSession(
