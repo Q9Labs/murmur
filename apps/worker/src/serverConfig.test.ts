@@ -46,6 +46,9 @@ describe("server configuration", () => {
   it("compares dotted app versions numerically", () => {
     expect(isBelowMinimumVersion("1.2.9", "1.2.10")).toBe(true);
     expect(isBelowMinimumVersion("1.3", "1.2.10")).toBe(false);
-    expect(isBelowMinimumVersion(null, "1.2.10")).toBe(false);
+    expect(isBelowMinimumVersion(null, "1.2.10")).toBe(true);
+    expect(isBelowMinimumVersion("unknown", "1.2.10")).toBe(true);
+    expect(isBelowMinimumVersion("1..2", "1.2.10")).toBe(true);
+    expect(isBelowMinimumVersion(null, null)).toBe(false);
   });
 });

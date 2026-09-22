@@ -161,13 +161,19 @@ export function appConfig(config: ServerConfig): AppConfigResponse {
 }
 
 export function isBelowMinimumVersion(version: string | null, minimum: string | null): boolean {
-  if (!version || !minimum) {
+  if (!minimum) {
     return false;
+  }
+  if (!version) {
+    return true;
+  }
+  if (!/^\d+(?:\.\d+)*$/.test(version) || !/^\d+(?:\.\d+)*$/.test(minimum)) {
+    return true;
   }
   const current = version.split(".").map(Number);
   const required = minimum.split(".").map(Number);
   if (current.some((part) => !Number.isInteger(part)) || required.some((part) => !Number.isInteger(part))) {
-    return false;
+    return true;
   }
   for (let index = 0; index < Math.max(current.length, required.length); index += 1) {
     if ((current[index] ?? 0) !== (required[index] ?? 0)) {
