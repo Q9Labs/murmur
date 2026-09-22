@@ -96,6 +96,7 @@ function createMemorySessionRecord(
   const record = createSessionRecord({
     app_session_id: body.app_session_id,
     hashed_install_id: body.hashed_install_id,
+    max_session_seconds: body.max_session_seconds,
     now_ms: body.now_ms,
   });
   return body.enforce_limits ? { ok: true } : record;
@@ -106,7 +107,7 @@ function canAcceptReportMemory(appSessionId: string, nowMs: number): LimitResult
   if (!session) {
     return { ok: false, code: "session_closed" };
   }
-  if (nowMs - session.created_at_ms > defaultRateLimits.maxSessionSeconds * 1000) {
+  if (nowMs - session.created_at_ms > (session.max_session_seconds ?? defaultRateLimits.maxSessionSeconds) * 1000) {
     return { ok: false, code: "session_expired" };
   }
   return canAcceptReportWithStores(appSessionId, nowMs, reportTimestampsBySession);

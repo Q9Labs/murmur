@@ -15,7 +15,6 @@ import {
   corsHeaders,
   json,
 } from "./http/response";
-import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
 import { getSentryOptions } from "./observability/sentry";
@@ -168,7 +167,6 @@ const handler = {
     const abandonedSessionSweep = closeAbandonedUsageSessions(
       env.BILLING_DB,
       nowMs,
-      defaultRateLimits.maxSessionSeconds * 1_000,
     ).then((closed) => {
       if (closed > 0) {
         logWorkerEvent({

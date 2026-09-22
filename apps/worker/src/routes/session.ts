@@ -15,7 +15,6 @@ import {
   isBillingEnforced,
 } from "../env";
 import { json } from "../http/response";
-import { defaultRateLimits } from "../limits";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
 import {
@@ -55,6 +54,7 @@ export async function createSession(
   const limitResult = await createSessionIfAllowedDurable({
     app_session_id: appSessionId,
     hashed_install_id: authorized.hashedInstallId,
+    max_session_seconds: config.max_session_seconds,
     namespace: env.RATE_LIMITER,
     now_ms: nowMs,
   });
@@ -70,6 +70,7 @@ export async function createSession(
     appSessionId,
     nowMs,
     config.free_allowance_minutes,
+    config.max_session_seconds,
   );
   if (!billingUsage.ok) {
     await closeSessionDurable({
@@ -199,11 +200,12 @@ async function prepareBillingUsage(
   usageSessionId: string,
   nowMs: number,
   freeAllowanceMinutes: number,
+  maxSessionSeconds: number,
 ): Promise<
   | { ok: true; sessionDurationMs: number }
   | { ok: false; response: Response }
 > {
-  const defaultDurationMs = defaultRateLimits.maxSessionSeconds * 1_000;
+  const defaultDurationMs = maxSessionSeconds * 1_000;
   if (!isBillingEnforced(env)) {
     return { ok: true, sessionDurationMs: defaultDurationMs };
   }
@@ -230,6 +232,7 @@ async function prepareBillingUsage(
     action: "open_usage_session",
     customerId: customerSession.user.id,
     nowMs,
+    maxSessionSeconds,
     usageSessionId,
   });
   if (!usage.result.ok || !("balance" in usage.result)) {

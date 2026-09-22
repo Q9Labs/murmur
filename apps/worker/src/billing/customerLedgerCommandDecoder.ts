@@ -192,8 +192,9 @@ function decodeOpenUsageSession(
   common: CommonCommand,
 ): OpenUsageSessionCommand | null {
   const usageSessionId = requiredString(value, "usageSessionId");
-  return usageSessionId
-    ? { action: "open_usage_session", ...common, usageSessionId }
+  const maxSessionSeconds = optionalPositiveInteger(value, "maxSessionSeconds");
+  return usageSessionId && maxSessionSeconds !== null
+    ? { action: "open_usage_session", ...common, maxSessionSeconds, usageSessionId }
     : null;
 }
 

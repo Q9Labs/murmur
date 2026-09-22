@@ -38,6 +38,7 @@ export type DurableLimitRequest =
       app_session_id: string;
       enforce_limits?: boolean;
       hashed_install_id: string;
+      max_session_seconds?: number;
       now_ms: number;
     }
   | {

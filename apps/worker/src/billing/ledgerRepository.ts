@@ -385,6 +385,7 @@ export class LedgerRepository {
   async openUsageSession(params: {
     customerId: string;
     generation: number;
+    maxSessionSeconds?: number;
     nowMs: number;
     usageSessionId: string;
   }): Promise<{ balance: LedgerBalance; generation: number; usageSessionId: string }> {
@@ -424,8 +425,8 @@ export class LedgerRepository {
       .prepare(
         `INSERT INTO usage_sessions
           (usage_session_id, customer_id, generation, state, forwarded_ms, settled_ms,
-           next_settlement_sequence, started_at_ms, ended_at_ms, updated_at_ms)
-         VALUES (?, ?, ?, 'open', 0, 0, 1, ?, NULL, ?)`,
+           next_settlement_sequence, started_at_ms, ended_at_ms, updated_at_ms, max_session_seconds)
+         VALUES (?, ?, ?, 'open', 0, 0, 1, ?, NULL, ?, ?)`,
       )
       .bind(
         params.usageSessionId,
@@ -433,6 +434,7 @@ export class LedgerRepository {
         params.generation,
         params.nowMs,
         params.nowMs,
+        params.maxSessionSeconds ?? 300,
       )
       .run();
     requireChanges([result], [1]);

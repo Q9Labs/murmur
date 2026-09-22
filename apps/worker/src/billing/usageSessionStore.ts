@@ -41,7 +41,6 @@ export async function findOpenUsageSession(
 export async function closeAbandonedUsageSessions(
   database: D1Database | undefined,
   nowMs: number,
-  maxSessionMs: number,
 ): Promise<number> {
   if (!database) {
     return 0;
@@ -50,9 +49,9 @@ export async function closeAbandonedUsageSessions(
     .prepare(
       `UPDATE usage_sessions
        SET state = 'failed', ended_at_ms = ?, updated_at_ms = ?
-       WHERE state = 'open' AND started_at_ms <= ?`,
+       WHERE state = 'open' AND started_at_ms + max_session_seconds * 1000 <= ?`,
     )
-    .bind(nowMs, nowMs, nowMs - maxSessionMs)
+    .bind(nowMs, nowMs, nowMs)
     .run();
   return result.meta.changes;
 }

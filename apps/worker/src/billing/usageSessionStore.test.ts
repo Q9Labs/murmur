@@ -33,13 +33,14 @@ describe("Abandoned usage session sweep", () => {
   it("fails sessions left open longer than the maximum session length", async () => {
     const { bindings, database, statements } = stubUsageSessionDatabase(3);
 
-    await expect(closeAbandonedUsageSessions(database, 2_000_000, 900_000)).resolves.toBe(3);
+    await expect(closeAbandonedUsageSessions(database, 2_000_000)).resolves.toBe(3);
     expect(statements[0]).toContain("UPDATE usage_sessions");
     expect(statements[0]).toContain("state = 'open'");
-    expect(bindings[0]).toEqual([2_000_000, 2_000_000, 1_100_000]);
+    expect(statements[0]).toContain("max_session_seconds * 1000");
+    expect(bindings[0]).toEqual([2_000_000, 2_000_000, 2_000_000]);
   });
 
   it("does nothing when the billing database is unavailable", async () => {
-    await expect(closeAbandonedUsageSessions(undefined, 2_000_000, 900_000)).resolves.toBe(0);
+    await expect(closeAbandonedUsageSessions(undefined, 2_000_000)).resolves.toBe(0);
   });
 });

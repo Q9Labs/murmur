@@ -50,6 +50,7 @@ export type GrantValueCommand = {
 export type OpenUsageSessionCommand = {
   action: "open_usage_session";
   customerId: string;
+  maxSessionSeconds?: number;
   nowMs: number;
   usageSessionId: string;
 };

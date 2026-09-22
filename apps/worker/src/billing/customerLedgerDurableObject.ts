@@ -121,6 +121,7 @@ async function executeLedgerCommand(
     const result = await repository.openUsageSession({
       customerId: command.customerId,
       generation,
+      maxSessionSeconds: command.maxSessionSeconds,
       nowMs: command.nowMs,
       usageSessionId: command.usageSessionId,
     });

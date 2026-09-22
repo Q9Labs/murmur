@@ -14,6 +14,7 @@ export function createSessionRecordWithStores(
   params: {
     app_session_id: string;
     hashed_install_id: string;
+    max_session_seconds?: number;
     now_ms: number;
   },
   store: SessionStore,
@@ -23,6 +24,7 @@ export function createSessionRecordWithStores(
     closed_at_ms: null,
     created_at_ms: params.now_ms,
     hashed_install_id: params.hashed_install_id,
+    max_session_seconds: params.max_session_seconds,
     realtime_connected_at_ms: null,
   };
   store.sessionsById.set(params.app_session_id, record);
@@ -95,7 +97,8 @@ export function reserveRealtimeSessionWithStores(
   if (!session || session.closed_at_ms !== null) {
     return { code: "session_closed", ok: false };
   }
-  const expiresAtMs = session.created_at_ms + params.config.maxSessionSeconds * 1_000;
+  const expiresAtMs = session.created_at_ms +
+    (session.max_session_seconds ?? params.config.maxSessionSeconds) * 1_000;
   if (params.now_ms >= expiresAtMs) {
     session.closed_at_ms = params.now_ms;
     return { code: "session_expired", ok: false };
@@ -119,7 +122,7 @@ function closeExpiredSessionsWithStores(
   for (const session of sessionsById.values()) {
     if (
       session.closed_at_ms === null &&
-      nowMs - session.created_at_ms >= config.maxSessionSeconds * 1000
+      nowMs - session.created_at_ms >= (session.max_session_seconds ?? config.maxSessionSeconds) * 1000
     ) {
       session.closed_at_ms = nowMs;
     }

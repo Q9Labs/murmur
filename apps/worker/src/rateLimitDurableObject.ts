@@ -118,6 +118,7 @@ function createSessionRecord(
   const record = adapter.createSessionRecord({
     app_session_id: body.app_session_id,
     hashed_install_id: body.hashed_install_id,
+    max_session_seconds: body.max_session_seconds,
     now_ms: body.now_ms,
   });
   return body.enforce_limits ? { ok: true } : record;
@@ -197,6 +198,7 @@ export function isRateLimiterUnavailable(result: LimitResult): boolean {
 export async function createSessionIfAllowedDurable(params: {
   app_session_id: string;
   hashed_install_id: string;
+  max_session_seconds?: number;
   namespace?: RateLimiterNamespace;
   now_ms: number;
 }): Promise<LimitResult> {
@@ -205,6 +207,7 @@ export async function createSessionIfAllowedDurable(params: {
     app_session_id: params.app_session_id,
     enforce_limits: true,
     hashed_install_id: params.hashed_install_id,
+    max_session_seconds: params.max_session_seconds,
     now_ms: params.now_ms,
   });
 }
