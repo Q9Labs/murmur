@@ -132,7 +132,6 @@ export async function reconcileDailyRevenueCatBatch(
     } catch (failure) {
       Sentry.captureException(failure, {
         tags: {
-          customer_id: customer.customer_id,
           error_code: failureCode(failure),
           operation: "revenuecat_reconciliation",
         },

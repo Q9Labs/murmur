@@ -71,7 +71,7 @@ function stubBillingDatabase(customerIds: string[]): D1Database {
 }
 
 describe("RevenueCat daily reconciliation batch", () => {
-  it("captures every per-customer failure with the customer and error code", async () => {
+  it("captures every per-customer failure without a customer ID tag", async () => {
     const env: Env = {
       BILLING_DB: stubBillingDatabase(["customer-1", "customer-2"]),
       BILLING_FULFILLMENT_ENABLED: "true",
@@ -83,14 +83,12 @@ describe("RevenueCat daily reconciliation batch", () => {
     expect(sentry.captureException).toHaveBeenCalledTimes(2);
     expect(sentry.captureException).toHaveBeenNthCalledWith(1, expect.any(Error), {
       tags: {
-        customer_id: "customer-1",
         error_code: expect.stringContaining("revenuecat"),
         operation: "revenuecat_reconciliation",
       },
     });
     expect(sentry.captureException).toHaveBeenNthCalledWith(2, expect.any(Error), {
       tags: {
-        customer_id: "customer-2",
         error_code: expect.stringContaining("revenuecat"),
         operation: "revenuecat_reconciliation",
       },
