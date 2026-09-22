@@ -64,6 +64,7 @@ export type LiveTranslationState = {
   report_error: string | null;
   report_receipt_id: string | null;
   session: TranslationSession;
+  source_transcript_enabled: boolean;
   spans: TranslationSpan[];
   status: SessionState;
   tentative_source_caption: string;

@@ -85,6 +85,14 @@ export async function closeWorkerSession(
   }
 }
 
+export function hasSourceTranscript(response: object): boolean {
+  const features: unknown = Reflect.get(response, "features");
+  if (typeof features !== "object" || features === null) {
+    return true;
+  }
+  return Reflect.get(features, "source_transcript") !== false;
+}
+
 function isExpectedNetworkFailure(failure: unknown): boolean {
   if (failure instanceof TypeError) {
     return true;

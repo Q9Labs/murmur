@@ -50,6 +50,7 @@ import {
   closeWorkerSession,
   collectDeviceIntegrity,
   createWorkerSession,
+  hasSourceTranscript,
   requestCapturePermission,
   requestMicrophonePermission,
 } from "./workerApi";
@@ -83,6 +84,7 @@ export function useLiveTranslation(
   const [session, setSession] = useState(() => createSession(params));
   const [spans, setSpans] = useState<TranslationSpan[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [sourceTranscriptEnabled, setSourceTranscriptEnabled] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportReceiptId, setReportReceiptId] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
@@ -526,6 +528,7 @@ export function useLiveTranslation(
       return;
     }
     recordListenTiming("worker_session_ready");
+    setSourceTranscriptEnabled(hasSourceTranscript(response));
 
     setSession((current) => {
       const next = {
@@ -1087,6 +1090,7 @@ export function useLiveTranslation(
     report_receipt_id: reportReceiptId,
     reportSpan,
     session,
+    source_transcript_enabled: sourceTranscriptEnabled,
     spans,
     start,
     status: session.state,

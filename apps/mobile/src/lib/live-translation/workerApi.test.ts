@@ -37,6 +37,7 @@ import {
   closeWorkerSession,
   collectDeviceIntegrity,
   createWorkerSession,
+  hasSourceTranscript,
   requestCapturePermission,
   workerSessionCloseTimeoutMs,
   workerSessionRequestTimeoutMs,
@@ -46,6 +47,7 @@ const request = {
   analytics_enabled: false,
   app_install_id: "install_1",
   device_integrity: { available: false, platform: "android" },
+  playback_enabled: true,
   source_language: "en" as const,
   target_language: "ar" as const,
 };
@@ -161,6 +163,26 @@ describe("createWorkerSession", () => {
     await expect(createWorkerSession({ ...request, playback_enabled: false })).resolves.toEqual(payload);
     const fetchCall = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(String(fetchCall?.[1]?.body))).toMatchObject({ playback_enabled: false });
+  });
+});
+
+describe("hasSourceTranscript", () => {
+  const session = {
+    app_session_id: "session_1",
+    features: { source_transcript: false },
+    limits: { expires_at_ms: 20_000, max_session_seconds: 300 },
+    realtime_ws_url: "wss://worker.example.test/realtime",
+    session_epoch: 1,
+  };
+
+  it("follows the worker's source transcript flag", () => {
+    expect(hasSourceTranscript(session)).toBe(false);
+    expect(hasSourceTranscript({ ...session, features: { source_transcript: true } })).toBe(true);
+  });
+
+  it("keeps the source transcript for workers that predate the flag", () => {
+    const { features: _features, ...olderWorkerSession } = session;
+    expect(hasSourceTranscript(olderWorkerSession)).toBe(true);
   });
 });
 
