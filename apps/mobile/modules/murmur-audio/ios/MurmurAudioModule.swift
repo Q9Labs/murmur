@@ -28,6 +28,15 @@ public class MurmurAudioModule: Module {
     channels: 1,
     interleaved: true
   )!
+  // AVAudioMixerNode inputs reject interleaved integer formats on some devices
+  // (kAudioUnitErr_FormatNotSupported, -10868), so the player node is connected
+  // with a non-interleaved float format and Int16 frames are converted on enqueue.
+  private let playbackFormat = AVAudioFormat(
+    commonFormat: .pcmFormatFloat32,
+    sampleRate: murmurSampleRate,
+    channels: 1,
+    interleaved: false
+  )!
 
   public func definition() -> ModuleDefinition {
     Name("MurmurAudio")
@@ -163,7 +172,7 @@ public class MurmurAudioModule: Module {
 
     if playerNode.engine == nil {
       playbackEngine.attach(playerNode)
-      playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: pcmFormat)
+      playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: playbackFormat)
     }
     playbackEngine.prepare()
     try playbackEngine.start()
@@ -182,13 +191,8 @@ public class MurmurAudioModule: Module {
     }
 
     let frameCount = AVAudioFrameCount(data.count / 2)
-    guard let buffer = AVAudioPCMBuffer(pcmFormat: pcmFormat, frameCapacity: frameCount) else {
+    guard let buffer = playbackBuffer(data: data, frameCount: frameCount) else {
       return
-    }
-    buffer.frameLength = frameCount
-    let audioBuffer = buffer.audioBufferList.pointee.mBuffers
-    if let target = audioBuffer.mData {
-      data.copyBytes(to: target.assumingMemoryBound(to: UInt8.self), count: data.count)
     }
 
     let queuedMs = Int(Double(frameCount) / murmurSampleRate * 1000.0)
@@ -211,6 +215,21 @@ public class MurmurAudioModule: Module {
       }
     }
     emitState(reason: "playback_enqueued")
+  }
+
+  private func playbackBuffer(data: Data, frameCount: AVAudioFrameCount) -> AVAudioPCMBuffer? {
+    guard let buffer = AVAudioPCMBuffer(pcmFormat: playbackFormat, frameCapacity: frameCount),
+          let channel = buffer.floatChannelData?[0] else {
+      return nil
+    }
+    buffer.frameLength = frameCount
+    data.withUnsafeBytes { raw in
+      for index in 0..<Int(frameCount) {
+        let sample = raw.loadUnaligned(fromByteOffset: index * 2, as: Int16.self)
+        channel[index] = Float(Int16(littleEndian: sample)) / Float(Int16.max)
+      }
+    }
+    return buffer
   }
 
   private func clearPlaybackSync(reason: String) {
