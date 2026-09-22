@@ -27,8 +27,8 @@ const previewTranslation =
 const previewBilling: MurmurBillingContext = {
   busy: false,
   customer: {
-    allowanceMs: 30 * 60_000,
-    availableMs: 30 * 60_000,
+    allowanceMs: 10 * 60_000,
+    availableMs: 10 * 60_000,
     creditMs: 0,
     customerId: "preview-customer",
     earliestExpiryAtMs: null,

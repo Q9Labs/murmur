@@ -1,0 +1,21 @@
+# iOS 1.2.2 (build 13) shipped pointing at murmur-worker-development.
+# This script takes over that name and forwards everything to production,
+# so those installs are metered and billed. Retire it once iOS 1.2.3 is adopted.
+name = "murmur-worker-development"
+main = "index.ts"
+compatibility_date = "2026-05-16"
+workers_dev = true
+
+[[services]]
+binding = "PRODUCTION"
+service = "murmur-worker-production"
+
+# The script already owns these Durable Object classes. Keeping them exported
+# leaves their storage intact so a rollback to the old version still works.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimitDurableObject"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["CustomerLedgerDurableObject"]

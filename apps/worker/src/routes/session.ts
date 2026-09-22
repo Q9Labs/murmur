@@ -19,7 +19,10 @@ import { json } from "../http/response";
 import { defaultRateLimits } from "../limits";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
-import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
+import {
+  queuePostHogEvent,
+  type TelemetryExecutionContext,
+} from "../observability/posthog";
 import {
   closeSessionDurable,
   createSessionIfAllowedDurable,

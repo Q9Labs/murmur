@@ -116,6 +116,7 @@ export async function proxyRealtimeSession(
     env,
     startedAtMs: realtimeStartedAtMs,
     stats: {
+      closeReason: null,
       failureCode: null,
       inputAudioBytes: 0,
       inputAudioChunks: 0,
@@ -136,6 +137,7 @@ export async function proxyRealtimeSession(
       return;
     }
     sessionFinished = true;
+    telemetry.stats.closeReason ??= termination.reason;
     providerAbort.abort();
     clearRealtimeTimers();
     if (termination.errorCode) {
@@ -630,6 +632,9 @@ function bindProviderEvents(
         }
         send(client, output.event);
         if (output.event.kind === "session_closed") {
+          telemetry.stats.closeReason = output.providerCloseReason
+            ? normalizeFailureCode(output.providerCloseReason)
+            : "provider_session_closed";
           terminate({
             errorCode: null,
             failureCode: null,
@@ -710,6 +715,7 @@ type RealtimeTelemetry = {
   env: Env;
   startedAtMs: number;
   stats: {
+    closeReason: string | null;
     failureCode: string | null;
     inputAudioBytes: number;
     inputAudioChunks: number;
@@ -749,6 +755,7 @@ function createSessionEndedEvent(
 ): WorkerTelemetryEvent {
   return {
     app_session_id: telemetry.appSessionId,
+    close_reason: telemetry.stats.closeReason,
     event: "worker_session_ended",
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,

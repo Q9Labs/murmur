@@ -37,3 +37,22 @@ export async function findOpenUsageSession(
     startedAtMs: row.started_at_ms,
   };
 }
+
+export async function closeAbandonedUsageSessions(
+  database: D1Database | undefined,
+  nowMs: number,
+  maxSessionMs: number,
+): Promise<number> {
+  if (!database) {
+    return 0;
+  }
+  const result = await database
+    .prepare(
+      `UPDATE usage_sessions
+       SET state = 'failed', ended_at_ms = ?, updated_at_ms = ?
+       WHERE state = 'open' AND started_at_ms <= ?`,
+    )
+    .bind(nowMs, nowMs, nowMs - maxSessionMs)
+    .run();
+  return result.meta.changes;
+}

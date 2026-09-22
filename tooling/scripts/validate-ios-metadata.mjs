@@ -73,7 +73,7 @@ assert(
   "Review notes must explain the automatic guest account",
 );
 assert(
-  /30 free translation minutes/i.test(reviewNotes),
+  /10 free translation minutes/i.test(reviewNotes),
   "Review notes must state the free monthly allowance",
 );
 assert(

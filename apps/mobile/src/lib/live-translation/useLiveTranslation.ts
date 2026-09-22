@@ -961,6 +961,15 @@ export function useLiveTranslation(
       sessionRef.current.identity.app_session_id,
       reason,
     )
+      .then((outcome) => {
+        if (outcome === "network_unavailable") {
+          recordDebug(
+            "worker.session_close_unavailable",
+            "Worker session close could not reach the network",
+            "warn",
+          );
+        }
+      })
       .catch((failure: unknown) => {
         captureMobileFailure(failure, {
           app_session_id: sessionRef.current.identity.app_session_id,

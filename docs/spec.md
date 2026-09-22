@@ -16,7 +16,7 @@ Microphone is available on every supported platform. Phone audio is available on
 
 When Android grants display-over-other-apps access, Phone audio shows the current translation in a draggable native overlay. Denying overlay access does not block capture; captions remain available in Murmur. The foreground notification and Android's projection indicator remain visible for the session and can stop capture.
 
-Each account receives 30 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
+Each account receives 10 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
 
 ## Architecture
 

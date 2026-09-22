@@ -7,7 +7,7 @@ const defaultOpenAIRealtimeModel = "gpt-realtime-translate";
 
 export type OpenAITranslationOutput =
   | { kind: "audio"; pcm16: ArrayBuffer }
-  | { event: RealtimeServerEvent; kind: "event" }
+  | { event: RealtimeServerEvent; kind: "event"; providerCloseReason?: string }
   | { kind: "ignored" };
 
 export async function openTranslationSocket(params: {
@@ -97,7 +97,7 @@ export function parseTranslationOutput(data: unknown): OpenAITranslationOutput {
     };
   }
   if (parsed.type === "session.closed") {
-    return { kind: "event", event: { kind: "session_closed" } };
+    return sessionClosedOutput(parsed);
   }
   if (parsed.type === "error") {
     return {
@@ -110,6 +110,17 @@ export function parseTranslationOutput(data: unknown): OpenAITranslationOutput {
     };
   }
   return { kind: "ignored" };
+}
+
+function sessionClosedOutput(parsed: Record<string, unknown>): OpenAITranslationOutput {
+  const closeReason =
+    shortString(parsed.reason) ??
+    shortString(parsed.code) ??
+    nestedShortString(parsed.session, ["status_details", "reason"]) ??
+    nestedShortString(parsed.session, ["status_details", "error", "code"]);
+  return closeReason === null
+    ? { kind: "event", event: { kind: "session_closed" } }
+    : { kind: "event", event: { kind: "session_closed" }, providerCloseReason: closeReason };
 }
 
 function providerSessionConfig(

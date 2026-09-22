@@ -2,7 +2,10 @@ import { parseMobileTelemetryRequest } from "@murmur/protocol/telemetry";
 
 import type { Env } from "../env";
 import { json } from "../http/response";
-import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
+import {
+  queuePostHogEvent,
+  type TelemetryExecutionContext,
+} from "../observability/posthog";
 import { hashInstallId } from "../privacy";
 import {
   canAcceptTelemetryDurable,

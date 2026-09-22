@@ -43,7 +43,9 @@ Deploy the isolated development Worker with:
 pnpm --filter @murmur/worker exec wrangler deploy --env development
 ```
 
-The development environment is `murmur-worker-development`. It has its own Durable Object namespace, secrets, and `workers.dev` hostname. Point a development app build at that hostname with `EXPO_PUBLIC_MURMUR_WORKER_URL`; do not reuse the production hostname for iteration.
+The development environment is `murmur-worker-dev`. It has its own Durable Object namespace, secrets, and `workers.dev` hostname. Point a development app build at that hostname with `EXPO_PUBLIC_MURMUR_WORKER_URL`; do not reuse the production hostname for iteration.
+
+The old `murmur-worker-development` name belongs to a proxy in `apps/worker/legacy-ios-proxy` that forwards every request to production. iOS 1.2.2 shipped pointing at that hostname, so the proxy keeps those installs metered and billed. Deploy it with `pnpm --filter @murmur/worker exec wrangler deploy -c legacy-ios-proxy/wrangler.toml`, and delete it once iOS installs have moved to a release built on the production profile.
 
 ## Verification
 

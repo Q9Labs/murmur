@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import * as Sentry from "@sentry/cloudflare";
+
 import { type Env, isBillingFulfillmentEnabled } from "../env";
 import { revenueCatCustomerId } from "./revenueCatIdentity";
 import { findBillingProduct } from "./catalog";
@@ -127,7 +129,13 @@ export async function reconcileDailyRevenueCatBatch(
         nowMs,
         trigger: "daily",
       });
-    } catch {
+    } catch (failure) {
+      Sentry.captureException(failure, {
+        tags: {
+          error_code: failureCode(failure),
+          operation: "revenuecat_reconciliation",
+        },
+      });
       failed += 1;
     }
   }

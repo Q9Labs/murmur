@@ -16,18 +16,18 @@ describe("guest account merge", () => {
   it("combines free usage from both customers", () => {
     expect(mergedFreeRemainingMs({
       destinationOriginalMs: freeAllowanceMs,
-      destinationRemainingMs: 20 * 60_000,
+      destinationRemainingMs: 7 * 60_000,
       sourceOriginalMs: freeAllowanceMs,
-      sourceRemainingMs: 25 * 60_000,
-    })).toBe(15 * 60_000);
+      sourceRemainingMs: 8 * 60_000,
+    })).toBe(5 * 60_000);
   });
 
   it("floors the merged free balance at zero", () => {
     expect(mergedFreeRemainingMs({
       destinationOriginalMs: freeAllowanceMs,
-      destinationRemainingMs: 5 * 60_000,
+      destinationRemainingMs: 4 * 60_000,
       sourceOriginalMs: freeAllowanceMs,
-      sourceRemainingMs: 5 * 60_000,
+      sourceRemainingMs: 3 * 60_000,
     })).toBe(0);
   });
 });
