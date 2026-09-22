@@ -41,7 +41,7 @@ GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT = "MEETS_DEVICE_INTEGRITY"
 GOOGLE_PLAY_PACKAGE_NAME = "com.q9labsai.murmur"
 
 [env.development]
-name = "murmur-worker-development"
+name = "murmur-worker-dev"
 workers_dev = true
 
 [[env.development.durable_objects.bindings]]
