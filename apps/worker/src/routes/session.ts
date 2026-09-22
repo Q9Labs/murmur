@@ -69,6 +69,7 @@ export async function createSession(
     env,
     appSessionId,
     nowMs,
+    config.free_allowance_minutes,
   );
   if (!billingUsage.ok) {
     await closeSessionDurable({
@@ -197,6 +198,7 @@ async function prepareBillingUsage(
   env: Env,
   usageSessionId: string,
   nowMs: number,
+  freeAllowanceMinutes: number,
 ): Promise<
   | { ok: true; sessionDurationMs: number }
   | { ok: false; response: Response }
@@ -213,6 +215,7 @@ async function prepareBillingUsage(
   const bootstrap = await ensureCurrentAllowance({
     customerId: customerSession.user.id,
     env,
+    freeAllowanceMinutes,
     freeClaimHash,
     nowMs,
     principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",

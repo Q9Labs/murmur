@@ -124,6 +124,7 @@ export class LedgerRepository {
   }
 
   private async grantFreeAllowance(command: BootstrapGuestCommand): Promise<void> {
+    const grantMs = command.freeAllowanceMs ?? freeAllowanceMs;
     const idempotencyKey = `${command.customerId}:${command.periodKey}`;
     const ledgerEntryId = `ledger:${idempotencyKey}`;
     const grantId = `grant:${idempotencyKey}`;
@@ -149,7 +150,7 @@ export class LedgerRepository {
           command.periodKey,
           command.periodStartsAtMs,
           command.periodExpiresAtMs,
-          freeAllowanceMs,
+          grantMs,
           command.nowMs,
         ),
       this.database
@@ -163,7 +164,7 @@ export class LedgerRepository {
         .bind(
           ledgerEntryId,
           command.customerId,
-          freeAllowanceMs,
+          grantMs,
           `free:${idempotencyKey}`,
           grantId,
           JSON.stringify({ allowance_kind: "free", period_key: command.periodKey }),
@@ -181,8 +182,8 @@ export class LedgerRepository {
           grantId,
           command.customerId,
           command.periodKey,
-          freeAllowanceMs,
-          freeAllowanceMs,
+          grantMs,
+          grantMs,
           command.periodStartsAtMs,
           command.periodExpiresAtMs,
           ledgerEntryId,

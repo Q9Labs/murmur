@@ -61,35 +61,55 @@ function decodeBootstrapGuest(
   value: object,
   common: CommonCommand,
 ): BootstrapGuestCommand | null {
-  const periodExpiresAtMs = requiredInteger(value, "periodExpiresAtMs");
-  const periodKey = requiredString(value, "periodKey");
-  const periodStartsAtMs = requiredInteger(value, "periodStartsAtMs");
+  const period = decodeFreePeriod(value);
+  const principal = decodePrincipal(value);
+  const freeAllowanceMs = optionalPositiveInteger(value, "freeAllowanceMs");
   const grantFreeAllowance = Reflect.get(value, "grantFreeAllowance");
-  const principalId = requiredString(value, "principalId");
-  const principalProvider = Reflect.get(value, "principalProvider");
-  const providerSubject = requiredString(value, "providerSubject");
-  if (
-    periodExpiresAtMs === null ||
-    !periodKey ||
-    periodStartsAtMs === null ||
-    typeof grantFreeAllowance !== "boolean" ||
-    !principalId ||
-    (principalProvider !== "anonymous" && principalProvider !== "email") ||
-    !providerSubject
-  ) {
+  if (!period || !principal || freeAllowanceMs === null || typeof grantFreeAllowance !== "boolean") {
     return null;
   }
   return {
     action: "bootstrap_guest",
     ...common,
     grantFreeAllowance,
-    periodExpiresAtMs,
-    periodKey,
-    periodStartsAtMs,
-    principalId,
-    principalProvider,
-    providerSubject,
+    ...(freeAllowanceMs !== undefined ? { freeAllowanceMs } : {}),
+    ...period,
+    ...principal,
   };
+}
+
+function decodeFreePeriod(value: object): Pick<
+  BootstrapGuestCommand,
+  "periodExpiresAtMs" | "periodKey" | "periodStartsAtMs"
+> | null {
+  const periodExpiresAtMs = requiredInteger(value, "periodExpiresAtMs");
+  const periodKey = requiredString(value, "periodKey");
+  const periodStartsAtMs = requiredInteger(value, "periodStartsAtMs");
+  return periodExpiresAtMs === null || !periodKey || periodStartsAtMs === null
+    ? null
+    : { periodExpiresAtMs, periodKey, periodStartsAtMs };
+}
+
+function decodePrincipal(value: object): Pick<
+  BootstrapGuestCommand,
+  "principalId" | "principalProvider" | "providerSubject"
+> | null {
+  const principalId = requiredString(value, "principalId");
+  const principalProvider = Reflect.get(value, "principalProvider");
+  const providerSubject = requiredString(value, "providerSubject");
+  if (!principalId || !providerSubject ||
+    (principalProvider !== "anonymous" && principalProvider !== "email")) {
+    return null;
+  }
+  return { principalId, principalProvider, providerSubject };
+}
+
+function optionalPositiveInteger(value: object, key: string): number | null | undefined {
+  const field = Reflect.get(value, key);
+  if (field === undefined) {
+    return undefined;
+  }
+  return typeof field === "number" && Number.isSafeInteger(field) && field > 0 ? field : null;
 }
 
 function decodeCloseUsageSession(

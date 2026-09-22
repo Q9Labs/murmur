@@ -72,6 +72,24 @@ describe("customer ledger command decoder", () => {
     expect(decodeCustomerLedgerCommand(command)).toEqual(command);
   });
 
+  it("preserves a configured Free grant amount", () => {
+    const command = {
+      action: "bootstrap_guest",
+      customerId: "customer-1",
+      freeAllowanceMs: 420_000,
+      grantFreeAllowance: true,
+      nowMs: 1,
+      periodExpiresAtMs: 3,
+      periodKey: "free:2026-08",
+      periodStartsAtMs: 2,
+      principalId: "principal-1",
+      principalProvider: "anonymous",
+      providerSubject: "install-1",
+    };
+    expect(decodeCustomerLedgerCommand(command)).toEqual(command);
+    expect(decodeCustomerLedgerCommand({ ...command, freeAllowanceMs: -1 })).toBeNull();
+  });
+
   it.each([
     null,
     {},

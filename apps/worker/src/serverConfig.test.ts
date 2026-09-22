@@ -16,8 +16,13 @@ describe("server configuration", () => {
 
   it("evaluates typed flags with the worker telemetry identity", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      featureFlags: { source_transcript: true, max_session_seconds: true, sessions_enabled: false },
-      featureFlagPayloads: { max_session_seconds: "240" },
+      featureFlags: {
+        free_allowance_minutes: true,
+        source_transcript: true,
+        max_session_seconds: true,
+        sessions_enabled: false,
+      },
+      featureFlagPayloads: { free_allowance_minutes: "7", max_session_seconds: "240" },
     })));
     vi.stubGlobal("fetch", fetchMock);
     const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
@@ -28,6 +33,7 @@ describe("server configuration", () => {
     });
     expect(config.source_transcript).toBe(true);
     expect(config.max_session_seconds).toBe(240);
+    expect(config.free_allowance_minutes).toBe(7);
     expect(config.sessions_enabled).toBe(false);
     const request = fetchMock.mock.calls[0]?.[1];
     expect(JSON.parse(request.body)).toMatchObject({

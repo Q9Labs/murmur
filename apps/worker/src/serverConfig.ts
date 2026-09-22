@@ -3,6 +3,7 @@ import { isLanguageCode } from "@murmur/protocol/languages";
 import * as Sentry from "@sentry/cloudflare";
 
 import type { CustomerPlan } from "./billing/allowanceService";
+import { freeAllowanceMs } from "./billing/catalog";
 import { requiresDeviceIntegrity, type Env } from "./env";
 import { defaultRateLimits } from "./limits";
 
@@ -30,7 +31,7 @@ export function defaultServerConfig(env: Env): ServerConfig {
   return {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
-    free_allowance_minutes: 5,
+    free_allowance_minutes: freeAllowanceMs / 60_000,
     low_balance_threshold_minutes: 15,
     max_session_seconds: defaultRateLimits.maxSessionSeconds,
     min_app_version_android: null,
