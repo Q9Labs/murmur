@@ -267,15 +267,23 @@ function ActionButton(props: {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: props.disabled }}
       disabled={props.disabled}
       onPress={props.onPress}
       style={({ pressed }) => [
         props.styles.button,
-        props.primary && props.styles.primaryButton,
-        (pressed || props.disabled) && props.styles.disabled,
+        props.primary && !props.disabled && props.styles.primaryButton,
+        props.disabled && props.styles.disabledButton,
+        pressed && props.styles.pressed,
       ]}
     >
-      <Text style={[props.styles.buttonText, props.primary && props.styles.primaryButtonText]}>
+      <Text
+        style={[
+          props.styles.buttonText,
+          props.primary && !props.disabled && props.styles.primaryButtonText,
+          props.disabled && props.styles.disabledButtonText,
+        ]}
+      >
         {props.label}
       </Text>
     </Pressable>
@@ -316,7 +324,8 @@ function createStyles(colors: ReturnType<typeof useMurmurTheme>) {
     },
     buttonText: { color: colors.primary, fontSize: 16, fontWeight: "800" },
     caption: { color: colors.muted, fontSize: 14, fontWeight: "600", lineHeight: 20 },
-    disabled: { opacity: 0.45 },
+    disabledButton: { backgroundColor: colors.input, borderStyle: "dashed" },
+    disabledButtonText: { color: colors.muted, fontWeight: "700" },
     error: { color: "#B33A3A", fontSize: 13, fontWeight: "700", marginTop: 14 },
     eyebrow: { color: colors.teal, fontSize: 12, fontWeight: "900", letterSpacing: 1.2 },
     heading: { color: colors.primary, fontSize: 18, fontWeight: "900" },
@@ -332,6 +341,7 @@ function createStyles(colors: ReturnType<typeof useMurmurTheme>) {
     },
     message: { color: colors.muted, fontSize: 13, fontWeight: "700", marginTop: 14 },
     primaryButton: { backgroundColor: colors.primary, borderColor: colors.primary },
+    pressed: { opacity: 0.55 },
     primaryButtonText: { color: colors.background },
     signInForm: { gap: 12 },
   });

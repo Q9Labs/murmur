@@ -55,7 +55,7 @@ export function ModalSheet({
               <ScrollView
                 contentContainerStyle={sheetContent}
                 keyboardDismissMode="interactive"
-                showsVerticalScrollIndicator={false}
+                style={sheetScroll}
               >
                 {children}
               </ScrollView>
@@ -67,7 +67,9 @@ export function ModalSheet({
   );
 }
 
-const sheetContent = { paddingBottom: 24 } as const;
+const sheetContent = { paddingBottom: 32 } as const;
+// Without flexShrink the scroll view grows to its content and the sheet clips it on iOS.
+const sheetScroll = { flexShrink: 1 } as const;
 
 function ModalSheetHeader({ onClose, title }: { onClose: () => void; title: string }): ReactNode {
   const { colors, styles } = useSheetStyles();
