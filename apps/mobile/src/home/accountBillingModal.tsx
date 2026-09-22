@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { freeAllowanceMinutes } from "../lib/billing/allowance";
 import { type MurmurBillingContext, useMurmurBilling } from "../lib/billing/context";
 import { ModalSheet } from "./modalSheet";
 import { useMurmurTheme } from "./theme";
@@ -31,7 +32,7 @@ export function AccountBillingModal(props: {
         <Text style={styles.eyebrow}>TIME AVAILABLE</Text>
         <Text style={styles.balance}>{balance}</Text>
         <Text style={styles.caption}>
-          Free includes 10 minutes each month. Pro includes 3 hours each month. Credit packs never expire.
+          Free includes {freeAllowanceMinutes} minutes each month. Pro includes 3 hours each month. Credit packs never expire.
         </Text>
       </View>
 
