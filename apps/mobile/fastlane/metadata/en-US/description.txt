@@ -8,7 +8,7 @@ Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Por
 
 START FREE, KEEP YOUR TIME
 
-Murmur creates a durable guest account with 30 translation minutes each month, so no sign-up is needed. Murmur Pro includes 3 hours each month, with monthly and annual plans. Non-expiring credit packs add time when you need it. You can link an email for recovery, restore store purchases, and delete your account in the app.
+Murmur creates a durable guest account with 10 translation minutes each month, so no sign-up is needed. Murmur Pro includes 3 hours each month, with monthly and annual plans. Non-expiring credit packs add time when you need it. You can link an email for recovery, restore store purchases, and delete your account in the app.
 
 Murmur does not save cloud transcript history by default. Microphone audio streams only during a live session, and you can stop or cancel at any time.
 

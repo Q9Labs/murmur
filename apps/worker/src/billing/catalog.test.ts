@@ -9,7 +9,7 @@ import {
 
 describe("billing catalog", () => {
   it("keeps the approved allowance values", () => {
-    expect(freeAllowanceMs).toBe(30 * 60 * 1_000);
+    expect(freeAllowanceMs).toBe(10 * 60 * 1_000);
     expect(proAllowanceMs).toBe(180 * 60 * 1_000);
   });
 

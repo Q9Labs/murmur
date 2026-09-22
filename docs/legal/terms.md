@@ -20,7 +20,7 @@ You can report translation issues in the app. Reports help support and quality r
 
 ## Accounts, Plans, Credits, And Usage
 
-Murmur starts with a guest customer account and 30 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.
+Murmur starts with a guest customer account and 10 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.
 
 Monthly Pro renews each month. Annual Pro provides the same 3-hour allowance each internal month for one yearly charge. It does not grant the full year of time at once. Unused Free or Pro allowance expires at the end of its allowance period and does not roll over. Credit packs do not expire.
 

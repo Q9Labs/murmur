@@ -61,7 +61,7 @@ function buildMarketingLandingPage(options: MarketingLandingPageOptions): Page {
           <a class="store-button store-button-primary" href="${trackedAppStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
           <a class="store-button store-button-secondary" href="${trackedGooglePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
         </div>
-        <p class="hero-points">Live translated captions · 30 free minutes · No saved transcript history</p>
+        <p class="hero-points">Live translated captions · 10 free minutes · No saved transcript history</p>
       </section>
 
       <section class="landing-grid">
@@ -127,7 +127,7 @@ export const legalPages: Record<string, Page> = {
     path: "/",
     title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 30 free minutes and no cloud transcript history by default.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 10 free minutes and no cloud transcript history by default.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
@@ -138,7 +138,7 @@ export const legalPages: Record<string, Page> = {
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
           </div>
-          <p class="hero-points">Real-time captions · 30 free minutes monthly · Nothing saved by default</p>
+          <p class="hero-points">Real-time captions · 10 free minutes monthly · Nothing saved by default</p>
         </div>
         <div class="hero-card">
           <span class="hero-card-glow"></span>
@@ -236,7 +236,7 @@ export const legalPages: Record<string, Page> = {
         <div class="price-grid">
           <article class="price-card">
             <span class="price-kicker">Free</span>
-            <h3>30 minutes</h3>
+            <h3>10 minutes</h3>
             <p class="price">$0 <span>/ month</span></p>
             <p>For quick questions, directions, and short explanations.</p>
           </article>
@@ -259,7 +259,7 @@ export const legalPages: Record<string, Page> = {
       <section class="cta">
         <div class="cta-inner">
           <h2>Take Murmur to your next tour or talk.</h2>
-          <p>Start with 30 free minutes each month. Upgrade or add non-expiring time inside the app.</p>
+          <p>Start with 10 free minutes each month. Upgrade or add non-expiring time inside the app.</p>
           <div class="hero-actions">
             <a class="store-button store-button-primary" href="${appStoreUrl}" rel="noopener">${appleLogoSvg}<span>App Store</span></a>
             <a class="store-button store-button-secondary" href="${googlePlayUrl}" rel="noopener">${playLogoSvg}<span>Google Play</span></a>
@@ -273,7 +273,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
     description:
-      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 30 free minutes each month.",
+      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 10 free minutes each month.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
     eyebrow: "Live translation for travel",
     heading: "Understand the guide without interrupting the tour.",
@@ -362,7 +362,7 @@ export const legalPages: Record<string, Page> = {
       <p><strong>Source and translated captions.</strong> OpenAI Realtime returns source-language and translated captions through Murmur's Cloudflare Worker for local display. Murmur does not save transcript history by default.</p>
 
       <p><strong>Account, entitlement, and purchase metadata.</strong> Murmur creates a random guest customer id so it can grant Free time and meter translation use. You can add an email address for account recovery; Murmur stores the email and sign-in records needed for that purpose. Murmur stores plan state, credit grants, usage debits, renewals, restores, refunds, and store transaction identifiers in an append-only entitlement ledger. Apple, Google, and RevenueCat process store purchases. Murmur does not receive or store your payment-card details.</p>
-      <p><strong>Anonymous install, Free allowance, and session metadata.</strong> The app creates an anonymous install identifier and a separate Free allowance identifier in platform secure storage. The Worker hashes both values. The install identifier supports diagnostics and pseudonymous session measurement; the Free allowance identifier prevents account deletion from creating more than one 30-minute grant for the same app installation in a UTC month. Reset Murmur Identity replaces only the diagnostic install identifier. Delete Local Data removes both local identifiers, while the current monthly Free claim hash can remain on the server through its allowance period for abuse prevention.</p>
+      <p><strong>Anonymous install, Free allowance, and session metadata.</strong> The app creates an anonymous install identifier and a separate Free allowance identifier in platform secure storage. The Worker hashes both values. The install identifier supports diagnostics and pseudonymous session measurement; the Free allowance identifier prevents account deletion from creating more than one 10-minute grant for the same app installation in a UTC month. Reset Murmur Identity replaces only the diagnostic install identifier. Delete Local Data removes both local identifiers, while the current monthly Free claim hash can remain on the server through its allowance period for abuse prevention.</p>
       <p><strong>Campaign and referral tags.</strong> When Murmur is opened directly through a tagged app link, it may process a short allowlisted source, medium, campaign, content, partner, or landing-page label with the next successful live session. These labels are normalized, length-limited, and consumed after that session starts. Store-page links use Apple or Google campaign parameters measured by the respective store; Murmur does not currently copy iOS install attribution into an in-app session. Murmur does not put audio or caption text in campaign attribution.</p>
       <p><strong>Local engagement state.</strong> Murmur stores a qualified-session count and the version and time of its last native rating request on the device. This state is used only to avoid interrupting a live or unsuccessful session and to avoid repeatedly asking for a rating. It contains no audio or caption text.</p>
       <p><strong>Translation reports.</strong> You can report inaccurate, wrong-language, harmful, speech-related, or other translation issues. Reports include session/span metadata and may include text snapshots only when explicitly submitted by the app.</p>
@@ -404,7 +404,7 @@ export const legalPages: Record<string, Page> = {
       <p>OpenAI Realtime handles speech recognition, translation, and translated speech. Its output can be delayed, incomplete, inaccurate, offensive, or inappropriate. Murmur may show captions when speech output is unavailable.</p>
       <p>You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.</p>
       <h2>Accounts, Plans, Credits, and Usage</h2>
-      <p>Murmur starts with a guest customer account and 30 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.</p>
+      <p>Murmur starts with a guest customer account and 10 Free minutes each month. Add and verify an email before you subscribe to Murmur Pro or buy a non-expiring credit pack, so paid value can be recovered on another device. Pro provides a 3-hour monthly allowance. Allowance time is used before credit packs. The app shows store-localized prices before purchase.</p>
       <p>Monthly Pro renews each month. Annual Pro provides the same 3-hour allowance each internal month for one yearly charge. It does not grant the full year of time at once. Unused Free or Pro allowance expires at the end of its allowance period and does not roll over. Credit packs do not expire.</p>
       <p>Apple or Google handles payment, renewal, cancellation, and applicable taxes. Deleting a Murmur account does not cancel a store subscription. Cancel it in the App Store or Google Play. Refunds can remove granted value and may create a negative balance when refunded time was already used. A reversed refund restores the corresponding value.</p>
       <h2>Acceptable Use</h2>
@@ -1158,13 +1158,13 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
           "@type": "SoftwareApplication",
           applicationCategory: "UtilitiesApplication",
           description:
-            "One-way live speech translation with real-time translated captions, 30 free minutes each month, optional paid time, and no cloud transcript history by default.",
+            "One-way live speech translation with real-time translated captions, 10 free minutes each month, optional paid time, and no cloud transcript history by default.",
           featureList: [
             "One-way live speech translation",
             "Real-time translated captions",
             "Optional translated speech",
             "Automatic guest account with optional email recovery",
-            "30 free minutes each month",
+            "10 free minutes each month",
             "No cloud transcript history by default",
           ],
           name: siteName,

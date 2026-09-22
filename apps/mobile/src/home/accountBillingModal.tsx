@@ -31,7 +31,7 @@ export function AccountBillingModal(props: {
         <Text style={styles.eyebrow}>TIME AVAILABLE</Text>
         <Text style={styles.balance}>{balance}</Text>
         <Text style={styles.caption}>
-          Free includes 30 minutes each month. Pro includes 3 hours each month. Credit packs never expire.
+          Free includes 10 minutes each month. Pro includes 3 hours each month. Credit packs never expire.
         </Text>
       </View>
 

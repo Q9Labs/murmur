@@ -12,7 +12,7 @@ There is one session experience. Listening continues until the user stops, cance
 
 Murmur does not save microphone audio or transcript history by default. Reports may include transcript snapshots only when a user explicitly opts in.
 
-Each account receives 30 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
+Each account receives 10 free translation minutes per calendar month. Murmur Pro provides 3 hours per internal monthly allowance period through a monthly or annual Apple or Google subscription. The annual price is about 20% below twelve monthly payments. Non-expiring credit packs add 60, 180, or 540 minutes. D1 is authoritative for entitlement and balance state, and accepted audio is settled to the immutable ledger in milliseconds.
 
 ## Architecture
 

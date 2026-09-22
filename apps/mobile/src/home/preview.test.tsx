@@ -47,14 +47,14 @@ vi.mock("./variants/bloom/onboarding", () => ({
 import { BloomPreview } from "./preview";
 
 describe("Bloom preview", () => {
-  it("renders billing with a stable 30-minute fixture", () => {
+  it("renders billing with a stable 10-minute fixture", () => {
     renderToStaticMarkup(<BloomPreview screen="billing" />);
 
     expect(harness.billingProps?.["billing"]).toMatchObject({
       busy: false,
       customer: {
-        allowanceMs: 1_800_000,
-        availableMs: 1_800_000,
+        allowanceMs: 600_000,
+        availableMs: 600_000,
         plan: "free",
       },
       error: null,

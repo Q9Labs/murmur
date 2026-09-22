@@ -59,7 +59,7 @@ These are repository-supported positioning differences, not claims of market exc
 
 ## 5. Monetization
 
-Each durable customer receives 30 free minutes per calendar month. Murmur Pro provides 3 hours each internal month at $12.99 monthly or $124.99 annually. Non-expiring credit packs provide 60 minutes for $3.99, 180 minutes for $10.99, or 540 minutes for $31.99. Apple and Google process payment, RevenueCat normalizes store state, and the Worker verifies purchases before D1 grants value. Sources: `docs/billing-spec.md`, `apps/worker/src/billing/catalog.ts`, `apps/mobile/src/lib/billing/revenueCat.ts`.
+Each durable customer receives 10 free minutes per calendar month. Murmur Pro provides 3 hours each internal month at $12.99 monthly or $124.99 annually. Non-expiring credit packs provide 60 minutes for $3.99, 180 minutes for $10.99, or 540 minutes for $31.99. Apple and Google process payment, RevenueCat normalizes store state, and the Worker verifies purchases before D1 grants value. Sources: `docs/billing-spec.md`, `apps/worker/src/billing/catalog.ts`, `apps/mobile/src/lib/billing/revenueCat.ts`.
 
 ## 6. Privacy posture
 
@@ -84,9 +84,9 @@ Exact text already present:
 
 > **App Store subtitle:** “Captions for travel & talks”
 
-> **App Store promotional text:** “Follow tours, talks, and lectures with live translated captions. Start with 30 free minutes each month, then add Pro or non-expiring credit packs.”
+> **App Store promotional text:** “Follow tours, talks, and lectures with live translated captions. Start with 10 free minutes each month, then add Pro or non-expiring credit packs.”
 
-> **Google Play short description:** “Live translated captions with 30 free minutes each month. No sign-up needed.”
+> **Google Play short description:** “Live translated captions with 10 free minutes each month. No sign-up needed.”
 
 The long descriptions open with:
 

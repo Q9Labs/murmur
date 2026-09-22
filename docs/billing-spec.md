@@ -14,7 +14,7 @@ The final product has durable guest and registered customer accounts. Apple and 
 
 This work is complete when all of the following are observable:
 
-- A new install receives a durable guest customer and 30 free translation minutes for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
+- A new install receives a durable guest customer and 10 free translation minutes for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
 - A guest can register or sign in with a verified email code without losing purchased value or usage history. A merge into an existing customer recomputes Free usage under one monthly cap instead of stacking two Free grants.
 - A registered customer can buy Murmur Pro monthly or annual on iOS or Android, restore it on another supported device, and see the same server-owned entitlement and balance.
 - A registered customer can buy any credit pack. Pack credits survive subscription expiry, app reinstall, and supported cross-platform sign-in.
@@ -49,7 +49,7 @@ All internal quantities use integer milliseconds. Storefronts localize the base 
 
 | Product | Store type | Included translation | Base price |
 | --- | --- | ---: | ---: |
-| Free | Server allowance | 30 minutes per UTC month | $0 |
+| Free | Server allowance | 10 minutes per UTC month | $0 |
 | Murmur Pro Monthly | Auto-renewing subscription | 180 minutes per allowance cycle | $12.99/month |
 | Murmur Pro Annual | Auto-renewing subscription | 180 minutes per internal monthly allowance cycle | $124.99/year |
 | 60-Minute Credit Pack | Consumable / one-time product | 60 non-expiring minutes | $3.99 |
@@ -58,7 +58,7 @@ All internal quantities use integer milliseconds. Storefronts localize the base 
 
 The pricing model uses the official OpenAI price of $0.034 per minute for `gpt-realtime-translate`, a conservative 30% store fee, and RevenueCat's 1% fee after its free monthly tracked-revenue threshold. At full use, at least 10% of each paid product's base price remains after those variable costs: Monthly 21.89%, Annual 10.24%, and the 60, 180, and 540-minute packs 17.87%, 13.31%, and 11.61%. Annual is 19.82% below twelve monthly payments and grants the same monthly value. Free usage and Cloudflare and email costs are acquisition and operating costs outside this product-level contribution calculation. Revisit the catalog when provider or platform prices change.
 
-Pro replaces Free for an allowance cycle; it does not stack 180 paid minutes on top of 30 free minutes. An upgrade during a Free cycle increases that cycle's total allowance cap to 180 minutes, so a customer who already used 3 free minutes receives 177 remaining Pro minutes. Allowance never rolls over. Credit packs never expire and remain after Pro ends. Usage consumes current expiring allowance first, then the oldest non-expiring credit grant.
+Pro replaces Free for an allowance cycle; it does not stack 180 paid minutes on top of 10 free minutes. An upgrade during a Free cycle increases that cycle's total allowance cap to 180 minutes, so a customer who already used 3 free minutes receives 177 remaining Pro minutes. Allowance never rolls over. Credit packs never expire and remain after Pro ends. Usage consumes current expiring allowance first, then the oldest non-expiring credit grant.
 
 ## Customer behavior
 

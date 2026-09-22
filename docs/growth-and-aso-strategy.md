@@ -53,7 +53,7 @@ The repository-owned English metadata should use the following search structure:
 | App name/title | `Murmur: Live Voice Translator` |
 | App Store subtitle | `Captions for travel & talks` |
 | App Store keyword field | `interpreter,conference,meeting,event,tour,lecture,arabic,urdu,hindi,spanish,french,german,transcribe` |
-| Google Play short description | `Live translated captions with 30 free minutes each month. No sign-up needed.` |
+| Google Play short description | `Live translated captions with 10 free minutes each month. No sign-up needed.` |
 | Primary message | Follow ongoing speech in another language through live captions. |
 | Trust message | Start without sign-up; no saved cloud transcript history by default. |
 | Supporting message | Live sessions handle short exchanges, tours, lectures, talks, and other ongoing speech. |
@@ -74,7 +74,7 @@ The first three screenshots need to show value before setup:
 4. **Short exchange or ongoing speech.** Show the live caption flow without implying a two-way conversation feature.
 5. **15 supported languages, including Arabic.** Show the language picker with accurate availability.
 6. **Translated speech when available.** Show translated audio without making speech output look more reliable than captions.
-7. **30 free minutes. No saved transcript history.** Explain the free allowance and privacy benefit in plain language.
+7. **10 free minutes. No saved transcript history.** Explain the free allowance and privacy benefit in plain language.
 
 Every screenshot must use the current shipping interface and a successful real caption session. Marketing overlays may clarify the benefit, but the underlying app state cannot be fabricated. The Android feature graphic should use the same first message rather than a generic logo composition.
 
