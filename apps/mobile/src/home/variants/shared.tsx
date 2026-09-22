@@ -74,7 +74,12 @@ export function timelineScrollHandlers(refs: TimelineScrollRefs): {
   };
 }
 
-function timelineEmptyText(isLive: boolean): string {
+function timelineEmptyText(isLive: boolean, translationOnlyLanguage: string | null): string {
+  if (translationOnlyLanguage) {
+    return isLive
+      ? `Listening. ${translationOnlyLanguage} will appear here as people speak.`
+      : `Tap Listen and hear the room in ${translationOnlyLanguage}.`;
+  }
   return isLive
     ? "Listening. The conversation will appear here."
     : "The conversation appears here once you start.";
@@ -102,6 +107,7 @@ export function SpanTimeline({
   viewModel: VariantShellProps["viewModel"];
 }): ReactNode {
   const sourceRtl = Boolean(viewModel.sourceLanguage?.rtl);
+  const showSource = live.source_transcript_enabled;
   const visibleSpans = live.spans.filter((span) => !shouldHideSpan(span));
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
 
@@ -115,18 +121,24 @@ export function SpanTimeline({
       {...timelineScrollHandlers(refs)}
     >
       {!hasTimeline ? (
-        <Text style={textStyles.source}>{timelineEmptyText(viewModel.isLive)}</Text>
+        <Text style={textStyles.source}>
+          {timelineEmptyText(
+            viewModel.isLive,
+            showSource ? null : viewModel.targetLanguage.display_name,
+          )}
+        </Text>
       ) : null}
       {visibleSpans.map((span) => (
         <SpanRow
           key={`${span.span_id}:${span.revision}`}
+          showSource={showSource}
           sourceRtl={sourceRtl}
           span={span}
           targetRtl={viewModel.targetLanguage.rtl}
           textStyles={textStyles}
         />
       ))}
-      {live.tentative_source_caption.trim() ? (
+      {showSource && live.tentative_source_caption.trim() ? (
         <TentativeCaption sourceRtl={sourceRtl} text={live.tentative_source_caption} textStyles={textStyles} />
       ) : null}
     </ScrollView>
@@ -146,11 +158,13 @@ function TentativeCaption({
 }
 
 function SpanRow({
+  showSource,
   sourceRtl,
   span,
   targetRtl,
   textStyles,
 }: {
+  showSource: boolean;
   sourceRtl: boolean;
   span: TranslationSpan;
   targetRtl: boolean;
@@ -167,7 +181,9 @@ function SpanRow({
       >
         {timelineTranslationText(span)}
       </Text>
-      <Text style={[textStyles.source, sourceRtl && textStyles.rtl]}>{span.source_caption}</Text>
+      {showSource ? (
+        <Text style={[textStyles.source, sourceRtl && textStyles.rtl]}>{span.source_caption}</Text>
+      ) : null}
     </View>
   );
 }

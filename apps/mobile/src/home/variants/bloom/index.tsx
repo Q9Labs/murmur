@@ -191,10 +191,19 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
 
 function TranslationStage(props: VariantShellProps): ReactNode {
   const { styles } = useBloomStyles();
+  const translationOnly = !props.live.source_transcript_enabled;
   return (
     <View style={styles.flexFill}>
+      {translationOnly ? (
+        <View style={styles.stageHeader}>
+          <View accessibilityElementsHidden importantForAccessibility="no" style={styles.stageDot} />
+          <Text style={styles.stageLabel}>
+            Translating into {props.viewModel.targetLanguage.display_name}
+          </Text>
+        </View>
+      ) : null}
       <SpanTimeline
-        contentStyle={styles.timelineContent}
+        contentStyle={[styles.timelineContent, translationOnly && styles.timelineContentTranslationOnly]}
         autoScrollRef={props.autoScrollRef}
         live={props.live}
         style={styles.flexFill}

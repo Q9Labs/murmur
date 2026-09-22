@@ -94,6 +94,7 @@ const previewLive: LiveTranslationController = {
     state: "live",
     target_language: previewTargetLanguage,
   } satisfies TranslationSession,
+  source_transcript_enabled: true,
   spans: [
     {
       committed_translated_caption: previewTranslation,
