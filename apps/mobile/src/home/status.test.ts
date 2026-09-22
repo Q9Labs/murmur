@@ -31,7 +31,7 @@ describe("home status helpers", () => {
   });
 
   it("maps session state and errors into compact UI status labels", () => {
-    expect(getStatusText("live", null)).toBe("Health OK");
+    expect(getStatusText("live", null)).toBe("Listening");
     expect(getStatusText("recovering", null)).toBe("Recovering");
     expect(getStatusText("idle", "realtime_transport_error")).toBe("Network degraded");
     expect(getStatusText("idle", "worker_session_network_error")).toBe("Service unavailable");
