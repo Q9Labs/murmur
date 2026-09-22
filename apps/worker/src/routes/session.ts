@@ -126,6 +126,7 @@ export async function createSession(
       appSessionId,
       parsed.value.targetLanguage,
       parsed.value.analyticsEnabled,
+      parsed.value.playbackEnabled,
     ),
     session_epoch: 1,
   });
@@ -195,6 +196,7 @@ type ParsedCreateSessionRequest = {
   analyticsEnabled: boolean;
   appInstallId: string;
   deviceIntegrity: ReturnType<typeof parseDeviceIntegrity>;
+  playbackEnabled: boolean;
   sourceLanguage: SourceLanguageCode;
   targetLanguage: LanguageCode;
 };
@@ -208,6 +210,9 @@ function parseCreateSessionRequest(
   if (typeof body.app_install_id !== "string" || body.app_install_id.length < 8) {
     return { ok: false, response: json({ error: "invalid_install_id" }, 400) };
   }
+  if (body.playback_enabled !== undefined && typeof body.playback_enabled !== "boolean") {
+    return { ok: false, response: json({ error: "invalid_playback_enabled" }, 400) };
+  }
   const languagePair = parseLanguagePair(body.source_language, body.target_language);
   if ("error" in languagePair) {
     return { ok: false, response: json({ error: languagePair.error }, 400) };
@@ -219,6 +224,7 @@ function parseCreateSessionRequest(
       analyticsEnabled: body.analytics_enabled === true,
       appInstallId: body.app_install_id,
       deviceIntegrity: parseDeviceIntegrity(body.device_integrity),
+      playbackEnabled: body.playback_enabled !== false,
       sourceLanguage: languagePair.sourceLanguage,
       targetLanguage: languagePair.targetLanguage,
     },
@@ -287,6 +293,7 @@ function realtimeUrl(
   appSessionId: string,
   targetLanguage: LanguageCode,
   analyticsEnabled: boolean,
+  playbackEnabled: boolean,
 ): string {
   const url = new URL(requestUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -294,6 +301,7 @@ function realtimeUrl(
   url.search = new URLSearchParams({
     app_session_id: appSessionId,
     analytics_enabled: String(analyticsEnabled),
+    playback_enabled: String(playbackEnabled),
     target_language: targetLanguage,
   }).toString();
   return url.toString();

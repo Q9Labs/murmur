@@ -135,6 +135,7 @@ export function useLiveTranslation(
 
   useEffect(() => {
     playbackEnabledRef.current = params.playback_enabled;
+    clientRef.current?.setPlaybackEnabled(params.playback_enabled);
     if (!params.playback_enabled) {
       observeBackgroundOperation(
         MurmurAudioModule.clearPlayback("playback_disabled"),
@@ -507,6 +508,7 @@ export function useLiveTranslation(
       analytics_enabled: params.analytics_enabled,
       app_install_id: appInstallId,
       device_integrity: deviceIntegrity,
+      playback_enabled: params.playback_enabled,
       source_language: params.source_language,
       target_language: params.target_language,
     });
@@ -546,6 +548,7 @@ export function useLiveTranslation(
       url: response.realtime_ws_url,
     });
     clientRef.current = client;
+    client.setPlaybackEnabled(playbackEnabledRef.current);
     connectDeadlineRef.current = scheduleRealtimeConnectionDeadline(() => {
       if (sessionRef.current.state !== "connecting_realtime") {
         return;

@@ -46,6 +46,7 @@ export async function createWorkerSession(body: {
   analytics_enabled: boolean;
   app_install_id: string;
   device_integrity: DeviceIntegrityPayload;
+  playback_enabled?: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
 }): Promise<CreateSessionResponse | { error: string }> {

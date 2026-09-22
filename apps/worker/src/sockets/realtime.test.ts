@@ -57,6 +57,7 @@ class FakeSocket extends EventTarget {
 async function openTestRealtimeSession(params: {
   env?: Parameters<typeof proxyRealtimeSession>[2];
   name: string;
+  playbackEnabled?: boolean;
   targetLanguage?: string;
 }): Promise<{ appSessionId: string; client: FakeSocket; upstream: FakeSocket }> {
   const appSessionId = `session_${params.name}_${crypto.randomUUID()}`;
@@ -72,7 +73,7 @@ async function openTestRealtimeSession(params: {
   );
   await proxyRealtimeSession(
     new Request(
-      `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=${params.targetLanguage ?? "ar"}&analytics_enabled=true`,
+      `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=${params.targetLanguage ?? "ar"}&analytics_enabled=true&playback_enabled=${params.playbackEnabled ?? true}`,
     ),
     client as unknown as WorkerWebSocket,
     params.env ?? { OPENAI_API_KEY: "test_key" },
@@ -89,13 +90,19 @@ describe("app-facing realtime socket", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
-  it("accepts only the close command", () => {
+  it("accepts close and typed playback commands", () => {
     expect(parseClientCommand(JSON.stringify({ kind: "close_session" }))).toEqual({
       kind: "close_session",
     });
     expect(parseClientCommand(JSON.stringify({ kind: "provider_command" }))).toBeNull();
+    expect(parseClientCommand(JSON.stringify({ kind: "set_playback", enabled: false }))).toEqual({
+      kind: "set_playback",
+      enabled: false,
+    });
+    expect(parseClientCommand(JSON.stringify({ kind: "set_playback", enabled: "false" }))).toBeNull();
     expect(parseClientCommand("not-json")).toBeNull();
   });
 
@@ -387,6 +394,41 @@ describe("app-facing realtime socket", () => {
       code: 1000,
       reason: "provider_session_closed",
     });
+  });
+
+  it("suppresses translated audio until playback is re-enabled without suppressing text", async () => {
+    const { client, upstream } = await openTestRealtimeSession({
+      name: "playback_off",
+      playbackEnabled: false,
+    });
+    const audio = JSON.stringify({ delta: "AQID", type: "session.output_audio.delta" });
+    upstream.dispatchEvent(new MessageEvent("message", { data: audio }));
+    expect(client.sent.some((item) => item instanceof ArrayBuffer)).toBe(false);
+
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ delta: "hello", type: "session.output_transcript.delta" }),
+    }));
+    expect(client.sent.map(String).join(" ")).toContain("translation_delta");
+
+    client.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ kind: "set_playback", enabled: true }),
+    }));
+    upstream.dispatchEvent(new MessageEvent("message", { data: audio }));
+    expect(client.sent.at(-1)).toBeInstanceOf(ArrayBuffer);
+  });
+
+  it("suppresses translated audio when the server output-audio flag is off", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { output_audio_enabled: false },
+    }))));
+    const { client, upstream } = await openTestRealtimeSession({
+      env: { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+      name: "server_audio_off",
+    });
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ delta: "AQID", type: "session.output_audio.delta" }),
+    }));
+    expect(client.sent.some((item) => item instanceof ArrayBuffer)).toBe(false);
   });
 
   it("closes the client even when closing the provider socket throws", async () => {

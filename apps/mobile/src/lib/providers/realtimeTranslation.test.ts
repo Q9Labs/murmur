@@ -103,6 +103,33 @@ describe("RealtimeTranslationClient", () => {
     });
   });
 
+  it("sends playback toggles to the worker without closing the socket", () => {
+    const client = createRealtimeTranslationClient({
+      onEvent: vi.fn(),
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    client.setPlaybackEnabled(false);
+    client.setPlaybackEnabled(true);
+    expect(MockWebSocket.instances[0]?.sent).toEqual([
+      JSON.stringify({ kind: "set_playback", enabled: false }),
+      JSON.stringify({ kind: "set_playback", enabled: true }),
+    ]);
+  });
+
+  it("sends a preference changed before the socket opens once connected", () => {
+    const client = createRealtimeTranslationClient({
+      onEvent: vi.fn(),
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.setPlaybackEnabled(false);
+    client.connect();
+    MockWebSocket.instances[0]?.onopen?.();
+    expect(MockWebSocket.instances[0]?.sent).toEqual([
+      JSON.stringify({ kind: "set_playback", enabled: false }),
+    ]);
+  });
+
   it("fails closed when audio acknowledgements stop", async () => {
     vi.useFakeTimers();
     const onEvent = vi.fn();

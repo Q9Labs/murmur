@@ -227,6 +227,7 @@ describe("worker routes", () => {
       `app_session_id=${encodeURIComponent(session.app_session_id)}`,
     );
     expect(session.realtime_ws_url).toContain("target_language=ar");
+    expect(session.realtime_ws_url).toContain("playback_enabled=true");
     expect(session.realtime_ws_url).toMatch(/^wss:/);
     expect(session.session_epoch).toBe(1);
 
@@ -239,6 +240,23 @@ describe("worker routes", () => {
     );
     expect(closeResponse.status).toBe(200);
     await expect(closeResponse.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("passes a disabled initial playback preference into the realtime URL", async () => {
+    const response = await worker.fetch(
+      new Request("https://worker.example/v2/session", {
+        body: JSON.stringify({
+          app_install_id: `install_${crypto.randomUUID()}`,
+          playback_enabled: false,
+          source_language: "en",
+          target_language: "ar",
+        }),
+        method: "POST",
+      }),
+      { OPENAI_API_KEY: "test_key", SESSION_HASH_SALT: "test_salt" },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("playback_enabled=false");
   });
 
   it("rejects required integrity when the device proof is absent", async () => {

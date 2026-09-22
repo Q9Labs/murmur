@@ -94,12 +94,12 @@ describe("capture permission routing", () => {
 });
 
 describe("createWorkerSession", () => {
-  it("aborts a session request that does not settle before the connection deadline", async () => {
+  async function expectDeadline(fetchResponse: () => Promise<Response>): Promise<void> {
     vi.useFakeTimers();
     let requestSignal: AbortSignal | undefined;
     vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
       requestSignal = init?.signal ?? undefined;
-      return new Promise<Response>(() => undefined);
+      return fetchResponse();
     }));
 
     const pending = createWorkerSession(request);
@@ -107,21 +107,14 @@ describe("createWorkerSession", () => {
 
     await expect(pending).resolves.toEqual({ error: "worker_session_network_error" });
     expect(requestSignal?.aborted).toBe(true);
+  }
+
+  it("aborts a session request that does not settle before the connection deadline", async () => {
+    await expectDeadline(() => new Promise<Response>(() => undefined));
   });
 
   it("keeps the deadline active while reading a stalled response body", async () => {
-    vi.useFakeTimers();
-    let requestSignal: AbortSignal | undefined;
-    vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
-      requestSignal = init?.signal ?? undefined;
-      return Promise.resolve(new Response(new ReadableStream({ start: () => undefined })));
-    }));
-
-    const pending = createWorkerSession(request);
-    await vi.advanceTimersByTimeAsync(workerSessionRequestTimeoutMs);
-
-    await expect(pending).resolves.toEqual({ error: "worker_session_network_error" });
-    expect(requestSignal?.aborted).toBe(true);
+    await expectDeadline(async () => new Response(new ReadableStream({ start: () => undefined })));
   });
 
   it("returns a successful response before the deadline", async () => {
@@ -137,7 +130,9 @@ describe("createWorkerSession", () => {
       vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 })),
     );
 
-    await expect(createWorkerSession(request)).resolves.toEqual(payload);
+    await expect(createWorkerSession({ ...request, playback_enabled: false })).resolves.toEqual(payload);
+    const fetchCall = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(fetchCall?.[1]?.body))).toMatchObject({ playback_enabled: false });
   });
 });
 
