@@ -284,9 +284,10 @@ function createBloomStyles(theme: MurmurTheme) {
       letterSpacing: 0.4,
     },
     sourceText: {
-      color: theme.muted,
-      fontSize: 15,
-      lineHeight: 23,
+      color: theme.secondaryText,
+      fontSize: 18,
+      fontWeight: "500",
+      lineHeight: 28,
     },
     swapText: {
       color: theme.teal,
