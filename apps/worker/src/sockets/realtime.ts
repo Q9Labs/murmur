@@ -282,7 +282,7 @@ export async function proxyRealtimeSession(
   try {
     upstream = await openTranslationSocket({
       apiKey: validated.apiKey,
-      model: env.OPENAI_REALTIME_MODEL,
+      model: config.realtime_model,
       safetyIdentifier: validated.safetyIdentifier,
       signal: providerAbort.signal,
     });
@@ -367,13 +367,20 @@ export async function proxyRealtimeSession(
     () => sessionFinished,
     (enabled) => { playback.enabled = enabled; },
   );
-  bindProviderEvents(client, upstream, telemetry, terminate, () => playback.enabled && config.output_audio_enabled);
+  bindProviderEvents(
+    client,
+    upstream,
+    telemetry,
+    terminate,
+    () => playback.enabled && config.output_audio_enabled,
+    config.source_transcript,
+  );
   try {
-    upstream.send(createSessionUpdate(validated.targetLanguage));
+    upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
     send(client, {
       kind: "session_opened",
       provider_metadata: {
-        model: env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-translate",
+        model: config.realtime_model,
         provider: "openai",
       },
     });
@@ -632,6 +639,7 @@ function bindProviderEvents(
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
   isPlaybackEnabled: () => boolean,
+  sourceTranscript: boolean,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
     try {
@@ -643,6 +651,9 @@ function bindProviderEvents(
         return;
       }
       if (output.kind === "event") {
+        if (output.event.kind === "source_delta" && !sourceTranscript) {
+          return;
+        }
         forwardProviderEvent(output, client, telemetry, terminate);
       }
     } catch (failure) {

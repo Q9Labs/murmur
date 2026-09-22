@@ -35,16 +35,12 @@ export async function openTranslationSocket(params: {
   return socket;
 }
 
-export function createSessionUpdate(targetLanguage: LanguageCode): string {
+export function createSessionUpdate(targetLanguage: LanguageCode, sourceTranscript = false): string {
   return JSON.stringify({
     type: "session.update",
     session: {
       audio: {
-        input: {
-          transcription: {
-            model: "gpt-realtime-whisper",
-          },
-        },
+        ...(sourceTranscript ? { input: { transcription: { model: "gpt-realtime-whisper" } } } : {}),
         output: {
           language: toOpenAILanguage(targetLanguage),
         },

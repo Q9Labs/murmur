@@ -5,7 +5,7 @@ import {
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
 import { getMurmurSession } from "../auth/auth";
-import { ensureCurrentAllowance } from "../billing/allowanceService";
+import { currentCustomerPlan, ensureCurrentAllowance } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
 import {
@@ -13,7 +13,6 @@ import {
   getReadiness,
   getRealtimeApiKey,
   isBillingEnforced,
-  requiresDeviceIntegrity,
 } from "../env";
 import { json } from "../http/response";
 import { defaultRateLimits } from "../limits";
@@ -29,6 +28,7 @@ import {
   isRateLimiterUnavailable,
 } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
+import { getServerConfig, isBelowMinimumVersion, type ServerConfig } from "../serverConfig";
 
 export async function createSession(
   request: Request,
@@ -45,10 +45,11 @@ export async function createSession(
   }
 
   const nowMs = Date.now();
-  const authorized = await authorizeCreateSession(parsed.value, env, nowMs);
+  const authorized = await prepareConfiguredSession(request, parsed.value, env, nowMs);
   if (!authorized.ok) {
     return authorized.response;
   }
+  const config = authorized.config;
 
   const appSessionId = crypto.randomUUID();
   const limitResult = await createSessionIfAllowedDurable({
@@ -117,6 +118,7 @@ export async function createSession(
 
   return json({
     app_session_id: appSessionId,
+    features: { source_transcript: config.source_transcript },
     limits: {
       expires_at_ms: nowMs + sessionDurationMs,
       max_session_seconds: Math.floor(sessionDurationMs / 1_000),
@@ -127,9 +129,67 @@ export async function createSession(
       parsed.value.targetLanguage,
       parsed.value.analyticsEnabled,
       parsed.value.playbackEnabled,
+      parsed.value.appPlatform,
+      parsed.value.appVersion,
     ),
     session_epoch: 1,
   });
+}
+
+async function prepareConfiguredSession(
+  request: Request,
+  parsed: ParsedCreateSessionRequest,
+  env: Env,
+  nowMs: number,
+): Promise<
+  | { config: ServerConfig; hashedInstallId: string; ok: true; requestHashVerified: boolean }
+  | { ok: false; response: Response }
+> {
+  const customerSession = await getMurmurSession(request, env);
+  if (isBillingEnforced(env) && !customerSession) {
+    return { ok: false, response: json({ error: "authentication_required" }, 401) };
+  }
+  const hashedInstallId = await hashInstallId(
+    parsed.appInstallId,
+    env.SESSION_HASH_SALT ?? "local-development-salt",
+  );
+  const plan = customerSession
+    ? await currentCustomerPlan(env.BILLING_DB, customerSession.user.id, nowMs)
+    : "free";
+  const config = await getServerConfig(env, {
+    appVersion: parsed.appVersion,
+    distinctId: `anonymous_install_${hashedInstallId}`,
+    plan,
+    platform: parsed.appPlatform,
+  });
+  if (!config.sessions_enabled) {
+    return {
+      ok: false,
+      response: json({ error: "sessions_disabled", message: config.sessions_disabled_message }, 503),
+    };
+  }
+  const minimumVersion = minimumAppVersion(config, parsed.appPlatform);
+  if (isBelowMinimumVersion(parsed.appVersion, minimumVersion)) {
+    return {
+      ok: false,
+      response: json({ error: "app_version_unsupported", minimum_version: minimumVersion }, 426),
+    };
+  }
+  const authorized = await authorizeCreateSession(
+    parsed,
+    env,
+    nowMs,
+    hashedInstallId,
+    config.device_integrity_required,
+  );
+  return authorized.ok ? { ...authorized, config } : authorized;
+}
+
+function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | null): string | null {
+  if (platform === "ios") {
+    return config.min_app_version_ios;
+  }
+  return platform === "android" ? config.min_app_version_android : null;
 }
 
 async function prepareBillingUsage(
@@ -195,6 +255,8 @@ type ParsedCreateSessionRequest = {
   acquisition?: AcquisitionContext;
   analyticsEnabled: boolean;
   appInstallId: string;
+  appPlatform: "android" | "ios" | null;
+  appVersion: string | null;
   deviceIntegrity: ReturnType<typeof parseDeviceIntegrity>;
   playbackEnabled: boolean;
   sourceLanguage: SourceLanguageCode;
@@ -217,13 +279,16 @@ function parseCreateSessionRequest(
   if ("error" in languagePair) {
     return { ok: false, response: json({ error: languagePair.error }, 400) };
   }
+  const deviceIntegrity = parseDeviceIntegrity(body.device_integrity);
   return {
     ok: true,
     value: {
       acquisition: normalizeAcquisitionContext(body.acquisition),
       analyticsEnabled: body.analytics_enabled === true,
       appInstallId: body.app_install_id,
-      deviceIntegrity: parseDeviceIntegrity(body.device_integrity),
+      deviceIntegrity,
+      appPlatform: parseAppPlatform(body.app_platform, deviceIntegrity.platform),
+      appVersion: typeof body.app_version === "string" ? body.app_version : null,
       playbackEnabled: body.playback_enabled !== false,
       sourceLanguage: languagePair.sourceLanguage,
       targetLanguage: languagePair.targetLanguage,
@@ -231,25 +296,30 @@ function parseCreateSessionRequest(
   };
 }
 
+function parseAppPlatform(explicit: unknown, integrityPlatform: string | null): "android" | "ios" | null {
+  if (explicit === "android" || explicit === "ios") {
+    return explicit;
+  }
+  return integrityPlatform === "android" || integrityPlatform === "ios" ? integrityPlatform : null;
+}
+
 async function authorizeCreateSession(
   parsed: ParsedCreateSessionRequest,
   env: Env,
   nowMs: number,
+  hashedInstallId: string,
+  integrityRequired: boolean,
 ): Promise<
   | { hashedInstallId: string; ok: true; requestHashVerified: boolean }
   | { ok: false; response: Response }
 > {
-  const hashedInstallId = await hashInstallId(
-    parsed.appInstallId,
-    env.SESSION_HASH_SALT ?? "local-development-salt",
-  );
   const integrityResult = await verifyPlayIntegrityIfRequired({
     device_integrity: parsed.deviceIntegrity,
     env,
     hashed_install_id: hashedInstallId,
     namespace: env.RATE_LIMITER,
     now_ms: nowMs,
-    required: requiresDeviceIntegrity(env),
+    required: integrityRequired,
   });
   if (!integrityResult.ok) {
     return {
@@ -276,16 +346,21 @@ function parseDeviceIntegrity(value: unknown): {
   if (typeof value !== "object" || value === null) {
     return { available: false, platform: null, provider: null };
   }
-  const payload = value as Record<string, unknown>;
+  const token = stringProperty(value, "token");
   return {
-    available: payload.available === true && typeof payload.token === "string" && payload.token.length > 20,
-    key_id: typeof payload.key_id === "string" ? payload.key_id : undefined,
-    kind: typeof payload.kind === "string" ? payload.kind : undefined,
-    nonce: typeof payload.nonce === "string" ? payload.nonce : undefined,
-    platform: typeof payload.platform === "string" ? payload.platform : null,
-    provider: typeof payload.provider === "string" ? payload.provider : null,
-    token: typeof payload.token === "string" ? payload.token : undefined,
+    available: "available" in value && value.available === true && Boolean(token && token.length > 20),
+    key_id: stringProperty(value, "key_id"),
+    kind: stringProperty(value, "kind"),
+    nonce: stringProperty(value, "nonce"),
+    platform: stringProperty(value, "platform") ?? null,
+    provider: stringProperty(value, "provider") ?? null,
+    token,
   };
+}
+
+function stringProperty(value: object, key: string): string | undefined {
+  const property = Object.entries(value).find(([name]) => name === key)?.[1];
+  return typeof property === "string" ? property : undefined;
 }
 
 function realtimeUrl(
@@ -294,6 +369,8 @@ function realtimeUrl(
   targetLanguage: LanguageCode,
   analyticsEnabled: boolean,
   playbackEnabled: boolean,
+  appPlatform: "android" | "ios" | null,
+  appVersion: string | null,
 ): string {
   const url = new URL(requestUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -302,6 +379,8 @@ function realtimeUrl(
     app_session_id: appSessionId,
     analytics_enabled: String(analyticsEnabled),
     playback_enabled: String(playbackEnabled),
+    ...(appPlatform ? { app_platform: appPlatform } : {}),
+    ...(appVersion ? { app_version: appVersion } : {}),
     target_language: targetLanguage,
   }).toString();
   return url.toString();

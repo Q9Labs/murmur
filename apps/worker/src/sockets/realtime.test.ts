@@ -56,6 +56,7 @@ class FakeSocket extends EventTarget {
 
 async function openTestRealtimeSession(params: {
   env?: Parameters<typeof proxyRealtimeSession>[2];
+  hashedInstallId?: string;
   name: string;
   playbackEnabled?: boolean;
   targetLanguage?: string;
@@ -63,7 +64,7 @@ async function openTestRealtimeSession(params: {
   const appSessionId = `session_${params.name}_${crypto.randomUUID()}`;
   await createSessionRecordDurable({
     app_session_id: appSessionId,
-    hashed_install_id: "install_hash",
+    hashed_install_id: params.hashedInstallId ?? "install_hash",
     now_ms: Date.now(),
   });
   const client = new FakeSocket();
@@ -339,7 +340,6 @@ describe("app-facing realtime socket", () => {
     expect(JSON.parse(String(upstream.sent[0]))).toMatchObject({
       session: {
         audio: {
-          input: { transcription: { model: "gpt-realtime-whisper" } },
           output: { language: "pt" },
         },
       },
@@ -378,7 +378,7 @@ describe("app-facing realtime socket", () => {
     upstream.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ delta: "hello", type: "session.input_transcript.delta" }),
     }));
-    expect(client.sent.map(String).join(" ")).toContain("source_delta");
+    expect(client.sent.map(String).join(" ")).not.toContain("source_delta");
     upstream.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ delta: "AQID", type: "session.output_audio.delta" }),
     }));
@@ -394,6 +394,25 @@ describe("app-facing realtime socket", () => {
       code: 1000,
       reason: "provider_session_closed",
     });
+  });
+
+  it("enables and forwards source transcription when the server flag is on", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { source_transcript: true },
+    }))));
+    const { client, upstream } = await openTestRealtimeSession({
+      env: { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+      hashedInstallId: "install_hash_source_flag_on",
+      name: "source_flag_on",
+    });
+    expect(JSON.parse(String(upstream.sent[0]))).toMatchObject({
+      session: { audio: { input: { transcription: { model: "gpt-realtime-whisper" } } } },
+    });
+    const sourceEvent = new MessageEvent("message", {
+      data: JSON.stringify({ delta: "hello", type: "session.input_transcript.delta" }),
+    });
+    upstream.dispatchEvent(sourceEvent);
+    expect(client.sent).toContainEqual(expect.stringContaining('"kind":"source_delta"'));
   });
 
   it("suppresses translated audio until playback is re-enabled without suppressing text", async () => {
@@ -423,6 +442,7 @@ describe("app-facing realtime socket", () => {
     }))));
     const { client, upstream } = await openTestRealtimeSession({
       env: { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+      hashedInstallId: "install_hash_server_audio_off",
       name: "server_audio_off",
     });
     upstream.dispatchEvent(new MessageEvent("message", {

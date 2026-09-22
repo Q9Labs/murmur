@@ -10,12 +10,11 @@ import {
 // cspell:ignore AQID
 
 describe("OpenAI realtime translation adapter", () => {
-  it("maps Murmur session settings to OpenAI translation settings", () => {
+  it("does not enable source transcription by default", () => {
     expect(JSON.parse(createSessionUpdate("pt-BR"))).toEqual({
       type: "session.update",
       session: {
         audio: {
-          input: { transcription: { model: "gpt-realtime-whisper" } },
           output: { language: "pt" },
         },
       },
@@ -24,10 +23,15 @@ describe("OpenAI realtime translation adapter", () => {
       type: "session.update",
       session: {
         audio: {
-          input: { transcription: { model: "gpt-realtime-whisper" } },
           output: { language: "zh" },
         },
       },
+    });
+  });
+
+  it("enables source transcription only when the flag is on", () => {
+    expect(JSON.parse(createSessionUpdate("ar", true))).toMatchObject({
+      session: { audio: { input: { transcription: { model: "gpt-realtime-whisper" } } } },
     });
   });
 
