@@ -1,8 +1,8 @@
 # Murmur Terms Of Use
 
-Last updated: 2026-08-29
+Last updated: 2026-09-14
 
-Murmur is a one-way live translation app. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
+Murmur is a one-way live translation app. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Optional speech output may play translated phrases in Microphone mode when available.
 
 This text is not legal advice. It describes the OpenAI Realtime service path hosted by the production Worker.
 
@@ -48,7 +48,7 @@ Murmur relies on Cloudflare, OpenAI Realtime, RevenueCat, Apple, Google, Resend,
 
 ## Availability
 
-Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, microphone permissions, unsupported languages, quotas, or device limitations may prevent live translation or speech output.
+Murmur may change, suspend, or discontinue features. OpenAI Realtime or Cloudflare failures, network conditions, audio or screen-sharing permissions, protected playback, unsupported languages, quotas, or device limitations may prevent live translation or speech output.
 
 ## No Warranty
 

@@ -6,6 +6,7 @@ import {
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
 import { canStartSession, type TranslationSpan } from "@murmur/protocol/session";
+import type { AudioCaptureSource } from "../../modules/murmur-audio";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
@@ -35,6 +36,7 @@ export type HomeViewModel = {
 };
 
 export function buildHomeViewModel(params: {
+  captureSource?: AudioCaptureSource;
   live: Pick<
     LiveTranslationController,
     "error" | "preparation_status" | "spans" | "status" | "tentative_source_caption"
@@ -76,6 +78,7 @@ export function buildHomeViewModel(params: {
       latestTranslationText,
     }),
     secondaryCanvasText: buildSecondaryCanvasText({
+      captureSource: params.captureSource ?? "microphone",
       error: params.live.error,
       hasSourceText,
       isLive,
@@ -153,10 +156,14 @@ function buildPrimaryCanvasText(params: {
   if (params.error === "microphone_permission_denied") {
     return "Microphone access needed";
   }
+  if (params.error === "device_playback_permission_denied") {
+    return "Phone audio access needed";
+  }
   return "Ready to translate";
 }
 
 function buildSecondaryCanvasText(params: {
+  captureSource: AudioCaptureSource;
   error: string | null;
   hasSourceText: boolean;
   isLive: boolean;
@@ -166,10 +173,15 @@ function buildSecondaryCanvasText(params: {
     return params.latestSourceCaption;
   }
   if (params.isLive) {
-    return "Speak now. Captions will appear here.";
+    return params.captureSource === "device_playback"
+      ? "Play audio in another app. Captions will appear here and in the floating bubble."
+      : "Speak now. Captions will appear here.";
   }
   if (params.error === "microphone_permission_denied") {
     return "Allow microphone access to start listening.";
+  }
+  if (params.error === "device_playback_permission_denied") {
+    return "Allow audio recording and screen sharing to translate phone playback.";
   }
   return "Choose a direction, then tap Listen.";
 }

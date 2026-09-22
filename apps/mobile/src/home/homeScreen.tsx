@@ -11,7 +11,11 @@ import {
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
 
-import MurmurAudioModule, { type AudioStateEvent } from "../../modules/murmur-audio";
+import MurmurAudioModule, {
+  type AudioCaptureSource,
+  type AudioStateEvent,
+  type CaptureCapabilities,
+} from "../../modules/murmur-audio";
 import { getAcquisitionContextFromUrl } from "../lib/acquisition";
 import {
   deleteEngagementState,
@@ -50,6 +54,12 @@ const audioPlaybackSaveError = "Could not save the audio setting. Please try aga
 const localDataDeletedMessage =
   "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared.";
 const localDataDeleteError = "Could not delete local data. Please try again.";
+const defaultCaptureCapabilities: CaptureCapabilities = {
+  device_playback_supported: false,
+  floating_overlay_supported: false,
+  microphone_supported: true,
+  overlay_permission_granted: false,
+};
 
 type AudioPlaybackPreferenceController = ReturnType<
   typeof createAudioPlaybackPreferenceController
@@ -191,6 +201,8 @@ export default function HomeScreen(): ReactNode {
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
+  const [captureSource, setCaptureSource] = useState<AudioCaptureSource>("microphone");
+  const [captureCapabilities, setCaptureCapabilities] = useState(defaultCaptureCapabilities);
   const [audioState, setAudioState] = useState<AudioStateEvent | null>(null);
   const [networkType, setNetworkType] = useState("unknown");
   const timelineRef = useRef<ScrollView | null>(null);
@@ -214,21 +226,24 @@ export default function HomeScreen(): ReactNode {
   );
   const [acquisition, setAcquisition] = useState(incomingAcquisition);
 
+  const effectiveAudioPlaybackEnabled = captureSource === "microphone" && audioPlaybackEnabled;
   const live = useLiveTranslation({
     acquisition,
     analytics_enabled: anonymousAnalyticsEnabled === true,
+    capture_source: captureSource,
     network_type: networkType,
-    playback_enabled: audioPlaybackEnabled,
+    playback_enabled: effectiveAudioPlaybackEnabled,
     source_language: sourceLanguageCode,
     target_language: targetLanguageCode,
   });
   const viewModel = useMemo(
     () => buildHomeViewModel({
+      captureSource,
       live,
       sourceLanguageCode,
       targetLanguageCode,
     }),
-    [live, sourceLanguageCode, targetLanguageCode],
+    [captureSource, live, sourceLanguageCode, targetLanguageCode],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -301,6 +316,20 @@ export default function HomeScreen(): ReactNode {
     void audioPreferenceController.restore();
     return () => audioPreferenceController.dispose();
   }, [audioPreferenceController]);
+
+  useEffect(() => {
+    let mounted = true;
+    void MurmurAudioModule.getCaptureCapabilities()
+      .then((capabilities) => {
+        if (mounted) {
+          setCaptureCapabilities(capabilities);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const subscription = MurmurAudioModule.addListener(
@@ -387,6 +416,25 @@ export default function HomeScreen(): ReactNode {
     await live.start();
   }
 
+  async function selectCaptureSource(source: AudioCaptureSource): Promise<void> {
+    if (source === "device_playback" && !captureCapabilities.device_playback_supported) {
+      return;
+    }
+    setCaptureSource(source);
+    if (
+      source !== "device_playback" ||
+      !captureCapabilities.floating_overlay_supported ||
+      captureCapabilities.overlay_permission_granted
+    ) {
+      return;
+    }
+    const granted = await MurmurAudioModule.requestOverlayPermission().catch(() => false);
+    setCaptureCapabilities((current) => ({
+      ...current,
+      overlay_permission_granted: granted,
+    }));
+  }
+
   async function handlePrimaryAction(): Promise<void> {
     if (viewModel.isLive) {
       const completion = await live.stop();
@@ -423,7 +471,10 @@ export default function HomeScreen(): ReactNode {
     return (
       <OnboardingScreen
         canStart={viewModel.canStart}
+        captureSource={captureSource}
+        devicePlaybackSupported={captureCapabilities.device_playback_supported}
         onContinue={() => setOnboardingStep("privacy")}
+        onCaptureSourceChange={(source) => void selectCaptureSource(source)}
         onOpenPicker={setPickerMode}
         onPickerClose={() => setPickerMode(null)}
         onPrivacyAgree={() => void acceptThirdPartyDataSharing()}
@@ -445,11 +496,14 @@ export default function HomeScreen(): ReactNode {
   return (
     <HomeExperience
       anonymousAnalyticsEnabled={anonymousAnalyticsEnabled ?? false}
-      audioPlaybackEnabled={audioPlaybackEnabled}
+      audioPlaybackAvailable={captureSource === "microphone"}
+      audioPlaybackEnabled={effectiveAudioPlaybackEnabled}
       audioState={audioState}
       autoScrollRef={autoScrollRef}
       diagnosticsOpen={diagnosticsOpen}
       developerToolsEnabled={__DEV__}
+      captureSource={captureSource}
+      devicePlaybackSupported={captureCapabilities.device_playback_supported}
       live={live}
       networkType={networkType}
       onCloseDiagnostics={() => setDiagnosticsOpen(false)}
@@ -458,6 +512,7 @@ export default function HomeScreen(): ReactNode {
       onAnonymousAnalyticsEnabledChange={(enabled) => {
         void changeAnonymousAnalyticsEnabled(enabled);
       }}
+      onCaptureSourceChange={(source) => void selectCaptureSource(source)}
       onAudioPlaybackEnabledChange={(enabled) => {
         void audioPreferenceController.setEnabled(enabled);
       }}
@@ -473,6 +528,7 @@ export default function HomeScreen(): ReactNode {
             setAnonymousAnalyticsEnabled(true);
             setPrivacyAcknowledged(false);
             setPrivacyConsentChecked(false);
+            setCaptureSource("microphone");
           },
         );
       }}

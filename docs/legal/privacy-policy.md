@@ -1,16 +1,20 @@
 # Murmur Privacy Policy
 
-Last updated: 2026-08-29
+Last updated: 2026-09-14
 
-Murmur is a one-way live translator. You choose a source language and a target language, tap Listen, speak, and Murmur shows translated captions and plays translated speech.
+Murmur is a one-way live translator. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Microphone mode can play translated speech.
 
-Before a live translation session starts, Murmur asks for permission to share the data needed for live AI translation with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or request microphone audio until this permission is granted.
+Before a live translation session starts, Murmur asks for permission to share the selected live audio with OpenAI Realtime through Murmur's Cloudflare Worker. The app does not open an OpenAI Realtime connection or capture audio until this permission is granted.
 
 ## Data Murmur Processes
 
-### Microphone Audio
+### Live Audio
 
-Murmur collects microphone audio from the device microphone only while a live translation session is active. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime for live transcription, translation, and translated speech. Murmur does not save microphone audio by default.
+In Microphone mode, Murmur collects microphone audio only during a user-started live session. On supported Android phones, Phone audio mode captures eligible media playback after the user approves Android's audio-recording and screen-sharing prompts; Murmur does not record the microphone in this mode. Audio passes through Murmur's Cloudflare Worker to OpenAI Realtime. Murmur does not save captured audio by default.
+
+### Floating Captions
+
+In Android Phone audio mode, translated captions can appear in a draggable system overlay after the user allows Murmur to display over other apps. The overlay is rendered locally and does not add another server copy of captions.
 
 ### Source Captions
 
@@ -42,7 +46,7 @@ You can report an inaccurate, wrong-language, harmful, speech-related, or other 
 
 ### Product Analytics, Diagnostics, And Latency Telemetry
 
-Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. These events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include microphone audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.
+Murmur uses anonymous product analytics to measure activation, translation completion and issue-report categories, latency, return use, and failures. These events can include app and build version, platform, language pair, broad network type, feature settings, timing, duration, error category, audio byte or frame counts, caption character counts, and whether a committed translation occurred. They never include captured audio, source captions, translated captions, generated speech audio, advertising identifiers, precise location, contacts, or account data.
 
 The app sends analytics events to Murmur's Cloudflare Worker. The Worker validates a fixed event schema, hashes the anonymous install identifier, and forwards the allowed event properties to PostHog US. To prevent analytics-ingestion abuse, the Worker also keeps request timestamps for up to one hour under a separate one-way hash of the connecting network address. It does not send that address or abuse-prevention hash to PostHog or Sentry. PostHog does not receive the raw install identifier or the device's IP address from Murmur. Murmur disables PostHog person profiles, geolocation, autocapture, and session replay.
 

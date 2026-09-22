@@ -59,6 +59,49 @@ function createBloomStyles(theme: MurmurTheme) {
       gap: 14,
       paddingVertical: 16,
     },
+    captureSourceGroup: {
+      backgroundColor: theme.chromeButton,
+      borderColor: theme.hairline,
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: "row",
+      padding: 4,
+    },
+    captureSourceHint: {
+      color: theme.muted,
+      fontSize: 12,
+      lineHeight: 17,
+      paddingHorizontal: 8,
+      textAlign: "center",
+    },
+    captureSourceIcon: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    captureSourceOption: {
+      alignItems: "center",
+      borderRadius: 999,
+      flex: 1,
+      flexDirection: "row",
+      gap: 7,
+      justifyContent: "center",
+      minHeight: 38,
+      paddingHorizontal: 12,
+    },
+    captureSourceOptionActive: {
+      backgroundColor: theme.selected,
+    },
+    captureSourceText: {
+      color: theme.muted,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    captureSourceTextActive: {
+      color: theme.primary,
+    },
+    captureSourceWrap: {
+      gap: 6,
+    },
     controlColumn: {
       alignItems: "stretch",
       gap: 14,

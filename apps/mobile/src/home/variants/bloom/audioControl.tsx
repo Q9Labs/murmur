@@ -5,23 +5,32 @@ import { Pressable, View } from "react-native";
 import { useBloomStyles } from "./styles";
 
 export function TranslatedAudioControl({
+  disabled = false,
   enabled,
   onChange,
 }: {
+  disabled?: boolean;
   enabled: boolean;
   onChange: (enabled: boolean) => void;
 }): ReactNode {
   const { styles } = useBloomStyles();
   return (
     <Pressable
-      accessibilityLabel={enabled ? "Turn translated audio off" : "Turn translated audio on"}
+      accessibilityLabel={
+        disabled
+          ? "Translated audio is off during phone audio capture"
+          : enabled
+            ? "Turn translated audio off"
+            : "Turn translated audio on"
+      }
       accessibilityRole="switch"
-      accessibilityState={{ checked: enabled }}
+      accessibilityState={{ checked: enabled, disabled }}
+      disabled={disabled}
       onPress={() => onChange(!enabled)}
       style={({ pressed }) => [
         styles.chromeButton,
         enabled && styles.chromeButtonActive,
-        pressed && styles.pressed,
+        (pressed || disabled) && styles.pressed,
       ]}
     >
       <SpeakerIcon enabled={enabled} />

@@ -59,6 +59,7 @@ const previewLive: LiveTranslationController = {
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
     runtime: {
+      capture_source: "microphone",
       playback_enabled: true,
       realtime_socket_open: false,
       source_char_count: previewSourceCaption.length,
@@ -197,7 +198,10 @@ function SettingsPreview(): ReactNode {
 function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNode {
   const props: VariantOnboardingProps = {
     canStart: true,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     onContinue: noop,
+    onCaptureSourceChange: noop,
     onOpenPicker: noop,
     onPrivacyAgree: noop,
     onStart: noop,
@@ -214,7 +218,10 @@ function OnboardingPreview({ step }: { step: "languages" | "privacy" }): ReactNo
 function WelcomePreview(): ReactNode {
   const props: VariantOnboardingProps = {
     canStart: true,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     onContinue: noop,
+    onCaptureSourceChange: noop,
     onOpenPicker: noop,
     onPrivacyAgree: noop,
     onStart: noop,
@@ -244,11 +251,15 @@ function TranslationPreview(
     [],
   );
   const props: VariantShellProps = {
+    audioPlaybackAvailable: true,
     audioPlaybackEnabled,
     audioState: null,
     autoScrollRef,
+    captureSource: "microphone",
+    devicePlaybackSupported: true,
     live: previewLive,
     onAudioPlaybackEnabledChange: noop,
+    onCaptureSourceChange: noop,
     onOpenAccountBilling: noop,
     onOpenPicker: noop,
     onOpenSettings: noop,

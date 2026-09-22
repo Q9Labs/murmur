@@ -1,1 +1,1 @@
-Improves live translation and network recovery, stabilises background microphone sessions, adds subscriptions and credit packs with account recovery, and refreshes Murmur’s design and store presentation.
+Stops translation safely when Murmur leaves the foreground, loses its connection, or hears no speech for two minutes. Sessions now have a five-minute safety limit. Includes Phone audio translation and floating captions on supported devices.

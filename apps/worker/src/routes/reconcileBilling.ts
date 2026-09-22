@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/cloudflare";
+
 import { getMurmurSession } from "../auth/auth";
 import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation";
 import { isBillingFulfillmentEnabled, type Env } from "../env";
@@ -66,4 +68,3 @@ export async function reconcileBilling(
     return json({ error: "reconciliation_failed" }, 503);
   }
 }
-import * as Sentry from "@sentry/cloudflare";

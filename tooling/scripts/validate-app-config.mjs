@@ -28,8 +28,8 @@ const productionWorkerUrl = "https://murmur.q9labs.ai";
 const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev";
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const releaseVersion = "1.2.3";
-const iosBuildNumber = "14";
-const androidVersionCode = 9;
+const iosBuildNumber = "17";
+const androidVersionCode = 13;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -62,7 +62,7 @@ assert(appConfig.splash?.backgroundColor === "#F8F4ED", "splash background must 
 assert(appConfig.ios?.bundleIdentifier === "com.q9labsai.murmur", "iOS bundle id must be com.q9labsai.murmur");
 assert(
   appConfig.ios?.buildNumber === iosBuildNumber,
-  `iOS build number must be ${iosBuildNumber} for the v${releaseVersion} sandbox release; got ${appConfig.ios?.buildNumber}`,
+  `iOS build number must be ${iosBuildNumber} for the v${releaseVersion} production release; got ${appConfig.ios?.buildNumber}`,
 );
 assert(
   appConfig.ios?.appStoreUrl === "https://apps.apple.com/app/id6756962206",
@@ -121,23 +121,24 @@ assert(
 );
 assert(
   appConfig.android?.versionCode === androidVersionCode,
-  `Android versionCode must be ${androidVersionCode} for the v${releaseVersion} sandbox release; got ${appConfig.android?.versionCode}`,
+  `Android versionCode must be ${androidVersionCode} for the v${releaseVersion} production release; got ${appConfig.android?.versionCode}`,
 );
 assert(appConfig.android?.adaptiveIcon?.foregroundImage === "./assets/images/adaptive-icon.png", "Android adaptive icon must use validated asset");
 assert(appConfig.android?.adaptiveIcon?.backgroundColor === "#F8F4ED", "Android adaptive icon background must match generated icon");
 const requiredAndroidPermissions = [
   "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
   "android.permission.RECORD_AUDIO",
+  "android.permission.SYSTEM_ALERT_WINDOW",
 ];
 assert(
   JSON.stringify(appConfig.android?.permissions ?? []) === JSON.stringify(requiredAndroidPermissions),
-  "Android explicit permissions must only include foreground microphone capture permissions",
+  "Android explicit permissions must only include live microphone and device-playback capture permissions",
 );
 const blockedPermissions = new Set(appConfig.android?.blockedPermissions ?? []);
 for (const blockedPermission of [
   "android.permission.READ_EXTERNAL_STORAGE",
-  "android.permission.SYSTEM_ALERT_WINDOW",
   "android.permission.USE_BIOMETRIC",
   "android.permission.USE_FINGERPRINT",
   "android.permission.VIBRATE",
@@ -165,10 +166,12 @@ assert(sandboxBuild?.ios?.simulator === false, "EAS sandbox iOS build must targe
 assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_ENV === "sandbox", "EAS sandbox build must label telemetry as sandbox");
 assert(sandboxBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === sandboxWorkerUrl, "EAS sandbox Worker URL must target the isolated sandbox Worker");
 assert(sandboxBuild?.env?.EXPO_PUBLIC_REVENUECAT_OFFERING_ID === "sandbox", "EAS sandbox build must select the noncurrent sandbox offering");
+assert(sandboxBuild?.autoIncrement === true, "EAS sandbox builds must auto-increment store build identifiers");
 assert(productionBuild?.distribution === "store", "EAS production build must use store distribution");
 assert(productionBuild?.android?.buildType === "app-bundle", "EAS production Android build must produce an app bundle");
 assert(productionBuild?.ios?.simulator === false, "EAS production iOS build must target devices, not simulator");
 assert(productionBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === productionWorkerUrl, "EAS production Worker URL must target production Worker");
+assert(productionBuild?.autoIncrement === true, "EAS production builds must auto-increment store build identifiers");
 assert(easConfig.submit?.["sandbox-internal"]?.android?.track === "internal", "EAS sandbox internal submit profile must target Play internal");
 assert(easConfig.submit?.["sandbox-alpha"]?.android?.track === "alpha", "EAS sandbox alpha submit profile must target Play alpha");
 assert(easConfig.submit?.["sandbox-internal"]?.ios?.ascAppId === "6756962206", "EAS sandbox iOS submit profile must target the Murmur App Store app");

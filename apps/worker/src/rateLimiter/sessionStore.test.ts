@@ -65,6 +65,7 @@ describe("rate limiter session stores", () => {
 
   it("reserves each realtime session once and rejects expired sessions", () => {
     const store = createStore();
+    const expiresAtMs = 1_000 + defaultRateLimits.maxSessionSeconds * 1_000;
     createSessionRecordWithStores({
       app_session_id: "session_once",
       hashed_install_id: "install_once",
@@ -76,7 +77,7 @@ describe("rate limiter session stores", () => {
       config: defaultRateLimits,
       now_ms: 2_000,
     }, store.sessionsById)).toEqual({
-      expires_at_ms: 901_000,
+      expires_at_ms: expiresAtMs,
       hashed_install_id: "install_once",
       ok: true,
     });
@@ -97,9 +98,9 @@ describe("rate limiter session stores", () => {
     expect(reserveRealtimeSessionWithStores({
       app_session_id: "session_expired",
       config: defaultRateLimits,
-      now_ms: 901_000,
+      now_ms: expiresAtMs,
     }, store.sessionsById)).toEqual({ code: "session_expired", ok: false });
-    expect(store.sessionsById.get("session_expired")?.closed_at_ms).toBe(901_000);
+    expect(store.sessionsById.get("session_expired")?.closed_at_ms).toBe(expiresAtMs);
   });
 
   it("rate-limits reports and prunes expired state", () => {

@@ -24,3 +24,5 @@ BUILT FOR READABLE LIVE TRANSLATION
 Murmur needs an internet connection and a microphone — that's it.
 
 Murmur uses OpenAI Realtime for speech recognition, translation, and translated speech. Translations can be delayed, incomplete, or inaccurate. Do not rely on Murmur for emergencies, medical, legal, financial, immigration, or other high-stakes decisions without a qualified human interpreter.
+
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

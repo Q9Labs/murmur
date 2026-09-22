@@ -1,3 +1,12 @@
+export type AudioCaptureSource = "microphone" | "device_playback";
+
+export type CaptureCapabilities = {
+  device_playback_supported: boolean;
+  floating_overlay_supported: boolean;
+  microphone_supported: boolean;
+  overlay_permission_granted: boolean;
+};
+
 export type MurmurAudioModuleEvents = {
   onAudioFrame: (frame: AudioFrameEvent) => void;
   onAudioState: (state: AudioStateEvent) => void;
@@ -5,6 +14,7 @@ export type MurmurAudioModuleEvents = {
 
 export type AudioFrameEvent = {
   audio_generation_id: number;
+  capture_source: AudioCaptureSource;
   data: Uint8Array;
   duration_ms: number;
   event_seq: number;
@@ -33,10 +43,14 @@ export type AudioStateEvent = {
     playback_underrun_count: number;
     playback_usage: string;
     playback_write_errors: number;
+    projection_active?: boolean;
     sdk_int: number;
+    overlay_permission_granted?: boolean;
+    overlay_visible?: boolean;
   };
   audio_generation_id: number;
   capture_active: boolean;
+  capture_source: AudioCaptureSource;
   dropped_frames: number;
   event_seq: number;
   playback_active: boolean;

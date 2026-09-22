@@ -14,6 +14,7 @@ export async function openTranslationSocket(params: {
   apiKey: string;
   model?: string;
   safetyIdentifier: string;
+  signal?: AbortSignal;
 }): Promise<WorkerWebSocket> {
   const model = params.model ?? defaultOpenAIRealtimeModel;
   const url = new URL("https://api.openai.com/v1/realtime/translations");
@@ -24,6 +25,7 @@ export async function openTranslationSocket(params: {
       "OpenAI-Safety-Identifier": params.safetyIdentifier,
       Upgrade: "websocket",
     },
+    signal: params.signal,
   });
   const socket = (response as Response & { webSocket?: WorkerWebSocket }).webSocket;
   if (!socket) {

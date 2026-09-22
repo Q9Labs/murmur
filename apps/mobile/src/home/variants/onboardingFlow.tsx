@@ -89,8 +89,8 @@ function PrivacyStep({
         <Text style={theme.privacyEyebrow ?? theme.eyebrow}>{text.privacyEyebrowText}</Text>
         {text.privacyTitle ? <Text style={theme.title}>{text.privacyTitle}</Text> : null}
         <Text style={theme.copyEmphasis ?? theme.copy}>
-          When you tap Listen, Murmur sends live audio through Q9 Labs on Cloudflare
-          to OpenAI for transcription, translation, and translated speech.
+          When you tap Listen, Murmur sends live microphone audio or supported Android phone
+          playback through Q9 Labs on Cloudflare to OpenAI for transcription and translation.
         </Text>
         <Text style={theme.copy}>
           Murmur uses this data only to provide translation, speech output, safety reports,
@@ -145,6 +145,9 @@ function ConsentRow({
 
 function LanguagesStep({
   canStart,
+  captureSource,
+  devicePlaybackSupported,
+  onCaptureSourceChange,
   onOpenPicker,
   onStart,
   sourceLanguage,
@@ -169,6 +172,16 @@ function LanguagesStep({
           theme={theme}
           value={targetLanguage}
         />
+        {devicePlaybackSupported ? (
+          <SetupRow
+            label="Listen from"
+            onPress={() => onCaptureSourceChange(
+              captureSource === "microphone" ? "device_playback" : "microphone"
+            )}
+            theme={theme}
+            value={captureSource === "microphone" ? "Microphone" : "Phone audio"}
+          />
+        ) : null}
       </View>
       <View style={theme.footer}>
         <FlowButton disabled={!canStart} label={text.listenLabel} onPress={onStart} theme={theme} />

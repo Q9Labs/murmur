@@ -1,4 +1,37 @@
+const exactLiveErrorCopy: Readonly<Record<string, string>> = {
+  allowance_exhausted:
+    "You’re out of translation time. Get more time or restore an existing purchase.",
+  device_playback_capture_revoked:
+    "Phone audio capture stopped. Tap Listen to approve a new session.",
+  device_playback_capture_stopped:
+    "Phone audio capture ended. Return to Murmur and tap Listen to start again.",
+  device_playback_permission_denied:
+    "Phone audio needs audio recording and screen-sharing access. Murmur does not use the microphone in this mode.",
+  device_playback_start_failed:
+    "Could not start phone audio capture. The playing app may block capture.",
+  microphone_permission_denied: "Microphone access is required to translate speech.",
+  microphone_start_failed: "Could not start the microphone. Please try again.",
+  realtime_allowance_exhausted:
+    "You’re out of translation time. Get more time or restore an existing purchase.",
+  realtime_provider_authentication_failed:
+    "Murmur’s translation provider needs attention. Please contact support.",
+  realtime_provider_quota_exhausted:
+    "Murmur’s translation capacity is temporarily exhausted. Please try again later.",
+  realtime_provider_rate_limited:
+    "Translation is busy right now. Wait a moment, then try again.",
+  realtime_session_silence_timeout:
+    "Translation stopped after two minutes without speech. Tap Listen to start again.",
+  session_backgrounded:
+    "Translation stopped when Murmur left the foreground. Return and tap Listen to start again.",
+  session_silence_timeout:
+    "Translation stopped after two minutes without speech. Tap Listen to start again.",
+};
+
 export function formatLiveError(error: string): string {
+  const exactCopy = exactLiveErrorCopy[error];
+  if (exactCopy) {
+    return exactCopy;
+  }
   if (error.startsWith("provider_unconfigured")) {
     return "Live translation is not connected yet. Please try again after setup is complete.";
   }
@@ -19,12 +52,6 @@ export function formatLiveError(error: string): string {
   }
   if (error === "worker_session_network_error" || error.startsWith("worker_session_http_")) {
     return "Could not reach Murmur translation service. Check your connection and try again.";
-  }
-  if (error === "microphone_permission_denied") {
-    return "Microphone access is required to translate speech.";
-  }
-  if (error === "microphone_start_failed") {
-    return "Could not start the microphone. Please try again.";
   }
   if (error === "realtime_transport_error") {
     return `Translation connection was interrupted. Please try again. (${error})`;

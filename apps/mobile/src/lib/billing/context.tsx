@@ -1,8 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { MobileBillingTelemetryEventName } from "@murmur/protocol/telemetry";
 
 import type { MurmurCustomer } from "./customerResponse";
+import {
+  didReconciliationAdvance,
+  type ReconciliationSnapshot,
+} from "./reconciliation";
 import type { MurmurPaywallOutcome } from "./revenueCat";
 
 export type MurmurBillingContext = {
@@ -48,6 +52,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   const [notice, setNotice] = useState<string | null>(null);
   const [purchasesAvailable, setPurchasesAvailable] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const reconciliationSnapshot = useRef<ReconciliationSnapshot | null>(null);
 
   const loadCustomer = useCallback(async (): Promise<MurmurCustomer> => {
     const { fetchMurmurCustomer } = await import("./customerApi");
@@ -78,7 +83,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         const nextCustomer = await loadCustomer();
         if (active && nextCustomer.isRegistered && nextCustomer.fulfillmentEnabled) {
           const { reconcileMurmurCustomer } = await import("./customerApi");
-          await reconcileMurmurCustomer("login");
+          reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
           captureBillingTelemetry("mobile_reconciliation_succeeded", { resultCategory: "login" });
           if (active) {
             await loadCustomer();
@@ -108,7 +113,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   ): Promise<boolean> => {
     const { reconcileMurmurCustomer } = await import("./customerApi");
     const delaysMs = [0, 500, 1_500, 3_000];
+    const baseline = reconciliationSnapshot.current;
     let lastFailure: unknown = null;
+    let lastResult: ReconciliationSnapshot | null = null;
     setSyncing(true);
     try {
       for (const delayMs of delaysMs) {
@@ -117,7 +124,10 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         }
         try {
           const result = await reconcileMurmurCustomer(trigger);
-          if (result.purchaseCount + result.subscriptionCount > 0) {
+          lastFailure = null;
+          lastResult = result;
+          if (didReconciliationAdvance(baseline, result)) {
+            reconciliationSnapshot.current = result;
             captureBillingTelemetry("mobile_reconciliation_succeeded", {
               resultCategory: trigger,
             });
@@ -131,6 +141,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         captureBillingTelemetry("mobile_reconciliation_failed", { resultCategory: trigger });
         throw lastFailure;
       }
+      reconciliationSnapshot.current = lastResult;
       captureBillingTelemetry("mobile_reconciliation_succeeded", {
         resultCategory: `${trigger}_empty`,
       });
@@ -152,7 +163,6 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       setBusy(false);
     }
   }, []);
-
   const value = useMemo<MurmurBillingContext>(() => ({
     busy,
     customer,
@@ -161,6 +171,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { deleteMurmurAccount } = await import("../auth/client");
         await deleteMurmurAccount();
+        reconciliationSnapshot.current = null;
         setCustomer(null);
         setPurchasesAvailable(false);
         setError(null);
@@ -246,6 +257,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { switchMurmurAccount } = await import("../auth/client");
         await switchMurmurAccount();
+        reconciliationSnapshot.current = null;
         await loadCustomer();
         setError(null);
         setNotice("Switched to a fresh Murmur guest account. Sign in to recover another balance.");
@@ -265,7 +277,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         const nextCustomer = await loadCustomer();
         if (nextCustomer.fulfillmentEnabled) {
           const { reconcileMurmurCustomer } = await import("./customerApi");
-          await reconcileMurmurCustomer("login");
+          reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
           await loadCustomer();
         }
         captureBillingTelemetry("mobile_registration_completed");

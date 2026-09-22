@@ -14,7 +14,8 @@ export type RealtimeUsageMeter = {
 
 export function createRealtimeUsageMeter(params: {
   availableMs: number;
-  customerId: string;
+  customerId: string | null;
+  enforceAllowance?: boolean;
   namespace: DurableObjectNamespace | undefined;
   usageSessionId: string;
 }): RealtimeUsageMeter {
@@ -23,18 +24,23 @@ export function createRealtimeUsageMeter(params: {
   let nextSettlementSequence = 1;
   let settledMs = 0;
   let activeSettlement: Promise<{ availableMs: number; exhausted: boolean }> | null = null;
-  let closed = false;
+  let acceptingAudio = true;
+  let closing: Promise<void> | null = null;
+  let usageSessionClosed = false;
 
   function acceptedMs(byteLength = acceptedAudioBytes): number {
     return Math.ceil(byteLength / pcm16BytesPerMillisecond);
   }
 
   function checkAudio(byteLength: number): AudioAcceptance {
-    if (closed) {
+    if (!acceptingAudio) {
       return "allowance_exhausted";
     }
     const targetAcceptedMs = acceptedMs(acceptedAudioBytes + byteLength);
     const nextUnsettledMs = targetAcceptedMs - settledMs;
+    if (params.enforceAllowance === false) {
+      return "accepted";
+    }
     if (nextUnsettledMs > availableMs) {
       return "allowance_exhausted";
     }
@@ -52,7 +58,7 @@ export function createRealtimeUsageMeter(params: {
   }
 
   async function settleOnce(): Promise<{ availableMs: number; exhausted: boolean }> {
-    if (closed) {
+    if (usageSessionClosed || !params.customerId) {
       return { availableMs, exhausted: availableMs <= 0 };
     }
     const targetSettledMs = acceptedMs();
@@ -95,20 +101,28 @@ export function createRealtimeUsageMeter(params: {
   }
 
   async function close(outcome: "closed" | "failed"): Promise<void> {
-    if (closed) {
+    acceptingAudio = false;
+    closing ??= closeUsageSession(outcome);
+    return closing;
+  }
+
+  async function closeUsageSession(outcome: "closed" | "failed"): Promise<void> {
+    const customerId = params.customerId;
+    if (!customerId) {
+      usageSessionClosed = true;
       return;
     }
-    let settlementFailure: unknown = null;
-    try {
+    const settlementFailure = await captureFailure(async () => {
+      if (activeSettlement) {
+        await activeSettlement;
+      }
       await settle();
-    } catch (failure) {
-      settlementFailure = failure;
-    }
-    closed = true;
-    try {
-      const ledger = await callCustomerLedger(params.namespace, params.customerId, {
+    });
+    usageSessionClosed = true;
+    const closeFailure = await captureFailure(async () => {
+      const ledger = await callCustomerLedger(params.namespace, customerId, {
         action: "close_usage_session",
-        customerId: params.customerId,
+        customerId,
         nowMs: Date.now(),
         outcome,
         usageSessionId: params.usageSessionId,
@@ -116,19 +130,35 @@ export function createRealtimeUsageMeter(params: {
       if (!ledger.result.ok && ledger.result.code !== "usage_session_closed") {
         throw new Error(`usage close failed: ${ledger.result.code}`);
       }
-    } catch (closeFailure) {
-      if (settlementFailure instanceof Error && closeFailure instanceof Error) {
-        throw new Error(
-          `${settlementFailure.message}; ${closeFailure.message}`,
-          { cause: closeFailure },
-        );
-      }
-      throw closeFailure;
-    }
-    if (settlementFailure) {
-      throw settlementFailure;
-    }
+    });
+    throwUsageCloseFailure(settlementFailure, closeFailure);
   }
 
   return { checkAudio, close, recordAudio, settle };
+}
+
+async function captureFailure(operation: () => Promise<void>): Promise<unknown | null> {
+  try {
+    await operation();
+    return null;
+  } catch (failure) {
+    return failure;
+  }
+}
+
+function throwUsageCloseFailure(
+  settlementFailure: unknown | null,
+  closeFailure: unknown | null,
+): void {
+  if (settlementFailure instanceof Error && closeFailure instanceof Error) {
+    throw new Error(`${settlementFailure.message}; ${closeFailure.message}`, {
+      cause: closeFailure,
+    });
+  }
+  if (closeFailure) {
+    throw closeFailure;
+  }
+  if (settlementFailure) {
+    throw settlementFailure;
+  }
 }

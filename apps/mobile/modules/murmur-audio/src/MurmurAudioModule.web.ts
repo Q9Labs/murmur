@@ -1,6 +1,12 @@
 import { NativeModule, registerWebModule } from "expo";
 
-import type { AudioFrameEvent, AudioStateEvent, MurmurAudioModuleEvents } from "./MurmurAudio.types";
+import type {
+  AudioCaptureSource,
+  AudioFrameEvent,
+  AudioStateEvent,
+  CaptureCapabilities,
+  MurmurAudioModuleEvents,
+} from "./MurmurAudio.types";
 
 const murmurSampleRate = 24_000;
 const frameSamples = 480;
@@ -19,8 +25,9 @@ type PendingPlayback = {
   durationMs: number;
 };
 
-class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
+class MurmurAudioWebModule extends NativeModule<MurmurAudioModuleEvents> {
   private audioGenerationId = 0;
+  private captureSource: AudioCaptureSource = "microphone";
   private captureRuntime: CaptureRuntime | null = null;
   private captureBuffer = new Float32Array(0);
   private droppedFrames = 0;
@@ -48,11 +55,32 @@ class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
     }
   }
 
+  async getCaptureCapabilities(): Promise<CaptureCapabilities> {
+    return {
+      device_playback_supported: false,
+      floating_overlay_supported: false,
+      microphone_supported: supportsBrowserAudioCapture(),
+      overlay_permission_granted: false,
+    };
+  }
+
+  async requestDevicePlaybackPermission(): Promise<boolean> {
+    return false;
+  }
+
+  async requestOverlayPermission(): Promise<boolean> {
+    return false;
+  }
+
   async getAudioState(): Promise<AudioStateEvent> {
     return this.state("get_audio_state");
   }
 
-  async startCapture(): Promise<AudioStateEvent> {
+  async startCapture(source: AudioCaptureSource): Promise<AudioStateEvent> {
+    if (source !== "microphone") {
+      throw new Error("Device playback capture is unavailable in this browser");
+    }
+    this.captureSource = source;
     if (this.captureRuntime) {
       return this.state("capture_started");
     }
@@ -91,6 +119,10 @@ class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
     await this.stopCaptureRuntime();
     this.emitState(reason);
     return this.state(reason);
+  }
+
+  async updateOverlayCaption(): Promise<AudioStateEvent> {
+    return this.state("overlay_unavailable");
   }
 
   async startPlayback(): Promise<AudioStateEvent> {
@@ -143,6 +175,7 @@ class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
   private emitFrame(data: Uint8Array): void {
     this.emit("onAudioFrame", {
       audio_generation_id: this.audioGenerationId,
+      capture_source: this.captureSource,
       data,
       duration_ms: frameDurationMs,
       event_seq: this.nextEventSeq(),
@@ -161,6 +194,7 @@ class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
     return {
       audio_generation_id: this.audioGenerationId,
       capture_active: Boolean(this.captureRuntime),
+      capture_source: this.captureSource,
       dropped_frames: this.droppedFrames,
       event_seq: this.nextEventSeq(),
       playback_active: this.playbackActive,
@@ -477,4 +511,4 @@ function stopMediaStream(stream: MediaStream): void {
   }
 }
 
-export default registerWebModule(MurmurAudioModule, "MurmurAudio");
+export default registerWebModule(MurmurAudioWebModule, "MurmurAudio");

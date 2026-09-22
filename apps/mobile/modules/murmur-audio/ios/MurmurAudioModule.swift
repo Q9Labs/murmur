@@ -6,6 +6,7 @@ import ExpoModulesCore
 private let murmurSampleRate = 24_000.0
 private let murmurFrameBytes = 960
 private let murmurFrameDurationMs = 20
+private let murmurMaxCaptureDurationSeconds = 300.0
 private let murmurAppAttestKeyId = "murmur.app_attest.key_id.v1"
 
 public class MurmurAudioModule: Module {
@@ -14,8 +15,11 @@ public class MurmurAudioModule: Module {
   private let playerNode = AVAudioPlayerNode()
   private let audioQueue = DispatchQueue(label: "murmur.audio.native")
   private var converter: AVAudioConverter?
+  private var captureDeadline: DispatchWorkItem?
   private var captureBuffer = Data()
+  private var appForeground = true
   private var captureActive = false
+  private var captureSource = "microphone"
   private var playbackActive = false
   private var playbackQueuedMs = 0
   private var playbackGeneration = 0
@@ -48,18 +52,39 @@ public class MurmurAudioModule: Module {
       }
     }
 
+    AsyncFunction("getCaptureCapabilities") {
+      return [
+        "device_playback_supported": false,
+        "floating_overlay_supported": false,
+        "microphone_supported": true,
+        "overlay_permission_granted": false
+      ]
+    }
+
+    AsyncFunction("requestDevicePlaybackPermission") {
+      return false
+    }
+
+    AsyncFunction("requestOverlayPermission") {
+      return false
+    }
+
     AsyncFunction("getAudioState") {
       return self.statePayload(reason: "get_audio_state")
     }
 
-    AsyncFunction("startCapture") {
-      try self.startCaptureSync()
+    AsyncFunction("startCapture") { (source: String) in
+      try self.startCaptureSync(source: source)
       return self.statePayload(reason: "capture_started")
     }.runOnQueue(.main)
 
     AsyncFunction("stopCapture") { (reason: String?) in
       self.stopCaptureSync(reason: reason ?? "stop_capture")
       return self.statePayload(reason: reason ?? "stop_capture")
+    }.runOnQueue(.main)
+
+    AsyncFunction("updateOverlayCaption") { (_: String, _: Bool) in
+      return self.statePayload(reason: "overlay_unavailable")
     }.runOnQueue(.main)
 
     AsyncFunction("startPlayback") {
@@ -82,7 +107,13 @@ public class MurmurAudioModule: Module {
     }
 
     OnAppEntersBackground {
-      self.emitState(reason: "app_background_preserved")
+      self.appForeground = false
+      self.stopCaptureSync(reason: "app_background")
+      self.clearPlaybackSync(reason: "app_background")
+    }
+
+    OnAppEntersForeground {
+      self.appForeground = true
     }
 
     OnDestroy {
@@ -91,14 +122,29 @@ public class MurmurAudioModule: Module {
     }
   }
 
-  private func startCaptureSync() throws {
+  private func startCaptureSync(source: String) throws {
     if captureActive {
       return
     }
+    guard appForeground else {
+      throw NSError(
+        domain: "MurmurAudio",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Audio capture requires the foreground"]
+      )
+    }
+    guard source == "microphone" else {
+      throw NSError(
+        domain: "MurmurAudio",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Device playback capture is unavailable on this iOS version"]
+      )
+    }
+    captureSource = source
 
     audioGenerationId += 1
     droppedFrames = 0
-    captureBuffer.removeAll(keepingCapacity: true)
+    clearCaptureBufferSync()
 
     do {
       try configureAndStartCaptureEngine()
@@ -112,6 +158,7 @@ public class MurmurAudioModule: Module {
       }
     }
     captureActive = true
+    scheduleCaptureDeadline()
     emitState(reason: "capture_started")
   }
 
@@ -149,12 +196,36 @@ public class MurmurAudioModule: Module {
   }
 
   private func resetCaptureEngine() {
+    captureDeadline?.cancel()
+    captureDeadline = nil
     captureEngine.inputNode.removeTap(onBus: 0)
     captureEngine.stop()
     captureEngine.reset()
-    captureBuffer.removeAll(keepingCapacity: true)
+    clearCaptureBufferSync()
     converter = nil
     captureActive = false
+  }
+
+  private func clearCaptureBufferSync() {
+    audioQueue.sync {
+      captureBuffer.removeAll(keepingCapacity: true)
+    }
+  }
+
+  private func scheduleCaptureDeadline() {
+    captureDeadline?.cancel()
+    let deadline = DispatchWorkItem { [weak self] in
+      guard let self, self.captureActive else {
+        return
+      }
+      self.stopCaptureSync(reason: "capture_deadline")
+      self.clearPlaybackSync(reason: "capture_deadline")
+    }
+    captureDeadline = deadline
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + murmurMaxCaptureDurationSeconds,
+      execute: deadline
+    )
   }
 
   private func startPlaybackSync() throws {
@@ -383,9 +454,13 @@ public class MurmurAudioModule: Module {
     guard let dataPointer = audioBuffer.mData else {
       return
     }
+    let convertedData = Data(
+      bytes: dataPointer,
+      count: Int(audioBuffer.mDataByteSize)
+    )
 
     audioQueue.async {
-      self.captureBuffer.append(dataPointer.assumingMemoryBound(to: UInt8.self), count: Int(audioBuffer.mDataByteSize))
+      self.captureBuffer.append(convertedData)
       while self.captureBuffer.count >= murmurFrameBytes {
         let frame = self.captureBuffer.prefix(murmurFrameBytes)
         self.captureBuffer.removeFirst(murmurFrameBytes)
@@ -397,6 +472,7 @@ public class MurmurAudioModule: Module {
   private func emitFrame(data: Data) {
     let payload = [
       "audio_generation_id": audioGenerationId,
+      "capture_source": captureSource,
       "data": data,
       "duration_ms": murmurFrameDurationMs,
       "event_seq": nextEventSeq(),
@@ -421,6 +497,7 @@ public class MurmurAudioModule: Module {
     return [
       "audio_generation_id": audioGenerationId,
       "capture_active": captureActive,
+      "capture_source": captureSource,
       "dropped_frames": droppedFrames,
       "event_seq": nextEventSeq(),
       "playback_active": playbackActive,

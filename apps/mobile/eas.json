@@ -42,7 +42,7 @@
         "buildType": "app-bundle",
         "credentialsSource": "remote"
       },
-      "autoIncrement": false,
+      "autoIncrement": true,
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_MURMUR_ENV": "development",
@@ -62,7 +62,7 @@
         "buildType": "app-bundle",
         "credentialsSource": "remote"
       },
-      "autoIncrement": false,
+      "autoIncrement": true,
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_MURMUR_ENV": "sandbox",
@@ -82,7 +82,7 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "autoIncrement": false,
+      "autoIncrement": true,
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_MURMUR_ENV": "production",
