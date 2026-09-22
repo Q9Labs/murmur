@@ -5,6 +5,11 @@ const permissionHarness = vi.hoisted(() => ({
   platform: { OS: "android" },
   requestDevicePlaybackPermission: vi.fn(async () => true),
   requestMicrophonePermission: vi.fn(async () => true),
+  requestPlayIntegrityToken: vi.fn(async () => ({
+    available: true,
+    nonce: "encoded_nonce",
+    token: "integrity_token_long_enough",
+  })),
   requestPermission: vi.fn(async () => "granted"),
 }));
 
@@ -21,6 +26,7 @@ vi.mock("../../../modules/murmur-audio", () => ({
   default: {
     requestDevicePlaybackPermission: permissionHarness.requestDevicePlaybackPermission,
     requestMicrophonePermission: permissionHarness.requestMicrophonePermission,
+    requestPlayIntegrityToken: permissionHarness.requestPlayIntegrityToken,
   },
 }));
 
@@ -29,6 +35,7 @@ vi.mock("../config", () => import("../__tests__/workerClientMocks"));
 
 import {
   closeWorkerSession,
+  collectDeviceIntegrity,
   createWorkerSession,
   requestCapturePermission,
   workerSessionCloseTimeoutMs,
@@ -51,6 +58,27 @@ beforeEach(() => {
   );
   permissionHarness.requestDevicePlaybackPermission.mockReset().mockResolvedValue(true);
   permissionHarness.requestMicrophonePermission.mockReset().mockResolvedValue(true);
+  permissionHarness.requestPlayIntegrityToken.mockReset().mockResolvedValue({
+    available: true,
+    nonce: "encoded_nonce",
+    token: "integrity_token_long_enough",
+  });
+});
+
+describe("device integrity", () => {
+  it("sends the encoded nonce returned by the Android provider", async () => {
+    const integrity = await collectDeviceIntegrity({
+      appInstallId: "install_1234567890",
+      sourceLanguage: "en",
+      targetLanguage: "ar",
+    });
+    expect(permissionHarness.requestPlayIntegrityToken).toHaveBeenCalledOnce();
+    expect(integrity).toMatchObject({
+      available: true,
+      nonce: "encoded_nonce",
+      provider: "play_integrity",
+    });
+  });
 });
 
 afterEach(() => {

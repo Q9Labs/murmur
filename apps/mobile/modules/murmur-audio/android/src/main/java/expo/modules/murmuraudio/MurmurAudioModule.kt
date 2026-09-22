@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.util.Base64
 import android.net.Uri
 import android.media.projection.MediaProjectionManager
 import com.google.android.gms.tasks.Tasks
@@ -894,15 +895,20 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     }
 
     return try {
+      val encodedNonce = Base64.encodeToString(
+        nonce.toByteArray(Charsets.UTF_8),
+        Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
+      )
       val manager = IntegrityManagerFactory.create(context)
       val request = IntegrityTokenRequest.builder()
-        .setNonce(nonce)
+        .setNonce(encodedNonce)
         .build()
       val response = Tasks.await(manager.requestIntegrityToken(request), 10, TimeUnit.SECONDS)
       mapOf(
         "available" to true,
         "platform" to "android",
         "provider" to "play_integrity",
+        "nonce" to encodedNonce,
         "token" to response.token()
       )
     } catch (error: Exception) {

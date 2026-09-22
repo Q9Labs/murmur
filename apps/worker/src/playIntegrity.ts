@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import * as Sentry from "@sentry/cloudflare";
+
 import {
   AssertionError,
   AttestationError,
@@ -82,6 +84,11 @@ type DecodedPlayIntegrityResponse = {
 };
 
 const playIntegrityScope = "https://www.googleapis.com/auth/playintegrity";
+const optionalVerificationFailures = new Set<string>();
+
+function unverifiedResult(): PlayIntegrityVerificationResult {
+  return { ok: true, app_verdict: null, device_verdicts: [], request_hash_verified: false };
+}
 
 export async function verifyPlayIntegrityIfRequired(params: {
   device_integrity: DeviceIntegrityInput;
@@ -92,12 +99,31 @@ export async function verifyPlayIntegrityIfRequired(params: {
   required: boolean;
 }): Promise<PlayIntegrityVerificationResult> {
   if (!params.required) {
-    return {
-      ok: true,
-      app_verdict: null,
-      device_verdicts: [],
-      request_hash_verified: false,
-    };
+    const integrity = params.device_integrity;
+    if (!integrity.available || !integrity.token || integrity.platform !== "android" ||
+      integrity.provider !== "play_integrity") {
+      return unverifiedResult();
+    }
+    try {
+      const result = await verifyPlayIntegrityIfRequired({ ...params, required: true });
+      if (result.ok) {
+        return result;
+      }
+      if (!optionalVerificationFailures.has(result.code)) {
+        optionalVerificationFailures.add(result.code);
+        Sentry.captureMessage("optional_play_integrity_verification_failed", {
+          tags: { code: result.code },
+        });
+      }
+    } catch (failure) {
+      if (!optionalVerificationFailures.has("unexpected_error")) {
+        optionalVerificationFailures.add("unexpected_error");
+        Sentry.captureException(failure, {
+          tags: { operation: "optional_play_integrity_verification" },
+        });
+      }
+    }
+    return unverifiedResult();
   }
 
   const integrity = params.device_integrity;

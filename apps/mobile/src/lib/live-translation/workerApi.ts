@@ -113,16 +113,16 @@ export async function collectDeviceIntegrity(params: {
     params.targetLanguage,
     params.appInstallId.slice(-12),
   ].join("_");
-  const payload = (await MurmurAudioModule.requestPlayIntegrityToken(nonce).catch((error) => ({
+  const payload: Record<string, unknown> = await MurmurAudioModule.requestPlayIntegrityToken(nonce).catch((error) => ({
     available: false,
     platform: Platform.OS,
     reason: error instanceof Error ? error.message : "device_integrity_failed",
-  }))) as DeviceIntegrityPayload;
+  }));
   return {
     available: Boolean(payload.available && payload.token),
     key_id: typeof payload.key_id === "string" ? payload.key_id : undefined,
     kind: typeof payload.kind === "string" ? payload.kind : undefined,
-    nonce,
+    nonce: typeof payload.nonce === "string" ? payload.nonce : nonce,
     platform: Platform.OS,
     provider: Platform.OS === "ios" ? "app_attest" : "play_integrity",
     reason: typeof payload.reason === "string" ? payload.reason : undefined,
