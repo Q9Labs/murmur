@@ -5,6 +5,7 @@ import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation
 import { isBillingFulfillmentEnabled, type Env } from "../env";
 import { json } from "../http/response";
 import { queuePostHogEvent } from "../observability/posthog";
+import { hashInstallId } from "../privacy";
 
 export async function reconcileBilling(
   request: Request,
@@ -25,6 +26,10 @@ export async function reconcileBilling(
   const trigger = requestedTrigger === "restore" || requestedTrigger === "login"
     ? requestedTrigger
     : "purchase";
+  const distinctId = `customer_${await hashInstallId(
+    session.user.id,
+    env.SESSION_HASH_SALT ?? "local-development-salt",
+  )}`;
   try {
     const result = await reconcileRevenueCatCustomer({
       customerId: session.user.id,
@@ -34,7 +39,7 @@ export async function reconcileBilling(
     });
     queuePostHogEvent({
       context,
-      distinct_id: session.user.id,
+      distinct_id: distinctId,
       env,
       payload: {
         event: "worker_billing_reconciliation",
@@ -55,7 +60,7 @@ export async function reconcileBilling(
     });
     queuePostHogEvent({
       context,
-      distinct_id: session.user.id,
+      distinct_id: distinctId,
       env,
       payload: {
         event: "worker_billing_reconciliation",
