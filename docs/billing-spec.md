@@ -14,7 +14,7 @@ The final product has durable guest and registered customer accounts. Apple and 
 
 This work is complete when all of the following are observable:
 
-- A new install receives a durable guest customer and 10 free translation minutes for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
+- A new install receives a durable guest customer and the Free allowance for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
 - A guest can register or sign in with a verified email code without losing purchased value or usage history. A merge into an existing customer recomputes Free usage under one monthly cap instead of stacking two Free grants.
 - A registered customer can buy Murmur Pro monthly or annual on iOS or Android, restore it on another supported device, and see the same server-owned entitlement and balance.
 - A registered customer can buy any credit pack. Pack credits survive subscription expiry, app reinstall, and supported cross-platform sign-in.
@@ -58,7 +58,7 @@ All internal quantities use integer milliseconds. Storefronts localize the base 
 
 The pricing model uses the official OpenAI price of $0.034 per minute for `gpt-realtime-translate`, a conservative 30% store fee, and RevenueCat's 1% fee after its free monthly tracked-revenue threshold. At full use, at least 10% of each paid product's base price remains after those variable costs: Monthly 21.89%, Annual 10.24%, and the 60, 180, and 540-minute packs 17.87%, 13.31%, and 11.61%. Annual is 19.82% below twelve monthly payments and grants the same monthly value. Free usage and Cloudflare and email costs are acquisition and operating costs outside this product-level contribution calculation. Revisit the catalog when provider or platform prices change.
 
-Pro replaces Free for an allowance cycle; it does not stack 180 paid minutes on top of 10 free minutes. An upgrade during a Free cycle increases that cycle's total allowance cap to 180 minutes, so a customer who already used 3 free minutes receives 177 remaining Pro minutes. Allowance never rolls over. Credit packs never expire and remain after Pro ends. Usage consumes current expiring allowance first, then the oldest non-expiring credit grant.
+Pro replaces Free for an allowance cycle; it does not stack 180 paid minutes on top of the Free allowance. An upgrade during a Free cycle increases that cycle's total allowance cap to 180 minutes, so a customer who already used 3 free minutes receives 177 remaining Pro minutes. Allowance never rolls over. Credit packs never expire and remain after Pro ends. Usage consumes current expiring allowance first, then the oldest non-expiring credit grant.
 
 ## Customer behavior
 
@@ -194,7 +194,7 @@ Free grants use the unique key `free:<UTC YYYY-MM>` and are created lazily once 
 
 An uninterrupted Pro entitlement creates an internal episode ID and retains one UTC anchor across monthly and annual product changes. Cycle `n` uses the key `pro:<episode_id>:<n>`. Its boundaries are calculated from the original anchor plus `n` calendar months, clamping the day to the last valid day of each target month without drifting the later anchor. A lapse closes the episode; a later purchase starts a new one. Product replacement, deferred change, annual renewal, missed webhook recovery, and billing recovery cannot create a second grant for an existing cycle. Annual Pro creates one 180-minute grant at each internal monthly boundary, not 2,160 minutes upfront.
 
-A grant has `valid_from`, optional `expires_at`, original value, remaining projected value, source ledger entry, and optional store transaction. Free and Pro grants expire. Pack grants have no expiry. A Free-to-Pro upgrade computes one atomic cap transition from 30 to 180 minutes and subtracts Free usage already consumed in that UTC month; it cannot race a Free grant. Refund reversal refers to the original grants, so unrelated pack value is not silently relabeled.
+A grant has `valid_from`, optional `expires_at`, original value, remaining projected value, source ledger entry, and optional store transaction. Free and Pro grants expire. Pack grants have no expiry. A Free-to-Pro upgrade computes one atomic cap transition from the Worker's configured `freeAllowanceMs` to 180 minutes and subtracts Free usage already consumed in that UTC month; it cannot race a Free grant. Refund reversal refers to the original grants, so unrelated pack value is not silently relabeled.
 
 ### Worker interfaces
 
