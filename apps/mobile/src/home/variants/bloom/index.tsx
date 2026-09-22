@@ -10,10 +10,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { hasTimeAvailable, lowBalanceMinutes } from "../../../lib/billing/allowance";
 import { useMurmurBilling } from "../../../lib/billing/context";
 import { captureBillingTelemetry } from "../../../lib/telemetry";
 import { isAllowanceExhaustedError } from "../../errorCopy";
 import { useMicLevel, usePulse, useReducedMotion } from "../hooks";
+import { primaryStartLabel } from "../logic";
 import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
@@ -28,11 +30,9 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const { colors, styles } = useBloomStyles();
   const billing = useMurmurBilling();
   const wasLive = useRef(viewModel.isLive);
-  const lowBalanceMinutes = !viewModel.isLive && billing.customer &&
-      billing.customer.availableMs > 0 &&
-      billing.customer.availableMs <= 5 * 60_000
-    ? Math.max(1, Math.ceil(billing.customer.availableMs / 60_000))
-    : null;
+  const lowBalance = viewModel.isLive
+    ? null
+    : lowBalanceMinutes(billing.customer, billing.config.lowBalanceThresholdMinutes);
 
   useEffect(() => {
     if (wasLive.current && !viewModel.isLive) {
@@ -42,10 +42,10 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   }, [billing.refresh, viewModel.isLive]);
 
   useEffect(() => {
-    if (lowBalanceMinutes) {
+    if (lowBalance) {
       captureBillingTelemetry("mobile_low_balance_viewed");
     }
-  }, [lowBalanceMinutes]);
+  }, [lowBalance]);
 
   useEffect(() => {
     if (isAllowanceExhaustedError(live.error)) {
@@ -65,12 +65,8 @@ export function BloomShell(props: VariantShellProps): ReactNode {
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
         <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
-        {lowBalanceMinutes ? (
-          <Pressable accessibilityRole="button" onPress={props.onOpenAccountBilling}>
-            <Text style={styles.receipt}>
-              {lowBalanceMinutes} min left · Open Account & billing
-            </Text>
-          </Pressable>
+        {lowBalance ? (
+          <LowBalancePill minutes={lowBalance} onPress={props.onOpenLowBalance} />
         ) : null}
         <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
           {viewModel.statusText}
@@ -96,17 +92,31 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel={isAllowanceExhaustedError(live.error)
-            ? "Get more time"
-            : live.error && live.error !== "microphone_permission_denied"
-              ? "Try again"
-              : "Listen"}
+          startLabel={primaryStartLabel(live.error, hasTimeAvailable(billing.customer))}
           stopLabel="Stop"
           style={styles.listenPill}
           textStyle={styles.listenPillText}
         />
       </View>
     </SafeAreaView>
+  );
+}
+
+function LowBalancePill({ minutes, onPress }: { minutes: number; onPress: () => void }): ReactNode {
+  const { styles } = useBloomStyles();
+  const minuteLabel = minutes === 1 ? "minute" : "minutes";
+  return (
+    <Pressable
+      accessibilityHint="Shows Pro and top-up plans"
+      accessibilityLabel={`${minutes} ${minuteLabel} left. Top up`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.lowBalancePill, pressed && styles.pressed]}
+    >
+      <View style={styles.lowBalanceDot} />
+      <Text style={styles.lowBalanceText}>{minutes} min left</Text>
+      <Text style={styles.lowBalanceAction}>Top up</Text>
+    </Pressable>
   );
 }
 

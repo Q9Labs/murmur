@@ -37,6 +37,8 @@ import {
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
 } from "../lib/telemetry";
+import { hasTimeAvailable } from "../lib/billing/allowance";
+import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
@@ -45,10 +47,11 @@ import {
   setStoredAudioPlaybackEnabled,
 } from "./audioPlaybackPreference";
 import { HomeExperience } from "./experience";
+import type { OutOfMinutesReason } from "./outOfMinutesSheet";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
-import { isAllowanceExhaustedError } from "./errorCopy";
+import { isAllowanceExhaustedError, isUpdateRequiredError } from "./errorCopy";
 
 const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
 const localDataDeletedMessage =
@@ -198,6 +201,8 @@ export default function HomeScreen(): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [openAccountBilling, setOpenAccountBilling] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [purchaseSheetReason, setPurchaseSheetReason] = useState<OutOfMinutesReason | null>(null);
+  const [updateRequiredOpen, setUpdateRequiredOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
@@ -226,6 +231,7 @@ export default function HomeScreen(): ReactNode {
   );
   const [acquisition, setAcquisition] = useState(incomingAcquisition);
 
+  const billing = useMurmurBilling();
   const effectiveAudioPlaybackEnabled = captureSource === "microphone" && audioPlaybackEnabled;
   const live = useLiveTranslation({
     acquisition,
@@ -257,6 +263,17 @@ export default function HomeScreen(): ReactNode {
   useEffect(() => {
     setAcquisition(incomingAcquisition);
   }, [incomingAcquisition, incomingUrl]);
+
+  const refreshBilling = billing.refresh;
+  useEffect(() => {
+    if (isAllowanceExhaustedError(live.error)) {
+      setPurchaseSheetReason("exhausted");
+      void refreshBilling();
+    }
+    if (isUpdateRequiredError(live.error)) {
+      setUpdateRequiredOpen(true);
+    }
+  }, [live.error, refreshBilling]);
 
   useEffect(() => {
     if (live.status === "live" && acquisition) {
@@ -443,9 +460,12 @@ export default function HomeScreen(): ReactNode {
       }
       return;
     }
-    if (isAllowanceExhaustedError(live.error)) {
-      setOpenAccountBilling(true);
-      setSettingsOpen(true);
+    if (isUpdateRequiredError(live.error)) {
+      setUpdateRequiredOpen(true);
+      return;
+    }
+    if (isAllowanceExhaustedError(live.error) && !hasTimeAvailable(billing.customer)) {
+      setPurchaseSheetReason("exhausted");
       return;
     }
     if (!viewModel.canStart) {
@@ -508,7 +528,9 @@ export default function HomeScreen(): ReactNode {
       networkType={networkType}
       onCloseDiagnostics={() => setDiagnosticsOpen(false)}
       onClosePicker={() => setPickerMode(null)}
+      onClosePurchaseSheet={() => setPurchaseSheetReason(null)}
       onCloseSettings={() => setSettingsOpen(false)}
+      onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
       onAnonymousAnalyticsEnabledChange={(enabled) => {
         void changeAnonymousAnalyticsEnabled(enabled);
       }}
@@ -516,10 +538,7 @@ export default function HomeScreen(): ReactNode {
       onAudioPlaybackEnabledChange={(enabled) => {
         void audioPreferenceController.setEnabled(enabled);
       }}
-      onOpenAccountBilling={() => {
-        setOpenAccountBilling(true);
-        setSettingsOpen(true);
-      }}
+      onOpenLowBalance={() => setPurchaseSheetReason("low_balance")}
       onDeleteLocalData={() => {
         void audioPreferenceController.deleteLocalData(
           () => deleteLocalData(live.cancel),
@@ -541,6 +560,7 @@ export default function HomeScreen(): ReactNode {
       onShare={() => void shareMurmur()}
       onSwapLanguages={swapLanguages}
       pickerMode={pickerMode}
+      purchaseSheetReason={purchaseSheetReason}
       setSourceLanguageCode={setSourceLanguageCode}
       setTargetLanguageCode={setTargetLanguageCode}
       settingsMessage={settingsMessage}
@@ -549,6 +569,7 @@ export default function HomeScreen(): ReactNode {
       sourceLanguageCode={sourceLanguageCode}
       targetLanguageCode={targetLanguageCode}
       timelineRef={timelineRef}
+      updateRequiredOpen={updateRequiredOpen}
       userInteractedRef={userInteractedRef}
       viewModel={viewModel}
     />

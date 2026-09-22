@@ -10,11 +10,10 @@ vi.mock("react-native", () => reactNativeTestHarness);
 
 vi.mock("./diagnosticsModal", () => ({ DiagnosticsModal: () => null }));
 vi.mock("./languagePicker", () => ({ LanguagePickerController: () => null }));
-vi.mock("./modalSheet", () => ({
-  ModalSheet: ({ children, open, title }: { children?: ReactNode; open: boolean; title: string }) =>
-    open ? <section><h1>{title}</h1>{children}</section> : null,
-}));
+vi.mock("./modalSheet", () => import("./__tests__/modalSheetMock"));
+vi.mock("./outOfMinutesSheet", () => ({ OutOfMinutesSheetController: () => null }));
 vi.mock("./settingsModals", () => ({ SettingsModal: () => null }));
+vi.mock("./updateRequiredSheet", () => ({ UpdateRequiredSheet: () => null }));
 vi.mock("./styles", () => ({
   styles: {
     reportButton: {},

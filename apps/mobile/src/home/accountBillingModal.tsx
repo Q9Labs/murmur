@@ -42,7 +42,7 @@ export function AccountBillingModal(props: {
         onPress={() => void billing.refresh()}
         styles={styles}
       />
-      <AccountRecovery billing={billing} colors={colors} styles={styles} />
+      <AccountRecovery billing={billing} styles={styles} />
 
       <ActionButton
         disabled={billing.busy}
@@ -124,9 +124,38 @@ function paywallButtonLabel(registered: boolean, purchasesEnabled: boolean): str
 
 function AccountRecovery(props: {
   billing: MurmurBillingContext;
-  colors: ReturnType<typeof useMurmurTheme>;
   styles: ReturnType<typeof createStyles>;
 }): ReactNode {
+  if (props.billing.customer?.isRegistered) {
+    return (
+      <View style={props.styles.accountSection}>
+        <Text style={props.styles.caption}>
+          This balance is protected by your Murmur account. On another device or after reinstalling,
+          sign in with the same email, then restore purchases if the balance has not appeared yet.
+        </Text>
+        <ActionButton
+          disabled={props.billing.busy}
+          label="Use a different Murmur account"
+          onPress={() => confirmAccountSwitch(props.billing.switchAccount)}
+          styles={props.styles}
+        />
+      </View>
+    );
+  }
+  return (
+    <View style={props.styles.accountSection}>
+      <Text style={props.styles.heading}>Protect your balance</Text>
+      <Text style={props.styles.caption}>
+        Add an email so your plan and unused credits can follow you to another device.
+      </Text>
+      <EmailSignInForm billing={props.billing} />
+    </View>
+  );
+}
+
+export function EmailSignInForm(props: { billing: MurmurBillingContext }): ReactNode {
+  const colors = useMurmurTheme();
+  const styles = createStyles(colors);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -162,49 +191,31 @@ function AccountRecovery(props: {
     }
   }
 
-  if (props.billing.customer?.isRegistered) {
-    return (
-      <View style={props.styles.accountSection}>
-        <Text style={props.styles.caption}>
-          This balance is protected by your Murmur account. On another device or after reinstalling,
-          sign in with the same email, then restore purchases if the balance has not appeared yet.
-        </Text>
-        <ActionButton
-          disabled={props.billing.busy}
-          label="Use a different Murmur account"
-          onPress={() => confirmAccountSwitch(props.billing.switchAccount)}
-          styles={props.styles}
-        />
-      </View>
-    );
-  }
   return (
-    <View style={props.styles.accountSection}>
-      <Text style={props.styles.heading}>Protect your balance</Text>
-      <Text style={props.styles.caption}>
-        Add an email so your plan and unused credits can follow you to another device.
-      </Text>
+    <View style={styles.signInForm}>
       <TextInput
+        accessibilityLabel="Email address"
         autoCapitalize="none"
         autoComplete="email"
         editable={!props.billing.busy && !codeSent}
         inputMode="email"
         onChangeText={setEmail}
         placeholder="you@example.com"
-        placeholderTextColor={props.colors.muted}
-        style={props.styles.input}
+        placeholderTextColor={colors.muted}
+        style={styles.input}
         value={email}
       />
       {codeSent ? (
         <TextInput
+          accessibilityLabel="Six-digit sign-in code"
           autoComplete="one-time-code"
           editable={!props.billing.busy}
           inputMode="numeric"
           maxLength={6}
           onChangeText={setOtp}
           placeholder="6-digit code"
-          placeholderTextColor={props.colors.muted}
-          style={props.styles.input}
+          placeholderTextColor={colors.muted}
+          style={styles.input}
           value={otp}
         />
       ) : null}
@@ -212,9 +223,9 @@ function AccountRecovery(props: {
         disabled={props.billing.busy}
         label={codeSent ? "Verify code" : "Send sign-in code"}
         onPress={() => void (codeSent ? verifyCode() : sendCode())}
-        styles={props.styles}
+        styles={styles}
       />
-      {message ? <Text style={props.styles.message}>{message}</Text> : null}
+      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 }
@@ -321,5 +332,6 @@ function createStyles(colors: ReturnType<typeof useMurmurTheme>) {
     message: { color: colors.muted, fontSize: 13, fontWeight: "700", marginTop: 14 },
     primaryButton: { backgroundColor: colors.primary, borderColor: colors.primary },
     primaryButtonText: { color: colors.background },
+    signInForm: { gap: 12 },
   });
 }

@@ -21,7 +21,7 @@ export type VariantShellProps = {
   live: LiveTranslationController;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
-  onOpenAccountBilling: () => void;
+  onOpenLowBalance: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
   onPrimaryAction: () => void;

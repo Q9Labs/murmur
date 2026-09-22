@@ -1,6 +1,7 @@
 import type { NativeScrollEvent } from "react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
+import { isAllowanceExhaustedError, isUpdateRequiredError } from "../errorCopy";
 import type { UiVariant } from "./types";
 
 const uiVariants = ["bloom"] as const;
@@ -79,6 +80,16 @@ export function shouldHideSpan(span: TranslationSpan): boolean {
 
 export function hasVisibleTimeline(spans: TranslationSpan[], tentativeSourceCaption: string): boolean {
   return spans.some((span) => !shouldHideSpan(span)) || Boolean(tentativeSourceCaption.trim());
+}
+
+export function primaryStartLabel(error: string | null, timeAvailable: boolean): string {
+  if (isUpdateRequiredError(error)) {
+    return "Update Murmur";
+  }
+  if (isAllowanceExhaustedError(error) && !timeAvailable) {
+    return "Get more time";
+  }
+  return error && error !== "microphone_permission_denied" ? "Try again" : "Listen";
 }
 
 export function normalizedMicLevel(rms: number): number {

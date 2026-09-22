@@ -163,7 +163,7 @@ function shellProps(params: {
     live: liveState as VariantShellProps["live"],
     onAudioPlaybackEnabledChange: vi.fn(),
     onCaptureSourceChange: vi.fn(),
-    onOpenAccountBilling: vi.fn(),
+    onOpenLowBalance: vi.fn(),
     onOpenPicker: vi.fn(),
     onOpenSettings: vi.fn(),
     onPrimaryAction: vi.fn(),

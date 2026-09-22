@@ -9,10 +9,12 @@ import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
 import { ModalSheet } from "./modalSheet";
+import { OutOfMinutesSheetController, type OutOfMinutesReason } from "./outOfMinutesSheet";
 import { TranslationReportActions } from "./reportTranslation";
 import { SettingsModal } from "./settingsModals";
 import { styles } from "./styles";
 import type { PickerMode } from "./types";
+import { UpdateRequiredSheet } from "./updateRequiredSheet";
 import { BloomShell } from "./variants/bloom";
 import type { UiVariant, VariantShellProps } from "./variants/types";
 import type { HomeViewModel } from "./viewModel";
@@ -35,11 +37,13 @@ export function HomeExperience(props: {
   networkType: string;
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
+  onClosePurchaseSheet: () => void;
   onCloseSettings: () => void;
+  onCloseUpdateRequired: () => void;
   onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
-  onOpenAccountBilling: () => void;
+  onOpenLowBalance: () => void;
   onDeleteLocalData: () => void;
   onOpenDiagnostics: () => void;
   onOpenPicker: (mode: PickerMode) => void;
@@ -50,6 +54,7 @@ export function HomeExperience(props: {
   onShare: () => void;
   onSwapLanguages: () => void;
   pickerMode: PickerMode;
+  purchaseSheetReason: OutOfMinutesReason | null;
   setSourceLanguageCode: (language: SourceLanguageCode) => void;
   setTargetLanguageCode: (language: LanguageCode) => void;
   settingsMessage: string | null;
@@ -58,6 +63,7 @@ export function HomeExperience(props: {
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   timelineRef: MutableRefObject<ScrollView | null>;
+  updateRequiredOpen: boolean;
   userInteractedRef: MutableRefObject<boolean>;
   viewModel: HomeViewModel;
 }): ReactNode {
@@ -74,7 +80,7 @@ export function HomeExperience(props: {
         live={props.live}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onCaptureSourceChange={props.onCaptureSourceChange}
-        onOpenAccountBilling={props.onOpenAccountBilling}
+        onOpenLowBalance={props.onOpenLowBalance}
         onOpenPicker={props.onOpenPicker}
         onOpenSettings={props.onOpenSettings}
         onPrimaryAction={props.onPrimaryAction}
@@ -91,6 +97,12 @@ export function HomeExperience(props: {
         sourceLanguageCode={props.sourceLanguageCode}
         targetLanguageCode={props.targetLanguageCode}
       />
+      <OutOfMinutesSheetController
+        onClose={props.onClosePurchaseSheet}
+        open={props.purchaseSheetReason !== null}
+        reason={props.purchaseSheetReason ?? "exhausted"}
+      />
+      <UpdateRequiredSheet onClose={props.onCloseUpdateRequired} open={props.updateRequiredOpen} />
       <SettingsModal
         anonymousAnalyticsEnabled={props.anonymousAnalyticsEnabled}
         developerToolsEnabled={props.developerToolsEnabled}
