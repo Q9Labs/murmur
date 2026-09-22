@@ -64,43 +64,18 @@ export type WorkerTelemetryEvent =
 
 export type TelemetryExecutionContext = Pick<ExecutionContext, "waitUntil">;
 
-export type RequestLocation = {
-  city: string | null;
-  country: string | null;
-  region: string | null;
-};
-
-export function requestLocation(request: Request): RequestLocation {
-  const cf = request.cf;
-  return {
-    city: typeof cf?.city === "string" ? cf.city : null,
-    country: typeof cf?.country === "string" ? cf.country : null,
-    region: typeof cf?.region === "string" ? cf.region : null,
-  };
-}
-
 type PostHogCaptureParams = {
   distinct_id: string;
   env: Env;
-  location?: RequestLocation;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;
 };
-
-function postHogLocationProperties(location?: RequestLocation) {
-  return {
-    $geoip_city_name: location?.city ?? null,
-    $geoip_country_code: location?.country ?? null,
-    $geoip_disable: true,
-    $geoip_subdivision_1_name: location?.region ?? null,
-    $ip: null,
-  };
-}
 
 function postHogEventProperties(params: PostHogCaptureParams) {
   const { event, ...eventProperties } = params.payload;
   return {
     ...eventProperties,
-    ...postHogLocationProperties(params.location),
+    $geoip_disable: true,
+    $ip: null,
     $process_person_profile: false,
     component: event.startsWith("mobile_") ? "mobile" : "worker",
     distinct_id: params.distinct_id,

@@ -29,8 +29,6 @@ import {
 } from "../rateLimitDurableObject";
 import {
   queuePostHogEvent,
-  requestLocation,
-  type RequestLocation,
   type TelemetryExecutionContext,
   type WorkerTelemetryEvent,
 } from "../observability/posthog";
@@ -116,7 +114,6 @@ export async function proxyRealtimeSession(
     context,
     distinctId: `anonymous_install_${validated.safetyIdentifier}`,
     env,
-    location: requestLocation(request),
     startedAtMs: realtimeStartedAtMs,
     stats: {
       closeReason: null,
@@ -712,7 +709,6 @@ type RealtimeTermination = {
 
 type RealtimeTelemetry = {
   analyticsEnabled: boolean;
-  location: RequestLocation;
   appSessionId: string;
   context?: TelemetryExecutionContext;
   distinctId: string;
@@ -782,7 +778,6 @@ function queueRealtimeTelemetry(
     context: telemetry.context,
     distinct_id: telemetry.distinctId,
     env: telemetry.env,
-    location: telemetry.location,
     payload,
   });
 }

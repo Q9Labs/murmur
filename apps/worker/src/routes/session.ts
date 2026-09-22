@@ -21,7 +21,6 @@ import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
 import {
   queuePostHogEvent,
-  requestLocation,
   type TelemetryExecutionContext,
 } from "../observability/posthog";
 import {
@@ -97,7 +96,6 @@ export async function createSession(
       context,
       distinct_id: `anonymous_install_${authorized.hashedInstallId}`,
       env,
-      location: requestLocation(request),
       payload: {
         acquisition_campaign: parsed.value.acquisition?.campaign,
         acquisition_content: parsed.value.acquisition?.content,
