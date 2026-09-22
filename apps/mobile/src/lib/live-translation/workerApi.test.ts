@@ -24,8 +24,8 @@ vi.mock("../../../modules/murmur-audio", () => ({
   },
 }));
 
-vi.mock("../auth/client", () => ({ authenticatedWorkerHeaders: async (headers: HeadersInit) => new Headers(headers) }));
-vi.mock("../config", () => ({ getWorkerBaseUrl: () => "https://worker.example.test" }));
+vi.mock("../auth/client", () => import("../__tests__/workerClientMocks"));
+vi.mock("../config", () => import("../__tests__/workerClientMocks"));
 
 import {
   closeWorkerSession,

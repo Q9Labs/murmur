@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../auth/client", () => ({
-  authenticatedWorkerHeaders: vi.fn(async (headers?: HeadersInit) => new Headers(headers)),
-}));
-vi.mock("../config", () => ({
-  getWorkerBaseUrl: () => "https://worker.example.test",
-}));
+vi.mock("../auth/client", () => import("../__tests__/workerClientMocks"));
+vi.mock("../config", () => import("../__tests__/workerClientMocks"));
 
 import {
   requestMurmurCustomer,

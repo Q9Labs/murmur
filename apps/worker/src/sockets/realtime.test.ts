@@ -466,7 +466,7 @@ describe("app-facing realtime socket", () => {
     client.dispatchEvent(new Event("close"));
 
     expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
-      close_reason: "client_closed",
+      close_reason: "client_close_session",
       failure_code: null,
       outcome: "completed",
     }));

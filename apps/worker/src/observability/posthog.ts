@@ -79,35 +79,47 @@ export function requestLocation(request: Request): RequestLocation {
   };
 }
 
-async function capturePostHogEvent(params: {
+type PostHogCaptureParams = {
   distinct_id: string;
   env: Env;
   location?: RequestLocation;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;
-}): Promise<void> {
+};
+
+function postHogLocationProperties(location?: RequestLocation) {
+  return {
+    $geoip_city_name: location?.city ?? null,
+    $geoip_country_code: location?.country ?? null,
+    $geoip_disable: true,
+    $geoip_subdivision_1_name: location?.region ?? null,
+    $ip: null,
+  };
+}
+
+function postHogEventProperties(params: PostHogCaptureParams) {
+  const { event, ...eventProperties } = params.payload;
+  return {
+    ...eventProperties,
+    ...postHogLocationProperties(params.location),
+    $process_person_profile: false,
+    component: event.startsWith("mobile_") ? "mobile" : "worker",
+    distinct_id: params.distinct_id,
+    environment: params.env.MURMUR_ENV ?? "development",
+    product: "murmur",
+    telemetry_schema_version: 1,
+  };
+}
+
+async function capturePostHogEvent(params: PostHogCaptureParams): Promise<void> {
   const apiKey = params.env.POSTHOG_PROJECT_TOKEN?.trim();
   if (!apiKey) {
     return;
   }
-  const { event, ...eventProperties } = params.payload;
   const response = await fetch(postHogUsCaptureUrl, {
     body: JSON.stringify({
       api_key: apiKey,
-      event,
-      properties: {
-        ...eventProperties,
-        $geoip_city_name: params.location?.city ?? null,
-        $geoip_country_code: params.location?.country ?? null,
-        $geoip_disable: true,
-        $geoip_subdivision_1_name: params.location?.region ?? null,
-        $ip: null,
-        $process_person_profile: false,
-        component: event.startsWith("mobile_") ? "mobile" : "worker",
-        distinct_id: params.distinct_id,
-        environment: params.env.MURMUR_ENV ?? "development",
-        product: "murmur",
-        telemetry_schema_version: 1,
-      },
+      event: params.payload.event,
+      properties: postHogEventProperties(params),
       timestamp: new Date().toISOString(),
       uuid: crypto.randomUUID(),
     }),
@@ -119,12 +131,8 @@ async function capturePostHogEvent(params: {
   }
 }
 
-export function queuePostHogEvent(params: {
+export function queuePostHogEvent(params: PostHogCaptureParams & {
   context?: TelemetryExecutionContext;
-  distinct_id: string;
-  env: Env;
-  location?: RequestLocation;
-  payload: MobileTelemetryEvent | WorkerTelemetryEvent;
 }): void {
   const capture = capturePostHogEvent(params).catch((failure: unknown) => {
     Sentry.captureException(failure, {
