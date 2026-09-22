@@ -6,6 +6,7 @@ import { createMurmurAuth } from "./auth/auth";
 import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObject";
 import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
 import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
+import { closeAbandonedUsageSessions } from "./billing/usageSessionStore";
 import {
   getReadiness,
   type Env,
@@ -14,6 +15,7 @@ import {
   corsHeaders,
   json,
 } from "./http/response";
+import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
 import { getSentryOptions } from "./observability/sentry";
@@ -158,7 +160,26 @@ const handler = {
         });
         throw failure;
       });
-    context.waitUntil(Promise.all([reconciliation, freeClaimCleanup]).then(() => undefined));
+    const abandonedSessionSweep = closeAbandonedUsageSessions(
+      env.BILLING_DB,
+      nowMs,
+      defaultRateLimits.maxSessionSeconds * 1_000,
+    ).then((closed) => {
+      if (closed > 0) {
+        logWorkerEvent({
+          closed,
+          event: "abandoned_usage_sessions_closed",
+        });
+      }
+    }).catch((failure: unknown) => {
+      Sentry.captureException(failure, {
+        tags: { operation: "abandoned_usage_session_sweep" },
+      });
+      throw failure;
+    });
+    context.waitUntil(
+      Promise.all([reconciliation, freeClaimCleanup, abandonedSessionSweep]).then(() => undefined),
+    );
   },
 } satisfies ExportedHandler<Env>;
 

@@ -30,6 +30,8 @@ import {
 } from "../rateLimitDurableObject";
 import {
   queuePostHogEvent,
+  requestLocation,
+  type RequestLocation,
   type TelemetryExecutionContext,
   type WorkerTelemetryEvent,
 } from "../observability/posthog";
@@ -112,8 +114,10 @@ export async function proxyRealtimeSession(
     context,
     distinctId: `anonymous_install_${validated.safetyIdentifier}`,
     env,
+    location: requestLocation(request),
     startedAtMs: realtimeStartedAtMs,
     stats: {
+      closeReason: null,
       failureCode: null,
       inputAudioBytes: 0,
       inputAudioChunks: 0,
@@ -332,6 +336,7 @@ function bindClientEvents(
   };
   let audioQueue = Promise.resolve();
   let billingStopped = false;
+  let clientRequestedClose = false;
   const stopForBilling = (code: "allowance_exhausted" | "billing_unavailable"): void => {
     if (billingStopped) {
       return;
@@ -398,6 +403,7 @@ function bindClientEvents(
     }
     const command = parseClientCommand(event.data);
     if (command?.kind === "close_session") {
+      clientRequestedClose = true;
       audioQueue = audioQueue.then(() => {
         if (upstream.readyState === WebSocket.OPEN) {
           upstream.send(createCloseMessage());
@@ -410,9 +416,14 @@ function bindClientEvents(
       });
     }
   });
-  client.addEventListener("close", () => {
+  client.addEventListener("close", (event: CloseEvent) => {
     closeSocket(upstream, 1000, "client_close");
-    finishSessionRecord("failed", "client_transport_closed");
+    const closedCleanly = clientRequestedClose || event.code === 1000 || event.code === 1001;
+    telemetry.stats.closeReason ??= closedCleanly ? "client_closed" : "client_transport_closed";
+    finishSessionRecord(
+      closedCleanly ? "completed" : "failed",
+      closedCleanly ? null : "client_transport_closed",
+    );
   });
   client.addEventListener("error", () => {
     Sentry.captureMessage("worker_client_websocket_error", {
@@ -454,6 +465,9 @@ function bindProviderEvents(
       send(client, output.event);
       if (output.event.kind === "session_closed") {
         sessionClosedCleanly = true;
+        telemetry.stats.closeReason = output.providerCloseReason
+          ? normalizeFailureCode(output.providerCloseReason)
+          : "provider_session_closed";
         closeSocket(client, 1000, "session_closed");
         finishSessionRecord("completed");
       }
@@ -488,12 +502,14 @@ function bindProviderEvents(
 
 type RealtimeTelemetry = {
   analyticsEnabled: boolean;
+  location: RequestLocation;
   appSessionId: string;
   context?: TelemetryExecutionContext;
   distinctId: string;
   env: Env;
   startedAtMs: number;
   stats: {
+    closeReason: string | null;
     failureCode: string | null;
     inputAudioBytes: number;
     inputAudioChunks: number;
@@ -533,6 +549,7 @@ function createSessionEndedEvent(
 ): WorkerTelemetryEvent {
   return {
     app_session_id: telemetry.appSessionId,
+    close_reason: telemetry.stats.closeReason,
     event: "worker_session_ended",
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,
@@ -555,6 +572,7 @@ function queueRealtimeTelemetry(
     context: telemetry.context,
     distinct_id: telemetry.distinctId,
     env: telemetry.env,
+    location: telemetry.location,
     payload,
   });
 }

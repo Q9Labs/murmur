@@ -51,6 +51,7 @@ export type WorkerTelemetryEvent =
     }
   | {
       app_session_id: string;
+      close_reason: string | null;
       event: "worker_session_ended";
       failure_code: string | null;
       input_audio_bytes: number;

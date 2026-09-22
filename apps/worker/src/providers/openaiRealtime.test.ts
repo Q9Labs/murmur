@@ -67,6 +67,22 @@ describe("OpenAI realtime translation adapter", () => {
       event: { kind: "session_closed" },
     });
     expect(parseTranslationOutput(JSON.stringify({
+      type: "session.closed",
+      reason: "max_duration_reached",
+    }))).toEqual({
+      kind: "event",
+      event: { kind: "session_closed" },
+      providerCloseReason: "max_duration_reached",
+    });
+    expect(parseTranslationOutput(JSON.stringify({
+      type: "session.closed",
+      session: { status_details: { reason: "idle_timeout" } },
+    }))).toEqual({
+      kind: "event",
+      event: { kind: "session_closed" },
+      providerCloseReason: "idle_timeout",
+    });
+    expect(parseTranslationOutput(JSON.stringify({
       type: "error",
       error: { code: "rate_limit_exceeded", message: "private provider details" },
     }))).toEqual({

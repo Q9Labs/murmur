@@ -9,6 +9,15 @@ vi.mock("../providers/openaiRealtime", async (importOriginal) => ({
   openTranslationSocket: providerMocks.openTranslationSocket,
 }));
 
+const telemetryMocks = vi.hoisted(() => ({
+  queuePostHogEvent: vi.fn<(params: { payload: { event: string } }) => void>(),
+}));
+
+vi.mock("../observability/posthog", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../observability/posthog")>(),
+  queuePostHogEvent: telemetryMocks.queuePostHogEvent,
+}));
+
 import type { WorkerWebSocket } from "../http/response";
 import { createSessionRecordDurable } from "../rateLimitDurableObject";
 import {
@@ -55,7 +64,7 @@ async function openTestRealtimeSession(params: {
   );
   await proxyRealtimeSession(
     new Request(
-      `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=${params.targetLanguage ?? "ar"}`,
+      `https://worker.test/v2/realtime?app_session_id=${appSessionId}&target_language=${params.targetLanguage ?? "ar"}&analytics_enabled=true`,
     ),
     client as unknown as WorkerWebSocket,
     params.env ?? { OPENAI_API_KEY: "test_key" },
@@ -66,6 +75,7 @@ async function openTestRealtimeSession(params: {
 describe("app-facing realtime socket", () => {
   beforeEach(() => {
     providerMocks.openTranslationSocket.mockReset();
+    telemetryMocks.queuePostHogEvent.mockReset();
     vi.stubGlobal("WebSocket", { CONNECTING: 0, OPEN: 1 });
   });
 
@@ -295,4 +305,47 @@ describe("app-facing realtime socket", () => {
       reason: "provider_transport_closed",
     });
   });
+
+  it("classifies client-requested closes as completed and carries the close reason", async () => {
+    const { client } = await openTestRealtimeSession({ name: "client_clean_close" });
+    client.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ kind: "close_session" }),
+    }));
+    client.dispatchEvent(new Event("close"));
+
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      close_reason: "client_closed",
+      failure_code: null,
+      outcome: "completed",
+    }));
+  });
+
+  it("keeps a client transport close that was not requested a failure", async () => {
+    const { client } = await openTestRealtimeSession({ name: "client_dropped" });
+    client.dispatchEvent(new Event("close"));
+
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      close_reason: "client_transport_closed",
+      failure_code: "client_transport_closed",
+      outcome: "failed",
+    }));
+  });
+
+  it("records the provider close reason when the provider ends the session", async () => {
+    const { upstream } = await openTestRealtimeSession({ name: "provider_close_reason" });
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ reason: "Max Duration Reached", type: "session.closed" }),
+    }));
+
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      close_reason: "max_duration_reached",
+      outcome: "completed",
+    }));
+  });
 });
+
+function sessionEndedEvents(): { event: string }[] {
+  return telemetryMocks.queuePostHogEvent.mock.calls
+    .map(([params]) => params.payload)
+    .filter((payload) => payload.event === "worker_session_ended");
+}
