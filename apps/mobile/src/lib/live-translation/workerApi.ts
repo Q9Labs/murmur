@@ -63,13 +63,16 @@ export async function closeWorkerSession(
   const timeoutId = setTimeout(() => controller.abort(), workerSessionCloseTimeoutMs);
   try {
     const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
-    await fetch(`${getWorkerBaseUrl()}/v2/session/${appSessionId}/stop`, {
+    const response = await fetch(`${getWorkerBaseUrl()}/v2/session/${appSessionId}/stop`, {
       body: JSON.stringify({ reason }),
       headers,
       keepalive: true,
       method: "POST",
       signal: controller.signal,
     });
+    if (!response.ok) {
+      throw new Error(`worker_session_stop_http_${response.status}`);
+    }
     return "closed";
   } catch (failure) {
     if (isExpectedNetworkFailure(failure)) {

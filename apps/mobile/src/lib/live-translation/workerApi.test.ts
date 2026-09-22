@@ -165,6 +165,13 @@ describe("closeWorkerSession", () => {
     await expect(closeWorkerSession("session_1", "stop")).resolves.toBe("network_unavailable");
   });
 
+  it.each([401, 500])("throws when the stop response is HTTP %i", async (status) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status })));
+
+    await expect(closeWorkerSession("session_1", "stop"))
+      .rejects.toThrow(`worker_session_stop_http_${status}`);
+  });
+
   it("aborts a stop request that outlives the close deadline", async () => {
     vi.useFakeTimers();
     let aborted = false;
