@@ -2,7 +2,11 @@ import { parseMobileTelemetryRequest } from "@murmur/protocol/telemetry";
 
 import type { Env } from "../env";
 import { json } from "../http/response";
-import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
+import {
+  queuePostHogEvent,
+  requestLocation,
+  type TelemetryExecutionContext,
+} from "../observability/posthog";
 import { hashInstallId } from "../privacy";
 import {
   canAcceptTelemetryDurable,
@@ -54,6 +58,7 @@ export async function captureMobileTelemetry(
     context,
     distinct_id: `anonymous_install_${hashedInstallId}`,
     env,
+    location: requestLocation(request),
     payload: telemetry.payload,
   });
   return json({ ok: true }, 202);

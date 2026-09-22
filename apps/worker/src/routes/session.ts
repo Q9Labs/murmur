@@ -19,7 +19,11 @@ import { json } from "../http/response";
 import { defaultRateLimits } from "../limits";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
-import { queuePostHogEvent, type TelemetryExecutionContext } from "../observability/posthog";
+import {
+  queuePostHogEvent,
+  requestLocation,
+  type TelemetryExecutionContext,
+} from "../observability/posthog";
 import {
   closeSessionDurable,
   createSessionIfAllowedDurable,
@@ -93,6 +97,7 @@ export async function createSession(
       context,
       distinct_id: `anonymous_install_${authorized.hashedInstallId}`,
       env,
+      location: requestLocation(request),
       payload: {
         acquisition_campaign: parsed.value.acquisition?.campaign,
         acquisition_content: parsed.value.acquisition?.content,

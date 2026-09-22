@@ -23,6 +23,7 @@ describe("PostHog delivery", () => {
       context: { waitUntil },
       distinct_id: "anonymous_install_hashed",
       env: { MURMUR_ENV: "production", POSTHOG_PROJECT_TOKEN: "phc_test" },
+      location: { city: "Dubai", country: "AE", region: "Dubai" },
       payload: {
         app_session_id: "session-12345678",
         event: "worker_first_translation",
@@ -39,7 +40,10 @@ describe("PostHog delivery", () => {
       api_key: "phc_test",
       event: "worker_first_translation",
       properties: {
+        $geoip_city_name: "Dubai",
+        $geoip_country_code: "AE",
         $geoip_disable: true,
+        $geoip_subdivision_1_name: "Dubai",
         $ip: null,
         $process_person_profile: false,
         component: "worker",

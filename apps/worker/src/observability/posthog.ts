@@ -64,9 +64,25 @@ export type WorkerTelemetryEvent =
 
 export type TelemetryExecutionContext = Pick<ExecutionContext, "waitUntil">;
 
+export type RequestLocation = {
+  city: string | null;
+  country: string | null;
+  region: string | null;
+};
+
+export function requestLocation(request: Request): RequestLocation {
+  const cf = request.cf;
+  return {
+    city: typeof cf?.city === "string" ? cf.city : null,
+    country: typeof cf?.country === "string" ? cf.country : null,
+    region: typeof cf?.region === "string" ? cf.region : null,
+  };
+}
+
 async function capturePostHogEvent(params: {
   distinct_id: string;
   env: Env;
+  location?: RequestLocation;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;
 }): Promise<void> {
   const apiKey = params.env.POSTHOG_PROJECT_TOKEN?.trim();
@@ -80,7 +96,10 @@ async function capturePostHogEvent(params: {
       event,
       properties: {
         ...eventProperties,
+        $geoip_city_name: params.location?.city ?? null,
+        $geoip_country_code: params.location?.country ?? null,
         $geoip_disable: true,
+        $geoip_subdivision_1_name: params.location?.region ?? null,
         $ip: null,
         $process_person_profile: false,
         component: event.startsWith("mobile_") ? "mobile" : "worker",
@@ -104,6 +123,7 @@ export function queuePostHogEvent(params: {
   context?: TelemetryExecutionContext;
   distinct_id: string;
   env: Env;
+  location?: RequestLocation;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;
 }): void {
   const capture = capturePostHogEvent(params).catch((failure: unknown) => {
