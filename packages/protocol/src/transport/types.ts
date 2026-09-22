@@ -1,5 +1,15 @@
 import type { LanguageCode, SourceLanguageCode } from "../languages";
 
+export type AppConfigResponse = {
+  enabled_languages: LanguageCode[] | null;
+  low_balance_threshold_minutes: number;
+  min_app_version_android: string | null;
+  min_app_version_ios: string | null;
+  paywall_offering_id: string | null;
+  sessions_disabled_message: string;
+  sessions_enabled: boolean;
+};
+
 export type CreateSessionResponse = {
   app_session_id: string;
   limits: {

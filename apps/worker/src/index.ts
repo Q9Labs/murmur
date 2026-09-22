@@ -25,6 +25,7 @@ import {
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
 import { getCustomer } from "./routes/customer";
+import { getConfig } from "./routes/config";
 import { reconcileBilling } from "./routes/reconcileBilling";
 import { receiveRevenueCatWebhook } from "./routes/revenueCatWebhook";
 import { createSession } from "./routes/session";
@@ -70,6 +71,10 @@ const handler = {
 
     if (url.pathname === "/v3/customer" && request.method === "GET") {
       return getCustomer(request, env, context);
+    }
+
+    if (url.pathname === "/v3/config" && request.method === "GET") {
+      return getConfig(request, env, context);
     }
 
     if (url.pathname === "/v3/billing/reconcile" && request.method === "POST") {

@@ -1,0 +1,177 @@
+import type { AppConfigResponse } from "@murmur/protocol/transport/types";
+import { isLanguageCode } from "@murmur/protocol/languages";
+import * as Sentry from "@sentry/cloudflare";
+
+import type { CustomerPlan } from "./billing/allowanceService";
+import { requiresDeviceIntegrity, type Env } from "./env";
+import { defaultRateLimits } from "./limits";
+
+export type ServerConfig = AppConfigResponse & {
+  device_integrity_required: boolean;
+  free_allowance_minutes: number;
+  max_session_seconds: number;
+  output_audio_enabled: boolean;
+  realtime_model: string;
+  source_transcript: boolean;
+};
+
+type ConfigIdentity = {
+  appVersion: string | null;
+  distinctId: string;
+  plan: CustomerPlan;
+  platform: string | null;
+};
+
+const cache = new Map<string, { expiresAt: number; value: ServerConfig }>();
+const cacheTtlMs = 30_000;
+let failureReported = false;
+
+export function defaultServerConfig(env: Env): ServerConfig {
+  return {
+    device_integrity_required: requiresDeviceIntegrity(env),
+    enabled_languages: null,
+    free_allowance_minutes: 5,
+    low_balance_threshold_minutes: 15,
+    max_session_seconds: defaultRateLimits.maxSessionSeconds,
+    min_app_version_android: null,
+    min_app_version_ios: null,
+    output_audio_enabled: true,
+    paywall_offering_id: null,
+    realtime_model: env.OPENAI_REALTIME_MODEL?.trim() || "gpt-realtime-translate",
+    sessions_disabled_message: "Sessions are temporarily unavailable. Please try again later.",
+    sessions_enabled: true,
+    source_transcript: false,
+  };
+}
+
+export async function getServerConfig(env: Env, identity: ConfigIdentity): Promise<ServerConfig> {
+  const defaults = defaultServerConfig(env);
+  const token = env.POSTHOG_PROJECT_TOKEN?.trim();
+  if (!token) {
+    return defaults;
+  }
+  const key = JSON.stringify([identity.distinctId, identity.plan, identity.platform, identity.appVersion]);
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+  try {
+    const response = await fetch("https://us.i.posthog.com/flags/", {
+      body: JSON.stringify({
+        distinct_id: identity.distinctId,
+        person_properties: {
+          app_platform: identity.platform,
+          app_version: identity.appVersion,
+          plan: identity.plan,
+        },
+        token,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      signal: AbortSignal.timeout(800),
+    });
+    if (!response.ok) {
+      throw new Error(`posthog_flags_http_${response.status}`);
+    }
+    const data: unknown = await response.json();
+    if (typeof data !== "object" || data === null || !("featureFlags" in data)) {
+      throw new Error("posthog_flags_invalid_response");
+    }
+    const flags = data.featureFlags;
+    const payloads = "featureFlagPayloads" in data ? data.featureFlagPayloads : null;
+    if (typeof flags !== "object" || flags === null) {
+      throw new Error("posthog_flags_invalid_response");
+    }
+    const value = (name: keyof ServerConfig): unknown => {
+      const flag = Object.entries(flags).find(([key]) => key === name)?.[1];
+      if (flag === undefined) {
+        return undefined;
+      }
+      const rawPayload = typeof payloads === "object" && payloads !== null
+        ? Object.entries(payloads).find(([key]) => key === name)?.[1]
+        : undefined;
+      if (typeof rawPayload === "string") {
+        try {
+          return JSON.parse(rawPayload);
+        } catch {
+          return rawPayload;
+        }
+      }
+      return rawPayload ?? flag;
+    };
+    const boolean = (name: keyof ServerConfig, fallback: boolean): boolean =>
+      typeof value(name) === "boolean" ? value(name) === true : fallback;
+    const number = (name: keyof ServerConfig, fallback: number): number => {
+      const candidate = value(name);
+      return typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0
+        ? candidate
+        : fallback;
+    };
+    const string = (name: keyof ServerConfig, fallback: string): string => {
+      const candidate = value(name);
+      return typeof candidate === "string" ? candidate : fallback;
+    };
+    const optionalString = (name: keyof ServerConfig): string | null => {
+      const candidate = value(name);
+      return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+    };
+    const languages = value("enabled_languages");
+    const config: ServerConfig = {
+      device_integrity_required: boolean("device_integrity_required", defaults.device_integrity_required),
+      enabled_languages: Array.isArray(languages) && languages.every(isLanguageCode)
+        ? languages
+        : defaults.enabled_languages,
+      free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
+      low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
+      max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
+      min_app_version_android: optionalString("min_app_version_android"),
+      min_app_version_ios: optionalString("min_app_version_ios"),
+      output_audio_enabled: boolean("output_audio_enabled", defaults.output_audio_enabled),
+      paywall_offering_id: optionalString("paywall_offering_id"),
+      realtime_model: string("realtime_model", defaults.realtime_model),
+      sessions_disabled_message: string("sessions_disabled_message", defaults.sessions_disabled_message),
+      sessions_enabled: boolean("sessions_enabled", defaults.sessions_enabled),
+      source_transcript: boolean("source_transcript", defaults.source_transcript),
+    };
+    if (cache.size >= 256) {
+      cache.clear();
+    }
+    cache.set(key, { expiresAt: Date.now() + cacheTtlMs, value: config });
+    return config;
+  } catch (failure) {
+    if (!failureReported) {
+      failureReported = true;
+      Sentry.captureException(failure, { tags: { operation: "posthog_server_config" } });
+    }
+    return defaults;
+  }
+}
+
+export function appConfig(config: ServerConfig): AppConfigResponse {
+  return {
+    enabled_languages: config.enabled_languages,
+    low_balance_threshold_minutes: config.low_balance_threshold_minutes,
+    min_app_version_android: config.min_app_version_android,
+    min_app_version_ios: config.min_app_version_ios,
+    paywall_offering_id: config.paywall_offering_id,
+    sessions_disabled_message: config.sessions_disabled_message,
+    sessions_enabled: config.sessions_enabled,
+  };
+}
+
+export function isBelowMinimumVersion(version: string | null, minimum: string | null): boolean {
+  if (!version || !minimum) {
+    return false;
+  }
+  const current = version.split(".").map(Number);
+  const required = minimum.split(".").map(Number);
+  if (current.some((part) => !Number.isInteger(part)) || required.some((part) => !Number.isInteger(part))) {
+    return false;
+  }
+  for (let index = 0; index < Math.max(current.length, required.length); index += 1) {
+    if ((current[index] ?? 0) !== (required[index] ?? 0)) {
+      return (current[index] ?? 0) < (required[index] ?? 0);
+    }
+  }
+  return false;
+}
