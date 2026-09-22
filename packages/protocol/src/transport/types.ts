@@ -1,4 +1,5 @@
 import type { LanguageCode, SourceLanguageCode } from "../languages";
+import type { AcquisitionContext } from "../acquisition";
 
 export type AppConfigResponse = {
   enabled_languages: LanguageCode[] | null;
@@ -10,8 +11,31 @@ export type AppConfigResponse = {
   sessions_enabled: boolean;
 };
 
+export type CreateSessionRequest = {
+  acquisition?: AcquisitionContext;
+  analytics_enabled: boolean;
+  app_install_id: string;
+  app_platform?: "android" | "ios";
+  app_version?: string;
+  device_integrity?: {
+    available: boolean;
+    key_id?: string;
+    kind?: string;
+    nonce?: string;
+    platform: string | null;
+    provider?: string | null;
+    token?: string;
+  };
+  playback_enabled?: boolean;
+  source_language: SourceLanguageCode;
+  target_language: LanguageCode;
+};
+
 export type CreateSessionResponse = {
   app_session_id: string;
+  features: {
+    source_transcript: boolean;
+  };
   limits: {
     expires_at_ms: number;
     max_session_seconds: number;
@@ -20,9 +44,9 @@ export type CreateSessionResponse = {
   session_epoch: number;
 };
 
-export type RealtimeClientCommand = {
-  kind: "close_session";
-};
+export type RealtimeClientCommand =
+  | { kind: "close_session" }
+  | { enabled: boolean; kind: "set_playback" };
 
 export type RealtimeServerEvent =
   | {
