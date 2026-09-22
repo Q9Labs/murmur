@@ -31,7 +31,10 @@ describe("billing reconciliation telemetry identity", () => {
     });
 
     const response = await reconcileBilling(
-      new Request("https://worker.example.test/v3/billing/reconcile", { method: "POST" }),
+      new Request("https://worker.example.test/v3/billing/reconcile", {
+        body: JSON.stringify({ analytics_enabled: true }),
+        method: "POST",
+      }),
       env,
     );
 
@@ -46,7 +49,10 @@ describe("billing reconciliation telemetry identity", () => {
     vi.mocked(reconcileRevenueCatCustomer).mockRejectedValueOnce(new Error("provider unavailable"));
 
     const response = await reconcileBilling(
-      new Request("https://worker.example.test/v3/billing/reconcile", { method: "POST" }),
+      new Request("https://worker.example.test/v3/billing/reconcile", {
+        body: JSON.stringify({ analytics_enabled: true }),
+        method: "POST",
+      }),
       env,
     );
 
@@ -55,5 +61,35 @@ describe("billing reconciliation telemetry identity", () => {
       distinct_id: `customer_${await hashInstallId("customer-123", "test-salt")}`,
       payload: expect.objectContaining({ status: "failed" }),
     }));
+  });
+
+  it.each([undefined, false])("does not capture when analytics is %s", async (enabled) => {
+    vi.mocked(reconcileRevenueCatCustomer).mockResolvedValueOnce({
+      purchaseCount: 0,
+      subscriptionCount: 0,
+    });
+
+    const response = await reconcileBilling(
+      new Request("https://worker.example.test/v3/billing/reconcile", {
+        body: enabled === undefined ? undefined : JSON.stringify({ analytics_enabled: enabled }),
+        method: "POST",
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(queuePostHogEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not capture a failed reconciliation without explicit analytics consent", async () => {
+    vi.mocked(reconcileRevenueCatCustomer).mockRejectedValueOnce(new Error("provider unavailable"));
+
+    const response = await reconcileBilling(
+      new Request("https://worker.example.test/v3/billing/reconcile", { method: "POST" }),
+      env,
+    );
+
+    expect(response.status).toBe(503);
+    expect(queuePostHogEvent).not.toHaveBeenCalled();
   });
 });

@@ -22,14 +22,25 @@ export async function reconcileBilling(
   if (!isBillingFulfillmentEnabled(env)) {
     return json({ error: "billing_fulfillment_disabled" }, 503);
   }
+  let analyticsEnabled = false;
+  if (request.body) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "invalid_reconciliation_request" }, 400);
+    }
+    analyticsEnabled = typeof body === "object" && body !== null &&
+      Reflect.get(body, "analytics_enabled") === true;
+  }
   const requestedTrigger = request.headers.get("x-murmur-reconciliation-trigger");
   const trigger = requestedTrigger === "restore" || requestedTrigger === "login"
     ? requestedTrigger
     : "purchase";
-  const distinctId = `customer_${await hashInstallId(
+  const distinctId = analyticsEnabled ? `customer_${await hashInstallId(
     session.user.id,
     env.SESSION_HASH_SALT ?? "local-development-salt",
-  )}`;
+  )}` : null;
   try {
     const result = await reconcileRevenueCatCustomer({
       customerId: session.user.id,
@@ -37,18 +48,20 @@ export async function reconcileBilling(
       nowMs: Date.now(),
       trigger,
     });
-    queuePostHogEvent({
-      context,
-      distinct_id: distinctId,
-      env,
-      payload: {
-        event: "worker_billing_reconciliation",
-        purchase_count: result.purchaseCount,
-        status: "succeeded",
-        subscription_count: result.subscriptionCount,
-        trigger,
-      },
-    });
+    if (distinctId) {
+      queuePostHogEvent({
+        context,
+        distinct_id: distinctId,
+        env,
+        payload: {
+          event: "worker_billing_reconciliation",
+          purchase_count: result.purchaseCount,
+          status: "succeeded",
+          subscription_count: result.subscriptionCount,
+          trigger,
+        },
+      });
+    }
     return json({
       ok: true,
       purchase_count: result.purchaseCount,
@@ -58,18 +71,20 @@ export async function reconcileBilling(
     Sentry.captureException(failure, {
       tags: { operation: "reconcile_billing" },
     });
-    queuePostHogEvent({
-      context,
-      distinct_id: distinctId,
-      env,
-      payload: {
-        event: "worker_billing_reconciliation",
-        purchase_count: 0,
-        status: "failed",
-        subscription_count: 0,
-        trigger,
-      },
-    });
+    if (distinctId) {
+      queuePostHogEvent({
+        context,
+        distinct_id: distinctId,
+        env,
+        payload: {
+          event: "worker_billing_reconciliation",
+          purchase_count: 0,
+          status: "failed",
+          subscription_count: 0,
+          trigger,
+        },
+      });
+    }
     return json({ error: "reconciliation_failed" }, 503);
   }
 }
