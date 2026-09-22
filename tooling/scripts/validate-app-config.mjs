@@ -25,7 +25,7 @@ const assert = (condition, message) => {
 };
 
 const productionWorkerUrl = "https://murmur.q9labs.ai";
-const testingWorkerUrl = "https://murmur-worker-development.msbilal.workers.dev";
+const testingWorkerUrl = "https://murmur-worker-dev.msbilal.workers.dev";
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const releaseVersion = "1.2.3";
 const iosBuildNumber = "17";
@@ -156,6 +156,12 @@ assert(appUiSource.includes(">Listen<"), "App UI must include the canonical List
 const productionBuild = easConfig.build?.production;
 const sandboxBuild = easConfig.build?.sandbox;
 const testingBuild = easConfig.build?.testing;
+for (const [profileName, profile] of Object.entries(easConfig.build ?? {})) {
+  assert(
+    !JSON.stringify(profile).includes("murmur-worker-development"),
+    `EAS ${profileName} build must not reference the legacy production proxy`,
+  );
+}
 assert(testingBuild?.distribution === "store", "EAS testing build must use store distribution");
 assert(testingBuild?.android?.buildType === "app-bundle", "EAS testing Android build must produce an app bundle");
 assert(testingBuild?.ios?.simulator === false, "EAS testing iOS build must target devices, not simulator");
