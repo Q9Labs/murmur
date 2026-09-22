@@ -179,7 +179,15 @@ describe("Bloom preview", () => {
     expect(harness.outOfMinutesProps).toMatchObject({
       billing: { customer: { availableMs: 0, isRegistered: false } },
       open: true,
-      plans: { plans: [{ kind: "pro" }, { kind: "pro" }, { kind: "top_up" }], status: "ready" },
+      plans: {
+        plans: [
+          { kind: "pro", price: "$9.99 / month" },
+          { kind: "pro", price: "$99.99 / year" },
+          { kind: "top_up", price: "$7.99" },
+          { kind: "top_up", price: "$29.99" },
+        ],
+        status: "ready",
+      },
       reason: "exhausted",
     });
     expect(harness.shellProps?.["live"]).toMatchObject({ error: "allowance_exhausted" });

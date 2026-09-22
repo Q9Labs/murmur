@@ -88,6 +88,7 @@ export function OutOfMinutesSheet(props: {
   reason: OutOfMinutesReason;
 }): ReactNode {
   const styles = useOutOfMinutesStyles();
+  const [signUpOpen, setSignUpOpen] = useState(false);
   const registered = props.billing.customer?.isRegistered === true;
   const title = props.reason === "low_balance" ? "Running low" : "Out of minutes";
 
@@ -102,28 +103,25 @@ export function OutOfMinutesSheet(props: {
       />
       <Text style={styles.body}>{sheetMessage(props.billing, props.reason)}</Text>
 
-      {registered ? null : (
-        <View style={styles.section}>
-          <Text accessibilityRole="header" style={styles.heading}>Sign up</Text>
-          <Text style={styles.caption}>
-            Add your email so your minutes and purchases follow you to any device.
-          </Text>
-          <EmailSignInForm billing={props.billing} />
-        </View>
-      )}
-
       <View style={styles.section}>
         <Text accessibilityRole="header" style={styles.heading}>Plans</Text>
         <PlanList
           billing={props.billing}
+          onNeedSignUp={() => setSignUpOpen(true)}
           onRetry={props.onRetryPlans}
           plans={props.plans}
           styles={styles}
         />
-        {registered ? null : (
-          <Text style={styles.caption}>Sign up above to choose a plan.</Text>
-        )}
       </View>
+
+      {registered ? null : (
+        <SignUpToBuy
+          billing={props.billing}
+          onOpen={() => setSignUpOpen(true)}
+          open={signUpOpen}
+          styles={styles}
+        />
+      )}
 
       {props.billing.notice ? <Text style={styles.notice}>{props.billing.notice}</Text> : null}
       {props.billing.error ? (
@@ -144,12 +142,43 @@ function sheetMessage(billing: MurmurBillingContext, reason: OutOfMinutesReason)
   }
   const nextStep = customer?.isRegistered
     ? "Choose Pro or a top-up to keep talking."
-    : "Sign up, then choose Pro or a top-up to keep talking.";
+    : "Pick a plan to keep talking. You'll add your email first.";
   return `You've used your ${freeAllowanceMinutes} free minutes for this month. ${nextStep}`;
+}
+
+function SignUpToBuy(props: {
+  billing: MurmurBillingContext;
+  onOpen: () => void;
+  open: boolean;
+  styles: OutOfMinutesStyles;
+}): ReactNode {
+  const { styles } = props;
+  if (!props.open) {
+    return (
+      <Pressable
+        accessibilityHint="Add your email, then pick a plan"
+        accessibilityRole="button"
+        onPress={props.onOpen}
+        style={({ pressed }) => [styles.signUpButton, pressed && styles.pressed]}
+      >
+        <Text style={styles.signUpButtonText}>Sign up to buy</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <View style={styles.section}>
+      <Text accessibilityRole="header" style={styles.heading}>Sign up to buy</Text>
+      <Text style={styles.caption}>
+        Add your email so your minutes and purchases follow you to any device.
+      </Text>
+      <EmailSignInForm billing={props.billing} />
+    </View>
+  );
 }
 
 function PlanList(props: {
   billing: MurmurBillingContext;
+  onNeedSignUp: () => void;
   onRetry: () => void;
   plans: PlanListState;
   styles: OutOfMinutesStyles;
@@ -177,19 +206,20 @@ function PlanList(props: {
     return <Text style={styles.caption}>No plans are available from the store right now.</Text>;
   }
   const customer = props.billing.customer;
-  const canBuy = Boolean(
-    customer?.isRegistered &&
-      customer.purchasesEnabled &&
-      props.billing.purchasesAvailable &&
-      !props.billing.busy,
+  const registered = customer?.isRegistered === true;
+  const storeReady = Boolean(
+    customer?.purchasesEnabled && props.billing.purchasesAvailable && !props.billing.busy,
   );
   return (
     <View style={styles.planGroup}>
       {props.plans.plans.map((plan) => (
         <PlanRow
-          disabled={!canBuy}
+          disabled={registered && !storeReady}
           key={plan.id}
-          onPress={() => void props.billing.purchasePlan(plan.id)}
+          needsSignUp={!registered}
+          onPress={registered
+            ? () => void props.billing.purchasePlan(plan.id)
+            : props.onNeedSignUp}
           plan={plan}
           styles={styles}
         />
@@ -200,6 +230,7 @@ function PlanList(props: {
 
 function PlanRow(props: {
   disabled: boolean;
+  needsSignUp: boolean;
   onPress: () => void;
   plan: MurmurPlan;
   styles: OutOfMinutesStyles;
@@ -208,6 +239,7 @@ function PlanRow(props: {
   const isPro = plan.kind === "pro";
   return (
     <Pressable
+      accessibilityHint={props.needsSignUp ? "Sign up first to buy this plan" : undefined}
       accessibilityLabel={`${plan.title}, ${plan.price}`}
       accessibilityRole="button"
       accessibilityState={{ disabled: props.disabled }}
@@ -216,7 +248,8 @@ function PlanRow(props: {
       style={({ pressed }) => [
         styles.planRow,
         isPro && styles.planRowPro,
-        (pressed || props.disabled) && styles.planRowMuted,
+        props.disabled && styles.planRowUnavailable,
+        pressed && styles.pressed,
       ]}
     >
       <View style={styles.planCopy}>
@@ -255,9 +288,9 @@ function createOutOfMinutesStyles(theme: MurmurTheme) {
     },
     illustration: {
       alignSelf: "center",
-      height: 140,
-      marginBottom: 12,
-      width: 200,
+      height: 96,
+      marginBottom: 8,
+      width: 137,
     },
     notice: {
       color: theme.muted,
@@ -270,7 +303,7 @@ function createOutOfMinutesStyles(theme: MurmurTheme) {
       gap: 3,
     },
     planGroup: {
-      gap: 10,
+      gap: 8,
     },
     planKind: {
       color: theme.muted,
@@ -285,20 +318,20 @@ function createOutOfMinutesStyles(theme: MurmurTheme) {
     planRow: {
       alignItems: "center",
       borderColor: theme.hairline,
-      borderRadius: 20,
+      borderRadius: 18,
       borderWidth: 1,
       flexDirection: "row",
       gap: 12,
-      minHeight: 64,
-      paddingHorizontal: 18,
-      paddingVertical: 14,
-    },
-    planRowMuted: {
-      opacity: 0.55,
+      minHeight: 58,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
     },
     planRowPro: {
       backgroundColor: theme.selected,
       borderColor: theme.selectedBorder,
+    },
+    planRowUnavailable: {
+      borderStyle: "dashed",
     },
     planTitle: {
       color: theme.primary,
@@ -322,8 +355,22 @@ function createOutOfMinutesStyles(theme: MurmurTheme) {
       fontWeight: "800",
     },
     section: {
-      gap: 12,
-      marginTop: 24,
+      gap: 10,
+      marginTop: 18,
+    },
+    signUpButton: {
+      alignItems: "center",
+      backgroundColor: theme.action,
+      borderRadius: 999,
+      justifyContent: "center",
+      marginTop: 16,
+      minHeight: 56,
+      paddingHorizontal: 24,
+    },
+    signUpButtonText: {
+      color: theme.onAction,
+      fontSize: 17,
+      fontWeight: "800",
     },
   });
 }

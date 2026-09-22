@@ -136,12 +136,13 @@ const previewTranslationOnlyLive: LiveTranslationController = {
   spans: previewLive.spans.map((span) => ({ ...span, source_caption: "" })),
 };
 
-// Fixture prices for screenshots only; the app always shows store prices.
+// US ladder from the pricing proposal, for screenshots only; the app always shows store prices.
 const previewPlans: PlanListState = {
   plans: [
-    { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro" },
-    { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Murmur Pro Annual" },
+    { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro · 2 hours a month" },
+    { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Pro Annual · 2 months free" },
     { id: "trip_pass", kind: "top_up", price: "$7.99", title: "Trip Pass · 60 minutes" },
+    { id: "pack_300", kind: "top_up", price: "$29.99", title: "300-minute pack" },
   ],
   status: "ready",
 };

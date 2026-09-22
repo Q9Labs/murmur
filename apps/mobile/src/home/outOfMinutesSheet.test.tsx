@@ -122,17 +122,20 @@ beforeEach(() => {
 });
 
 describe("out-of-minutes sheet", () => {
-  it("asks anonymous listeners to sign up and shows Pro before top-ups", () => {
+  it("shows anonymous listeners the plans first with a sign-up-to-buy action", () => {
     const anonymous = billing();
     const markup = renderSheet({ billing: anonymous });
 
     expect(markup).toContain("Out of minutes");
     expect(markup).toContain("You&#x27;ve used your 5 free minutes for this month.");
-    expect(markup).toContain("email sign-in");
     expect(markup.indexOf("Murmur Pro")).toBeLessThan(markup.indexOf("60 minutes"));
+    expect(markup.indexOf("60 minutes")).toBeLessThan(markup.indexOf("Sign up to buy"));
     expect(markup).toContain("$9.99 / month");
+    expect(markup).not.toContain("email sign-in");
     const proRow = harness.controls.find((control) => control.accessibilityLabel === "Murmur Pro, $9.99 / month");
-    expect(proRow?.disabled).toBe(true);
+    expect(proRow?.disabled).toBe(false);
+    proRow?.onPress?.();
+    expect(anonymous.purchasePlan).not.toHaveBeenCalled();
   });
 
   it("lets signed-in listeners buy a plan straight from the sheet", () => {
@@ -140,6 +143,7 @@ describe("out-of-minutes sheet", () => {
     const markup = renderSheet({ billing: signedIn });
 
     expect(markup).not.toContain("email sign-in");
+    expect(markup).not.toContain("Sign up to buy");
     expect(markup).toContain("Choose Pro or a top-up to keep talking.");
     const topUp = harness.controls.find((control) => control.accessibilityLabel === "60 minutes, $7.99");
     expect(topUp?.disabled).toBe(false);
