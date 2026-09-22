@@ -38,30 +38,31 @@ export function getRevenueCatOfferingId(): string | undefined {
   return publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID);
 }
 
-export type UiPreviewScreen =
-  | "billing"
-  | "languages"
-  | "picker"
-  | "privacy"
-  | "settings"
-  | "source-picker"
-  | "translation"
-  | "translation-muted"
-  | "welcome";
+const uiPreviewScreens = [
+  "billing",
+  "languages",
+  "low-balance",
+  "out-of-minutes",
+  "out-of-minutes-signed-in",
+  "picker",
+  "privacy",
+  "settings",
+  "source-picker",
+  "translation",
+  "translation-muted",
+  "translation-only",
+  "update-required",
+  "welcome",
+] as const;
+
+export type UiPreviewScreen = (typeof uiPreviewScreens)[number];
+
+export function toUiPreviewScreen(value: string | undefined): UiPreviewScreen | null {
+  return uiPreviewScreens.find((candidate) => candidate === value) ?? null;
+}
 
 export function getUiPreviewScreen(): UiPreviewScreen | null {
-  const previewScreen = process.env.EXPO_PUBLIC_MURMUR_UI_PREVIEW;
-  return previewScreen === "billing" ||
-    previewScreen === "languages" ||
-    previewScreen === "picker" ||
-    previewScreen === "privacy" ||
-    previewScreen === "settings" ||
-    previewScreen === "source-picker" ||
-    previewScreen === "translation" ||
-    previewScreen === "translation-muted" ||
-    previewScreen === "welcome"
-    ? previewScreen
-    : null;
+  return toUiPreviewScreen(process.env.EXPO_PUBLIC_MURMUR_UI_PREVIEW);
 }
 
 function publicConfigValue(value: string | undefined): string | undefined {

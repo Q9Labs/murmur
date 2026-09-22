@@ -2,7 +2,7 @@ import { Redirect, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
 
 import { BloomPreview, type PreviewScreen } from "../src/home/preview";
-import { getUiPreviewScreen } from "../src/lib/config";
+import { getUiPreviewScreen, toUiPreviewScreen } from "../src/lib/config";
 
 type PreviewParams = {
   screen?: string | string[];
@@ -20,14 +20,5 @@ export default function PreviewRoute(): ReactNode {
 
 export function normalizePreviewScreen(screen: PreviewParams["screen"]): PreviewScreen {
   const requestedScreen = Array.isArray(screen) ? screen[0] : screen;
-  return requestedScreen === "languages" ||
-    requestedScreen === "billing" ||
-    requestedScreen === "picker" ||
-    requestedScreen === "privacy" ||
-    requestedScreen === "settings" ||
-    requestedScreen === "source-picker" ||
-    requestedScreen === "translation" ||
-    requestedScreen === "translation-muted"
-    ? requestedScreen
-    : "welcome";
+  return toUiPreviewScreen(requestedScreen) ?? "welcome";
 }
