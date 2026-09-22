@@ -21,7 +21,12 @@ vi.mock("../config", () => ({
   getWorkerBaseUrl: () => "https://worker.example.test",
 }));
 
-import { createWorkerSession, workerSessionRequestTimeoutMs } from "./workerApi";
+import {
+  closeWorkerSession,
+  createWorkerSession,
+  workerSessionCloseTimeoutMs,
+  workerSessionRequestTimeoutMs,
+} from "./workerApi";
 
 const request = {
   analytics_enabled: false,
@@ -66,5 +71,60 @@ describe("createWorkerSession", () => {
     );
 
     await expect(createWorkerSession(request)).resolves.toEqual(payload);
+  });
+});
+
+describe("closeWorkerSession", () => {
+  it("sends a keepalive stop request and reports a clean close", async () => {
+    let requestInit: RequestInit | undefined;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      requestInit = init;
+      return new Response(null, { status: 204 });
+    }));
+
+    await expect(closeWorkerSession("session_1", "stop")).resolves.toBe("closed");
+    expect(requestInit?.keepalive).toBe(true);
+    expect(requestInit?.signal).toBeDefined();
+  });
+
+  it("treats a network failure as expected instead of throwing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Network request failed");
+      }),
+    );
+
+    await expect(closeWorkerSession("session_1", "stop")).resolves.toBe("network_unavailable");
+  });
+
+  it("aborts a stop request that outlives the close deadline", async () => {
+    vi.useFakeTimers();
+    let aborted = false;
+    vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => new Promise<Response>(
+      (_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          aborted = true;
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      },
+    )));
+
+    const pending = closeWorkerSession("session_1", "stop");
+    await vi.advanceTimersByTimeAsync(workerSessionCloseTimeoutMs);
+
+    await expect(pending).resolves.toBe("network_unavailable");
+    expect(aborted).toBe(true);
+  });
+
+  it("propagates failures that are not network failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new RangeError("unexpected");
+      }),
+    );
+
+    await expect(closeWorkerSession("session_1", "stop")).rejects.toBeInstanceOf(RangeError);
   });
 });

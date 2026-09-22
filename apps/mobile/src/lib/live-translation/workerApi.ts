@@ -12,6 +12,9 @@ import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
 export const workerSessionRequestTimeoutMs = 15_000;
+export const workerSessionCloseTimeoutMs = 8_000;
+
+export type WorkerSessionCloseOutcome = "closed" | "network_unavailable";
 
 export async function requestMicrophonePermission(): Promise<boolean> {
   if (Platform.OS === "android") {
@@ -32,15 +35,41 @@ export async function createWorkerSession(body: {
   return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, body);
 }
 
-export async function closeWorkerSession(appSessionId: string, reason: string): Promise<void> {
+export async function closeWorkerSession(
+  appSessionId: string,
+  reason: string,
+): Promise<WorkerSessionCloseOutcome> {
   if (!appSessionId) {
-    return;
+    return "closed";
   }
-  await fetch(`${getWorkerBaseUrl()}/v2/session/${appSessionId}/stop`, {
-    method: "POST",
-    headers: await authenticatedWorkerHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ reason }),
-  }).catch(() => null);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), workerSessionCloseTimeoutMs);
+  try {
+    const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
+    await fetch(`${getWorkerBaseUrl()}/v2/session/${appSessionId}/stop`, {
+      body: JSON.stringify({ reason }),
+      headers,
+      keepalive: true,
+      method: "POST",
+      signal: controller.signal,
+    });
+    return "closed";
+  } catch (failure) {
+    if (isExpectedNetworkFailure(failure)) {
+      return "network_unavailable";
+    }
+    throw failure;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function isExpectedNetworkFailure(failure: unknown): boolean {
+  if (failure instanceof TypeError) {
+    return true;
+  }
+  return failure instanceof Error &&
+    (failure.name === "AbortError" || failure.name === "TimeoutError");
 }
 
 export async function collectDeviceIntegrity(params: {
