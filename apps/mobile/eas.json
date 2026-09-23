@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "channel": "development",
       "android": {
         "buildType": "apk"
       },
@@ -22,6 +23,7 @@
       }
     },
     "preview": {
+      "channel": "preview",
       "android": {
         "buildType": "apk"
       },
@@ -38,6 +40,7 @@
       }
     },
     "testing": {
+      "channel": "testing",
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
@@ -58,6 +61,7 @@
       }
     },
     "sandbox": {
+      "channel": "sandbox",
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
@@ -79,6 +83,7 @@
       }
     },
     "production": {
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       },

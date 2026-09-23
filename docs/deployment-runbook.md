@@ -70,3 +70,28 @@ After deploying to an approved environment, verify `/health`, `/ready`, `/privac
 Android signing is configured through the `MURMUR_ANDROID_*` environment variables used by `tooling/scripts/build-android-release-signed.sh`. Store the keystore and its properties outside the repository. iOS credentials belong in the platform keychain or the approved CI credential store.
 
 Never record certificate fingerprints, credential paths, console edit IDs, tester identities, deployment IDs, or production account details in tracked documentation.
+
+## Expo OTA updates
+
+EAS Update can deliver JavaScript, copy, translations, UI, bundled assets, and bug fixes to installed builds when those changes use the native capabilities already in the build. A store build is required for any native module, permission, config plugin, Expo SDK, or `expo-updates` configuration change.
+
+Publish to the production channel:
+
+```bash
+eas update --channel production --message "Describe the update"
+```
+
+Start a staged rollout at 10% with `--rollout-percentage`; adjust an active rollout with `eas update:edit`:
+
+```bash
+eas update --channel production --message "Describe the update" --rollout-percentage=10
+```
+
+Republish a previously published update from production or use the guided rollback to return to the previous update (or the embedded update if there is no previous one):
+
+```bash
+eas update:republish --channel production
+eas update:rollback
+```
+
+Apple forbids OTA changes that alter the app's main purpose ([App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)). See Expo's [rollout](https://docs.expo.dev/eas-update/rollouts/) and [rollback](https://docs.expo.dev/eas-update/rollbacks/) guides for the release controls.

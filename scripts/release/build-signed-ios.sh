@@ -51,6 +51,15 @@ command -v openssl >/dev/null
 command -v plutil >/dev/null
 command -v ruby >/dev/null
 
+# Expo SDK 54 / React Native 0.81 use the legacy app lifecycle, which crashes at
+# launch on iOS 27 when linked against the iOS 27 SDK. Build with Xcode 26 until
+# the app adopts UIScene (Expo SDK 57 with ios.enableSceneSupport).
+xcode_major=$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')
+if ((xcode_major >= 27)); then
+  echo "Xcode $xcode_major builds against the iOS $xcode_major SDK; set DEVELOPER_DIR to an Xcode 26 install." >&2
+  exit 1
+fi
+
 chmod 700 "$temp_dir"
 manifest="$repo_root/release/manifest.json"
 expected_certificate_sha256=$(jq -er '.apple.certificate_sha256' "$manifest")

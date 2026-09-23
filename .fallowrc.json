@@ -25,6 +25,7 @@
     "@posthog/react-native-plugin",
     "expo-device",
     "expo-localization",
+    "expo-updates",
     "expo-web-browser",
     "react-native-web"
   ],
