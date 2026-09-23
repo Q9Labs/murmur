@@ -25,6 +25,16 @@ export function isLanguagePairEnabled(
   return sourceEnabled && isLanguageEnabled(pair.target, enabledLanguages);
 }
 
+// Until /v3/config has loaded (or failed back to defaults), a remotely disabled language
+// could still be selected, so no pair is ready to start.
+export function isLanguagePairReady(params: {
+  configLoaded: boolean;
+  enabledLanguages: readonly LanguageCode[] | null;
+  pair: LanguagePair;
+}): boolean {
+  return params.configLoaded && isLanguagePairEnabled(params.pair, params.enabledLanguages);
+}
+
 // Moves a disabled source or target onto the first enabled language that keeps the pair
 // distinct. Auto-detect stays as the source because it is not a language itself.
 export function normalizeLanguagePair(

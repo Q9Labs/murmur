@@ -53,7 +53,7 @@ import {
   setStoredAudioPlaybackEnabled,
 } from "./audioPlaybackPreference";
 import { HomeExperience } from "./experience";
-import { isLanguagePairEnabled, normalizeLanguagePair } from "./languageAvailability";
+import { isLanguagePairReady, normalizeLanguagePair } from "./languageAvailability";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
@@ -238,6 +238,11 @@ export default function HomeScreen(): ReactNode {
 
   const billing = useMurmurBilling();
   const { enabledLanguages } = billing.config;
+  const languagesReady = isLanguagePairReady({
+    configLoaded: billing.configLoaded,
+    enabledLanguages,
+    pair: { source: sourceLanguageCode, target: targetLanguageCode },
+  });
   const effectiveAudioPlaybackEnabled = captureSource === "microphone" && audioPlaybackEnabled;
   const live = useLiveTranslation({
     acquisition,
@@ -251,15 +256,12 @@ export default function HomeScreen(): ReactNode {
   const viewModel = useMemo(
     () => buildHomeViewModel({
       captureSource,
-      languagePairEnabled: isLanguagePairEnabled(
-        { source: sourceLanguageCode, target: targetLanguageCode },
-        enabledLanguages,
-      ),
+      languagePairEnabled: languagesReady,
       live,
       sourceLanguageCode,
       targetLanguageCode,
     }),
-    [captureSource, enabledLanguages, live, sourceLanguageCode, targetLanguageCode],
+    [captureSource, languagesReady, live, sourceLanguageCode, targetLanguageCode],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -451,7 +453,7 @@ export default function HomeScreen(): ReactNode {
   }
 
   async function startLiveTranslation(): Promise<void> {
-    if (!isLanguagePairEnabled({ source: sourceLanguageCode, target: targetLanguageCode }, enabledLanguages)) {
+    if (!languagesReady) {
       return;
     }
     if (anonymousAnalyticsEnabled === null) {

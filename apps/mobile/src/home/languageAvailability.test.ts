@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isLanguagePairEnabled, normalizeLanguagePair } from "./languageAvailability";
+import { isLanguagePairEnabled, isLanguagePairReady, normalizeLanguagePair } from "./languageAvailability";
 
 describe("language availability", () => {
   it("leaves the pair alone when every language is enabled", () => {
@@ -17,6 +17,13 @@ describe("language availability", () => {
   it("keeps auto-detect as the source", () => {
     expect(normalizeLanguagePair({ source: "auto", target: "ar" }, ["en"])).toEqual({ source: "auto", target: "en" });
     expect(isLanguagePairEnabled({ source: "auto", target: "en" }, ["en"])).toBe(true);
+  });
+
+  it("keeps Listen off until the server config has loaded or fallen back", () => {
+    const pair = { source: "en", target: "ar" } as const;
+    expect(isLanguagePairReady({ configLoaded: false, enabledLanguages: null, pair })).toBe(false);
+    expect(isLanguagePairReady({ configLoaded: true, enabledLanguages: null, pair })).toBe(true);
+    expect(isLanguagePairReady({ configLoaded: true, enabledLanguages: ["en"], pair })).toBe(false);
   });
 
   it("blocks a pair when nothing is enabled", () => {
