@@ -17,10 +17,6 @@ describe("language availability", () => {
   it("switches to auto-detect when a single allowed language would be both sides", () => {
     expect(normalizeLanguagePair({ source: "en", target: "ar" }, ["en"])).toEqual({ source: "auto", target: "en" });
     expect(normalizeLanguagePair({ source: "ar", target: "en" }, ["en"])).toEqual({ source: "auto", target: "en" });
-    expect(isLanguagePairEnabled({ source: "auto", target: "en" }, ["en"])).toBe(true);
-  });
-
-  it("keeps auto-detect as the source", () => {
     expect(normalizeLanguagePair({ source: "auto", target: "ar" }, ["en"])).toEqual({ source: "auto", target: "en" });
     expect(isLanguagePairEnabled({ source: "auto", target: "en" }, ["en"])).toBe(true);
   });

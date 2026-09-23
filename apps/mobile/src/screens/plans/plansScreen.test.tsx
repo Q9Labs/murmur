@@ -20,9 +20,9 @@ vi.mock("./planList", () => ({
 vi.mock("../../lib/billing/context", () => ({
   useMurmurBilling: () => ({ ...fixtureBilling(), initialized: plansBilling.initialized }),
 }));
-vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
-vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
+vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
+vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 
 import { planTermFromParam, PlansScreen } from "./plansScreen";
 
@@ -49,7 +49,7 @@ describe("plans screen", () => {
     expect(router.push).toHaveBeenCalledWith({ params: { plan: "$rc_annual" }, pathname: "/sign-in" });
   });
 
-  it("waits for billing to initialise before loading plans on a cold deep link", () => {
+  it("waits for billing to finish loading before loading plans on a cold deep link", () => {
     planList.opens.length = 0;
     plansBilling.initialized = false;
     renderToStaticMarkup(<PlansScreen />);
