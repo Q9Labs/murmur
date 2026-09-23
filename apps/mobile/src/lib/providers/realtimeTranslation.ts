@@ -44,6 +44,7 @@ export function createRealtimeTranslationClient(options: {
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
   let inputBufferedBytes = 0;
   let pendingPlaybackEnabled: boolean | null = null;
+  let sessionReady = false;
   const diagnostics = createEmptyRealtimeTransportDiagnostics();
 
   function clearAckTimer(): void {
@@ -113,6 +114,17 @@ export function createRealtimeTranslationClient(options: {
     scheduleAckDeadline();
   }
 
+  function sendPlaybackPreference(): void {
+    if (!sessionReady || pendingPlaybackEnabled === null || socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    const command: RealtimeClientCommand = {
+      kind: "set_playback",
+      enabled: pendingPlaybackEnabled,
+    };
+    socket.send(JSON.stringify(command));
+  }
+
   function recordServerEvent(event: RealtimeServerEvent): void {
     const nowMs = Date.now();
     if (event.kind === "input_audio_ack") {
@@ -169,6 +181,7 @@ export function createRealtimeTranslationClient(options: {
       if (socket) {
         return;
       }
+      sessionReady = false;
       acceptingMessages = true;
       acknowledgedInputChunks = 0;
       sentInputChunks = 0;
@@ -177,13 +190,6 @@ export function createRealtimeTranslationClient(options: {
       nextSocket.binaryType = "arraybuffer";
       nextSocket.onopen = () => {
         diagnostics.socket_opened_at_ms = Date.now();
-        if (pendingPlaybackEnabled !== null) {
-          const command: RealtimeClientCommand = {
-            kind: "set_playback",
-            enabled: pendingPlaybackEnabled,
-          };
-          nextSocket.send(JSON.stringify(command));
-        }
       };
       nextSocket.onmessage = (event) => {
         if (!acceptingMessages || generation !== socketGeneration) {
@@ -201,6 +207,10 @@ export function createRealtimeTranslationClient(options: {
             options.shouldPlayAudio,
             () => options.onEvent({ kind: "playback_error" }),
             (serverEvent) => {
+              if (serverEvent.kind === "session_opened") {
+                sessionReady = true;
+                sendPlaybackPreference();
+              }
               recordServerEvent(serverEvent);
               options.onEvent(serverEvent);
             },
@@ -278,10 +288,7 @@ export function createRealtimeTranslationClient(options: {
     },
     setPlaybackEnabled(enabled: boolean): void {
       pendingPlaybackEnabled = enabled;
-      if (socket?.readyState === WebSocket.OPEN) {
-        const command: RealtimeClientCommand = { kind: "set_playback", enabled };
-        socket.send(JSON.stringify(command));
-      }
+      sendPlaybackPreference();
     },
   };
 }

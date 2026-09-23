@@ -4,12 +4,14 @@ const auth = vi.hoisted(() => ({
   deleteUser: vi.fn(),
   getCookie: vi.fn(),
   getSession: vi.fn(),
+  requestHook: vi.fn(),
   signInAnonymous: vi.fn(),
   signInEmailOtp: vi.fn(),
   sendVerificationOtp: vi.fn(),
 }));
 const installIdentity = vi.hoisted(() => ({
   getOrCreateFreeAllowanceId: vi.fn(),
+  getOrCreateInstallId: vi.fn(),
 }));
 
 vi.mock("@better-auth/expo/client", () => ({ expoClient: vi.fn(() => ({})) }));
@@ -18,18 +20,26 @@ vi.mock("better-auth/client/plugins", () => ({
   emailOTPClient: vi.fn(() => ({})),
 }));
 vi.mock("better-auth/react", () => ({
-  createAuthClient: vi.fn(() => ({
-    deleteUser: auth.deleteUser,
-    emailOtp: { sendVerificationOtp: auth.sendVerificationOtp },
-    getCookie: auth.getCookie,
-    getSession: auth.getSession,
-    signIn: {
-      anonymous: auth.signInAnonymous,
-      emailOtp: auth.signInEmailOtp,
-    },
-  })),
+  createAuthClient: vi.fn((options: {
+    fetchOptions: { onRequest: (context: { headers: Headers }) => Promise<unknown> };
+  }) => {
+    auth.requestHook.mockImplementation(options.fetchOptions.onRequest);
+    return {
+      deleteUser: auth.deleteUser,
+      emailOtp: { sendVerificationOtp: auth.sendVerificationOtp },
+      getCookie: auth.getCookie,
+      getSession: auth.getSession,
+      signIn: {
+        anonymous: auth.signInAnonymous,
+        emailOtp: auth.signInEmailOtp,
+      },
+    };
+  }),
 }));
 vi.mock("expo-secure-store", () => ({}));
+vi.mock("../appRelease", () => ({
+  getAppRelease: () => ({ app_platform: "android", app_version: "1.2.3" }),
+}));
 vi.mock("../installIdentity", () => installIdentity);
 
 import {
@@ -48,9 +58,20 @@ beforeEach(() => {
   auth.signInEmailOtp.mockResolvedValue({ error: null });
   auth.deleteUser.mockResolvedValue({ error: null });
   installIdentity.getOrCreateFreeAllowanceId.mockResolvedValue("free_test_123");
+  installIdentity.getOrCreateInstallId.mockResolvedValue("install_test_123");
 });
 
 describe("mobile Murmur authentication client", () => {
+  it("passes install and release targeting through the auth request hook", async () => {
+    const headers = new Headers();
+    await auth.requestHook({ headers });
+
+    expect(headers.get("x-murmur-free-allowance-id")).toBe("free_test_123");
+    expect(headers.get("x-murmur-install-id")).toBe("install_test_123");
+    expect(headers.get("x-murmur-app-platform")).toBe("android");
+    expect(headers.get("x-murmur-app-version")).toBe("1.2.3");
+  });
+
   it("adds the durable account cookie to Worker requests", async () => {
     const headers = await authenticatedWorkerHeaders({ "x-test": "value" });
 

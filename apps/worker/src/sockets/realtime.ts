@@ -12,7 +12,7 @@ import {
 } from "../billing/realtimeUsageMeter";
 import { findOpenUsageSession } from "../billing/usageSessionStore";
 import { type Env, getRealtimeApiKey, isBillingEnforced } from "../env";
-import { getServerConfig } from "../serverConfig";
+import { getServerConfig, type ServerConfig } from "../serverConfig";
 import {
   closeSocket,
   send,
@@ -103,15 +103,6 @@ export async function proxyRealtimeSession(
     closeSocket(client, validated.code, validated.reason);
     return;
   }
-  const config = await getServerConfig(env, {
-    appVersion: url.searchParams.get("app_version"),
-    distinctId: `anonymous_install_${validated.safetyIdentifier}`,
-    plan: validated.customerId
-      ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
-      : "free",
-    platform: url.searchParams.get("app_platform"),
-  });
-  const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
   const usageMeter = createRealtimeUsageMeter({
     availableMs: validated.availableMs,
     customerId: validated.customerId,
@@ -119,6 +110,27 @@ export async function proxyRealtimeSession(
     namespace: env.CUSTOMER_LEDGER,
     usageSessionId: appSessionId,
   });
+  let config: ServerConfig;
+  try {
+    config = await getServerConfig(env, {
+      appVersion: url.searchParams.get("app_version"),
+      distinctId: `anonymous_install_${validated.safetyIdentifier}`,
+      plan: validated.customerId
+        ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
+        : "free",
+      platform: url.searchParams.get("app_platform"),
+    });
+  } catch (failure) {
+    await closeMeteredRealtimeSession(appSessionId, "failed", usageMeter, env).catch(
+      (cleanupFailure: unknown) => {
+        Sentry.captureException(cleanupFailure, {
+          tags: { app_session_id: appSessionId, operation: "close_failed_realtime_config" },
+        });
+      },
+    );
+    throw failure;
+  }
+  const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
