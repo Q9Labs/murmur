@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useEffect, type ReactNode } from "react";
 import { Pressable, Text } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 
 import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import { captureMobileFailure } from "../../lib/observability/sentry";
@@ -57,12 +58,14 @@ function ConversationRow({ record }: { record: ConversationRecord }): ReactNode 
       onPress={() => router.push({ params: { id: record.id }, pathname: "/history/[id]" })}
       style={({ pressed }) => [styles.conversationRow, pressed && styles.pressed]}
     >
-      <Text
-        numberOfLines={2}
-        style={[styles.conversationExcerpt, uiTextDirectionStyle(conversationTextDirection(record), ui.direction)]}
-      >
-        {record.text}
-      </Text>
+      <PostHogMaskView>
+        <Text
+          numberOfLines={2}
+          style={[styles.conversationExcerpt, uiTextDirectionStyle(conversationTextDirection(record), ui.direction)]}
+        >
+          {record.text}
+        </Text>
+      </PostHogMaskView>
       <Text style={styles.conversationMeta}>{`${started} · ${details}`}</Text>
     </Pressable>
   );
