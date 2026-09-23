@@ -32,12 +32,14 @@ vi.mock("../billing/freeAllowanceClaims", () => ({
 import { currentCustomerPlan } from "../billing/allowanceService";
 import { getCustomer } from "./customer";
 
+let giftRemainingMs = null;
 const database = {
   prepare() {
     const statement = {
       all: async () => ({
         results: [{ expires_at_ms: 1_810_000_000_000, grant_id: "pack-1", remaining_ms: 30 * 60_000 }],
       }),
+      first: async () => giftRemainingMs === null ? null : { remaining_ms: giftRemainingMs },
       bind: () => statement,
     };
     return statement;
@@ -72,5 +74,24 @@ describe("GET /v3/customer billing fields", () => {
       features: { history: false, max_session_seconds: 300, phone_audio: false },
       plan: "free",
     });
+  });
+
+  it("keeps Phone audio available for a Free customer's active gift", async () => {
+    giftRemainingMs = 60_000;
+    vi.mocked(currentCustomerPlan).mockResolvedValueOnce("free");
+    try {
+      const response = await getCustomer(
+        new Request("https://worker.example.test/v3/customer"),
+        { BILLING_DB: database, BILLING_FULFILLMENT_ENABLED: "true" },
+      );
+      expect(await response.json()).toMatchObject({
+        credit_packs: [{ grant_id: "pack-1" }],
+        entitlements: { pro: false, pro_max: false },
+        features: { history: false, max_session_seconds: 300, phone_audio: true },
+        gifts: { phone_audio: { claimable: false, remaining_ms: 60_000 } },
+      });
+    } finally {
+      giftRemainingMs = null;
+    }
   });
 });

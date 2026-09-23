@@ -30,7 +30,7 @@ describe("allowance rules", () => {
     expect(freeAllowanceMinutes).toBe(7);
   });
 
-  it("treats Pro and top-up credit as paid", () => {
+  it("treats Pro, Pro Max and top-up credit as paid", () => {
     expect(isPaidCustomer(customer)).toBe(true);
     expect(isPaidCustomer({ ...customer, plan: "pro_max" })).toBe(true);
     expect(isPaidCustomer({ ...customer, creditMs: 60_000, plan: "free" })).toBe(true);

@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { currentCustomerPlan, type CustomerPlan } from "../billing/allowanceService";
 import { queuePersonalOfferStart } from "../billing/personalOffer";
+import { getSessionPhoneAudioGift, settlePhoneAudioGift } from "../billing/phoneAudioGift";
 import {
   createRealtimeUsageMeter,
   type RealtimeUsageMeter,
@@ -88,6 +89,7 @@ export function connectRealtimeSocket(
   } as WorkerResponseInit);
 }
 
+// fallow-ignore-next-line complexity
 export async function proxyRealtimeSession(
   request: Request,
   client: WorkerWebSocket,
@@ -104,10 +106,20 @@ export async function proxyRealtimeSession(
     closeSocket(client, validated.code, validated.reason);
     return;
   }
+  const giftDatabase = env.BILLING_DB;
+  const phoneAudioGift = giftDatabase
+    ? await getSessionPhoneAudioGift(giftDatabase, appSessionId)
+    : null;
   const usageMeter = createRealtimeUsageMeter({
     availableMs: validated.availableMs,
     customerId: validated.customerId,
     enforceAllowance: validated.billingEnforced,
+    gift: phoneAudioGift && giftDatabase
+      ? {
+        remainingMs: phoneAudioGift.remainingMs,
+        settle: (totalMs) => settlePhoneAudioGift(giftDatabase, appSessionId, totalMs),
+      }
+      : undefined,
     namespace: env.CUSTOMER_LEDGER,
     usageSessionId: appSessionId,
   });
@@ -355,14 +367,14 @@ export async function proxyRealtimeSession(
   }
   settlementTimer = setInterval(() => {
     void usageMeter.settle().then((settlement) => {
-      if (!settlement.exhausted || sessionFinished || !validated.billingEnforced) {
+      if ((!settlement.exhausted && !settlement.giftExhausted) || sessionFinished || !validated.billingEnforced) {
         return;
       }
       terminate({
-        errorCode: "allowance_exhausted",
-        failureCode: "allowance_exhausted",
+        errorCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
+        failureCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
         outcome: "failed",
-        reason: "allowance_exhausted",
+        reason: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
         retryable: false,
         socketCode: 1008,
       });
@@ -576,17 +588,19 @@ function bindClientEvents(
     });
   };
   let audioQueue = Promise.resolve();
-  const stopForBilling = (code: "allowance_exhausted" | "billing_unavailable"): void => {
+  const stopForBilling = (code: "allowance_exhausted" | "phone_audio_gift_exhausted" | "billing_unavailable"): void => {
     terminate({
       errorCode: code,
       failureCode: code,
       outcome: "failed",
       reason: code,
       retryable: code === "billing_unavailable",
-      socketCode: code === "allowance_exhausted" ? 1008 : 1011,
+      socketCode: code === "billing_unavailable" ? 1011 : 1008,
     });
   };
+  // fallow-ignore-next-line complexity
   const queueAudio = (audio: ArrayBuffer): void => {
+    // fallow-ignore-next-line complexity
     audioQueue = audioQueue.then(async () => {
       if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
         return;
@@ -594,14 +608,14 @@ function bindClientEvents(
       let acceptance = usageMeter.checkAudio(audio.byteLength);
       if (acceptance === "settlement_required") {
         const settlement = await usageMeter.settle();
-        if (settlement.exhausted) {
-          stopForBilling("allowance_exhausted");
+        if (settlement.exhausted || settlement.giftExhausted) {
+          stopForBilling(settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted");
           return;
         }
         acceptance = usageMeter.checkAudio(audio.byteLength);
       }
       if (acceptance !== "accepted") {
-        stopForBilling("allowance_exhausted");
+        stopForBilling(acceptance === "phone_audio_gift_exhausted" ? acceptance : "allowance_exhausted");
         return;
       }
       if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {

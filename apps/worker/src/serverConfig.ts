@@ -10,7 +10,8 @@ import { defaultRateLimits } from "./limits";
 export type ServerConfig = Omit<AppConfigResponse, "personal_offer"> & {
   device_integrity_required: boolean;
   free_allowance_minutes: number;
-  max_session_seconds: number;
+  max_session_seconds_free: number;
+  max_session_seconds_paid: number;
   output_audio_enabled: boolean;
   personal_offer_enabled: boolean;
   personal_offer_hours: number;
@@ -36,7 +37,8 @@ export function defaultServerConfig(env: Env): ServerConfig {
     enabled_languages: null,
     free_allowance_minutes: freeAllowanceMs / 60_000,
     low_balance_threshold_minutes: 15,
-    max_session_seconds: defaultRateLimits.maxSessionSeconds,
+    max_session_seconds_free: defaultRateLimits.maxSessionSeconds,
+    max_session_seconds_paid: 3600,
     min_app_version_android: null,
     min_app_version_ios: null,
     output_audio_enabled: true,
@@ -130,7 +132,8 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
       : defaults.enabled_languages,
     free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
     low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
-    max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
+    max_session_seconds_free: number("max_session_seconds_free", defaults.max_session_seconds_free),
+    max_session_seconds_paid: number("max_session_seconds_paid", defaults.max_session_seconds_paid),
     min_app_version_android: optionalString("min_app_version_android"),
     min_app_version_ios: optionalString("min_app_version_ios"),
     output_audio_enabled: boolean("output_audio_enabled", defaults.output_audio_enabled),
@@ -143,6 +146,10 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
     sessions_enabled: boolean("sessions_enabled", defaults.sessions_enabled),
     source_transcript: boolean("source_transcript", defaults.source_transcript),
   };
+}
+
+export function sessionLimitSeconds(config: ServerConfig, plan: CustomerPlan): number {
+  return Math.min(plan === "free" ? config.max_session_seconds_free : config.max_session_seconds_paid, 3600);
 }
 
 export function appConfig(

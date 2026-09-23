@@ -8,6 +8,7 @@ export type MurmurCustomer = {
   entitlements: { pro: boolean; proMax: boolean };
   features: { history: boolean; maxSessionSeconds: number; phoneAudio: boolean };
   fulfillmentEnabled: boolean;
+  gifts?: { phoneAudio: { claimable: boolean; remainingMs: number } };
   isRegistered: boolean;
   negativeMs: number;
   plan: "free" | "pro" | "pro_max";
@@ -34,9 +35,10 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
   const metadata = decodeMetadata(payload);
   const entitlements = decodeEntitlements(Reflect.get(payload, "entitlements"));
   const features = decodeFeatures(Reflect.get(payload, "features"));
+  const gifts = decodeGifts(Reflect.get(payload, "gifts"));
   const creditPacks = decodeCreditPacks(Reflect.get(payload, "credit_packs"));
   if (!isValidCustomerId(customerId) || balance === null || metadata === null ||
-    entitlements === null || features === null || creditPacks === null) {
+    entitlements === null || features === null || gifts === null || creditPacks === null) {
     return null;
   }
 
@@ -51,11 +53,46 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
       phoneAudio: metadata.plan !== "free",
     },
     fulfillmentEnabled: metadata.fulfillmentEnabled,
+    ...(gifts ? { gifts } : {}),
     isRegistered: metadata.isRegistered,
     plan: metadata.plan,
     purchasesEnabled: metadata.purchasesEnabled,
     revenueCatCustomerId: metadata.revenueCatCustomerId ?? customerId,
   };
+}
+
+function decodeFeatures(value: unknown): MurmurCustomer["features"] | null | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const phoneAudio = Reflect.get(value, "phone_audio");
+  const history = Reflect.get(value, "history");
+  const maxSessionSeconds = Reflect.get(value, "max_session_seconds");
+  return typeof phoneAudio === "boolean" && typeof history === "boolean" &&
+    typeof maxSessionSeconds === "number" && Number.isInteger(maxSessionSeconds) && maxSessionSeconds > 0
+    ? { phoneAudio, history, maxSessionSeconds }
+    : null;
+}
+
+// fallow-ignore-next-line complexity
+function decodeGifts(value: unknown): MurmurCustomer["gifts"] | null | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const phoneAudio = Reflect.get(value, "phone_audio");
+  if (typeof phoneAudio !== "object" || phoneAudio === null) return null;
+  const claimable = Reflect.get(phoneAudio, "claimable");
+  const remainingMs = Reflect.get(phoneAudio, "remaining_ms");
+  return typeof claimable === "boolean" && typeof remainingMs === "number" &&
+    Number.isInteger(remainingMs) && remainingMs >= 0
+    ? { phoneAudio: { claimable, remainingMs } }
+    : null;
+}
+
+function decodeEntitlements(value: unknown): MurmurCustomer["entitlements"] | null | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const pro = Reflect.get(value, "pro");
+  const proMax = Reflect.get(value, "pro_max");
+  return typeof pro === "boolean" && typeof proMax === "boolean" ? { pro, proMax } : null;
 }
 
 function decodeBalance(value: unknown): CustomerBalance | null {
@@ -113,33 +150,6 @@ function optionalBoolean(value: unknown, fallback: boolean): boolean | null {
 
 function customerPlan(value: unknown): MurmurCustomer["plan"] | null {
   return value === "free" || value === "pro" || value === "pro_max" ? value : null;
-}
-
-function decodeEntitlements(value: unknown): MurmurCustomer["entitlements"] | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const pro = requiredBoolean(Reflect.get(value, "pro"));
-  const proMax = requiredBoolean(Reflect.get(value, "pro_max"));
-  return pro === null || proMax === null ? null : { pro, proMax };
-}
-
-function decodeFeatures(value: unknown): MurmurCustomer["features"] | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const history = requiredBoolean(Reflect.get(value, "history"));
-  const phoneAudio = requiredBoolean(Reflect.get(value, "phone_audio"));
-  const maxSessionSeconds = nonnegativeInteger(value, "max_session_seconds");
-  return history === null || phoneAudio === null || maxSessionSeconds === null
-    ? null
-    : { history, maxSessionSeconds, phoneAudio };
 }
 
 function decodeCreditPacks(value: unknown): MurmurCustomer["creditPacks"] | null {

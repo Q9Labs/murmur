@@ -13,6 +13,7 @@ export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
   analytics_enabled: boolean;
   capture_source: AudioCaptureSource;
+  history_customer_id: string | null;
   network_type: string;
   playback_enabled: boolean;
   source_language: SourceLanguageCode;

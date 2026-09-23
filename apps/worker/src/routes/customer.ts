@@ -9,7 +9,10 @@ import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
 import { areBillingPurchasesEnabled, isBillingFulfillmentEnabled, type Env } from "../env";
 import { revenueCatCustomerId } from "../billing/revenueCatIdentity";
+import { getPhoneAudioGift } from "../billing/phoneAudioGift";
 import { json } from "../http/response";
+import { hashInstallId } from "../privacy";
+import { defaultServerConfig, getServerConfig, sessionLimitSeconds } from "../serverConfig";
 
 type CreditPackRow = {
   expires_at_ms: number;
@@ -49,6 +52,18 @@ export async function getCustomer(
     return json({ error: ledger.result.ok ? "billing_unavailable" : ledger.result.code }, ledger.response.status);
   }
   const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
+  const gift = env.BILLING_DB
+    ? await getPhoneAudioGift(env.BILLING_DB, session.user.id)
+    : { claimable: true, remaining_ms: 0 };
+  const installId = request.headers.get("x-murmur-install-id");
+  const config = installId && installId.length >= 8
+    ? await getServerConfig(env, {
+      appVersion: request.headers.get("x-murmur-app-version"),
+      distinctId: `anonymous_install_${await hashInstallId(installId, env.SESSION_HASH_SALT ?? "local-development-salt")}`,
+      plan,
+      platform: request.headers.get("x-murmur-app-platform"),
+    })
+    : defaultServerConfig(env);
   const creditPacks = env.BILLING_DB
     ? (await env.BILLING_DB.prepare(
       `SELECT grant_id, remaining_ms, expires_at_ms
@@ -72,12 +87,13 @@ export async function getCustomer(
     credit_packs: creditPacks,
     entitlements: { pro: paid, pro_max: plan === "pro_max" },
     features: {
+      phone_audio: paid || gift.remaining_ms > 0,
       history: paid,
-      max_session_seconds: paid ? 3_600 : 300,
-      phone_audio: paid,
+      max_session_seconds: sessionLimitSeconds(config, plan),
     },
     fulfillment_enabled: isBillingFulfillmentEnabled(env),
     is_registered: session.user.isAnonymous !== true,
+    gifts: { phone_audio: gift },
     plan,
     purchases_enabled: areBillingPurchasesEnabled(env),
     revenuecat_customer_id: revenueCatCustomerId(env, session.user.id),
