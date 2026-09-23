@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
-import { fixtureBilling } from "../__tests__/billingFixture";
+import { fixtureBilling, fixtureCustomer } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
@@ -18,7 +18,7 @@ vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => billingRef
 vi.mock("../settings/settingsControls", () => ({ useSettingsControls: () => accountLock }));
 vi.mock("../../lib/telemetry", () => telemetry);
 
-import { AccountScreen, formatMinutes, reportAccountViewed } from "./accountScreen";
+import { AccountScreen, hasUnsavedPurchase, packValidity, reportAccountViewed } from "./accountScreen";
 
 beforeEach(() => {
   resetRecorded();
@@ -76,8 +76,29 @@ describe("account screen", () => {
     });
   });
 
-  it("formats minutes and hours", () => {
-    expect(formatMinutes(0)).toBe("0 min");
-    expect(formatMinutes(120 * 60_000)).toBe("2 hr");
+  it("reminds a guest who bought something to save it, until they sign in", () => {
+    billingRef.current = fixtureBilling({ availableMs: 118 * 60_000, plan: "pro" });
+    renderToStaticMarkup(<AccountScreen />);
+
+    expect(findControl("Sign in")).toBeUndefined();
+    findControl("Save your purchase")?.onPress?.();
+    expect(router.push).toHaveBeenCalledWith("/save-purchase");
+    expect(hasUnsavedPurchase({ ...fixtureCustomer, creditMs: 60_000 })).toBe(true);
+    expect(hasUnsavedPurchase({ ...fixtureCustomer, isRegistered: true, plan: "pro" })).toBe(false);
+    expect(hasUnsavedPurchase(fixtureCustomer)).toBe(false);
+  });
+
+  it("shows how long pack minutes stay valid", () => {
+    billingRef.current = fixtureBilling({
+      availableMs: 60 * 60_000,
+      creditMs: 60 * 60_000,
+      earliestExpiryAtMs: Date.UTC(2026, 11, 22),
+      isRegistered: true,
+    });
+    const markup = renderToStaticMarkup(<AccountScreen />);
+
+    expect(markup).toContain("Pack minutes valid until");
+    expect(packValidity(fixtureBilling({ creditMs: 0, earliestExpiryAtMs: 1 }).customer)).toBeNull();
+    expect(packValidity(null)).toBeNull();
   });
 });
