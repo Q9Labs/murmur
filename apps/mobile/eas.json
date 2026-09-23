@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "channel": "development",
       "android": {
         "buildType": "apk"
       },
@@ -22,6 +23,7 @@
       }
     },
     "preview": {
+      "channel": "preview",
       "android": {
         "buildType": "apk"
       },
@@ -38,6 +40,7 @@
       }
     },
     "testing": {
+      "channel": "testing",
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
@@ -58,6 +61,7 @@
       }
     },
     "sandbox": {
+      "channel": "sandbox",
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
@@ -79,6 +83,7 @@
       }
     },
     "production": {
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       },
@@ -89,7 +94,10 @@
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "665673711108-3rgpkv9t2gl70dta3p0hafjm60qu7mme.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "665673711108-j8340c44dsdvvorisn0i7desnap8kudn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN": "phc_leuu8NB2QFACooXz55aQ1BU110r9vEp4Z8cExvMxAs0"
       },
       "ios": {
         "credentialsSource": "remote",

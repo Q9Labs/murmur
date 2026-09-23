@@ -80,7 +80,10 @@ gradle.projectsEvaluated {
 GRADLE
 
 cd "$repo_root/apps/mobile"
-export EXPO_PUBLIC_MURMUR_WORKER_URL=https://murmur.q9labs.ai
+# Release builds take their public app config from the eas.json production profile.
+while IFS=$'\t' read -r key value; do
+  export "$key=$value"
+done < <(jq -er '.build.production.env | to_entries[] | [.key, .value] | @tsv' eas.json)
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
 echo "Building the signed Murmur Android bundle."

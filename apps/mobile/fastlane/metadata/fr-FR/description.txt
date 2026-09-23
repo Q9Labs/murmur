@@ -1,0 +1,30 @@
+Comprenez les paroles au moment où elles sont prononcées.
+
+Murmur transforme la parole en sous-titres traduits en direct pour suivre une visite, une conférence, un cours, une démonstration ou un office dans une autre langue.
+
+Choisissez la langue source et la langue cible, puis touchez Listen. Murmur affiche la traduction au fil de la reconnaissance vocale et peut la diffuser à voix haute si une sortie audio est disponible.
+
+Murmur prend en charge l’anglais, l’arabe, l’espagnol, le français, l’allemand, l’italien, le portugais brésilien, le japonais, le chinois simplifié, le coréen, le russe, l’hindi et le néerlandais. L’arabe s’affiche aussi de droite à gauche.
+
+7 minutes gratuites chaque mois, sans inscription
+
+Murmur crée automatiquement un compte invité avec 7 minutes de traduction offertes chaque mois, sans inscription. Pro comprend 120 minutes par mois et Pro Max, 400 ; les deux formules sont proposées au mois ou à l’année. Une session payante peut durer jusqu’à 60 minutes. Ajoutez du temps avec Trip Pass (60 minutes) ou Event Pass (300 minutes) ; les minutes des packs expirent 3 mois après l’achat. Connectez-vous avec Apple ou Google pour sauvegarder votre compte et restaurer vos achats. Vous pouvez aussi supprimer votre compte dans l’app.
+
+L’écoute continue lorsque Murmur passe en arrière-plan ou que l’écran est verrouillé. L’interface repensée est disponible en 11 langues.
+
+Par défaut, Murmur ne conserve pas d’historique des transcriptions dans le cloud. Le son du micro n’est transmis que pendant une session en direct ; vous pouvez l’arrêter ou l’annuler à tout moment.
+
+Une traduction en direct facile à suivre
+
+• Sous-titres traduits en direct
+• Sous-titres pour les échanges brefs comme pour la parole continue
+• Traductions affichées dans l’ordre où la parole est reconnue
+• Lecture audio facultative de la traduction
+• Choix de la langue source et de la langue cible
+• Signalement des problèmes de traduction dans l’app
+
+Murmur a seulement besoin d’une connexion Internet et d’un micro.
+
+Murmur utilise un service d’IA tiers pour reconnaître la parole en direct, la traduire et lire la traduction à voix haute. Les résultats peuvent être retardés, incomplets ou inexacts. Ne vous fiez pas uniquement à Murmur en cas d’urgence ou pour des décisions médicales, juridiques, financières, migratoires ou autres décisions importantes ; faites appel à un interprète humain qualifié.
+
+Conditions d’utilisation : https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

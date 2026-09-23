@@ -7,6 +7,7 @@ import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObje
 import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
 import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
 import { closeAbandonedUsageSessions } from "./billing/usageSessionStore";
+import { deleteExpiredSessionInsights } from "./insights/deleteExpiredSessionInsights";
 import {
   getReadiness,
   type Env,
@@ -200,8 +201,25 @@ const handler = {
       });
       throw failure;
     });
+    const sessionInsightRetention = deleteExpiredSessionInsights(env.BILLING_DB, nowMs)
+      .then(({ deletedInsights, deletedSessionContexts }) => {
+        if (deletedInsights > 0 || deletedSessionContexts > 0) {
+          logWorkerEvent({
+            deleted_insights: deletedInsights,
+            deleted_session_contexts: deletedSessionContexts,
+            event: "session_insight_retention_completed",
+          });
+        }
+      })
+      .catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { operation: "session_insight_retention_cleanup" },
+        });
+        throw failure;
+      });
     context.waitUntil(
-      Promise.all([reconciliation, freeClaimCleanup, abandonedSessionSweep]).then(() => undefined),
+      Promise.all([reconciliation, freeClaimCleanup, abandonedSessionSweep, sessionInsightRetention])
+        .then(() => undefined),
     );
   },
 } satisfies ExportedHandler<Env>;

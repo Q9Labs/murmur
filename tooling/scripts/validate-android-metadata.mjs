@@ -52,8 +52,9 @@ for (const locale of locales) {
     `${locale} Play metadata must include the real first-session CTA: tap Listen`,
   );
   assert(/guest account|no sign-up/i.test(combinedCopy), `${locale} Play metadata must explain guest access`);
-  assert(/10 translation minutes|10 free minutes/i.test(combinedCopy), `${locale} Play metadata must state the free monthly allowance`);
-  assert(/AI output can be incomplete or inaccurate/i.test(combinedCopy), `${locale} Play metadata must disclose AI output limits`);
+  assert(/7 free translation minutes|7 translation minutes|7 free minutes/i.test(combinedCopy), `${locale} Play metadata must state the free monthly allowance`);
+  assert(/third-party AI service/i.test(combinedCopy), `${locale} Play metadata must disclose third-party AI service use`);
+  assert(/results may be delayed, incomplete, or inaccurate/i.test(combinedCopy), `${locale} Play metadata must disclose translation limitations`);
 
   const featureGraphicPath = join(localeDir, "images", "featureGraphic", "feature-graphic.png");
   const featureGraphicValidation = validatePngFile({

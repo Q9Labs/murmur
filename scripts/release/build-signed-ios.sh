@@ -51,6 +51,15 @@ command -v openssl >/dev/null
 command -v plutil >/dev/null
 command -v ruby >/dev/null
 
+# Expo SDK 54 / React Native 0.81 use the legacy app lifecycle, which crashes at
+# launch on iOS 27 when linked against the iOS 27 SDK. Build with Xcode 26 until
+# the app adopts UIScene (Expo SDK 57 with ios.enableSceneSupport).
+xcode_major=$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')
+if ((xcode_major >= 27)); then
+  echo "Xcode $xcode_major builds against the iOS $xcode_major SDK; set DEVELOPER_DIR to an Xcode 26 install." >&2
+  exit 1
+fi
+
 chmod 700 "$temp_dir"
 manifest="$repo_root/release/manifest.json"
 expected_certificate_sha256=$(jq -er '.apple.certificate_sha256' "$manifest")
@@ -121,7 +130,10 @@ fi
 cp "$temp_dir/assets/profile.mobileprovision" "$installed_profile"
 
 cd "$repo_root/apps/mobile"
-export EXPO_PUBLIC_MURMUR_WORKER_URL="${EXPO_PUBLIC_MURMUR_WORKER_URL:-https://murmur.q9labs.ai}"
+# Release builds take their public app config from the eas.json production profile.
+while IFS=$'\t' read -r key value; do
+  export "$key=$value"
+done < <(jq -er '.build.production.env | to_entries[] | [.key, .value] | @tsv' eas.json)
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform ios
 if command -v pod >/dev/null; then
