@@ -783,7 +783,10 @@ document.querySelectorAll(".deck").forEach((deck) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "spine-tick";
     b.setAttribute("aria-label", "Slide " + (j + 1) + ": " + s.label);
-    b.innerHTML = '<span class="spine-lab">' + s.label + "</span>";
+    const lab = document.createElement("span");
+    lab.className = "spine-lab";
+    lab.textContent = s.label;
+    b.append(lab);
     if (s.steps.length) {
       const sub = document.createElement("span");
       sub.className = "spine-sub";
