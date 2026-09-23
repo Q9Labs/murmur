@@ -1,3 +1,4 @@
+import { useLocales } from "expo-localization";
 import {
   useCallback,
   useEffect,
@@ -8,14 +9,26 @@ import {
 } from "react";
 import { View } from "react-native";
 
+import { captureMobileFailure } from "../lib/observability/sentry";
 import {
   createTranslator,
   uiContentDirectionStyle,
   UiLocaleContext,
+  useUiLocale,
   type UiLocaleContextValue,
 } from "./runtime";
-import { deleteStoredUiLocale, getStoredUiLocale, setStoredUiLocale } from "./storage";
-import { directionForLocale, isUiLocale, type UiLocale } from "./types";
+import {
+  deleteStoredUiLocalePreference,
+  getStoredUiLocalePreference,
+  setStoredUiLocalePreference,
+} from "./storage";
+import {
+  directionForLocale,
+  isUiLocalePreference,
+  resolveUiLocale,
+  type UiLocale,
+  type UiLocalePreference,
+} from "./types";
 
 type DocumentLocaleRoot = { dir: string; lang: string };
 
@@ -25,52 +38,61 @@ export function syncDocumentLocale(locale: UiLocale, root: DocumentLocaleRoot): 
 }
 
 export function UiLocaleProvider({ children }: { children: ReactNode }): ReactNode {
-  const [locale, setLocaleState] = useState<UiLocale>("en");
+  const deviceLocales = useLocales();
+  const [preference, setPreferenceState] = useState<UiLocalePreference>("system");
   const [ready, setReady] = useState(false);
   const mountedRef = useRef(false);
-  const persistedLocaleRef = useRef<UiLocale>("en");
+  const persistedPreferenceRef = useRef<UiLocalePreference>("system");
   const requestVersionRef = useRef(0);
   const operationQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
     mountedRef.current = true;
     let active = true;
-    void getStoredUiLocale().then((storedLocale) => {
-      if (!active) {
-        return;
-      }
-      persistedLocaleRef.current = storedLocale;
-      setLocaleState(storedLocale);
-      setReady(true);
-    });
+    getStoredUiLocalePreference()
+      .then((storedPreference) => {
+        if (active) {
+          persistedPreferenceRef.current = storedPreference;
+          setPreferenceState(storedPreference);
+        }
+      }, (failure: unknown) => {
+        // The saved choice is unreadable: report it and follow the device language.
+        captureMobileFailure(failure, { operation: "restore_ui_locale", stage: "i18n" });
+      })
+      .finally(() => {
+        if (active) {
+          setReady(true);
+        }
+      });
     return () => {
       active = false;
       mountedRef.current = false;
     };
   }, []);
 
+  // Each queued write settles before the next starts; its own caller still sees the failure.
   const enqueue = useCallback((operation: () => Promise<void>): Promise<void> => {
-    const next = operationQueueRef.current.catch(() => undefined).then(operation);
-    operationQueueRef.current = next.catch(() => undefined);
+    const next = operationQueueRef.current.then(operation);
+    operationQueueRef.current = next.then(() => undefined, () => undefined);
     return next;
   }, []);
 
-  const setLocale = useCallback((nextLocale: UiLocale): Promise<void> => {
-    if (!isUiLocale(nextLocale)) {
-      return Promise.reject(new RangeError(`Unsupported UI locale: ${String(nextLocale)}`));
+  const setPreference = useCallback((nextPreference: UiLocalePreference): Promise<void> => {
+    if (!isUiLocalePreference(nextPreference)) {
+      return Promise.reject(new RangeError(`Unsupported UI locale: ${String(nextPreference)}`));
     }
     if (!mountedRef.current) {
       return Promise.resolve();
     }
     const requestVersion = ++requestVersionRef.current;
-    setLocaleState(nextLocale);
+    setPreferenceState(nextPreference);
     return enqueue(async () => {
       try {
-        await setStoredUiLocale(nextLocale);
-        persistedLocaleRef.current = nextLocale;
+        await setStoredUiLocalePreference(nextPreference);
+        persistedPreferenceRef.current = nextPreference;
       } catch (error) {
         if (mountedRef.current && requestVersionRef.current === requestVersion) {
-          setLocaleState(persistedLocaleRef.current);
+          setPreferenceState(persistedPreferenceRef.current);
         }
         throw error;
       }
@@ -83,24 +105,26 @@ export function UiLocaleProvider({ children }: { children: ReactNode }): ReactNo
     }
     const requestVersion = ++requestVersionRef.current;
     return enqueue(async () => {
-      await deleteStoredUiLocale();
-      persistedLocaleRef.current = "en";
+      await deleteStoredUiLocalePreference();
+      persistedPreferenceRef.current = "system";
       if (mountedRef.current && requestVersionRef.current === requestVersion) {
-        setLocaleState("en");
+        setPreferenceState("system");
       }
     });
   }, [enqueue]);
 
+  const locale = resolveUiLocale(preference, deviceLocales);
   const translator = useMemo(() => createTranslator(locale), [locale]);
   const contextValue = useMemo<UiLocaleContextValue>(() => ({
     deleteLocale,
     direction: directionForLocale(locale),
     locale,
+    preference,
     ready,
-    setLocale,
+    setPreference,
     t: translator,
     translate: translator,
-  }), [deleteLocale, locale, ready, setLocale, translator]);
+  }), [deleteLocale, locale, preference, ready, setPreference, translator]);
 
   useEffect(() => {
     if (!ready || typeof document === "undefined" || !document.documentElement) {
@@ -114,6 +138,27 @@ export function UiLocaleProvider({ children }: { children: ReactNode }): ReactNo
   }
   return (
     <UiLocaleContext.Provider value={contextValue}>
+      <View style={[providerRoot, uiContentDirectionStyle(locale)]}>{children}</View>
+    </UiLocaleContext.Provider>
+  );
+}
+
+// Renders a subtree in a fixed locale, for previews and store screenshots.
+export function UiLocaleOverride({ children, locale }: { children: ReactNode; locale: UiLocale }): ReactNode {
+  const parent = useUiLocale();
+  const value = useMemo<UiLocaleContextValue>(() => {
+    const translator = createTranslator(locale);
+    return {
+      ...parent,
+      direction: directionForLocale(locale),
+      locale,
+      preference: locale,
+      t: translator,
+      translate: translator,
+    };
+  }, [locale, parent]);
+  return (
+    <UiLocaleContext.Provider value={value}>
       <View style={[providerRoot, uiContentDirectionStyle(locale)]}>{children}</View>
     </UiLocaleContext.Provider>
   );

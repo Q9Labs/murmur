@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
-import type { MessageKey } from "../../i18n/catalogs";
+import type { MessageKey } from "../../i18n/catalogs/en";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import type { VariantOnboardingProps } from "./types";
 

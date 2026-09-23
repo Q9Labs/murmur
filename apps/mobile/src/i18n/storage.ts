@@ -1,24 +1,21 @@
 import { deleteLocalValue, getLocalValue, setLocalValue } from "../lib/localStorage";
-import { isUiLocale, type UiLocale } from "./types";
+import { isUiLocalePreference, type UiLocalePreference } from "./types";
 
 const uiLocaleStorageKey = "murmur_ui_locale_v1";
 
-export async function getStoredUiLocale(): Promise<UiLocale> {
-  try {
-    const value = await getLocalValue(uiLocaleStorageKey);
-    return isUiLocale(value) ? value : "en";
-  } catch {
-    return "en";
-  }
+// Read failures propagate so the provider can report them before falling back.
+export async function getStoredUiLocalePreference(): Promise<UiLocalePreference> {
+  const value = await getLocalValue(uiLocaleStorageKey);
+  return isUiLocalePreference(value) ? value : "system";
 }
 
-export async function setStoredUiLocale(locale: UiLocale): Promise<void> {
-  if (!isUiLocale(locale)) {
-    throw new RangeError(`Unsupported UI locale: ${String(locale)}`);
+export async function setStoredUiLocalePreference(preference: UiLocalePreference): Promise<void> {
+  if (!isUiLocalePreference(preference)) {
+    throw new RangeError(`Unsupported UI locale: ${String(preference)}`);
   }
-  await setLocalValue(uiLocaleStorageKey, locale);
+  await setLocalValue(uiLocaleStorageKey, preference);
 }
 
-export async function deleteStoredUiLocale(): Promise<void> {
+export async function deleteStoredUiLocalePreference(): Promise<void> {
   await deleteLocalValue(uiLocaleStorageKey);
 }

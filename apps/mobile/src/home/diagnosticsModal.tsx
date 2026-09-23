@@ -9,6 +9,7 @@ import {
   useUiLocale,
 } from "../i18n/runtime";
 import type { Translate } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import { formatLatencyPercentiles } from "../lib/latency";
 import { getLanguage, type LanguageCode, type LanguageDefinition, type SourceLanguageCode } from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
@@ -132,7 +133,7 @@ function DiagnosticsMetrics({
   audioState: AudioStateEvent | null;
   direction: "ltr" | "rtl";
   live: LiveTranslationController;
-  locale: "en" | "ar";
+  locale: UiLocale;
   translate: Translate;
 }): ReactNode {
   return (
@@ -245,7 +246,7 @@ function DiagnosticsLatency({
 }: {
   direction: "ltr" | "rtl";
   live: LiveTranslationController;
-  locale: "en" | "ar";
+  locale: UiLocale;
   translate: Translate;
 }): ReactNode {
   return (
@@ -284,7 +285,7 @@ const diagnosticLatencyRows = [
   ["first_translated_transcript", "Capture to first translation"],
 ] as const;
 
-function latencyDisplayOptions(locale: "en" | "ar", translate: Translate) {
+function latencyDisplayOptions(locale: UiLocale, translate: Translate) {
   return {
     formatCount: (count: string) => translate("diagnostics.latencyCount", { count }),
     formatNumber: (value: number) => formatUiNumber(value, locale),

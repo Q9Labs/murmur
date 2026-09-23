@@ -32,7 +32,8 @@ const arabicContext: UiLocaleContextValue = {
   direction: "rtl",
   locale: "ar",
   ready: true,
-  setLocale: vi.fn(async () => undefined),
+  preference: "ar",
+  setPreference: vi.fn(async () => undefined),
   t: arabicTranslate,
   translate: arabicTranslate,
 };

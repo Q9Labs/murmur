@@ -50,7 +50,7 @@ import {
   type SettingsControls,
   usePublishSettingsControls,
 } from "../screens/settings/settingsControls";
-import type { MessageKey } from "../i18n/catalogs";
+import type { MessageKey } from "../i18n/catalogs/en";
 import { createTranslator, type Translate, useUiLocale } from "../i18n/runtime";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
