@@ -39,6 +39,7 @@ export function createMurmurAuth(
         allowDifferentEmails: false,
         allowUnlinkingAll: false,
         disableImplicitLinking: true,
+        updateUserInfoOnLink: false,
       },
       encryptOAuthTokens: true,
     },

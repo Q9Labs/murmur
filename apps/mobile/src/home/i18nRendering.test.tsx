@@ -7,6 +7,10 @@ import { createTranslator, UiLocaleContext, type UiLocaleContextValue } from "..
 
 const capturedText: Array<{ children: ReactNode; style: unknown }> = [];
 
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: ({ children }: { children?: ReactNode }) => children ?? null,
+}));
+
 vi.mock("react-native", () => ({
   ScrollView: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
   Text: ({ children, style }: { children?: ReactNode; style?: unknown }) => {

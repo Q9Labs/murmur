@@ -7,6 +7,7 @@ import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObje
 import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
 import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
 import { closeAbandonedUsageSessions } from "./billing/usageSessionStore";
+import { deleteExpiredRatingSurveys } from "./insights/deleteExpiredRatingSurveys";
 import { deleteExpiredSessionInsights } from "./insights/deleteExpiredSessionInsights";
 import {
   getReadiness,
@@ -217,8 +218,29 @@ const handler = {
         });
         throw failure;
       });
+    const ratingSurveyRetention = deleteExpiredRatingSurveys(env.BILLING_DB, nowMs)
+      .then((deletedRatingSurveys) => {
+        if (deletedRatingSurveys > 0) {
+          logWorkerEvent({
+            deleted_rating_surveys: deletedRatingSurveys,
+            event: "rating_survey_retention_completed",
+          });
+        }
+      })
+      .catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { operation: "rating_survey_retention_cleanup" },
+        });
+        throw failure;
+      });
     context.waitUntil(
-      Promise.all([reconciliation, freeClaimCleanup, abandonedSessionSweep, sessionInsightRetention])
+      Promise.all([
+        reconciliation,
+        freeClaimCleanup,
+        abandonedSessionSweep,
+        sessionInsightRetention,
+        ratingSurveyRetention,
+      ])
         .then(() => undefined),
     );
   },
