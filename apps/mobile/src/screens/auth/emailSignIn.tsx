@@ -17,6 +17,7 @@ import {
 import { type AuthStyles, useAuthStyles } from "./styles";
 
 export type AuthDoneAction = {
+  disabled?: boolean;
   label: string;
   onPress: () => void;
 };
@@ -223,7 +224,7 @@ function SignedIn(props: { doneAction: AuthDoneAction; email: string; styles: Au
       <PrimaryButton
         label={props.doneAction.label}
         onPress={props.doneAction.onPress}
-        pending={false}
+        pending={props.doneAction.disabled === true}
         styles={styles}
       />
     </View>

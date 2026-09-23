@@ -6,6 +6,7 @@ import { fixtureBilling, fixturePlans } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 import { recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
+const planLoads = vi.hoisted(() => [] as Array<{ load: () => Promise<unknown>; open: boolean }>);
 const signInBilling = vi.hoisted(() => ({ current: null as MurmurBillingContext | null }));
 
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
@@ -14,10 +15,19 @@ vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.exp
 vi.mock("lucide-react-native", () => ({ Check: () => null }));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => signInBilling.current }));
 vi.mock("../plans/planList", () => ({
-  usePlanList: () => ({ plans: { plans: fixturePlans, status: "ready" }, refresh: vi.fn() }),
+  usePlanList: (open: boolean, load: () => Promise<unknown>) => {
+    planLoads.push({ load, open });
+    return { plans: { plans: fixturePlans, status: "ready" }, refresh: vi.fn() };
+  },
 }));
 
-import { checkoutDoneAction, findCheckoutPlan, planIdFromParam, SignInScreen } from "./signInScreen";
+import {
+  checkoutAvailability,
+  checkoutDoneAction,
+  findCheckoutPlan,
+  planIdFromParam,
+  SignInScreen,
+} from "./signInScreen";
 
 function doneButton() {
   return recorded.controls.find(
@@ -66,7 +76,7 @@ describe("sign-in screen", () => {
   it("keeps the checkout intent while the plan list reloads", () => {
     const purchasePlan = vi.fn(async () => undefined);
     const leave = vi.fn();
-    const action = checkoutDoneAction({ leave, plan: null, planId: "$rc_annual", purchasePlan });
+    const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan });
 
     expect(findCheckoutPlan({ status: "loading" }, "$rc_annual")).toBeNull();
     expect(action.label).toBe("Continue to checkout");
@@ -79,5 +89,38 @@ describe("sign-in screen", () => {
     expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "trip_pass")?.title).toBe("Trip Pass");
     expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, undefined)).toBeNull();
     expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "gone")).toBeNull();
+  });
+
+  it("preloads the plan quietly and only once billing is ready", () => {
+    planLoads.length = 0;
+    renderToStaticMarkup(<SignInScreen planId="$rc_annual" />);
+    expect(planLoads[0]?.open).toBe(true);
+    expect(planLoads[0]?.load).toBe(signInBilling.current?.loadPlansSilently);
+
+    planLoads.length = 0;
+    signInBilling.current = { ...fixtureBilling({ isRegistered: true }), initialized: false };
+    renderToStaticMarkup(<SignInScreen planId="$rc_annual" />);
+    expect(planLoads[0]?.open).toBe(false);
+  });
+
+  it("does not offer checkout when purchases can't go through", () => {
+    const leave = vi.fn();
+    const purchasePlan = vi.fn(async () => undefined);
+    const unavailable = checkoutDoneAction({ availability: "unavailable", leave, plan: null, planId: "$rc_annual", purchasePlan });
+    expect(unavailable.label).toBe("Back to plans");
+    unavailable.onPress();
+    expect(purchasePlan).not.toHaveBeenCalled();
+
+    expect(checkoutDoneAction({ availability: "busy", leave, plan: null, planId: "$rc_annual", purchasePlan }).disabled)
+      .toBe(true);
+  });
+
+  it("reads checkout availability from billing", () => {
+    const signedIn = fixtureBilling({ isRegistered: true });
+    expect(checkoutAvailability(signedIn)).toBe("ready");
+    expect(checkoutAvailability({ ...signedIn, busy: true })).toBe("busy");
+    expect(checkoutAvailability({ ...signedIn, purchasesAvailable: false })).toBe("unavailable");
+    expect(checkoutAvailability(fixtureBilling({ isRegistered: true, purchasesEnabled: false }))).toBe("unavailable");
+    expect(checkoutAvailability(fixtureBilling())).toBe("unavailable");
   });
 });

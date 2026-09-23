@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState, type ReactNode } from "react";
 
-import { useMurmurBilling } from "../../lib/billing/context";
+import { type MurmurBillingContext, useMurmurBilling } from "../../lib/billing/context";
 import { type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
 import { type PlanListState, usePlanList } from "../plans/planList";
 import { ScreenScaffold } from "../screenScaffold";
@@ -15,7 +15,23 @@ export function findCheckoutPlan(plans: PlanListState, planId: string | undefine
   return plans.plans.find((candidate) => candidate.id === planId) ?? null;
 }
 
+export type CheckoutAvailability = "busy" | "ready" | "unavailable";
+
+export function checkoutAvailability(billing: MurmurBillingContext): CheckoutAvailability {
+  const customer = billing.customer;
+  const purchasable = customer !== null &&
+    customer.isRegistered &&
+    customer.purchasesEnabled &&
+    customer.fulfillmentEnabled &&
+    billing.purchasesAvailable;
+  if (!purchasable) {
+    return "unavailable";
+  }
+  return billing.busy ? "busy" : "ready";
+}
+
 export function checkoutDoneAction(params: {
+  availability: CheckoutAvailability;
   leave: () => void;
   plan: MurmurPlan | null;
   planId: string | undefined;
@@ -25,7 +41,11 @@ export function checkoutDoneAction(params: {
   if (planId === undefined) {
     return { label: "Done", onPress: params.leave };
   }
+  if (params.availability === "unavailable") {
+    return { label: "Back to plans", onPress: params.leave };
+  }
   return {
+    disabled: params.availability === "busy",
     label: params.plan ? planPurchaseLabel(params.plan) : "Continue to checkout",
     onPress: () => {
       void params.purchasePlan(planId);
@@ -38,13 +58,17 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
   const router = useRouter();
   const billing = useMurmurBilling();
   const { handlers, state } = useEmailSignIn(billing, props.initialState);
-  const { plans } = usePlanList(props.planId !== undefined, billing.loadPlans);
+  const { plans } = usePlanList(
+    props.planId !== undefined && billing.initialized,
+    billing.loadPlansSilently,
+  );
   const [heldPlan, setHeldPlan] = useState<MurmurPlan | null>(null);
   const foundPlan = findCheckoutPlan(plans, props.planId);
   if (foundPlan && !heldPlan) {
     setHeldPlan(foundPlan);
   }
   const doneAction = checkoutDoneAction({
+    availability: checkoutAvailability(billing),
     leave: () => (router.canGoBack() ? router.back() : router.replace("/")),
     plan: heldPlan ?? foundPlan,
     planId: props.planId,
