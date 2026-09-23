@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { useMurmurBilling } from "../../lib/billing/context";
@@ -17,6 +17,8 @@ export function AccountScreen(): ReactNode {
   const locked = useSettingsControls()?.locked === true;
   const busy = billing.busy || locked;
   const storeUnavailable = busy || !billing.purchasesAvailable;
+
+  useEffect(reportAccountViewed, []);
 
   return (
     <ScreenScaffold
@@ -68,6 +70,12 @@ export function AccountScreen(): ReactNode {
       <StatusLine error={billing.error} notice={billing.notice} />
     </ScreenScaffold>
   );
+}
+
+export function reportAccountViewed(): void {
+  void import("../../lib/telemetry").then(({ captureBillingTelemetry }) => {
+    captureBillingTelemetry("mobile_billing_screen_viewed");
+  });
 }
 
 function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNode {

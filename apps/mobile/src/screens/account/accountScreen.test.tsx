@@ -8,6 +8,7 @@ import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePr
 
 const billingRef = vi.hoisted(() => ({ current: null as MurmurBillingContext | null }));
 const accountLock = vi.hoisted(() => ({ locked: false }));
+const telemetry = vi.hoisted(() => ({ captureBillingTelemetry: vi.fn() }));
 
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
@@ -15,8 +16,9 @@ vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => billingRef.current }));
 vi.mock("../settings/settingsControls", () => ({ useSettingsControls: () => accountLock }));
+vi.mock("../../lib/telemetry", () => telemetry);
 
-import { AccountScreen, formatMinutes } from "./accountScreen";
+import { AccountScreen, formatMinutes, reportAccountViewed } from "./accountScreen";
 
 beforeEach(() => {
   resetRecorded();
@@ -64,6 +66,14 @@ describe("account screen", () => {
     for (const label of ["Restore purchases", "Manage subscription", "Refresh balance", "Use a different account", "Delete account"]) {
       expect(findControl(label)?.disabled).toBe(true);
     }
+  });
+
+  it("records that the account screen was viewed", async () => {
+    reportAccountViewed();
+
+    await vi.waitFor(() => {
+      expect(telemetry.captureBillingTelemetry).toHaveBeenCalledWith("mobile_billing_screen_viewed");
+    });
   });
 
   it("formats minutes and hours", () => {
