@@ -18,6 +18,7 @@ export type CreateSessionRequest = {
   app_install_id: string;
   app_platform?: "android" | "ios";
   app_version?: string;
+  capture_source?: "microphone" | "phone_audio";
   device_integrity?: {
     available: boolean;
     key_id?: string;

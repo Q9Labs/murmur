@@ -16,9 +16,6 @@ export async function reconcileBilling(
   if (!session) {
     return json({ error: "authentication_required" }, 401);
   }
-  if (session.user.isAnonymous === true) {
-    return json({ error: "registration_required" }, 403);
-  }
   if (!isBillingFulfillmentEnabled(env)) {
     return json({ error: "billing_fulfillment_disabled" }, 503);
   }

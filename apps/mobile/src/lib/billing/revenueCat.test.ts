@@ -6,16 +6,20 @@ const store = vi.hoisted(() => ({
   logIn: vi.fn(),
   presentCustomerCenter: vi.fn(),
   purchasePackage: vi.fn(),
+  purchaseSubscriptionOption: vi.fn(),
   restorePurchases: vi.fn(),
 }));
+const platform = vi.hoisted(() => ({ os: "ios" }));
 
 vi.mock("../config", () => ({
-  getRevenueCatApiKeys: () => ({ ios: "apple-public-key" }),
+  getRevenueCatApiKeys: () => ({ android: "apple-public-key", ios: "apple-public-key" }),
   getRevenueCatOfferingId: () => "sandbox",
 }));
 vi.mock("react-native", () => ({
   Platform: {
-    select: (options: { ios?: string }) => options.ios,
+    get OS() { return platform.os; },
+    select: (options: { android?: string; ios?: string }) =>
+      platform.os === "android" ? options.android : options.ios,
   },
 }));
 vi.mock("react-native-purchases", () => ({
@@ -24,6 +28,7 @@ vi.mock("react-native-purchases", () => ({
     getOfferings: store.getOfferings,
     logIn: store.logIn,
     purchasePackage: store.purchasePackage,
+    purchaseSubscriptionOption: store.purchaseSubscriptionOption,
     restorePurchases: store.restorePurchases,
     setLogLevel: vi.fn(),
   },
@@ -44,6 +49,7 @@ import {
   purchaseMurmurPlan,
   restoreMurmurPurchases,
 } from "./revenueCat";
+import { yearlySaving } from "./planCatalog";
 
 function storePackage(params: {
   amount: number;
@@ -106,6 +112,7 @@ const launchPackages = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  platform.os = "ios";
   vi.stubGlobal("__DEV__", false);
   store.getOfferings.mockResolvedValue({
     all: {
@@ -152,6 +159,7 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 7.99,
         pricePerMonth: null,
         term: "pack",
+        tier: null,
         title: "Trip Pass",
       },
       {
@@ -162,6 +170,7 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 9.99,
         pricePerMonth: null,
         term: "monthly",
+        tier: "pro",
         title: "Murmur Pro",
       },
       {
@@ -172,9 +181,36 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 99.99,
         pricePerMonth: "$8.33",
         term: "yearly",
+        tier: "pro",
         title: "Murmur Pro Annual",
       },
     ]);
+  });
+
+  it("uses the matching live Pro Max price when showing annual savings", async () => {
+    await configureRevenueCat("customer-2");
+    const proMaxPackages = [
+      storePackage({
+        amount: 29.99, category: "SUBSCRIPTION", description: "400 minutes a month",
+        identifier: "promax_monthly", packageType: "MONTHLY", period: "P1M",
+        price: "$29.99", title: "Murmur Pro Max",
+      }),
+      storePackage({
+        amount: 299.99, category: "SUBSCRIPTION", description: "400 minutes a month",
+        identifier: "promax_annual", packageType: "ANNUAL", period: "P1Y",
+        price: "$299.99", title: "Murmur Pro Max Annual",
+      }),
+    ];
+    store.getOfferings.mockResolvedValue({
+      all: { max: { availablePackages: [...launchPackages, ...proMaxPackages], identifier: "max" } },
+      current: null,
+    });
+
+    const plans = await loadMurmurPlans("max");
+    const annual = plans.find((plan) => plan.id === "promax_annual");
+    expect(annual?.tier).toBe("pro_max");
+    if (!annual) throw new Error("Pro Max annual plan was not loaded");
+    expect(yearlySaving(annual, plans)).toEqual({ monthsFree: 1, percent: 16 });
   });
 
   it("buys the chosen package and reports a store cancellation separately", async () => {
@@ -190,5 +226,53 @@ describe("RevenueCat mobile adapter", () => {
       "That plan is no longer available from the store.",
     );
     expect(store.purchasePackage).toHaveBeenCalledWith(launchPackages[0]);
+  });
+
+  it("buys Play base plans normally and personal-20 only from a personal offering", async () => {
+    platform.os = "android";
+    await configureRevenueCat("customer-2");
+    const base = {
+      fullPricePhase: { price: { amountMicros: 699_000_000, formatted: "₹699" } },
+      id: "monthly",
+      isBasePlan: true,
+      storeProductId: "murmur_pro_lite:monthly",
+    };
+    const offer = {
+      id: "monthly:personal-20",
+      introPhase: { price: { amountMicros: 549_000_000, formatted: "₹549" } },
+      isBasePlan: false,
+      storeProductId: "murmur_pro_lite:monthly",
+    };
+    const monthly = storePackage({
+      amount: 549,
+      category: "SUBSCRIPTION",
+      description: "90 minutes a month",
+      identifier: "$rc_monthly",
+      period: "P1M",
+      price: "₹549",
+      title: "Murmur Pro",
+    });
+    monthly.product.identifier = "murmur_pro_lite:monthly";
+    const playPackage = {
+      ...monthly,
+      product: { ...monthly.product, defaultOption: offer, subscriptionOptions: [base, offer] },
+    };
+    store.getOfferings.mockResolvedValue({
+      all: {
+        lite: { availablePackages: [playPackage], identifier: "lite" },
+        lite_personal_offer: { availablePackages: [playPackage], identifier: "lite_personal_offer" },
+      },
+      current: null,
+    });
+    store.purchaseSubscriptionOption.mockResolvedValue({});
+
+    await expect(loadMurmurPlans("lite")).resolves.toMatchObject([{ price: "₹699", priceAmount: 699 }]);
+    await expect(loadMurmurPlans("lite_personal_offer"))
+      .resolves.toMatchObject([{ price: "₹549", priceAmount: 549 }]);
+    await purchaseMurmurPlan("$rc_monthly", "lite");
+    await purchaseMurmurPlan("$rc_monthly", "lite_personal_offer");
+    expect(store.purchaseSubscriptionOption).toHaveBeenNthCalledWith(1, base);
+    expect(store.purchaseSubscriptionOption).toHaveBeenNthCalledWith(2, offer);
+    expect(store.purchasePackage).not.toHaveBeenCalled();
   });
 });
