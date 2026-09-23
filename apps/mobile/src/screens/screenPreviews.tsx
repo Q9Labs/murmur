@@ -9,9 +9,9 @@ import {
   type AuthPreviewScreen,
   previewAuthStates,
   previewBilling,
+  previewCheckoutPlanId,
   previewSettingsControls,
   previewSignedInBilling,
-  previewYearlyPlan,
 } from "./previewFixtures";
 import { SettingsControlsFixture } from "./settings/settingsControls";
 import { SettingsScreen } from "./settings/settingsScreen";
@@ -40,7 +40,7 @@ function PlansPreview({ term }: { term: PlanTerm }): ReactNode {
 function AuthPreview({ screen }: { screen: AuthPreviewScreen }): ReactNode {
   return (
     <WithBilling billing={previewBilling}>
-      <SignInScreen initialState={previewAuthStates[screen]} planId={previewYearlyPlan.id} />
+      <SignInScreen initialState={previewAuthStates[screen]} planId={previewCheckoutPlanId} />
     </WithBilling>
   );
 }

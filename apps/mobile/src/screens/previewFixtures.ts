@@ -1,8 +1,10 @@
+import { billingProducts } from "@murmur/protocol/billing/catalog";
+
 import { authErrorMessage } from "../lib/auth/authErrors";
 import { freeAllowanceMinutes } from "../lib/billing/allowance";
 import type { MurmurBillingContext } from "../lib/billing/context";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
-import type { MurmurPlan } from "../lib/billing/planCatalog";
+import { type MurmurPlan, plansFromCatalog } from "../lib/billing/planCatalog";
 import { codeStep, type EmailSignInState } from "./auth/emailSignInState";
 import type { SettingsControls } from "./settings/settingsControls";
 
@@ -20,52 +22,10 @@ const previewCustomer: MurmurCustomer = {
   revenueCatCustomerId: "preview:preview-customer",
 };
 
-// US ladder from the pricing proposal, for screenshots only. The app shows store prices and
-// store product descriptions.
-export const previewYearlyPlan: MurmurPlan = {
-  description: "2 hours of live translation a month",
-  id: "$rc_annual",
-  periodLabel: "year",
-  price: "$99.99",
-  priceAmount: 99.99,
-  pricePerMonth: "$8.33",
-  term: "yearly",
-  title: "Murmur Pro Annual",
-};
+// Built from the shared billing catalog so previews always show the shipping ladder.
+export const previewPlans: MurmurPlan[] = plansFromCatalog(billingProducts);
 
-export const previewPlans: MurmurPlan[] = [
-  {
-    description: "2 hours of live translation a month",
-    id: "$rc_monthly",
-    periodLabel: "month",
-    price: "$9.99",
-    priceAmount: 9.99,
-    pricePerMonth: null,
-    term: "monthly",
-    title: "Murmur Pro",
-  },
-  previewYearlyPlan,
-  {
-    description: "60 minutes of live translation",
-    id: "trip_pass",
-    periodLabel: null,
-    price: "$7.99",
-    priceAmount: 7.99,
-    pricePerMonth: null,
-    term: "pack",
-    title: "Trip Pass",
-  },
-  {
-    description: "300 minutes of live translation",
-    id: "pack_300",
-    periodLabel: null,
-    price: "$29.99",
-    priceAmount: 29.99,
-    pricePerMonth: null,
-    term: "pack",
-    title: "300-minute pack",
-  },
-];
+export const previewCheckoutPlanId = previewPlans.find((plan) => plan.term === "yearly")?.id;
 
 export const previewBilling: MurmurBillingContext = {
   busy: false,

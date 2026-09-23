@@ -7,6 +7,7 @@ import {
   planBenefits,
   planPriceSuffix,
   planPurchaseLabel,
+  plansFromCatalog,
   planTabs,
   yearlySaving,
 } from "./planCatalog";
@@ -105,5 +106,57 @@ describe("plan catalog", () => {
       "yearly, $99.99 / year, Save 16% against monthly",
     );
     expect(planAccessibilityLabel(pack, [pack])).toBe("trip, $7.99");
+  });
+
+  it("builds US preview plans from catalog products, skipping offers and unpriced ones", () => {
+    const product = {
+      appleProductId: "apple.monthly",
+      basePriceUsdCents: 1_299,
+      code: "pro_monthly",
+      googleProductId: "google.monthly",
+      grantMs: 180 * 60_000,
+      kind: "subscription",
+      revenueCatPackageId: "$rc_monthly",
+    } as const;
+    const plans = plansFromCatalog([
+      product,
+      { ...product, basePriceUsdCents: 12_499, code: "pro_annual", revenueCatPackageId: "$rc_annual" },
+      { ...product, basePriceUsdCents: 399, code: "credits_60", grantMs: 60 * 60_000, kind: "credit_pack", revenueCatPackageId: "credits_60" },
+      { ...product, personalOffer: true, revenueCatPackageId: "offer" },
+      { ...product, basePriceUsdCents: null, code: "pro_monthly_in", revenueCatPackageId: "monthly_in" },
+    ]);
+
+    expect(plans).toEqual([
+      {
+        description: "3 hours of live translation a month",
+        id: "$rc_monthly",
+        periodLabel: "month",
+        price: "$12.99",
+        priceAmount: 12.99,
+        pricePerMonth: null,
+        term: "monthly",
+        title: "Murmur Pro",
+      },
+      {
+        description: "3 hours of live translation a month",
+        id: "$rc_annual",
+        periodLabel: "year",
+        price: "$124.99",
+        priceAmount: 124.99,
+        pricePerMonth: "$10.41",
+        term: "yearly",
+        title: "Murmur Pro Annual",
+      },
+      {
+        description: "60 minutes of live translation",
+        id: "credits_60",
+        periodLabel: null,
+        price: "$3.99",
+        priceAmount: 3.99,
+        pricePerMonth: null,
+        term: "pack",
+        title: "60-minute pack",
+      },
+    ]);
   });
 });

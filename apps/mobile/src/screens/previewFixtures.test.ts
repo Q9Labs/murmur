@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { planTabs, yearlySaving } from "../lib/billing/planCatalog";
+import { billingProducts } from "@murmur/protocol/billing/catalog";
+
+import { planTabs, plansFromCatalog } from "../lib/billing/planCatalog";
 import {
   previewAuthStates,
   previewBilling,
   previewBillingFor,
   previewPlans,
+  previewCheckoutPlanId,
   previewSignedInBilling,
-  previewYearlyPlan,
 } from "./previewFixtures";
 
 describe("preview fixtures", () => {
-  it("carry the proposed US ladder across all three tabs", async () => {
+  it("show exactly what the shared billing catalog sells", async () => {
+    expect(previewPlans).toEqual(plansFromCatalog(billingProducts));
     expect(planTabs(previewPlans).map((tab) => tab.term)).toEqual(["monthly", "yearly", "pack"]);
-    expect(yearlySaving(previewYearlyPlan, previewPlans)).toEqual({ monthsFree: 1, percent: 16 });
+    for (const plan of previewPlans) {
+      const product = billingProducts.find((candidate) =>
+        candidate.revenueCatPackageId === plan.id && candidate.personalOffer !== true);
+      expect(product?.basePriceUsdCents).toBe(Math.round(plan.priceAmount * 100));
+    }
+    expect(previewPlans.find((plan) => plan.id === previewCheckoutPlanId)?.term).toBe("yearly");
     await expect(previewBilling.loadPlans()).resolves.toBe(previewPlans);
   });
 
