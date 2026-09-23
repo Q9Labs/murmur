@@ -3,10 +3,12 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { storeLocales } from "./build-store-screenshots.mjs";
 import {
   androidScreenshotSpec,
   comparePngDirectories,
   createFailureCollector,
+  iosScreenshotSpec,
   validatePngDirectory,
   validatePngFile,
 } from "./store-screenshot-validation.mjs";
@@ -77,6 +79,41 @@ if (!screenshotRedesignPending) {
       rightLabel: "en-GB Play",
     }),
   );
+}
+
+// en-US and en-GB are checked above with the full Play listing; every other store locale ships the same set.
+if (!screenshotRedesignPending) {
+  for (const locale of storeLocales.filter(({ appLocale }) => appLocale !== "en")) {
+    const iosValidation = validatePngDirectory({
+      directory: join(mobileRoot, "fastlane", "metadata", locale.ios, "screenshots"),
+      expectedCount: iosScreenshotSpec.count,
+      expectedHeight: iosScreenshotSpec.height,
+      expectedWidth: iosScreenshotSpec.width,
+      directoryLabel: `${locale.ios} App Store screenshots`,
+      label: locale.ios,
+      requireDirectory: true,
+      requireOpaque: true,
+      screenshotLabel: "App Store screenshots",
+    });
+    failures.push(...iosValidation.failures);
+
+    for (const code of locale.android) {
+      const androidValidation = validatePngDirectory({
+        directory: join(mobileRoot, "fastlane", "metadata", "android", code, "images", "phoneScreenshots"),
+        expectedCount: androidScreenshotSpec.count,
+        expectedHeight: androidScreenshotSpec.height,
+        expectedWidth: androidScreenshotSpec.width,
+        directoryLabel: `${code} phone screenshots`,
+        fileLabelPrefix: `fastlane/metadata/android/${code}/images/phoneScreenshots/`,
+        label: code,
+        playLimits: true,
+        requireDirectory: true,
+        requireOpaque: true,
+        requireRgb: true,
+      });
+      failures.push(...androidValidation.failures);
+    }
+  }
 }
 
 if (screenshotRedesignPending) {

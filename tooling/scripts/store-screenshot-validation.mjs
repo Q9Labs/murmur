@@ -27,9 +27,15 @@ const pngBitDepthsByColorType = new Map([
 ]);
 
 export const androidScreenshotSpec = Object.freeze({
-  count: 5,
+  count: 8,
   height: 1920,
   width: 1080,
+});
+
+export const iosScreenshotSpec = Object.freeze({
+  count: 8,
+  height: 2868,
+  width: 1320,
 });
 
 export const createFailureCollector = () => {

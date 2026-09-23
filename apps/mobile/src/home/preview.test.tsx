@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { reactNativePrimitives } from "../screens/__tests__/reactNativePrimitives";
 
 const harness = vi.hoisted(() => ({
   onboardingProps: null as Record<string, unknown> | null,
@@ -11,6 +13,8 @@ const harness = vi.hoisted(() => ({
   shellProps: null as Record<string, unknown> | null,
   updateRequiredProps: null as Record<string, unknown> | null,
 }));
+
+vi.mock("react-native", () => import("../screens/__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 
 vi.mock("../i18n/provider", () => ({
   UiLocaleOverride: (props: { children: ReactNode }) => props.children,
@@ -102,6 +106,10 @@ vi.mock("../screens/screenPreviews", () => ({
 import { BloomPreview } from "./preview";
 
 describe("Bloom preview", () => {
+  beforeEach(() => {
+    reactNativePrimitives.Platform.OS = "ios";
+  });
+
   it.each([
     "account-guest",
     "account-signed-in",
@@ -267,6 +275,20 @@ describe("Bloom preview", () => {
     renderToStaticMarkup(<BloomPreview screen="translation-background" />);
 
     expect(harness.shellProps).toMatchObject({ listeningInBackground: true });
+    expect(harness.shellProps?.["live"]).toMatchObject({ status: "live" });
+  });
+
+  it("hides the Phone audio source on iOS, where the native module does not support it", () => {
+    renderToStaticMarkup(<BloomPreview screen="translation" />);
+
+    expect(harness.shellProps).toMatchObject({ captureSource: "microphone", devicePlaybackSupported: false });
+  });
+
+  it("shows the Phone audio source on Android and renders a live phone-audio session", () => {
+    reactNativePrimitives.Platform.OS = "android";
+    renderToStaticMarkup(<BloomPreview screen="translation-phone-audio" />);
+
+    expect(harness.shellProps).toMatchObject({ captureSource: "device_playback", devicePlaybackSupported: true });
     expect(harness.shellProps?.["live"]).toMatchObject({ status: "live" });
   });
 });

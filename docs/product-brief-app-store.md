@@ -41,7 +41,6 @@ The product is deliberately one-directional. The spec excludes bidirectional con
 
 ### Planned, experimental, or not yet safe to describe as shipped
 
-- **Longer live-caption store captures:** the Android and iOS screenshot notes say a future capture pass should add a longer live-caption session before store publication. Sources: `apps/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/README.md`, `apps/mobile/fastlane/metadata/en-US/screenshots.md`.
 - **Arabic and other interface localization:** the growth plan says the interface and support surfaces are currently English-only and recommends Arabic localization before Arabic-language acquisition. Source: `docs/growth-and-aso-strategy.md`.
 - **Custom store pages, product-page experiments, and paid campaigns:** the growth plan describes these as future work. Murmur now sends fixed, content-free product events through its Worker to PostHog US and uses Sentry for sanitized reliability diagnostics. Sources: `docs/growth-and-aso-strategy.md`, `docs/legal/observability-data-map.md`.
 - **Single realtime service path:** the shipping Worker uses OpenAI Realtime for speech, captions, and translated audio; no alternate translation route is part of the product contract. Sources: `apps/worker/src/providers/openaiRealtime.ts`, `apps/worker/src/sockets/realtime.ts`, `apps/worker/src/routes/session.ts`.
@@ -106,7 +105,7 @@ Sources: `apps/mobile/fastlane/metadata/en-US/keywords.txt`, `apps/mobile/fastla
 
 ### Existing assets
 
-- The previous iOS and Google Play screenshot sets, source captures, compositions, and screenshot-derived social assets were removed while the screenshot redesign is pending. See `apps/mobile/store-assets/SCREENSHOTS_PENDING_REDESIGN.md`.
+- The 1.3.0 iOS and Google Play screenshot sets (eight each, all eleven app languages) are built by `tooling/scripts/build-store-screenshots.mjs` from native captures in `apps/mobile/store-assets/source/screenshots/` and the Option B compositions.
 - A 1024×500 Google Play feature graphic remains under `apps/mobile/fastlane/metadata/android/`.
 - Source branding includes an app icon, Google Play icon, feature-graphic SVG, and dated logo concepts under `apps/mobile/store-assets/source/brand/` and `source/google-play/`.
 
