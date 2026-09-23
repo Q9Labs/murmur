@@ -36,7 +36,8 @@ export function isLanguagePairReady(params: {
 }
 
 // Moves a disabled source or target onto the first enabled language that keeps the pair
-// distinct. Auto-detect stays as the source because it is not a language itself.
+// distinct. Auto-detect stays as the source because it is not a language itself, and a
+// source that can only equal the target becomes auto-detect so the pair can still start.
 export function normalizeLanguagePair(
   pair: LanguagePair,
   enabledLanguages: readonly LanguageCode[] | null,
@@ -50,7 +51,7 @@ export function normalizeLanguagePair(
   const source = pair.source === autoSourceLanguageCode || isLanguageEnabled(pair.source, enabledLanguages)
     ? pair.source
     : firstEnabledExcept(enabledLanguages, target);
-  return { source, target };
+  return { source: source === target ? autoSourceLanguageCode : source, target };
 }
 
 function firstEnabledExcept(
