@@ -147,11 +147,11 @@ export async function proxyRealtimeSession(
     throw failure;
   }
   const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
-  const insightCollector = createInsightCollector();
   const insightSession = await loadInsightSession(env, appSessionId).catch((failure: unknown) => {
     Sentry.captureException(failure, { tags: { operation: "load_insight_session" } });
     return null;
   });
+  const insightCollector = insightSession ? createInsightCollector() : null;
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
@@ -420,7 +420,7 @@ export async function proxyRealtimeSession(
     terminate,
     () => playback.enabled && config.output_audio_enabled,
     config.source_transcript,
-    (delta) => insightCollector.add(delta),
+    (delta) => insightCollector?.add(delta),
   );
   try {
     upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
@@ -800,14 +800,14 @@ type RealtimeTermination = {
 function queueSessionInsight(params: {
   analyticsEnabled: boolean;
   appSessionId: string;
-  collector: ReturnType<typeof createInsightCollector>;
+  collector: ReturnType<typeof createInsightCollector> | null;
   config: ServerConfig;
   context?: TelemetryExecutionContext;
   env: Env;
   session: InsightSessionContext | null;
 }): void {
+  if (!params.session || !params.collector) return;
   const translation = params.collector.finish();
-  if (!params.session) return;
   const processing = translation
     ? processSessionInsight({
         analyticsEnabled: params.analyticsEnabled,

@@ -1,4 +1,4 @@
-const SESSION_INSIGHT_RETENTION_MONTHS = 24;
+const RETENTION_MONTHS = 24;
 
 export async function deleteExpiredSessionInsights(
   database: D1Database | undefined,
@@ -8,7 +8,7 @@ export async function deleteExpiredSessionInsights(
     return { deletedInsights: 0, deletedSessionContexts: 0 };
   }
 
-  const cutoff = sessionInsightRetentionCutoff(nowMs);
+  const cutoff = retentionCutoff(nowMs);
   const insights = await database
     .prepare("DELETE FROM session_insights WHERE created_at < ?")
     .bind(cutoff)
@@ -24,12 +24,12 @@ export async function deleteExpiredSessionInsights(
   };
 }
 
-function sessionInsightRetentionCutoff(nowMs: number): string {
+export function retentionCutoff(nowMs: number): string {
   const now = new Date(nowMs);
   const dayOfMonth = now.getUTCDate();
   const cutoff = new Date(now);
   cutoff.setUTCDate(1);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - SESSION_INSIGHT_RETENTION_MONTHS);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - RETENTION_MONTHS);
   const lastDayOfCutoffMonth = new Date(
     Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0),
   ).getUTCDate();

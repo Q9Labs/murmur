@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { router } from "../__tests__/navigation";
@@ -8,6 +9,9 @@ import type { ScreenServices } from "../screenServices";
 
 const state = vi.hoisted(() => ({ services: null as ScreenServices | null }));
 
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: (props: { children: ReactNode }) => <section data-replay-mask="">{props.children}</section>,
+}));
 vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("../proGate", () => ({ ProGate: (props: { title: string }) => <p>gate {props.title}</p> }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));

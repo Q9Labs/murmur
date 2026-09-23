@@ -2,6 +2,7 @@ import { Check } from "lucide-react-native";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 
 import type { MessageKey } from "../../i18n/catalogs/en";
 import { failureCopy, LocalizedError } from "../../i18n/localizedError";
@@ -179,7 +180,9 @@ function CodeEntry(props: {
   const pending = state.pending !== null || props.billingBusy;
   return (
     <View style={styles.flow}>
-      <EmphasisText emphasis={state.email} style={styles.body} styles={styles} text={t("auth.sentTo", { email: state.email })} />
+      <PostHogMaskView>
+        <EmphasisText emphasis={state.email} style={styles.body} styles={styles} text={t("auth.sentTo", { email: state.email })} />
+      </PostHogMaskView>
       <TextInput
         accessibilityLabel={t("auth.codeLabel")}
         autoComplete="one-time-code"
@@ -263,13 +266,15 @@ function SignedIn(props: { doneAction: AuthDoneAction; email: string; styles: Au
       <View accessibilityElementsHidden importantForAccessibility="no" style={styles.doneBadge}>
         <Check color={colors.teal} size={30} strokeWidth={2.5} />
       </View>
-      <EmphasisText
-        emphasis={props.email}
-        live
-        style={[styles.body, styles.centered]}
-        styles={styles}
-        text={t("auth.signedInAs", { email: props.email })}
-      />
+      <PostHogMaskView>
+        <EmphasisText
+          emphasis={props.email}
+          live
+          style={[styles.body, styles.centered]}
+          styles={styles}
+          text={t("auth.signedInAs", { email: props.email })}
+        />
+      </PostHogMaskView>
       <PrimaryButton
         label={props.doneAction.label}
         onPress={props.doneAction.onPress}

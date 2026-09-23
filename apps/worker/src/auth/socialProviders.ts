@@ -27,9 +27,14 @@ export function socialProviders(env: Env) {
           privateKey: applePrivateKey,
           teamId: appleTeamId,
         }),
-        mapProfileToUser: (profile: { email?: string; sub: string }) => ({
-          email: profile.email ?? `apple-${profile.sub}@apple.murmur.invalid`,
-        }),
+        overrideUserInfoOnSignIn: false,
+        mapProfileToUser: (profile: { email?: string; name?: string; sub: string }) => {
+          const name = profile.name?.trim() || "";
+          return {
+            email: profile.email ?? `apple-${profile.sub}@apple.murmur.invalid`,
+            name,
+          };
+        },
       })
       : undefined,
     google: googleWebClientId && googleClientSecret

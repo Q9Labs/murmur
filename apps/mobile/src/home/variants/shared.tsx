@@ -9,6 +9,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { UiDirection } from "../../i18n/types";
@@ -124,44 +125,46 @@ export function SpanTimeline({
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
 
   return (
-    <ScrollView
-      contentContainerStyle={contentStyle}
-      ref={refs.timelineRef}
-      scrollEventThrottle={80}
-      showsVerticalScrollIndicator={false}
-      style={style}
-      {...timelineScrollHandlers(refs)}
-    >
-      {!hasTimeline ? (
-        <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
-          {timelineEmptyText(
-            viewModel.isLive,
-            showSource ? null : viewModel.targetLanguageDisplayName,
-            t,
-          )}
-        </Text>
-      ) : null}
-      {visibleSpans.map((span) => (
-        <SpanRow
-          key={`${span.span_id}:${span.revision}`}
-          layout={direction}
-          showSource={showSource}
-          sourceDirection={sourceDirection}
-          span={span}
-          targetRtl={viewModel.targetLanguage.rtl}
-          translate={t}
-          textStyles={textStyles}
-        />
-      ))}
-      {showSource && live.tentative_source_caption.trim() ? (
-        <TentativeCaption
-          layout={direction}
-          sourceDirection={sourceDirection}
-          text={live.tentative_source_caption}
-          textStyles={textStyles}
-        />
-      ) : null}
-    </ScrollView>
+    <PostHogMaskView style={style}>
+      <ScrollView
+        contentContainerStyle={contentStyle}
+        ref={refs.timelineRef}
+        scrollEventThrottle={80}
+        showsVerticalScrollIndicator={false}
+        style={style}
+        {...timelineScrollHandlers(refs)}
+      >
+        {!hasTimeline ? (
+          <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
+            {timelineEmptyText(
+              viewModel.isLive,
+              showSource ? null : viewModel.targetLanguageDisplayName,
+              t,
+            )}
+          </Text>
+        ) : null}
+        {visibleSpans.map((span) => (
+          <SpanRow
+            key={`${span.span_id}:${span.revision}`}
+            layout={direction}
+            showSource={showSource}
+            sourceDirection={sourceDirection}
+            span={span}
+            targetRtl={viewModel.targetLanguage.rtl}
+            translate={t}
+            textStyles={textStyles}
+          />
+        ))}
+        {showSource && live.tentative_source_caption.trim() ? (
+          <TentativeCaption
+            layout={direction}
+            sourceDirection={sourceDirection}
+            text={live.tentative_source_caption}
+            textStyles={textStyles}
+          />
+        ) : null}
+      </ScrollView>
+    </PostHogMaskView>
   );
 }
 
