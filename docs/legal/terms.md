@@ -12,9 +12,9 @@ Murmur is not intended for emergencies, medical diagnosis, legal advice, immigra
 
 ## AI Translation and Session Insights
 
-Murmur sends the live audio you choose to share through its servers to a third-party AI service provider for speech recognition and translation. The service may return source captions, translated captions, and translated speech. Output can be delayed, incomplete, inaccurate, offensive, or inappropriate.
+Murmur sends the live audio you choose to share through its Cloudflare Worker to OpenAI Realtime for speech recognition and translation. OpenAI may return source captions, translated captions, and translated speech. Output can be delayed, incomplete, inaccurate, offensive, or inappropriate.
 
-AI session insights are optional and separate from live translation. If you consent, Murmur sends eligible session transcript text to a third-party AI service provider at session end to create a short derived insight. Murmur does not retain the transcript; it retains the derived insight for up to 24 months. The Privacy Policy explains the consent, opt-out, and deletion controls.
+AI Session Insights are optional and separate from live translation. Only translated text from a consented session is collected for this feature. For a session with at least 30 seconds of translation, Murmur sends the text to OpenRouter to create a short derived insight, then discards the text without storing it as a transcript. Murmur deletes each insight after 24 months in a daily job or earlier when the associated account is deleted. Turning off insights stops collection for future sessions but does not delete existing insights. The Privacy Policy explains the consent and deletion controls.
 
 You can report translation issues in the app. Reports help support and quality review but do not guarantee that a specific translation will be corrected.
 
@@ -26,7 +26,9 @@ The app shows the current Free allowance, plan limits, credit value, price, and 
 
 The applicable app store and a payment and subscription provider handle payment, renewal, cancellation, and applicable taxes. Murmur does not receive or store payment-card details. Deleting a Murmur account does not cancel a store subscription; cancel it through the relevant app store. Refunds can remove granted value and may create a negative balance when refunded time has already been used. A reversed refund restores the corresponding value.
 
-Murmur does not save full cloud transcript history by default. If you consent to AI session insights, a derived insight may be retained for up to 24 months as described in the Privacy Policy. The app stores an anonymous install identifier locally for allowance control, abuse prevention, and diagnostics, plus local interface and rating-prompt preferences. You can reset that identity, delete local data, or delete your Murmur account in the app.
+For eligible paid users, Murmur saves committed translated captions in local app storage on the device only; it does not upload this history to the cloud. Deleting a Murmur account does not erase local translation history. You can delete individual history entries or use Delete Local Data to clear on-device data.
+
+If you choose to submit an in-app rating survey, its stars, use-case answer, and optional Other text are sent directly to Murmur's server, not to product analytics, and retained for 24 months. The submission is sent even if Anonymous Analytics is off. Account deletion removes linked responses but does not find anonymous ratings.
 
 ## Acceptable Use
 
@@ -40,7 +42,7 @@ Do not use Murmur to:
 
 ## Privacy and Third-Party Services
 
-Murmur's privacy practices are described in the Privacy Policy at `https://murmur.q9labs.ai/privacy`. Murmur relies on third-party providers for cloud infrastructure, live AI translation and optional insight generation, account and email services, analytics and masked session replay, crash diagnostics, and payment and subscription processing. Those services may be unavailable or may change independently from Murmur.
+Murmur's privacy practices are described in the Privacy Policy at `https://murmur.q9labs.ai/privacy`. Murmur uses Cloudflare, OpenAI, OpenRouter, PostHog, Sentry, RevenueCat, Apple, Google, and Resend. A configured report webhook may also receive submitted reports. The Privacy Policy describes what each provider receives, including the direct PostHog session-replay connection. Those services may be unavailable or may change independently from Murmur.
 
 ## Availability
 

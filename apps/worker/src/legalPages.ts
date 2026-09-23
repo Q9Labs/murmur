@@ -274,7 +274,7 @@ export const legalPages: Record<string, Page> = {
     path: "/",
     title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 10 free minutes and no cloud transcript history by default.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 7 free minutes and no cloud transcript history; eligible paid users keep translated captions on device.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
@@ -345,12 +345,12 @@ export const legalPages: Record<string, Page> = {
         <div class="value">
           <span class="icon-tile tone-teal">${icon("user")}</span>
           <h3>Guest first</h3>
-          <p>Start without sign-up. Verify an email before purchase so a plan or credit balance can be recovered across devices.</p>
+          <p>Start without sign-up and purchase as a guest. Verify an email before purchase if you choose to sign in first; otherwise, save your guest purchase with Apple, Google, or email afterwards to recover it across devices.</p>
         </div>
         <div class="value">
           <span class="icon-tile tone-violet">${icon("lock")}</span>
           <h3>Yours alone</h3>
-          <p>No audio or transcript history saved by default.</p>
+          <p>Cloud storage: No audio or transcript history saved by default. Eligible paid users' committed translated captions are stored on the device only.</p>
         </div>
       </section>
 
@@ -396,7 +396,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
     description:
-      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 10 free minutes each month.",
+      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 7 free minutes each month.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
     heading: "Understand the guide without interrupting the tour.",
     lede:
@@ -471,56 +471,59 @@ export const legalPages: Record<string, Page> = {
     ],
   }),
   "/privacy": {
-    description: "Murmur privacy policy for live translation, accounts, and in-app purchases.",
+    description: "Murmur privacy policy for live translation, accounts, local history, and Session Insights.",
     path: "/privacy",
     title: "Murmur Privacy Policy",
     html: `
       <h1>Murmur Privacy Policy</h1>
       <p><strong>Last updated:</strong> ${lastUpdated}</p>
-      <p>Murmur is a one-way live speech translator operated by Q9 Labs. You choose languages and an available audio source, tap Listen, and Murmur displays translated captions. Microphone mode can also play translated speech.</p>
+      <p>Murmur is a one-way live speech translator operated by Q9 Labs. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Microphone mode can also play translated speech.</p>
       <h2>Live Translation</h2>
-      <p>Before a live session starts, Murmur asks you to allow the selected live audio to be sent through Murmur's servers to a third-party AI service provider for speech recognition and translation. In Microphone mode, Murmur captures microphone audio only while a session you started is active. On supported Android devices, Phone audio mode captures eligible media playback after you approve Android's audio-recording and screen-sharing prompts; it does not capture the microphone in that mode.</p>
-      <p>The AI service returns source and translated captions through Murmur's servers. Captions are displayed on your device and are not saved as a transcript history by default. Murmur does not save captured audio by default. Translated speech, when available, is returned for local playback.</p>
+      <p>Before a live session starts, Murmur asks you to allow the selected live audio to be sent through Murmur's Cloudflare Worker to OpenAI, a third-party AI service provider, for speech recognition and translation. In Microphone mode, Murmur captures microphone audio only while a session you started is active. On supported Android devices, Phone audio mode captures eligible media playback after you approve Android's audio-recording and screen-sharing prompts; it does not capture the microphone in that mode.</p>
+      <p>OpenAI returns source and translated captions through Murmur's Worker. Murmur does not save captured audio or keep cloud transcript history by default. Translated speech, when available, is returned for local playback.</p>
       <p>On Android, floating captions can appear in a system overlay after you allow Murmur to display over other apps. The overlay is rendered locally and does not create another server copy of the captions.</p>
+      <h2>Local Translation History</h2>
+      <p>For eligible paid users, Murmur saves committed translated captions in the app's Documents directory on the device only. Murmur does not upload this history to the cloud. Deleting your Murmur account does not erase on-device history. You can delete an individual history entry, use Delete Local Data to clear the history directory, or uninstall the app to remove its on-device data.</p>
       <h2>Optional AI Session Insights</h2>
       <p>After your first completed session, Murmur asks whether you want AI session insights. This is a separate, optional choice from live translation and Anonymous Analytics. You can decline and continue using translation, or change your choice in Settings. The choice starts off.</p>
-      <p>If you consent, Murmur creates an insight only for a session with at least 30 seconds of translation. Murmur's server keeps the session transcript text in memory while the session is active. At the end of an eligible session, it sends that text to a third-party AI service provider to derive a short record. The record may include the kind of setting, an event name if spoken, the topic, domain terms, an estimated speaker count, apparent user intent, a translation-quality score, possible confusing words or phrases, general sentiment, a short summary, and brief product feedback signals.</p>
-      <p>Murmur keeps the derived insight, not the transcript. The transcript is discarded after processing and is never written to Murmur storage or logs. The retained record is associated with a hashed install identifier, app session identifier, language pair, session duration, and creation time. Murmur retains each insight for up to 24 months from creation, then deletes it.</p>
-      <p>Turning off AI session insights stops future insight processing; it does not automatically delete insights already created. To request deletion of an existing insight, contact support with the approximate session date and any available session or report receipt details. Avoid speaking sensitive or identifying information if you do not want it reflected in a derived insight.</p>
+      <p>Only a session with AI session insights consent can have translated text collected for insight processing. For a consented session with at least 30 seconds of translation, Murmur's Worker holds that text in memory during the session and sends it to OpenRouter at the end to derive a short record. The record may include the kind of setting, an event name if spoken, the topic, domain terms, an estimated speaker count, apparent user intent, a translation-quality score, possible confusing words or phrases, general sentiment, a short summary, and brief product feedback signals. Murmur discards the translated text after processing; it is not written to Murmur storage or logs.</p>
+      <p>Murmur stores the derived insight, not the transcript. The record is associated with a hashed install identifier, app session identifier, language pair, session duration, and creation time. A daily job deletes each insight after 24 months; deleting the associated Murmur account removes its insights sooner. Turning off AI session insights stops collection for future sessions but does not delete insights already stored. Avoid speaking sensitive or identifying information if you do not want it reflected in a derived insight.</p>
       <h2>Accounts, Sign-In, and Purchases</h2>
       <p>Murmur creates a random guest customer identifier so it can provide Free time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.</p>
-      <p>You may save a purchase by signing in with Apple, Google, or email. For Apple or Google sign-in, Murmur receives your email address, which may be a private relay address depending on your Apple choice, and that provider's stable account identifier. Murmur stores the sign-in records needed to maintain your account and link your customer record. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.</p>
-      <p>Murmur stores plan state, credit grants, usage debits, renewal, restore and refund records, and store transaction identifiers in an entitlement ledger. The applicable app store and a payment and subscription provider validate and manage purchases. Murmur does not receive or store payment-card details.</p>
+      <p>You may save a purchase by signing in with Apple, Google, or email. For Apple sign-in, the app requests your email address and full name; Murmur receives your email address and your name if you choose to share it and Apple provides it on first sign-in, along with Apple's stable account identifier. For Google sign-in, Murmur receives your email address and Google's stable account identifier. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.</p>
+      <p>Murmur stores plan state, credit grants, usage debits, renewal, restore and refund records, and store transaction identifiers in an entitlement ledger. RevenueCat and the applicable app store help validate and manage purchases. Murmur does not receive or store payment-card details.</p>
       <h2>Install, Session, and Connection Data</h2>
       <p>The app stores an anonymous install identifier and a separate Free-allowance identifier in platform secure storage. Murmur's server hashes these identifiers for diagnostics, pseudonymous measurement, and abuse prevention. Reset Murmur Identity replaces the diagnostic install identifier. Delete Local Data removes local identifiers; a hashed current-month Free claim may remain on the server through that allowance period to prevent duplicate grants.</p>
-      <p>Murmur may process short, allowlisted source, medium, campaign, content, partner, or landing-page labels from tagged links. It also measures install source: on Android, Murmur reads the Play Install Referrer at first launch; on iOS, Murmur obtains an Apple AdServices attribution token and sends it to Apple's attribution service to resolve campaign information. Murmur uses the resulting source or campaign information to measure which campaigns lead to installs and use. This is not used to build an advertising profile or to track you across other companies' apps or websites. Turning Anonymous Analytics off stops forwarding new install-attribution information to product analytics.</p>
-      <p>Murmur may include the country derived from your network connection with relayed analytics events. It uses country only, not city or region, and does not collect precise location. For rate limiting, the server separately hashes the connecting network address and keeps request timestamps under that hash for up to one hour; it does not send the address or that abuse-prevention hash to product analytics or crash diagnostics.</p>
+      <p>Murmur may process short, allowlisted source, medium, campaign, content, partner, or landing-page labels from tagged links. On Android, Murmur may use the Play Install Referrer and Play Integrity. On iOS, Murmur may send an AdServices attribution token to Murmur's Worker, which resolves it with Apple. Murmur uses normalized source or campaign information to measure which campaigns lead to installs and use; it does not use it to track you across other companies' apps or websites. Turning Anonymous Analytics off stops forwarding new install-attribution information to product analytics.</p>
+      <p>Murmur may include the country derived from your network connection with relayed analytics events. It uses country only, not city or region, and does not collect precise location. Better Auth session records store the connection IP address and user-agent string until the session expires or the account is deleted. Separately, the Worker hashes the connecting network address for analytics rate limiting and keeps request timestamps under that hash for up to one hour; it does not send that address or rate-limit hash to PostHog or Sentry through the analytics relay.</p>
       <h2>Analytics, Session Replay, and Diagnostics</h2>
-      <p>Anonymous Analytics is on by default and can be turned off in Settings. Analytics events may describe app and build version, platform, language pair, onboarding steps, plan and offer interactions, sign-in method, session outcome, background use, capture source, broad network type, timing, duration, bounded error categories, and install source. They may include a star rating, your answer to “What did you use Murmur for?”, and the platform when Murmur requests a store review. If you choose “Other,” your optional written answer may also be sent. Please do not include sensitive or identifying information in that answer.</p>
-      <p>When you allow AI session insights, Murmur may send a separate session-insight event containing only enum and numeric fields, not the free-text summary or transcript. If Anonymous Analytics is off, Murmur stops new product analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue. This analytics control does not turn off AI session insights; use the separate AI session insights setting to stop future summaries.</p>
-      <p>Murmur uses session replay to understand app interactions. Replay captures app screens and interactions, not microphone audio. Before replay is sent, Murmur masks all text inputs and the translation and transcript text views. Replay follows the Anonymous Analytics setting and is off when analytics is off. The replay SDK does not duplicate events sent through Murmur's analytics relay.</p>
-      <p>Murmur also processes sanitized crash, error, and sampled performance diagnostics, such as a stack trace, bounded operation or error category, app release, environment, app session identifier, and limited timing data. Diagnostics do not include conversation content, request bodies, cookies, query strings, or user fields.</p>
+      <p>Anonymous Analytics is on by default and can be turned off in Settings. Product analytics events pass through Murmur's Worker relay, which validates event names and properties before forwarding them to PostHog. Events may describe app and build version, platform, language pair, onboarding steps, plan and offer interactions, sign-in method, session outcome, background use, capture source, broad network type, timing, duration, bounded error categories, and install source. The relay does not include your email address, provider account identifier, or credentials.</p>
+      <p>Session replay uses the PostHog SDK directly from the device, not Murmur's Worker relay. PostHog therefore sees the device IP address on replay network traffic. Replays do not include microphone audio; all text, text inputs, and images are masked. When Anonymous Analytics is turned off, the app stops session recording and opts the replay client out. Essential sanitized crash and error monitoring can continue.</p>
+      <p>Murmur also sends sanitized crash, error, and sampled performance diagnostics to Sentry, such as a stack trace, bounded operation or error category, app release, environment, app session identifier, and limited timing data. Diagnostics do not include conversation content, request bodies, cookies, query strings, or user fields.</p>
       <h2>Ratings, Survey Answers, and Translation Reports</h2>
-      <p>After qualifying sessions, Murmur may ask for a five-star in-app rating and the optional question “What did you use Murmur for?” Answers use a short list of use-case categories, with an optional “Other” text response. Murmur records the star rating and answer to understand how the app is used and improve it. Native store-review prompts are separate from the in-app rating.</p>
-      <p>Murmur stores a qualified-session count and the version and time of its last native rating request on your device so it can time prompts and avoid asking repeatedly. This local state contains no audio or caption text.</p>
-      <p>You can report an inaccurate, wrong-language, harmful, speech-related, or other translation issue. A report includes session and translation-span metadata. It may include text snapshots only when the app explicitly sends them. A report receipt can help support locate a report for a follow-up or deletion request.</p>
+      <p>After qualifying sessions, Murmur may ask for a five-star in-app rating and the optional question “What did you use Murmur for?” Answers use a short list of use-case categories, with an optional “Other” text response. When you submit the survey, its stars, use-case answer, and optional “Other” text go directly to Murmur's server, not to product analytics, and are stored for 24 months. You choose whether to submit; this direct submission is sent even when Anonymous Analytics is off. Account deletion removes ratings linked to that account. Anonymous ratings cannot be found by account deletion.</p>
+      <p>Murmur stores a qualified-session count and the version and time of its last native rating request on your device so it can time prompts and avoid asking repeatedly. This local state contains no audio or caption text. Native store-review prompts are separate from the in-app rating survey.</p>
+      <p>You can report an inaccurate, wrong-language, harmful, speech-related, or other translation issue. A report includes session and translation-span metadata. It may include text snapshots only when the app explicitly sends them. Reports are not removed by account deletion; contact support with the report receipt to request deletion. If a report webhook is configured, the report may also be sent to that webhook.</p>
       <h2>Third-Party Service Providers</h2>
-      <p>Murmur uses third-party services in these categories: a cloud hosting and infrastructure provider for Murmur's server, database, rate limits, and privacy-safe logs; a third-party AI service provider for live speech recognition, translation, translated speech, and consent-based session insights; an analytics provider for product analytics and masked session replay; a diagnostics provider for sanitized crash and performance monitoring; a payment and subscription provider and the relevant app stores for purchase validation and lifecycle records; and an email delivery provider for sign-in codes. These providers process data to provide services to Murmur. Under their terms, the AI service providers don't use this content to train their models, but they may keep request content for a limited period, typically up to 30 days, to monitor for abuse before deleting it.</p>
-      <h2>Retention</h2>
-      <p>Murmur does not retain captured audio or full transcript history by default. With your consent, it retains the derived session insight for up to 24 months from creation, then deletes it. Account records remain until you delete your account. Entitlement, store transaction, usage, renewal, and refund records may be retained as needed for service integrity, fraud prevention, financial reconciliation, and legal obligations; direct identifiers are removed when the account is deleted where possible. Analytics, diagnostics, campaign, session, and rate-limit metadata is retained only as needed for measurement, abuse prevention, debugging, and service operation, under applicable provider retention settings.</p>
+      <p>Murmur sends data to these providers: Cloudflare hosts Murmur's Worker, database, rate limiting, and related infrastructure; OpenAI receives selected live audio through the Worker for speech recognition, translation, and translated speech; OpenRouter receives translated text from consented sessions to create Session Insights; PostHog receives relayed product analytics and direct session-replay traffic; Sentry receives sanitized crash, error, and performance diagnostics; RevenueCat processes subscription and purchase lifecycle information; Apple and Google provide sign-in and app-store purchase services, with Apple also receiving iOS AdServices attribution requests and Google services providing Android Play Install Referrer and Play Integrity flows; Resend delivers email sign-in codes; and the operator of a configured report webhook may receive submitted report data.</p>
+      <p>Under their terms, the AI service providers do not use request content to train their models, but may retain it for a limited period, typically up to 30 days, to monitor for abuse before deleting it.</p>
+      <h2>Retention and Deletion</h2>
+      <p>Murmur does not retain captured audio or cloud transcript history by default. Eligible paid users' translated-caption history is stored only on their device. Session Insights are deleted by a daily job after 24 months or earlier when the associated account is deleted. Survey responses are retained for 24 months; account deletion removes account-linked responses but does not locate anonymous submissions.</p>
+      <p>Deleting your Murmur account removes the account and authentication records, associated Session Insights, and ratings linked to the account. It does not cancel an Apple or Google subscription or erase local translation history. Some deleted-state purchase, entitlement, usage, refund, or reconciliation records may remain in Murmur's billing ledger. Reports are deleted by support on request, not automatically by account deletion. PostHog and Sentry data expire under those providers' retention settings; Murmur does not automatically erase individual records from those services when an account is deleted.</p>
+      <p>Better Auth session IP and user-agent data remain until that session expires or the account is deleted. The hashed analytics rate-limit address and its timestamps are kept for up to one hour. OpenAI and OpenRouter request-content retention is governed by their provider terms above.</p>
       <h2>Your Choices</h2>
       <ul>
         <li>Stop or cancel a live session at any time.</li>
-        <li>Decline AI session insights or turn them off in Settings to stop future insight processing.</li>
-        <li>Turn Anonymous Analytics off in Settings to stop new analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue.</li>
-        <li>Reset Murmur Identity or use Delete Local Data in the app.</li>
+        <li>Decline AI session insights or turn them off in Settings to stop collecting translated text for future insights. Existing insights remain until account deletion or the 24-month retention job.</li>
+        <li>Turn Anonymous Analytics off in Settings to stop new relayed analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue.</li>
+        <li>Delete individual history entries or use Delete Local Data to clear on-device history and local data. Reset Murmur Identity replaces the diagnostic install identifier only.</li>
         <li>Delete your Murmur account and sign-in data in Account &amp; billing. Store subscriptions must be cancelled separately.</li>
-        <li>Contact support to request deletion of server-side insights, diagnostics, or report records that can be identified from the information you provide.</li>
+        <li>Contact support with a report receipt to request deletion of a translation report.</li>
       </ul>
       <h2>Children</h2>
       <p>Murmur is not designed for children and is not intended for the Kids Category or Designed for Families.</p>
       <h2>Contact</h2>
-      <p>Murmur is operated by Q9 Labs. Email <a href="mailto:${supportEmail}">${supportEmail}</a> for privacy, deletion, or support requests.</p>
+      <p>Murmur is operated by Q9 Labs. Email <a href="mailto:${supportEmail}">${supportEmail}</a> for privacy, deletion, or support requests. Public privacy URL: https://murmur.q9labs.ai/privacy.</p>
     `,
   },
   "/terms": {
@@ -535,13 +538,15 @@ export const legalPages: Record<string, Page> = {
       <p>Use Murmur only where live translation is appropriate and lawful. You are responsible for the speech you provide to the app and for deciding whether translated output is accurate enough for your situation.</p>
       <p>Murmur is not intended for emergencies, medical diagnosis, legal advice, immigration advice, financial decisions, or other high-stakes situations where an incorrect translation could cause harm. Always verify important translations with a qualified human interpreter.</p>
       <h2>AI Translation and Session Insights</h2>
-      <p>Murmur sends the live audio you choose to share through its servers to a third-party AI service provider for speech recognition and translation. The service may return source captions, translated captions, and translated speech. Output can be delayed, incomplete, inaccurate, offensive, or inappropriate.</p>
-      <p>AI session insights are optional and separate from live translation. If you consent, Murmur sends eligible session transcript text to a third-party AI service provider at session end to create a short derived insight. Murmur does not retain the transcript; it retains the derived insight for up to 24 months. The Privacy Policy explains the consent, opt-out, and deletion controls.</p>
-      <p>You can report translation issues in the app. Reports help support and quality review, but they do not guarantee that a specific translation will be corrected.</p>
+      <p>Murmur sends the live audio you choose to share through its Cloudflare Worker to OpenAI, a third-party AI service provider, for speech recognition and translation. OpenAI may return source captions, translated captions, and translated speech. Output can be delayed, incomplete, inaccurate, offensive, or inappropriate.</p>
+      <p>AI Session Insights are optional and separate from live translation. Only translated text from a consented session is collected for this feature. For a session with at least 30 seconds of translation, Murmur sends the text to OpenRouter to create a short derived insight, then discards the text without storing it as a transcript. Murmur deletes each insight after 24 months in a daily job or earlier when the associated account is deleted. Turning off insights stops collection for future sessions but does not delete existing insights. The Privacy Policy explains the consent and deletion controls.</p>
+      <p>You can report translation issues in the app. Reports help support and quality review but do not guarantee that a specific translation will be corrected.</p>
       <h2>Accounts, Plans, Credits, and Usage</h2>
       <p>Murmur creates a guest customer account automatically. A guest can use the available Free allowance and can purchase, restore, and reconcile store purchases without adding an email or creating a registered account. You may save a guest purchase to an account using Apple, Google, or email sign-in; Murmur then links the guest's purchase and remaining balance to that account so they can be recovered on another device.</p>
       <p>The app shows the current Free allowance, plan limits, credit value, price, and renewal terms before purchase. Paid allowances and credit packs are subject to the expiry shown in the app; credit packs expire 90 days after purchase. Monthly plans renew each month. Annual plans renew yearly, with allowance timing shown in the app. Unused allowances do not roll over.</p>
-      <p>The applicable app store and a payment and subscription provider handle payment, renewal, cancellation, and applicable taxes. Murmur does not receive or store payment-card details. Deleting a Murmur account does not cancel a store subscription; cancel it through the relevant app store. Refunds can remove granted value and may create a negative balance when refunded time was already used. A reversed refund restores the corresponding value.</p>
+      <p>The applicable app store and a payment and subscription provider handle payment, renewal, cancellation, and applicable taxes. Murmur does not receive or store payment-card details. Deleting a Murmur account does not cancel a store subscription; cancel it through the relevant app store. Refunds can remove granted value and may create a negative balance when refunded time has already been used. A reversed refund restores the corresponding value.</p>
+      <p>For eligible paid users, Murmur saves committed translated captions in local app storage on the device only; it does not upload this history to the cloud. Deleting a Murmur account does not erase local translation history. You can delete individual history entries or use Delete Local Data to clear on-device data.</p>
+      <p>If you choose to submit an in-app rating survey, its stars, use-case answer, and optional Other text are sent directly to Murmur's server, not to product analytics, and retained for 24 months. The submission is sent even if Anonymous Analytics is off. Account deletion removes linked responses but does not find anonymous ratings.</p>
       <h2>Acceptable Use</h2>
       <ul>
         <li>Do not break the law or violate someone else's rights.</li>
@@ -552,9 +557,9 @@ export const legalPages: Record<string, Page> = {
         <li>Do not attempt to access administrative endpoints or private diagnostics data.</li>
       </ul>
       <h2>Privacy and Third-Party Services</h2>
-      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur relies on third-party providers for cloud infrastructure, live AI translation and optional insight generation, account and email services, analytics and masked session replay, crash diagnostics, and payment and subscription processing. Those services may be unavailable or may change independently from Murmur.</p>
+      <p>Murmur's privacy practices are described in the Murmur Privacy Policy. Murmur uses Cloudflare, OpenAI, OpenRouter, PostHog, Sentry, RevenueCat, Apple, Google, and Resend. A configured report webhook may also receive submitted reports. The Privacy Policy describes what each provider receives, including the direct PostHog session-replay connection.</p>
       <h2>Availability</h2>
-      <p>Murmur may change, suspend, or discontinue features. AI service or cloud infrastructure failures, network conditions, audio or screen-sharing permissions, protected playback, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
+      <p>Murmur may change, suspend, or discontinue features. OpenAI or other AI service failures, cloud infrastructure failures, network conditions, audio or screen-sharing permissions, protected playback, unsupported languages, quotas, or device limitations may prevent live translation or speech output.</p>
       <h2>No Warranty</h2>
       <p>Murmur is provided as-is and as-available. To the maximum extent allowed by law, Murmur disclaims warranties of accuracy, availability, fitness for a particular purpose, and non-infringement.</p>
       <h2>Limitation of Liability</h2>
@@ -573,13 +578,15 @@ export const legalPages: Record<string, Page> = {
       <h2>Support Contact</h2>
       <p>Email <a href="mailto:${supportEmail}">${supportEmail}</a> for support, safety issues, privacy questions, and deletion requests. Include your report receipt id if your request relates to a translation report.</p>
       <h2>Accounts and Deletion</h2>
-      <p>Murmur creates a random guest customer account when you first use the app. You can purchase, restore, and reconcile purchases as a guest. You may add Apple, Google, or email sign-in and save a guest purchase to that account. Murmur does not retain full transcript history by default.</p>
-      <p>If you consent to AI session insights, Murmur stores the derived insight, not the transcript, for up to 24 months from creation. Turning off AI session insights stops future processing but does not automatically delete existing insights. Contact support with an approximate session date and any available session or report receipt details to request deletion.</p>
-      <p>Use <strong>Delete Murmur account</strong> in Account &amp; billing to remove sign-in data and access to the remaining balance. This does not cancel an Apple or Google subscription; cancel it through the store first. Murmur retains a pseudonymous financial and entitlement record only when needed for refunds, fraud prevention, reconciliation, and legal obligations.</p>
-      <p>The app stores anonymous install and Free-allowance identifiers, interface preference, and rating-prompt eligibility state on the device. Use <strong>Reset Murmur Identity</strong> to replace the diagnostic install identifier without changing billing, or <strong>Delete Local Data</strong> to clear all local Murmur data and the privacy acknowledgement. The hashed current-month Free claim can remain on the server through that month for abuse prevention.</p>
-      <p>Turn Anonymous Analytics off in Settings to stop new product analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue. AI session insights use a separate consent control.</p>
+      <p>Murmur creates a random guest customer account when you first use the app. You can purchase, restore, and reconcile purchases as a guest. You may add Apple, Google, or email sign-in and save a guest purchase to that account. Murmur does not keep cloud transcript history. For eligible paid users, Murmur saves translated captions locally on the device only.</p>
+      <p>Deleting a Murmur account removes the account and authentication records, associated Session Insights, and rating responses linked to the account. The billing ledger may retain deleted-state purchase, entitlement, usage, refund, and reconciliation records. Account deletion does not cancel an Apple or Google subscription and does not erase local translation history.</p>
+      <p>Only translated text from a consented session is collected for Session Insights. Turning off Session Insights stops collection for future sessions but does not delete existing insights. A daily job deletes insights after 24 months; account deletion removes associated insights sooner.</p>
+      <p>A rating survey is sent directly to Murmur's server, independently of Anonymous Analytics, and stored for 24 months. Account deletion removes linked responses; anonymous ratings are not found by account deletion.</p>
+      <p>Use <strong>Reset Murmur Identity</strong> to replace the diagnostic install identifier without changing billing. Use <strong>Delete Local Data</strong> to clear local Murmur data, including local translation history and the privacy acknowledgement. Deleting an individual history entry also removes it. A hashed current-month Free claim can remain on the server through that month for abuse prevention.</p>
+      <p>Turn Anonymous Analytics off in Settings to stop new relayed PostHog product events and install-attribution reporting. The app also stops session recording and opts the direct PostHog replay client out. Essential sanitized Sentry crash and error monitoring can continue. Session Insights use a separate consent control.</p>
       <h2>Server-Side Deletion Requests</h2>
-      <p>Murmur may process rate-limit metadata, analytics, session insights, diagnostic records, and translation report receipts. Support can review deletion requests for records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.</p>
+      <p>Reports are not automatically deleted when an account is deleted. Support deletes a report on request when the user provides its report receipt. If REPORT_WEBHOOK_URL is configured, the submitted report may also be sent to that endpoint; the endpoint operator may retain its own copy.</p>
+      <p>PostHog and Sentry records expire under those providers' retention settings. Murmur does not automatically erase an individual's analytics or diagnostic records from those services when an account is deleted. Better Auth session IP address and user-agent data remain until the session expires or the account is deleted; the hashed analytics rate-limit address and timestamps are kept for up to one hour.</p>
       <p>Support will not ask users to send audio recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.</p>
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
@@ -587,6 +594,7 @@ export const legalPages: Record<string, Page> = {
       <p>Store reviewers can start with the automatic guest account and Free allowance. Tap Listen, speak naturally, review translated captions, then test purchase and Restore controls as a guest. Use the report buttons on a committed translation span.</p>
     `,
   },
+
 };
 
 export function renderLegalPage(pathname: string): Response | null {
@@ -1177,14 +1185,14 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
           "@type": "SoftwareApplication",
           applicationCategory: "UtilitiesApplication",
           description:
-            "One-way live speech translation with real-time translated captions, a monthly Free allowance, optional paid time, no saved transcript history by default, and optional consent-based session insights.",
+            "One-way live speech translation with real-time translated captions, a monthly Free allowance, optional paid time, no cloud transcript history, eligible paid local translation history, and optional consent-based session insights.",
           featureList: [
             "One-way live speech translation",
             "Real-time translated captions",
             "Optional translated speech",
             "Guest use and purchases without a registered account",
             "Optional account sign-in to save a guest purchase",
-            "No saved transcript history by default; optional AI session insights",
+            "No cloud transcript history; eligible paid users can save translated captions locally",
           ],
           name: siteName,
           operatingSystem: "iOS, Android",
@@ -1208,7 +1216,7 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
               name: "Does Murmur save audio or transcript history?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Murmur does not save captured audio or full transcript history by default. If you consent to AI session insights, Murmur derives and retains a short insight for up to 24 months; the transcript itself is discarded and never stored or logged by Murmur.",
+                text: "Murmur does not save captured audio or cloud transcript history by default. Eligible paid users can have committed translated captions stored on the device only. If you consent to Session Insights, translated text is sent to OpenRouter to derive an insight; Murmur discards the text and deletes the insight after 24 months or earlier on account deletion.",
               },
             },
           ],
