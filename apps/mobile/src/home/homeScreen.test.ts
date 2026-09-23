@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
-vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("../screens/rating/ratingSheet", () => ({ RatingSheet: () => null }));
+vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({}) }));
 vi.mock("../lib/billing/context", () => ({
   useMurmurBilling: () => ({ config: { enabledLanguages: null }, configLoaded: true, customer: null }),
 }));
@@ -36,11 +38,14 @@ vi.mock("../lib/engagement", () => ({
   markReviewRequested: vi.fn(async () => undefined),
   recordSessionOutcome: vi.fn(async () => ({ should_request_review: false })),
 }));
-vi.mock("../lib/ratings/ratings", () => ({ deleteRatingState: vi.fn(async () => undefined) }));
-vi.mock("../lib/insightsConsent", () => ({
-  deleteInsightsConsent: vi.fn(async () => undefined),
-  getInsightsConsent: vi.fn(async () => false),
-  setInsightsConsent: vi.fn(async () => undefined),
+vi.mock("../lib/ratings/ratings", () => ({
+  claimRatingSlot: vi.fn(async () => false),
+  deleteRatingState: vi.fn(async () => undefined),
+}));
+vi.mock("../lib/phoneAudioGiftOffer", () => ({
+  deletePhoneAudioGiftOffer: vi.fn(async () => undefined),
+  hasOfferedPhoneAudioGift: vi.fn(async () => true),
+  markPhoneAudioGiftOffered: vi.fn(async () => undefined),
 }));
 vi.mock("../lib/installIdentity", () => ({
   acknowledgePrivacyDisclosure: vi.fn(async () => undefined),

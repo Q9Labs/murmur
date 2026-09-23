@@ -25,3 +25,10 @@ export function PrimaryAction(props: { disabled?: boolean; label: string; onPres
 export function StatusLine(props: { error: string | null; notice: string | null }): ReactNode {
   return <p>{props.notice}{props.error}</p>;
 }
+
+export const SecondaryAction = PrimaryAction;
+
+export function QuietAction(props: { label: string; onPress: () => void }): ReactNode {
+  recorded.controls.push({ accessibilityLabel: props.label, accessibilityRole: "button", onPress: props.onPress });
+  return <button>{props.label}</button>;
+}

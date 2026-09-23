@@ -6,6 +6,7 @@ import { useMurmurBilling } from "../../lib/billing/context";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import { LinkRow, RowGroup, SwitchRow } from "../rowGroup";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
+import { useScreenServices } from "../screenServices";
 import { useSettingsControls } from "./settingsControls";
 
 const legalUrls = {
@@ -24,6 +25,7 @@ export function SettingsScreen(): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
   const controls = useSettingsControls();
+  const services = useScreenServices();
   const locked = controls?.locked === true;
   const accountValue = billing.customer?.isRegistered ? "Signed in" : "Guest";
 
@@ -36,6 +38,7 @@ export function SettingsScreen(): ReactNode {
           onPress={() => router.push("/account")}
           value={accountValue}
         />
+        <LinkRow label="Conversation history" onPress={() => router.push("/history")} />
       </RowGroup>
       {controls ? (
         <RowGroup>
@@ -44,6 +47,12 @@ export function SettingsScreen(): ReactNode {
             label="Anonymous analytics"
             onChange={controls.changeAnalytics}
             value={controls.analyticsEnabled}
+          />
+          <SwitchRow
+            disabled={locked}
+            label="Help improve Murmur"
+            onChange={(consent) => void services.setInsightsConsent(consent)}
+            value={services.insightsConsent === true}
           />
           <LinkRow disabled={locked} label="Share Murmur" onPress={controls.share} />
         </RowGroup>

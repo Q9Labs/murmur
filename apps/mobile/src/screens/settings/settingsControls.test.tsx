@@ -12,10 +12,8 @@ import {
 const controls: SettingsControls = {
   analyticsEnabled: false,
   changeAnalytics: vi.fn(),
-  changeInsightsConsent: vi.fn(),
   deleteLocalData: vi.fn(),
   locked: true,
-  insightsConsent: null,
   message: null,
   openReport: vi.fn(),
   reportLabel: "Session diagnostics",

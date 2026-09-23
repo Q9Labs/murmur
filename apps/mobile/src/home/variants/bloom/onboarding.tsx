@@ -8,13 +8,11 @@ import { BrandMark, BreathingBlob } from "./index";
 import { useBloomStyles } from "./styles";
 
 const bloomText: OnboardingText = {
-  agreeLabel: "Agree and Continue",
+  agreeLabel: "Agree and continue",
   continueLabel: "Continue",
-  languagesEyebrowText: "First setup",
   languagesTitle: "Which way are we translating?",
   listenLabel: "Listen",
-  privacyEyebrowText: "Before you listen",
-  privacyTitle: "AI processing notice",
+  privacyTitle: "How translation works",
   sourceLabel: "I will speak",
   targetLabel: "Translate into",
   welcomeCopy: "Choose a direction, listen, and read clear captions in real time.",
@@ -32,12 +30,19 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     checkboxMark: styles.checkboxMark,
     consentRow: styles.consentRow,
     copy: styles.copy,
-    eyebrow: styles.eyebrow,
     footer: styles.onboardingFooter,
+    hero: styles.onboardingHero,
+    iconColor: colors.primary,
+    link: styles.onboardingLink,
+    point: styles.privacyPoint,
+    pointIcon: styles.privacyPointIcon,
+    pointText: styles.privacyPointText,
     pressed: styles.pressed,
+    setupLabel: styles.setupLabel,
     setupRow: styles.setupRow,
     setupValue: styles.setupValue,
     title: styles.title,
+    welcomeBody: styles.welcomeBody,
   };
 
   return (

@@ -13,7 +13,6 @@ vi.mock("./diagnosticsModal", () => ({ DiagnosticsModal: () => null }));
 vi.mock("./languagePicker", () => ({ LanguagePickerController: () => null }));
 vi.mock("./modalSheet", () => import("./__tests__/modalSheetMock"));
 vi.mock("./outOfMinutesSheet", () => ({ OutOfMinutesSheetController: () => null }));
-vi.mock("./settingsModals", () => ({ SettingsModal: () => null }));
 vi.mock("./updateRequiredSheet", () => ({ UpdateRequiredSheet: () => null }));
 vi.mock("./styles", () => ({
   styles: {
@@ -29,6 +28,7 @@ vi.mock("./styles", () => ({
   },
 }));
 vi.mock("./variants/bloom", () => ({ BloomShell: () => null }));
+vi.mock("./variants/bloom/backgroundListening", () => ({ useAppInBackground: () => false }));
 
 function createLive(): LiveTranslationController {
   const reportSpan = vi.fn(async () => undefined);

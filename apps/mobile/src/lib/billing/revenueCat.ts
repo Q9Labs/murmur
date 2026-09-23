@@ -3,6 +3,7 @@ import Purchases, {
   LOG_LEVEL,
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
+  type Price,
   type PurchasesOffering,
   type PurchasesPackage,
   type PurchasesStoreProduct,
@@ -10,8 +11,10 @@ import Purchases, {
 } from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
+import { findBillingProduct } from "@murmur/protocol/billing/catalog";
+
 import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
-import type { MurmurPlan, PlanTerm } from "./planCatalog";
+import { type MurmurPlan, type PlanIntroPrice, planTier, planTitle, type PlanTerm } from "./planCatalog";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -108,34 +111,59 @@ const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
 
 function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): MurmurPlan {
   const { product } = storePackage;
-  const selectedPrice = selectedPlayPrice(storePackage, offeringId);
+  const playPrices = selectedPlayPrices(storePackage, offeringId);
   const term = planTerm(storePackage);
-  const subscriptionTier = storePackage.identifier.startsWith("promax_") ? "pro_max" : "pro";
+  const tier = planTier(storePackage.identifier, term);
+  const storeTitle = product.title.replace(storeAppNameSuffix, "") || product.identifier;
   return {
     description: product.description,
     id: storePackage.identifier,
+    introPrice: playPrices ? playPrices.intro : appleIntroPrice(product),
+    minutes: catalogMinutes(product.identifier),
     periodLabel: planPeriodLabel(term, product.subscriptionPeriod),
-    price: selectedPrice?.formatted ?? product.priceString,
-    priceAmount: selectedPrice ? selectedPrice.amountMicros / 1_000_000 : product.price,
+    price: playPrices?.full.formatted ?? product.priceString,
+    priceAmount: playPrices ? playPrices.full.amountMicros / 1_000_000 : product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
     term,
-    tier: term === "pack" ? null : subscriptionTier,
-    title: product.title.replace(storeAppNameSuffix, "") || product.identifier,
+    tier,
+    title: planTitle(storePackage.identifier, tier, storeTitle),
   };
 }
 
-function selectedPlayPrice(storePackage: PurchasesPackage, offeringId: string) {
+// The App Store carries the personal offer as an introductory price on the `.offer` products.
+function appleIntroPrice(product: PurchasesStoreProduct): PlanIntroPrice | null {
+  return product.introPrice
+    ? { amount: product.introPrice.price, price: product.introPrice.priceString }
+    : null;
+}
+
+// Minutes come from the shared billing catalog, matched by store product id.
+function catalogMinutes(storeProductId: string): number | null {
+  const product = findBillingProduct(Platform.OS === "ios" ? "apple" : "google", storeProductId);
+  return product ? Math.round(product.grantMs / 60_000) : null;
+}
+
+// Google Play carries the personal offer as the intro phase of the `personal-20` option.
+function selectedPlayPrices(
+  storePackage: PurchasesPackage,
+  offeringId: string,
+): { full: Price; intro: PlanIntroPrice | null } | null {
   const option = selectedPlayOption(storePackage, offeringId);
   if (!option) {
     return null;
   }
-  const price = personalPlayOffer(offeringId, storePackage.identifier)
-    ? option.introPhase?.price
-    : option.fullPricePhase?.price;
-  if (!price) {
+  const full = option.fullPricePhase?.price ?? basePlayOption(storePackage.product)?.fullPricePhase?.price;
+  if (!full) {
     throw new Error("That plan has no price available from Google Play.");
   }
-  return price;
+  if (!personalPlayOffer(offeringId, storePackage.identifier)) {
+    return { full, intro: null };
+  }
+  const intro = option.introPhase?.price;
+  if (!intro) {
+    throw new Error("That plan has no offer price available from Google Play.");
+  }
+  return { full, intro: { amount: intro.amountMicros / 1_000_000, price: intro.formatted } };
 }
 
 function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {

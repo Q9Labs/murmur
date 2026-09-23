@@ -39,7 +39,7 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
     loadPlansSilently: vi.fn(async () => []),
     manageSubscription: vi.fn(async () => undefined),
     notice: null,
-    purchasePlan: vi.fn(async () => undefined),
+    purchasePlan: vi.fn(async () => true),
     purchasesAvailable: true,
     refresh: vi.fn(async () => undefined),
     restorePurchases: vi.fn(async () => undefined),
@@ -55,30 +55,47 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
 export const fixtureMonthly: MurmurPlan = {
   description: "2 hours of live translation a month",
   id: "$rc_monthly",
+  introPrice: null,
+  minutes: 120,
   periodLabel: "month",
   price: "$9.99",
   priceAmount: 9.99,
   pricePerMonth: null,
   term: "monthly",
   tier: "pro",
-  title: "Murmur Pro",
+  title: "Pro",
+};
+
+export const fixtureMaxMonthly: MurmurPlan = {
+  ...fixtureMonthly,
+  description: "400 minutes of live translation a month",
+  id: "promax_monthly",
+  minutes: 400,
+  price: "$29.99",
+  priceAmount: 29.99,
+  tier: "pro_max",
+  title: "Pro Max",
 };
 
 export const fixtureYearly: MurmurPlan = {
   description: "2 hours of live translation a month",
   id: "$rc_annual",
+  introPrice: null,
+  minutes: 120,
   periodLabel: "year",
   price: "$99.99",
   priceAmount: 99.99,
   pricePerMonth: "$8.33",
   term: "yearly",
   tier: "pro",
-  title: "Murmur Pro Annual",
+  title: "Pro",
 };
 
 export const fixturePack: MurmurPlan = {
   description: "60 minutes of live translation",
-  id: "trip_pass",
+  id: "trip_pass_60",
+  introPrice: null,
+  minutes: 60,
   periodLabel: null,
   price: "$7.99",
   priceAmount: 7.99,
@@ -88,4 +105,4 @@ export const fixturePack: MurmurPlan = {
   title: "Trip Pass",
 };
 
-export const fixturePlans: MurmurPlan[] = [fixtureMonthly, fixtureYearly, fixturePack];
+export const fixturePlans: MurmurPlan[] = [fixtureMonthly, fixtureMaxMonthly, fixtureYearly, fixturePack];

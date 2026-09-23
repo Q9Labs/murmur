@@ -17,6 +17,7 @@ import { styles } from "./styles";
 import type { PickerMode } from "./types";
 import { UpdateRequiredSheet } from "./updateRequiredSheet";
 import { BloomShell } from "./variants/bloom";
+import { useAppInBackground } from "./variants/bloom/backgroundListening";
 import type { UiVariant, VariantShellProps } from "./variants/types";
 import type { HomeViewModel } from "./viewModel";
 
@@ -60,6 +61,7 @@ export function HomeExperience(props: {
 }): ReactNode {
   const Shell = variantShells.bloom;
   const { customer } = useMurmurBilling();
+  const inBackground = useAppInBackground();
   return (
     <>
       <Shell
@@ -69,6 +71,7 @@ export function HomeExperience(props: {
         autoScrollRef={props.autoScrollRef}
         captureSource={props.captureSource}
         devicePlaybackSupported={props.devicePlaybackSupported}
+        listeningInBackground={inBackground && props.viewModel.isLive}
         live={props.live}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onCaptureSourceChange={props.onCaptureSourceChange}

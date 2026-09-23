@@ -14,17 +14,18 @@ import {
   type RatingSetting,
 } from "./ratingSchedule";
 
-const stateKey = "murmur_rating_state_v1";
+const stateKey = "murmur_rating_state_v2";
 
 type RatingState = {
   completedSessionCount: number;
+  ratingEligibleSessionCount: number;
   successfulSessionCount: number;
   storeReviewRequested: boolean;
 };
 
 export type SessionRatingDecision = {
   askInsightsConsent: boolean;
-  showRating: boolean;
+  ratingEligible: boolean;
   successfulSessionCount: number;
 };
 
@@ -32,17 +33,20 @@ let pending = Promise.resolve();
 
 async function readState(): Promise<RatingState> {
   const stored = await getLocalValue(stateKey);
-  if (!stored) return { completedSessionCount: 0, successfulSessionCount: 0, storeReviewRequested: false };
+  if (!stored) {
+    return { completedSessionCount: 0, ratingEligibleSessionCount: 0, successfulSessionCount: 0, storeReviewRequested: false };
+  }
   const value: unknown = JSON.parse(stored);
   if (!isRatingState(value)) throw new Error("rating_state_invalid");
   return value;
 }
 
+const ratingCountKeys = ["completedSessionCount", "ratingEligibleSessionCount", "successfulSessionCount"] as const;
+
 function isRatingState(value: unknown): value is RatingState {
   return typeof value === "object" && value !== null &&
-    "completedSessionCount" in value && Number.isInteger(value.completedSessionCount) &&
-    "successfulSessionCount" in value && Number.isInteger(value.successfulSessionCount) &&
-    "storeReviewRequested" in value && typeof value.storeReviewRequested === "boolean";
+    ratingCountKeys.every((key) => Number.isInteger(Reflect.get(value, key))) &&
+    typeof Reflect.get(value, "storeReviewRequested") === "boolean";
 }
 
 async function writeState(state: RatingState): Promise<void> {
@@ -69,7 +73,7 @@ export function recordCompletedSession(completion: {
       }
       return {
         askInsightsConsent: completedSessionCount === 1 && state.completedSessionCount === 0,
-        showRating: false,
+        ratingEligible: false,
         successfulSessionCount: state.successfulSessionCount,
       };
     }
@@ -80,9 +84,20 @@ export function recordCompletedSession(completion: {
     }
     return {
       askInsightsConsent: next.completedSessionCount === 1,
-      showRating: shouldShowRating(next.successfulSessionCount),
+      ratingEligible: true,
       successfulSessionCount: next.successfulSessionCount,
     };
+  });
+}
+
+// Called only when a rating-eligible session wasn't taken by a more important prompt,
+// so the schedule counts the sessions where the rating could actually be shown.
+export function claimRatingSlot(): Promise<boolean> {
+  return serialized(async () => {
+    const state = await readState();
+    const ratingEligibleSessionCount = state.ratingEligibleSessionCount + 1;
+    await writeState({ ...state, ratingEligibleSessionCount });
+    return shouldShowRating(ratingEligibleSessionCount);
   });
 }
 

@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+
+import { conversationDetails, conversationLanguages, conversationStarted } from "./conversationFormat";
+
+const record = {
+  durationMs: 12 * 60_000,
+  id: "conversation-1",
+  sourceLanguage: "ar" as const,
+  startedAtMs: Date.UTC(2026, 8, 3, 14, 5),
+  targetLanguage: "en" as const,
+  text: "Hello",
+};
+
+describe("conversation formatting", () => {
+  it("names the languages and the length", () => {
+    expect(conversationLanguages(record)).toBe("Arabic to English");
+    expect(conversationLanguages({ ...record, sourceLanguage: "auto" })).toBe("Auto detect to English");
+    expect(conversationDetails(record)).toBe("Arabic to English · 12 min");
+  });
+
+  it("formats the start time in the listener's locale", () => {
+    expect(conversationStarted(record)).not.toContain("2026");
+    expect(conversationStarted(record)).toMatch(/\d/);
+  });
+});

@@ -49,17 +49,18 @@ import {
   purchaseMurmurPlan,
   restoreMurmurPurchases,
 } from "./revenueCat";
-import { yearlySaving } from "./planCatalog";
 
 function storePackage(params: {
   amount: number;
   category: "NON_SUBSCRIPTION" | "SUBSCRIPTION";
   description: string;
   identifier: string;
+  intro?: { price: number; priceString: string };
   packageType?: string;
   period?: string;
   perMonth?: string;
   price: string;
+  productId?: string;
   title: string;
 }) {
   return {
@@ -67,7 +68,8 @@ function storePackage(params: {
     packageType: params.packageType ?? "CUSTOM",
     product: {
       description: params.description,
-      identifier: `product.${params.identifier}`,
+      identifier: params.productId ?? `product.${params.identifier}`,
+      introPrice: params.intro ?? null,
       price: params.amount,
       pricePerMonthString: params.perMonth ?? null,
       priceString: params.price,
@@ -83,15 +85,17 @@ const launchPackages = [
     amount: 7.99,
     category: "NON_SUBSCRIPTION",
     description: "60 minutes of live translation",
-    identifier: "pack_60",
+    identifier: "trip_pass_60",
     price: "$7.99",
-    title: "Trip Pass (Murmur - Live Translate)",
+    productId: "com.q9labsai.murmur.credits.60",
+    title: "Trip Pass, 60 minutes (Murmur - Live Translate)",
   }),
   storePackage({
     amount: 9.99,
     category: "SUBSCRIPTION",
     description: "2 hours of live translation a month",
     identifier: "$rc_monthly",
+    intro: { price: 7.99, priceString: "$7.99" },
     packageType: "MONTHLY",
     period: "P1M",
     perMonth: "$9.99",
@@ -153,7 +157,9 @@ describe("RevenueCat mobile adapter", () => {
     await expect(loadMurmurPlans("launch")).resolves.toEqual([
       {
         description: "60 minutes of live translation",
-        id: "pack_60",
+        id: "trip_pass_60",
+        introPrice: null,
+        minutes: 60,
         periodLabel: null,
         price: "$7.99",
         priceAmount: 7.99,
@@ -165,29 +171,33 @@ describe("RevenueCat mobile adapter", () => {
       {
         description: "2 hours of live translation a month",
         id: "$rc_monthly",
+        introPrice: { amount: 7.99, price: "$7.99" },
+        minutes: null,
         periodLabel: "month",
         price: "$9.99",
         priceAmount: 9.99,
         pricePerMonth: null,
         term: "monthly",
         tier: "pro",
-        title: "Murmur Pro",
+        title: "Pro",
       },
       {
         description: "2 hours of live translation a month",
         id: "$rc_annual",
+        introPrice: null,
+        minutes: null,
         periodLabel: "year",
         price: "$99.99",
         priceAmount: 99.99,
         pricePerMonth: "$8.33",
         term: "yearly",
         tier: "pro",
-        title: "Murmur Pro Annual",
+        title: "Pro",
       },
     ]);
   });
 
-  it("uses the matching live Pro Max price when showing annual savings", async () => {
+  it("names live Pro Max packages by tier", async () => {
     await configureRevenueCat("customer-2");
     const proMaxPackages = [
       storePackage({
@@ -209,8 +219,7 @@ describe("RevenueCat mobile adapter", () => {
     const plans = await loadMurmurPlans("max");
     const annual = plans.find((plan) => plan.id === "promax_annual");
     expect(annual?.tier).toBe("pro_max");
-    if (!annual) throw new Error("Pro Max annual plan was not loaded");
-    expect(yearlySaving(annual, plans)).toEqual({ monthsFree: 1, percent: 16 });
+    expect(annual?.title).toBe("Pro Max");
   });
 
   it("buys the chosen package and reports a store cancellation separately", async () => {
@@ -219,9 +228,9 @@ describe("RevenueCat mobile adapter", () => {
     store.purchasePackage.mockRejectedValueOnce({ userCancelled: true });
     store.purchasePackage.mockRejectedValueOnce(new Error("store down"));
 
-    await expect(purchaseMurmurPlan("pack_60", "launch")).resolves.toBe("purchased");
-    await expect(purchaseMurmurPlan("pack_60", "launch")).resolves.toBe("cancelled");
-    await expect(purchaseMurmurPlan("pack_60", "launch")).rejects.toThrow("store down");
+    await expect(purchaseMurmurPlan("trip_pass_60", "launch")).resolves.toBe("purchased");
+    await expect(purchaseMurmurPlan("trip_pass_60", "launch")).resolves.toBe("cancelled");
+    await expect(purchaseMurmurPlan("trip_pass_60", "launch")).rejects.toThrow("store down");
     await expect(purchaseMurmurPlan("missing", "launch")).rejects.toThrow(
       "That plan is no longer available from the store.",
     );
@@ -268,7 +277,7 @@ describe("RevenueCat mobile adapter", () => {
 
     await expect(loadMurmurPlans("lite")).resolves.toMatchObject([{ price: "₹699", priceAmount: 699 }]);
     await expect(loadMurmurPlans("lite_personal_offer"))
-      .resolves.toMatchObject([{ price: "₹549", priceAmount: 549 }]);
+      .resolves.toMatchObject([{ introPrice: { amount: 549, price: "₹549" }, price: "₹699", priceAmount: 699 }]);
     await purchaseMurmurPlan("$rc_monthly", "lite");
     await purchaseMurmurPlan("$rc_monthly", "lite_personal_offer");
     expect(store.purchaseSubscriptionOption).toHaveBeenNthCalledWith(1, base);

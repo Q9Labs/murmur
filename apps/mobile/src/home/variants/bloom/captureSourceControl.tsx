@@ -39,11 +39,11 @@ export function CaptureSourceControl({
           onPress={() => onChange("device_playback")}
         />
       </View>
-      <Text style={styles.captureSourceHint}>
-        {source === "device_playback"
-          ? "Play media in another app. Protected audio may stay silent. Floating captions show when allowed."
-          : "Translate speech heard by this phone's microphone."}
-      </Text>
+      {source === "device_playback" ? (
+        <Text style={styles.captureSourceHint}>
+          Play media in another app. Protected audio may stay silent. Floating captions show when allowed.
+        </Text>
+      ) : null}
     </View>
   );
 }

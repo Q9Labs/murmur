@@ -1,12 +1,15 @@
 import { useRouter } from "expo-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { View } from "react-native";
 
 import { type MurmurBillingContext, useMurmurBilling } from "../../lib/billing/context";
 import { type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
 import { type PlanListState, usePlanList } from "../plans/planList";
-import { ScreenScaffold } from "../screenScaffold";
+import { ScreenScaffold, StatusLine } from "../screenScaffold";
 import { type AuthDoneAction, EmailSignInView, emailSignInTitle, useEmailSignIn } from "./emailSignIn";
 import type { EmailSignInState } from "./emailSignInState";
+import { SocialSignInButtons } from "./socialButtons";
+import { useAuthStyles } from "./styles";
 
 export function findCheckoutPlan(plans: PlanListState, planId: string | undefined): MurmurPlan | null {
   if (planId === undefined || plans.status !== "ready") {
@@ -35,7 +38,7 @@ export function checkoutDoneAction(params: {
   leave: () => void;
   plan: MurmurPlan | null;
   planId: string | undefined;
-  purchasePlan: (planId: string) => Promise<void>;
+  purchasePlan: (planId: string) => Promise<boolean>;
 }): AuthDoneAction {
   const { planId } = params;
   if (planId === undefined) {
@@ -62,7 +65,10 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
     props.planId !== undefined && billing.initialized,
     billing.loadPlansSilently,
   );
+  const { styles } = useAuthStyles();
   const [heldPlan, setHeldPlan] = useState<MurmurPlan | null>(null);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const socialStarted = useRef(false);
   const foundPlan = findCheckoutPlan(plans, props.planId);
   if (foundPlan && !heldPlan) {
     setHeldPlan(foundPlan);
@@ -75,8 +81,30 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
     purchasePlan: billing.purchasePlan,
   });
 
+  const socialSignedIn = billing.customer?.isRegistered === true && state.step === "email";
+
+  // A social sign-in has no code step, so the checkout or exit runs once the account is saved.
+  useEffect(() => {
+    if (socialSignedIn && socialStarted.current) {
+      socialStarted.current = false;
+      doneAction.onPress();
+    }
+  }, [doneAction, socialSignedIn]);
+
   return (
     <ScreenScaffold title={emailSignInTitle(state)}>
+      {state.step === "email" ? (
+        <View style={styles.flow}>
+          <SocialSignInButtons
+            disabled={billing.busy}
+            onError={setSocialError}
+            onStart={() => {
+              socialStarted.current = true;
+            }}
+          />
+          <StatusLine error={socialError} notice={null} />
+        </View>
+      ) : null}
       <EmailSignInView billingBusy={billing.busy} doneAction={doneAction} handlers={handlers} state={state} />
     </ScreenScaffold>
   );

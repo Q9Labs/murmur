@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
-import type { MurmurPlan, PlanTerm } from "../../lib/billing/planCatalog";
-import { PlanPicker, type PlanPurchaseMode } from "./planPicker";
+import type { MurmurPlan } from "../../lib/billing/planCatalog";
 import { usePlanStyles } from "./styles";
 
 export type PlanListState =
@@ -40,12 +39,8 @@ export function usePlanList(
   return { plans, refresh };
 }
 
-export function PlanList(props: {
-  initialTerm?: PlanTerm;
-  mode: PlanPurchaseMode;
-  onRetry: () => void;
-  plans: PlanListState;
-}): ReactNode {
+// Shown instead of the picker while plans load, fail, or come back empty.
+export function PlanListStatus(props: { onRetry: () => void; plans: PlanListState }): ReactNode {
   const { styles } = usePlanStyles();
   if (props.plans.status === "loading") {
     return <Text accessibilityLiveRegion="polite" style={styles.status}>Loading plans…</Text>;
@@ -65,8 +60,5 @@ export function PlanList(props: {
       </View>
     );
   }
-  if (props.plans.plans.length === 0) {
-    return <Text style={styles.status}>No plans are available from the store right now.</Text>;
-  }
-  return <PlanPicker initialTerm={props.initialTerm} mode={props.mode} plans={props.plans.plans} />;
+  return <Text style={styles.status}>No plans are available from the store right now.</Text>;
 }

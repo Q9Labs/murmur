@@ -40,21 +40,50 @@ export function ScreenScaffold(props: {
   );
 }
 
-export function PrimaryAction(props: {
+export function PrimaryAction(props: ActionProps): ReactNode {
+  return <ActionButton {...props} tone="primary" />;
+}
+
+export function SecondaryAction(props: ActionProps): ReactNode {
+  return <ActionButton {...props} tone="secondary" />;
+}
+
+type ActionProps = {
   disabled?: boolean;
   label: string;
   onPress: () => void;
-}): ReactNode {
+};
+
+function ActionButton(props: ActionProps & { tone: "primary" | "secondary" }): ReactNode {
   const { styles } = useScreenStyles();
+  const primary = props.tone === "primary";
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: props.disabled === true }}
       disabled={props.disabled}
       onPress={props.onPress}
-      style={({ pressed }) => [styles.primaryButton, (pressed || props.disabled) && styles.pressed]}
+      style={({ pressed }) => [
+        primary ? styles.primaryButton : styles.secondaryButton,
+        (pressed || props.disabled) && styles.pressed,
+      ]}
     >
-      <Text style={styles.primaryButtonText}>{props.label}</Text>
+      <Text style={primary ? styles.primaryButtonText : styles.secondaryButtonText}>{props.label}</Text>
+    </Pressable>
+  );
+}
+
+// A low-emphasis text action, such as skipping an optional step.
+export function QuietAction(props: { label: string; onPress: () => void }): ReactNode {
+  const { styles } = useScreenStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={10}
+      onPress={props.onPress}
+      style={({ pressed }) => [styles.quietButton, pressed && styles.pressed]}
+    >
+      <Text style={styles.quietButtonText}>{props.label}</Text>
     </Pressable>
   );
 }

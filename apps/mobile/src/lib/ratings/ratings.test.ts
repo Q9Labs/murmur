@@ -20,7 +20,7 @@ vi.mock("../config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
 vi.mock("../auth/client", () => ({ authenticatedWorkerHeaders: vi.fn(async () => ({})) }));
 vi.mock("../installIdentity", () => ({ getOrCreateInstallId: vi.fn(async () => "install_12345678") }));
 
-import { recordCompletedSession, submitRating } from "./ratings";
+import { claimRatingSlot, recordCompletedSession, submitRating } from "./ratings";
 
 beforeEach(() => {
   storage.clear();
@@ -35,7 +35,7 @@ describe("ratings integration", () => {
       committed_caption_count: 1,
       duration_ms: 12_000,
       error: null,
-    })).toMatchObject({ askInsightsConsent: true, showRating: false, successfulSessionCount: 0 });
+    })).toMatchObject({ askInsightsConsent: true, ratingEligible: false, successfulSessionCount: 0 });
     expect(await recordCompletedSession({
       committed_caption_count: 1,
       duration_ms: 12_000,
@@ -47,14 +47,22 @@ describe("ratings integration", () => {
     const completion = { committed_caption_count: 1, duration_ms: 60_000, error: null };
     expect(await recordCompletedSession(completion)).toMatchObject({
       askInsightsConsent: true,
-      showRating: true,
+      ratingEligible: true,
       successfulSessionCount: 1,
     });
-    expect(await recordCompletedSession(completion)).toMatchObject({ showRating: true, successfulSessionCount: 2 });
+    expect(await recordCompletedSession(completion)).toMatchObject({ ratingEligible: true, successfulSessionCount: 2 });
     await submitRating({ answer: "travel", stars: 5 });
     expect(review.requestReview).not.toHaveBeenCalled();
-    expect(await recordCompletedSession(completion)).toMatchObject({ showRating: false, successfulSessionCount: 3 });
+    expect(await recordCompletedSession(completion)).toMatchObject({ ratingEligible: true, successfulSessionCount: 3 });
     expect(review.requestReview).toHaveBeenCalledOnce();
     expect(capture).toHaveBeenCalledWith({ event: "store_review_prompted", platform: "android" });
+  });
+
+  it("schedules the rating by the sessions where it was eligible, not every successful one", async () => {
+    const shown: boolean[] = [];
+    for (let slot = 1; slot <= 8; slot += 1) {
+      shown.push(await claimRatingSlot());
+    }
+    expect(shown).toEqual([true, true, false, false, true, false, false, true]);
   });
 });

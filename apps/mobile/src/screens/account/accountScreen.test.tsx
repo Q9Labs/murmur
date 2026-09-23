@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
-import { fixtureBilling } from "../__tests__/billingFixture";
+import { fixtureBilling, fixtureCustomer } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
@@ -18,7 +18,7 @@ vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => billingRef
 vi.mock("../settings/settingsControls", () => ({ useSettingsControls: () => accountLock }));
 vi.mock("../../lib/telemetry", () => telemetry);
 
-import { AccountScreen, formatMinutes, reportAccountViewed } from "./accountScreen";
+import { AccountScreen, hasUnsavedPurchase, packValidity, reportAccountViewed } from "./accountScreen";
 
 beforeEach(() => {
   resetRecorded();
@@ -76,8 +76,38 @@ describe("account screen", () => {
     });
   });
 
-  it("formats minutes and hours", () => {
-    expect(formatMinutes(0)).toBe("0 min");
-    expect(formatMinutes(120 * 60_000)).toBe("2 hr");
+  it("reminds a guest who bought something to save it, until they sign in", () => {
+    billingRef.current = fixtureBilling({ availableMs: 118 * 60_000, plan: "pro" });
+    renderToStaticMarkup(<AccountScreen />);
+
+    expect(findControl("Sign in")).toBeUndefined();
+    findControl("Save your purchase")?.onPress?.();
+    expect(router.push).toHaveBeenCalledWith("/save-purchase");
+    expect(hasUnsavedPurchase({ ...fixtureCustomer, creditMs: 60_000 })).toBe(true);
+    expect(hasUnsavedPurchase({ ...fixtureCustomer, isRegistered: true, plan: "pro" })).toBe(false);
+    expect(hasUnsavedPurchase(fixtureCustomer)).toBe(false);
+  });
+
+  it("shows how long pack minutes stay valid", () => {
+    billingRef.current = fixtureBilling({
+      availableMs: 60 * 60_000,
+      creditMs: 90 * 60_000,
+      creditPacks: [
+        { expiresAtMs: Date.UTC(2027, 0, 10, 12), grantId: "event", remainingMs: 30 * 60_000 },
+        { expiresAtMs: Date.UTC(2026, 11, 22, 12), grantId: "trip", remainingMs: 60 * 60_000 },
+        { expiresAtMs: Date.UTC(2026, 10, 1, 12), grantId: "spent", remainingMs: 0 },
+      ],
+      isRegistered: true,
+      plan: "pro_max",
+    });
+    const markup = renderToStaticMarkup(<AccountScreen />);
+    const lines = packValidity(billingRef.current.customer);
+
+    expect(markup).toContain("left on Pro Max");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^1 hr pack\. Valid until /);
+    expect(lines[1]).toMatch(/^30 min pack\. Valid until /);
+    expect(markup).toContain(lines[0]);
+    expect(packValidity(null)).toEqual([]);
   });
 });

@@ -23,7 +23,8 @@ export type MurmurBillingContext = {
   loadPlans: () => Promise<MurmurPlan[]>;
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
-  purchasePlan: (planId: string) => Promise<void>;
+  // Resolves true only when the store completed a purchase, so the UI can offer to save it.
+  purchasePlan: (planId: string) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<void>;
   restorePurchases: () => Promise<void>;
@@ -47,7 +48,7 @@ const unavailableBillingContext: MurmurBillingContext = {
   loadPlansSilently: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
-  purchasePlan: async () => undefined,
+  purchasePlan: async () => false,
   purchasesAvailable: false,
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
@@ -231,7 +232,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     return loadMurmurPlans(serverOfferingId);
   }, [serverOfferingId]);
 
-  const completeSignIn = useCallback(async (): Promise<void> => {
+  const completeSignIn = useCallback(async (method: AccountSaveMethod): Promise<void> => {
     const nextCustomer = await loadCustomer();
     if (nextCustomer.fulfillmentEnabled) {
       const { reconcileMurmurCustomer } = await import("./customerApi");
@@ -239,6 +240,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }
     captureBillingTelemetry("mobile_registration_completed");
+    captureAccountSaved(method);
     setError(null);
   }, [loadCustomer]);
 
@@ -274,23 +276,31 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice,
-    purchasePlan: (planId) => runStoreAction(async () => {
-      assertPaywallAvailable(customer);
-      const { purchaseMurmurPlan } = await import("./revenueCat");
-      captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
-      const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
-        (failure: unknown) => {
-          capturePaywallFailure("store_error");
-          throw failure;
-        },
-      );
-      if (outcome === "cancelled") {
-        capturePaywallCancellation();
-        setNotice("No purchase was made.");
-        return;
-      }
-      await completeStorePurchase();
-    }),
+    purchasePlan: async (planId) => {
+      let purchased = false;
+      await runStoreAction(async () => {
+        assertPaywallAvailable(customer);
+        const { purchaseMurmurPlan } = await import("./revenueCat");
+        captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
+        const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
+          (failure: unknown) => {
+            capturePaywallFailure("store_error");
+            throw failure;
+          },
+        );
+        if (outcome === "cancelled") {
+          capturePaywallCancellation();
+          setNotice("No purchase was made.");
+          return;
+        }
+        await completeStorePurchase();
+        if (config.personalOffer) {
+          captureOfferRedeemed(config.personalOffer.offeringId);
+        }
+        purchased = true;
+      });
+      return purchased;
+    },
     purchasesAvailable,
     refresh,
     restorePurchases: () => runStoreAction(async () => {
@@ -329,7 +339,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { signInWithApple } = await import("../auth/client");
         if (await signInWithApple()) {
-          await completeSignIn();
+          await completeSignIn("apple");
         }
       } finally {
         endBusy();
@@ -340,7 +350,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { signInWithGoogle } = await import("../auth/client");
         if (await signInWithGoogle()) {
-          await completeSignIn();
+          await completeSignIn("google");
         }
       } finally {
         endBusy();
@@ -368,7 +378,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { verifyEmailSignInCode } = await import("../auth/client");
         await verifyEmailSignInCode(email, otp);
-        await completeSignIn();
+        await completeSignIn("email");
       } finally {
         endBusy();
       }
@@ -448,6 +458,17 @@ function reportAppConfigFailure(failure: unknown): void {
 
 function errorMessage(failure: unknown): string {
   return failure instanceof Error ? failure.message : "Murmur billing is temporarily unavailable.";
+}
+
+type AccountSaveMethod = "apple" | "google" | "email";
+
+function captureAccountSaved(method: AccountSaveMethod): void {
+  void import("../telemetry").then((telemetry) => telemetry.captureMobileTelemetry({ event: "account_saved", method }));
+}
+
+function captureOfferRedeemed(offeringId: string): void {
+  void import("../telemetry").then((telemetry) =>
+    telemetry.captureMobileTelemetry({ event: "offer_redeemed", offering_id: offeringId }));
 }
 
 function captureBillingTelemetry(
