@@ -1,6 +1,6 @@
-# Murmur Support And Deletion
+# Murmur Support and Deletion
 
-Last updated: 2026-08-29
+Last updated: 2026-09-23
 
 This document defines Murmur's support and deletion surface. The production Worker hosts the public support page.
 
@@ -10,44 +10,29 @@ Current public support surface:
 
 - Public support URL: `https://murmur.q9labs.ai/support`.
 - Support email address: `q9labs.ai@gmail.com`.
-- Expected response window and escalation path for harmful, offensive, or safety-related translation reports still need an operational owner before public launch.
+- The response window and escalation path for harmful, offensive, or safety-related translation reports still need an operational owner before public launch.
 
-## Accounts And Deletion
+## Accounts and Deletion
 
-Murmur creates a random guest customer account when the app first starts. A user can add email recovery from Account & billing. Murmur has no cloud transcript history.
+Murmur creates a random guest customer account when the app first starts. Guests can purchase, restore, and reconcile purchases without an email or registered account. A user can optionally save a guest purchase to an Apple, Google, or email account; Murmur links the guest's purchase and remaining balance to that account. Murmur does not retain full transcript history by default.
 
-Delete Murmur account removes sign-in data and access to the remaining balance. It does not cancel an Apple or Google subscription, which must be cancelled through the store first. Murmur retains a pseudonymous financial and entitlement record only when needed for refunds, fraud prevention, reconciliation, and legal obligations.
+If a user consents to AI session insights, Murmur stores the derived insight, not the transcript, for up to 24 months from creation. Turning off AI session insights stops future processing but does not automatically delete existing insights. The user can ask support to delete an existing insight or related server-side record using an approximate session date and any available session or report receipt details.
 
-The app does store an anonymous install identifier on the device. The app includes:
+Use Delete Murmur account in Account & billing to remove sign-in data and access to the remaining balance. It does not cancel an Apple or Google subscription, which must be cancelled through the relevant store. Murmur may retain a pseudonymous financial and entitlement record when needed for refunds, fraud prevention, reconciliation, and legal obligations.
 
-- Reset Murmur Identity: replaces the anonymous install id.
-- Delete Local Data: clears the anonymous install id, analytics preference, interface preference, rating-prompt eligibility state, and local privacy acknowledgement.
+The app stores anonymous install and Free-allowance identifiers, interface preference, and rating-prompt eligibility state on the device. Use Reset Murmur Identity to replace the diagnostic install identifier without changing billing, or Delete Local Data to clear local Murmur data and the privacy acknowledgement. A hashed current-month Free claim can remain on the server through that month for abuse prevention.
 
-Anonymous Analytics can be turned off separately in Settings. This stops new PostHog product analytics events. Essential sanitized crash and error monitoring can continue.
+Anonymous Analytics can be turned off in Settings. This stops new product analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue. AI session insights use a separate consent control.
 
 ## Server-Side Deletion Requests
 
-Because Murmur may process rate-limit metadata, PostHog analytics, Sentry diagnostics, and translation report receipts, support provides a deletion path for server-side records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
-
-Support request intake should ask for:
-
-- Report receipt id, if the user is asking about a translation report.
-- Approximate date/time and language pair, if the user is asking about diagnostics.
-- Anonymous install/session metadata only if the app exposes a safe way to copy it.
+Murmur may process rate-limit metadata, analytics, session insights, diagnostics, and translation report receipts. Support can review deletion requests for records that can reasonably be tied to a user-supplied receipt or anonymous install/session metadata.
 
 Support must not ask users to send microphone recordings, full transcripts, government IDs, passwords, private keys, or app store credentials.
 
 ## Report Translation Triage
 
-Murmur's in-app report categories are:
-
-- Inaccurate.
-- Wrong language.
-- Harmful or offensive.
-- Speech issue.
-- Other.
-
-Production report triage is configured through `REPORT_ADMIN_TOKEN` and the Worker admin inbox. The inbox stores report metadata without raw source captions, translated captions, or user notes, and supports admin deletion by report receipt id. Before public launch, the operational workflow must still define who reviews reports, how harmful reports are escalated, how long reports are retained, and how report data is deleted.
+Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other. The operational workflow still needs an owner, an escalation path, report-retention timing, and a deletion procedure before public launch.
 
 ## Store Submission Requirements
 
@@ -56,15 +41,15 @@ Before App Store or Google Play submission, provide:
 - Public privacy policy URL.
 - Public terms URL.
 - Public support URL.
-- Guest-account, billing, Restore, and deletion steps in reviewer notes.
+- Guest-account, guest-purchase, billing, Restore, and deletion steps in reviewer notes.
 - In-app report translation path.
-- Data retention and deletion explanation for diagnostics and reports.
+- Data-retention and deletion explanation for session insights, diagnostics, and reports.
 
 ## Production Checklist
 
 - Host privacy policy, terms, and support/deletion pages on a stable domain.
-- Verify provider retention and training settings.
-- Confirm report-triage ownership, escalation, and retention.
-- Verify app privacy and Play Data Safety answers match the final implementation.
-- Confirm support can handle deletion requests tied to report receipts or anonymous install/session metadata.
+- Verify third-party provider retention and model-training settings.
+- Confirm report-triage ownership, escalation, retention, and deletion.
+- Verify App Store privacy and Google Play Data Safety answers against the final implementation.
+- Confirm support can handle deletion requests tied to session insights, report receipts, or anonymous install/session metadata.
 - Confirm account deletion, store cancellation, refunds, and Restore use the documented entitlement process.

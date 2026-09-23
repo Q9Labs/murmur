@@ -59,9 +59,10 @@ describe("legalPages", () => {
     expect(legalPages["/terms"].html).toContain("Murmur Terms of Use");
   });
 
-  it("keeps landing pages mode-neutral and on the OpenAI Realtime path", () => {
+  it("describes the AI processor by category on public pages", () => {
     const html = Object.values(legalPages).map((page) => page.html).join("\n");
 
-    expect(html).toContain("OpenAI Realtime");
+    expect(html).toContain("third-party AI service provider");
+    expect(html).not.toContain("OpenAI Realtime");
   });
 });
