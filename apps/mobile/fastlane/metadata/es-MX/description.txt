@@ -1,0 +1,30 @@
+Entiende lo que se dice, al momento.
+
+Murmur convierte el habla en subtítulos traducidos en vivo para que sigas un recorrido, una conferencia, una clase, una demostración o una ceremonia en otro idioma.
+
+Elige el idioma de origen y el de destino, y toca Listen. Murmur muestra los subtítulos traducidos a medida que reconoce la voz y puede reproducir la traducción cuando hay salida de audio disponible.
+
+Murmur admite inglés, árabe, español, francés, alemán, italiano, portugués de Brasil, japonés, chino simplificado, coreano, ruso, hindi y neerlandés. También muestra el árabe de derecha a izquierda.
+
+7 minutos gratis cada mes, sin registro
+
+Murmur crea automáticamente una cuenta de invitado con 7 minutos de traducción gratis al mes, sin necesidad de registrarte. Pro incluye 120 minutos al mes y Pro Max, 400; ambos tienen planes mensuales y anuales. Las sesiones de pago pueden durar hasta 60 minutos. Añade tiempo con Trip Pass (60 minutos) o Event Pass (300 minutos); los minutos de los pases vencen 3 meses después de comprarlos. Inicia sesión con Apple o Google para guardar tu cuenta y restaurar compras. También puedes eliminar tu cuenta desde la app.
+
+Sigue escuchando aunque Murmur quede en segundo plano o bloquees la pantalla. La interfaz rediseñada está disponible en 11 idiomas.
+
+Murmur no guarda el historial de transcripciones en la nube de forma predeterminada. El audio del micrófono solo se transmite durante una sesión en vivo; puedes detenerla o cancelarla cuando quieras.
+
+Diseñado para una traducción en vivo fácil de seguir
+
+• Subtítulos traducidos en vivo
+• Subtítulos para conversaciones breves y habla continua
+• Traducciones en orden a medida que se reconoce el habla
+• Voz traducida opcional
+• Controles de idioma de origen y destino
+• Reporta problemas de traducción desde la app
+
+Murmur solo necesita conexión a internet y acceso al micrófono.
+
+Murmur usa un servicio de IA de terceros para reconocer el habla en vivo, traducirla y reproducir la traducción en voz. Los resultados pueden tardar, estar incompletos o ser imprecisos. No dependas solo de Murmur en emergencias ni para decisiones médicas, legales, financieras, migratorias u otras de alto impacto; consulta a un intérprete humano cualificado.
+
+Términos de uso: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

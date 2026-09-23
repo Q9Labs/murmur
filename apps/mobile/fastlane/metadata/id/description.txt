@@ -1,0 +1,30 @@
+Pahami ucapan saat berlangsung.
+
+Murmur mengubah ucapan menjadi takarir terjemahan langsung, agar Anda dapat mengikuti tur, konferensi, kuliah, kelas, demo, atau khotbah dalam bahasa lain.
+
+Pilih bahasa sumber dan bahasa tujuan, lalu ketuk Listen. Murmur menampilkan takarir terjemahan seiring ucapan dikenali dan dapat memutar terjemahan dengan suara jika keluaran audio tersedia.
+
+Bahasa Indonesia belum didukung sebagai bahasa sumber atau tujuan. Murmur saat ini menerjemahkan antara bahasa Inggris, Arab, Spanyol, Prancis, Jerman, Italia, Portugis Brasil, Jepang, Mandarin Sederhana, Korea, Rusia, Hindi, dan Belanda. Teks Arab juga ditampilkan dari kanan ke kiri.
+
+7 menit gratis setiap bulan, tanpa daftar
+
+Murmur otomatis membuat akun tamu dan memberi 7 menit terjemahan gratis setiap bulan tanpa perlu mendaftar. Di wilayah ini, Pro mencakup 90 menit per bulan dan Pro Max 400; keduanya tersedia dalam paket bulanan dan tahunan. Sesi berbayar dapat berlangsung hingga 60 menit. Tambahkan waktu dengan Trip Pass (30 menit) atau Event Pass (300 menit); menit paket kedaluwarsa 3 bulan setelah pembelian. Masuk dengan Apple atau Google untuk menyimpan akun dan memulihkan pembelian. Akun dapat dihapus melalui aplikasi.
+
+Murmur tetap mendengarkan saat berjalan di latar belakang atau layar terkunci. Antarmuka aplikasi yang diperbarui tersedia dalam 11 bahasa.
+
+Secara default, Murmur tidak menyimpan riwayat transkrip di cloud. Audio mikrofon hanya dialirkan selama sesi langsung; Anda dapat menghentikan atau membatalkannya kapan saja.
+
+Terjemahan langsung yang mudah diikuti
+
+• Takarir terjemahan langsung
+• Takarir untuk percakapan singkat dan ucapan berkelanjutan
+• Terjemahan tampil berurutan saat ucapan dikenali
+• Suara terjemahan opsional
+• Pilihan bahasa sumber dan tujuan
+• Laporkan masalah terjemahan di aplikasi
+
+Murmur hanya memerlukan koneksi internet dan mikrofon.
+
+Murmur menggunakan layanan AI pihak ketiga untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam suara. Hasilnya dapat terlambat, tidak lengkap, atau tidak akurat. Jangan hanya mengandalkan Murmur untuk keadaan darurat atau keputusan medis, hukum, keuangan, imigrasi, maupun keputusan penting lainnya; gunakan juru bahasa manusia yang berkualifikasi.
+
+Ketentuan Penggunaan: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

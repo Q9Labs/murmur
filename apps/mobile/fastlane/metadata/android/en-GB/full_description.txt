@@ -6,9 +6,11 @@ Choose a source language and target language, then tap Listen. Murmur shows tran
 
 Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-START FREE, KEEP YOUR TIME
+7 FREE MINUTES EACH MONTH
 
-Murmur creates a durable guest account with 10 translation minutes each month, so no sign-up is needed. Murmur Pro includes 3 hours each month, with monthly and annual plans. Non-expiring credit packs add time when you need it. You can link an email for recovery, restore Google Play purchases, and delete your account in the app.
+Murmur creates a guest account automatically, with 7 free translation minutes each month and no sign-up required. Pro includes 120 minutes per month; Pro Max includes 400, with monthly and annual plans for both. Paid sessions can last up to 60 minutes. Add time with Trip Pass (60 minutes) or Event Pass (300 minutes); pack minutes expire 3 months after purchase. Sign in with Google to save your account and restore purchases, or delete your account in the app.
+
+Keep listening while Murmur is in the background or your screen is locked. The redesigned app interface is available in 11 languages.
 
 Murmur does not save cloud transcript history by default. Microphone audio streams only during a live session, and you can stop or cancel at any time.
 
@@ -25,4 +27,4 @@ Choose Microphone for nearby speech or Device Audio on supported Android phones 
 
 Murmur needs an internet connection. Android requires audio-recording access for both capture modes and screen-sharing approval for each Device Audio session; Murmur does not record the microphone in Device Audio mode.
 
-Murmur uses OpenAI Realtime for speech recognition, translation, and translated speech. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.
+Murmur uses a third-party AI service for live speech recognition, translation, and translated speech. Results may be delayed, incomplete, or inaccurate. Do not rely on Murmur alone for emergencies or medical, legal, financial, immigration, or other high-stakes decisions; use a qualified human interpreter.
