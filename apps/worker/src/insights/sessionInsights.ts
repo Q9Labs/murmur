@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { insightSettings, isInsightSetting, type InsightSetting } from "@murmur/protocol/insights";
 
 import type { Env } from "../env";
+import { customerSessionInsightDeletions } from "./deleteCustomerData";
 import { queuePostHogEvent, type TelemetryExecutionContext, type WorkerTelemetryEvent } from "../observability/posthog";
 
 type SessionInsight = {
@@ -60,10 +61,13 @@ export async function recordInsightsConsent(
     return;
   }
   if (params.customerId) {
-    await database.prepare(
-      "INSERT INTO customer_insights_consent (customer_id, consent, updated_at) VALUES (?, ?, ?) " +
-      "ON CONFLICT(customer_id) DO UPDATE SET consent = excluded.consent, updated_at = excluded.updated_at",
-    ).bind(params.customerId, Number(params.consent), new Date().toISOString()).run();
+    await database.batch([
+      database.prepare(
+        "INSERT INTO customer_insights_consent (customer_id, consent, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(customer_id) DO UPDATE SET consent = excluded.consent, updated_at = excluded.updated_at",
+      ).bind(params.customerId, Number(params.consent), new Date().toISOString()),
+      ...(params.consent ? [] : customerSessionInsightDeletions(database, params.customerId)),
+    ]);
   }
   if (!params.consent) return;
   await database.prepare("DELETE FROM insight_session_context WHERE created_at < ?")
@@ -141,15 +145,20 @@ export async function processSessionInsight(params: {
       if (consent?.consent !== 1) return;
     }
     const insight = await requestSessionInsight(key, params.configModel, params.translation.text);
-    await database.prepare(
+    // Consent is rechecked on insert, so a withdrawal during the model call still wins.
+    const stored = await database.prepare(
       "INSERT INTO session_insights " +
       "(app_session_id, customer_id, hashed_install_id, source_language, target_language, duration_ms, created_at, insight_json) " +
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(app_session_id) DO NOTHING",
+      "SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 WHERE ?9 IS NULL OR EXISTS " +
+      "(SELECT 1 FROM customer_insights_consent WHERE customer_id = ?9 AND consent = 1) " +
+      "ON CONFLICT(app_session_id) DO NOTHING",
     ).bind(
       params.session.appSessionId, params.session.customerId, params.session.hashedInstallId,
       params.session.sourceLanguage, params.session.targetLanguage,
       params.translation.durationMs, params.session.createdAt, JSON.stringify(insight),
+      params.session.customerId,
     ).run();
+    if (stored.meta.changes === 0) return;
     const payload = buildInsightTelemetryPayload(
       params.analyticsEnabled, insight, params.session, params.translation.durationMs,
     );
