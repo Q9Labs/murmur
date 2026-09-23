@@ -7,7 +7,7 @@ export function purchaseMode(
   onSignUp: (plan: MurmurPlan) => void,
 ): PlanPurchaseMode {
   const customer = billing.customer;
-  if (!customer?.isRegistered) {
+  if (!customer) {
     return { kind: "sign_up", onSignUp };
   }
   return {

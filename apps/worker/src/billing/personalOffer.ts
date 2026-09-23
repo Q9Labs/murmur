@@ -68,8 +68,9 @@ export async function redeemPersonalOffer(
   database: OfferDatabase,
   customerId: string,
   productId: string,
+  offerId: string | null = null,
 ): Promise<void> {
-  if (!isPersonalOfferProduct(productId)) {
+  if (!isPersonalOfferProduct(productId, offerId)) {
     return;
   }
   await database.prepare(

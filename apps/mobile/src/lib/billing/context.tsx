@@ -86,7 +86,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   const refresh = useCallback(async (): Promise<void> => {
     beginBusy();
     try {
-      await loadCustomer();
+      const { fetchMurmurAppConfig } = await import("./customerApi");
+      const [nextConfig] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
+      setConfig(nextConfig);
       setError(null);
     } catch (failure) {
       setError(errorMessage(failure));
@@ -120,7 +122,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     void (async () => {
       try {
         const nextCustomer = await loadCustomer();
-        if (active && nextCustomer.isRegistered && nextCustomer.fulfillmentEnabled) {
+        if (active && nextCustomer.fulfillmentEnabled) {
           const { reconcileMurmurCustomer } = await import("./customerApi");
           reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
           captureBillingTelemetry("mobile_reconciliation_succeeded", { resultCategory: "login" });
@@ -277,10 +279,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     purchasesAvailable,
     refresh,
     restorePurchases: () => runStoreAction(async () => {
-      if (!customer?.isRegistered) {
-        throw new Error("Add and verify an email before restoring purchases.");
-      }
-      if (!customer.fulfillmentEnabled) {
+      if (!customer?.fulfillmentEnabled) {
         throw new Error("Purchase restoration is temporarily unavailable.");
       }
       const { restoreMurmurPurchases } = await import("./revenueCat");
@@ -384,8 +383,8 @@ function delay(milliseconds: number): Promise<void> {
 }
 
 function assertPaywallAvailable(customer: MurmurCustomer | null): asserts customer is MurmurCustomer {
-  if (!customer?.isRegistered) {
-    throw new Error("Add and verify an email before making a purchase.");
+  if (!customer) {
+    throw new Error("Your Murmur account is still loading.");
   }
   if (!customer.purchasesEnabled) {
     throw new Error("New purchases are temporarily unavailable.");

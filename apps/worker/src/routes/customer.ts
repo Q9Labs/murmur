@@ -14,6 +14,12 @@ import { json } from "../http/response";
 import { hashInstallId } from "../privacy";
 import { defaultServerConfig, getServerConfig, sessionLimitSeconds } from "../serverConfig";
 
+type CreditPackRow = {
+  expires_at_ms: number;
+  grant_id: string;
+  remaining_ms: number;
+};
+
 export async function getCustomer(
   request: Request,
   env: Env,
@@ -58,6 +64,15 @@ export async function getCustomer(
       platform: request.headers.get("x-murmur-app-platform"),
     })
     : defaultServerConfig(env);
+  const creditPacks = env.BILLING_DB
+    ? (await env.BILLING_DB.prepare(
+      `SELECT grant_id, remaining_ms, expires_at_ms
+       FROM balance_grants
+       WHERE customer_id = ? AND grant_kind = 'credit_pack'
+         AND remaining_ms > 0 AND expires_at_ms > ?
+       ORDER BY expires_at_ms, grant_id`,
+    ).bind(session.user.id, nowMs).all<CreditPackRow>()).results
+    : [];
   const paid = plan !== "free";
 
   return json({
@@ -69,6 +84,7 @@ export async function getCustomer(
       negative_ms: ledger.result.balance.negativeMs,
     },
     customer_id: session.user.id,
+    credit_packs: creditPacks,
     entitlements: { pro: paid, pro_max: plan === "pro_max" },
     features: {
       phone_audio: paid || gift.remaining_ms > 0,

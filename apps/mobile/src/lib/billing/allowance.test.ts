@@ -13,7 +13,10 @@ const customer: MurmurCustomer = {
   availableMs: 12 * 60_000,
   creditMs: 0,
   customerId: "customer-1",
+  creditPacks: [],
   earliestExpiryAtMs: null,
+  entitlements: { pro: true, proMax: false },
+  features: { history: true, maxSessionSeconds: 3_600, phoneAudio: true },
   fulfillmentEnabled: true,
   isRegistered: true,
   negativeMs: 0,
@@ -23,8 +26,8 @@ const customer: MurmurCustomer = {
 };
 
 describe("allowance rules", () => {
-  it("matches the worker's five-minute free allowance", () => {
-    expect(freeAllowanceMinutes).toBe(5);
+  it("matches the worker's seven-minute free allowance", () => {
+    expect(freeAllowanceMinutes).toBe(7);
   });
 
   it("treats Pro, Pro Max and top-up credit as paid", () => {

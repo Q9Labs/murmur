@@ -8,10 +8,10 @@ afterEach(() => {
 });
 
 describe("server configuration", () => {
-  it("defaults to no source transcript and a five-minute free grant", () => {
+  it("defaults to no source transcript and a seven-minute free grant", () => {
     const config = defaultServerConfig({});
     expect(config.source_transcript).toBe(false);
-    expect(config.free_allowance_minutes).toBe(5);
+    expect(config.free_allowance_minutes).toBe(7);
     expect(config.max_session_seconds_free).toBe(300);
     expect(config.max_session_seconds_paid).toBe(3600);
     expect(sessionLimitSeconds(config, "free")).toBe(300);
