@@ -1,63 +1,38 @@
+import type { MessageKey } from "../i18n/catalogs/en";
 import { createTranslator, type Translate } from "../i18n/runtime";
 
 const fallbackTranslate = createTranslator("en");
 
-const exactLiveErrorCopy: Readonly<Record<string, string>> = {
-  allowance_exhausted:
-    "You’re out of translation time. Get more time or restore an existing purchase.",
-  app_version_unsupported: "This version of Murmur is out of date. Update to keep translating.",
-  client_upgrade_required: "This version of Murmur is out of date. Update to keep translating.",
-  device_playback_capture_revoked:
-    "Phone audio capture stopped. Tap Listen to approve a new session.",
-  device_playback_capture_stopped:
-    "Phone audio capture ended. Return to Murmur and tap Listen to start again.",
-  device_playback_permission_denied:
-    "Phone audio needs audio recording and screen-sharing access. Murmur does not use the microphone in this mode.",
-  device_playback_start_failed:
-    "Could not start phone audio capture. The playing app may block capture.",
-  microphone_permission_denied: "Microphone access is required to translate speech.",
-  microphone_start_failed: "Could not start the microphone. Please try again.",
-  realtime_allowance_exhausted:
-    "You’re out of translation time. Get more time or restore an existing purchase.",
-  realtime_provider_authentication_failed:
-    "Murmur’s translation provider needs attention. Please contact support.",
-  realtime_provider_quota_exhausted:
-    "Murmur’s translation capacity is temporarily exhausted. Please try again later.",
-  realtime_provider_rate_limited:
-    "Translation is busy right now. Wait a moment, then try again.",
-  realtime_session_silence_timeout:
-    "Translation stopped after two minutes without speech. Tap Listen to start again.",
-  session_backgrounded:
-    "Translation stopped when Murmur left the foreground. Return and tap Listen to start again.",
-  session_silence_timeout:
-    "Translation stopped after two minutes without speech. Tap Listen to start again.",
+const exactLiveErrorKeys: Readonly<Partial<Record<string, MessageKey>>> = {
+  allowance_exhausted: "liveError.outOfTime",
+  app_version_unsupported: "liveError.updateRequired",
+  client_upgrade_required: "liveError.updateRequired",
+  device_playback_capture_revoked: "liveError.phoneAudioRevoked",
+  device_playback_capture_stopped: "liveError.phoneAudioEnded",
+  device_playback_permission_denied: "liveError.phoneAudioAccess",
+  device_playback_start_failed: "liveError.phoneAudioStartFailed",
+  microphone_permission_denied: "error.microphonePermission",
+  microphone_start_failed: "error.microphoneStart",
+  realtime_allowance_exhausted: "liveError.outOfTime",
+  realtime_provider_authentication_failed: "liveError.providerAttention",
+  realtime_provider_quota_exhausted: "liveError.capacity",
+  realtime_provider_rate_limited: "liveError.busy",
+  realtime_session_silence_timeout: "liveError.silence",
+  session_backgrounded: "liveError.backgrounded",
+  session_silence_timeout: "liveError.silence",
+  worker_session_http_426: "liveError.updateRequired",
 };
 
 export function formatLiveError(error: string, translate: Translate = fallbackTranslate): string {
-  const exactCopy = exactLiveErrorCopy[error];
-  if (exactCopy) {
-    return exactCopy;
+  const exactKey = exactLiveErrorKeys[error];
+  if (exactKey) {
+    return translate(exactKey);
   }
   if (error.startsWith("provider_unconfigured")) {
     return translate("error.providerUnconfigured");
   }
   if (error.startsWith("provider_unavailable")) {
     return translate("error.providerUnavailable");
-  }
-  if (error === "allowance_exhausted" || error === "realtime_allowance_exhausted") {
-    return "You’re out of translation time. Get more time or restore an existing purchase.";
-  }
-  if (error === "realtime_provider_quota_exhausted") {
-    return "Murmur’s translation capacity is temporarily exhausted. Please try again later.";
-  }
-  if (error === "realtime_provider_rate_limited") {
-    return "Translation is busy right now. Wait a moment, then try again.";
-  }
-  if (error === "realtime_provider_authentication_failed") {
-    return "Murmur’s translation provider needs attention. Please contact support.";
-  }
-  if (error === "worker_session_http_426") {
-    return exactLiveErrorCopy.client_upgrade_required;
   }
   if (error === "worker_session_network_error" || error.startsWith("worker_session_http_")) {
     return translate("error.workerUnavailable");
@@ -66,7 +41,7 @@ export function formatLiveError(error: string, translate: Translate = fallbackTr
     return translate("error.transport", { error });
   }
   if (error.startsWith("realtime_")) {
-    return "Live translation is unavailable right now. Please try again.";
+    return translate("liveError.unavailable");
   }
   return translate("error.unavailable", { error });
 }

@@ -27,6 +27,7 @@ import {
 } from "./previewFixtures";
 import { type ScreenServices, ScreenServicesFixture } from "./screenServices";
 import { SettingsControlsFixture } from "./settings/settingsControls";
+import { LanguageScreen } from "./settings/languageScreen";
 import { SettingsScreen } from "./settings/settingsScreen";
 
 export type ScreenPreview =
@@ -36,6 +37,7 @@ export type ScreenPreview =
   | "account-pro-max"
   | "account-signed-in"
   | "account-unsaved"
+  | "app-language"
   | "history"
   | "history-detail"
   | "history-empty"
@@ -94,6 +96,7 @@ export const screenPreviews: Readonly<Record<ScreenPreview, () => ReactNode>> = 
   "account-pro-max": () => <WithFixtures billing={previewProMaxBilling}><AccountScreen /></WithFixtures>,
   "account-signed-in": () => <WithFixtures billing={previewSignedInBilling}><AccountScreen /></WithFixtures>,
   "account-unsaved": () => <WithFixtures billing={previewUnsavedBilling}><AccountScreen /></WithFixtures>,
+  "app-language": () => <LanguageScreen />,
   "auth-code": () => <AuthPreview screen="auth-code" />,
   "auth-code-error": () => <AuthPreview screen="auth-code-error" />,
   "auth-code-expired": () => <AuthPreview screen="auth-code-expired" />,

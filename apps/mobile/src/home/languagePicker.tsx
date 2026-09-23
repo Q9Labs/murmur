@@ -127,7 +127,7 @@ function LanguagePickerModal({
         <AutoDetectOption onSelect={onSelect} selected={selected} visible={showAutoDetect} />
         {filteredLanguages.length === 0 && !showAutoDetect ? (
           <Text accessibilityRole="text" style={styles.languageEmpty}>
-            No languages found. Try a different search.
+            {t("languagePicker.noResults")}
           </Text>
         ) : (
           filteredLanguages.map((language) => {
@@ -152,7 +152,11 @@ function LanguagePickerModal({
                     {language.display_name}
                   </Text>
                   <Text
-                    style={[styles.languageOptionNative, uiTextDirectionStyle(language.rtl ? "rtl" : "ltr")]}
+                    style={[
+                      styles.languageOptionNative,
+                      uiTextDirectionStyle(direction),
+                      { writingDirection: language.rtl ? "rtl" : "ltr" },
+                    ]}
                   >
                     {language.native_name}
                   </Text>

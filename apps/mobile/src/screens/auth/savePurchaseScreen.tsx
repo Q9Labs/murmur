@@ -3,6 +3,7 @@ import { Check } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
+import { useUiLocale } from "../../i18n/runtime";
 import { useMurmurBilling } from "../../lib/billing/context";
 import { PrimaryAction, QuietAction, ScreenScaffold, StatusLine } from "../screenScaffold";
 import { useScreenStyles } from "../styles";
@@ -12,6 +13,7 @@ import { useAuthStyles } from "./styles";
 export function SavePurchaseScreen(): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
+  const { t } = useUiLocale();
   const { colors, styles } = useAuthStyles();
   const screen = useScreenStyles().styles;
   const [error, setError] = useState<string | null>(null);
@@ -19,12 +21,12 @@ export function SavePurchaseScreen(): ReactNode {
 
   if (billing.customer?.isRegistered) {
     return (
-      <ScreenScaffold footer={<PrimaryAction label="Done" onPress={leave} />} title="Purchase saved">
+      <ScreenScaffold footer={<PrimaryAction label={t("auth.done")} onPress={leave} />} title={t("savePurchase.savedTitle")}>
         <View accessibilityElementsHidden importantForAccessibility="no" style={styles.doneBadge}>
           <Check color={colors.teal} size={30} strokeWidth={2.5} />
         </View>
         <Text accessibilityLiveRegion="polite" style={[styles.body, styles.centered]}>
-          Sign in on any phone to get it back.
+          {t("savePurchase.savedBody")}
         </Text>
       </ScreenScaffold>
     );
@@ -32,13 +34,13 @@ export function SavePurchaseScreen(): ReactNode {
 
   return (
     <ScreenScaffold
-      footer={<QuietAction label="Not now" onPress={leave} />}
-      title="Save your purchase"
+      footer={<QuietAction label={t("savePurchase.notNow")} onPress={leave} />}
+      title={t("savePurchase.title")}
     >
-      <Text style={screen.body}>Sign in so your plan stays yours on a new phone.</Text>
+      <Text style={screen.body}>{t("savePurchase.body")}</Text>
       <View style={styles.flow}>
         <SocialSignInButtons disabled={billing.busy} onError={setError} />
-        <EmailSignInButton disabled={billing.busy} label="Continue with email" onPress={() => router.replace("/sign-in")} />
+        <EmailSignInButton disabled={billing.busy} label={t("auth.continueEmail")} onPress={() => router.replace("/sign-in")} />
       </View>
       <StatusLine error={error} notice={null} />
     </ScreenScaffold>

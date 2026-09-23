@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
 import { useScreenStyles } from "./styles";
 
 export function ScreenScaffold(props: {
@@ -13,18 +14,21 @@ export function ScreenScaffold(props: {
 }): ReactNode {
   const router = useRouter();
   const { colors, styles } = useScreenStyles();
+  const { direction, t } = useUiLocale();
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
+    <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="Back"
+          accessibilityLabel={t("common.back")}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         >
-          <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
+          <View style={uiMirrorStyle(direction)}>
+            <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
+          </View>
         </Pressable>
         <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>
       </View>

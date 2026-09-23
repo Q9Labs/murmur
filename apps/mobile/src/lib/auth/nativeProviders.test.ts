@@ -69,6 +69,6 @@ describe("native provider identity", () => {
 
   it("rejects a provider response without an ID token", async () => {
     google.signIn.mockResolvedValue({ type: "success", data: { idToken: null } });
-    await expect(getGoogleIdentity()).rejects.toThrow("Google did not return a sign-in token");
+    await expect(getGoogleIdentity()).rejects.toThrow("Google sign-in didn't finish");
   });
 });

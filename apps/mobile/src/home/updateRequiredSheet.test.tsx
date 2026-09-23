@@ -59,11 +59,11 @@ beforeEach(() => {
 describe("update-required sheet", () => {
   it("links each platform to its own store listing", () => {
     expect(storeListing("ios", config)).toEqual({
-      label: "Update in the App Store",
+      label: "update.appStore",
       url: "https://apps.apple.com/app/id6756962206",
     });
     expect(storeListing("android", config)).toEqual({
-      label: "Update on Google Play",
+      label: "update.googlePlay",
       url: "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
     });
     expect(storeListing("web", config)).toBeNull();

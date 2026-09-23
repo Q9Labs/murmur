@@ -344,6 +344,7 @@ function DiagnosticSpanRow({
   span: TranslationSpan;
   targetLanguage: LanguageDefinition;
 }): ReactNode {
+  const { direction } = useUiLocale();
   return (
     <View style={styles.spanRow}>
       <Text style={[
@@ -351,10 +352,17 @@ function DiagnosticSpanRow({
         sourceDirection === "auto"
           ? styles.autoText
           : sourceDirection === "rtl" ? styles.rtlText : styles.ltrText,
+        sourceDirection !== "auto" && uiTextDirectionStyle(sourceDirection, direction),
       ]}>
         {span.source_caption}
       </Text>
-      <Text style={[styles.spanTranslation, targetLanguage.rtl ? styles.rtlText : styles.ltrText]}>
+      <Text
+        style={[
+          styles.spanTranslation,
+          targetLanguage.rtl ? styles.rtlText : styles.ltrText,
+          uiTextDirectionStyle(targetLanguage.rtl ? "rtl" : "ltr", direction),
+        ]}
+      >
         {getDiagnosticSpanTranslationText(span)}
       </Text>
       <TranslationReportActions live={live} span={span} />
@@ -375,7 +383,7 @@ function Metric({ direction, label, value, valueDirection }: {
   return (
     <View style={styles.metric}>
       <Text style={[styles.metricLabel, uiTextDirectionStyle(direction)]}>{label}</Text>
-      <Text style={[styles.metricValue, uiTextDirectionStyle(valueDirection)]} numberOfLines={1}>
+      <Text style={[styles.metricValue, uiTextDirectionStyle(valueDirection, direction)]} numberOfLines={1}>
         {value}
       </Text>
     </View>

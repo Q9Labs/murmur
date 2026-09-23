@@ -87,6 +87,7 @@ vi.mock("./viewModel", () => ({
     latestProviderRoute: null,
     sourceLanguageDisplayName: "English",
     targetLanguage: { display_name: "Arabic" },
+    targetLanguageDisplayName: "Arabic",
   }),
 }));
 

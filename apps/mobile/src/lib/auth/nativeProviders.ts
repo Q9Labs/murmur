@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 
+import { LocalizedError } from "../../i18n/localizedError";
 import { getGoogleOAuthClientIds } from "../config";
 
 export type NativeAppleIdentity = {
@@ -12,11 +13,11 @@ export type NativeAppleIdentity = {
 
 export async function getAppleIdentity(): Promise<NativeAppleIdentity | null> {
   if (Platform.OS !== "ios") {
-    throw new Error("Apple sign-in is only available on iOS.");
+    throw new LocalizedError("auth.appleUnavailable");
   }
   const AppleAuthentication = await import("expo-apple-authentication");
   if (!await AppleAuthentication.isAvailableAsync()) {
-    throw new Error("Apple sign-in is unavailable on this device.");
+    throw new LocalizedError("auth.appleUnavailable");
   }
   const Crypto = await import("expo-crypto");
   const nonce = Crypto.randomUUID();
@@ -29,7 +30,7 @@ export async function getAppleIdentity(): Promise<NativeAppleIdentity | null> {
       ],
     });
     if (!credential.identityToken) {
-      throw new Error("Apple did not return a sign-in token.");
+      throw new LocalizedError("auth.appleFailed");
     }
     return {
       token: credential.identityToken,
@@ -54,7 +55,7 @@ export async function getAppleIdentity(): Promise<NativeAppleIdentity | null> {
 export async function getGoogleIdentity(): Promise<string | null> {
   const { web: webClientId, ios: iosClientId } = getGoogleOAuthClientIds();
   if (!webClientId || (Platform.OS === "ios" && !iosClientId)) {
-    throw new Error("Google sign-in is not configured for this build.");
+    throw new LocalizedError("auth.googleUnavailable");
   }
   const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
   GoogleSignin.configure({ webClientId, iosClientId });
@@ -66,7 +67,7 @@ export async function getGoogleIdentity(): Promise<string | null> {
     return null;
   }
   if (!result.data.idToken) {
-    throw new Error("Google did not return a sign-in token.");
+    throw new LocalizedError("auth.googleFailed");
   }
   return result.data.idToken;
 }

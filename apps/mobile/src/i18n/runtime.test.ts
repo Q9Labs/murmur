@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createTranslator,
@@ -39,6 +39,18 @@ describe("UI locale runtime", () => {
     expect(uiMirrorStyle("rtl")).toEqual({ transform: [{ scaleX: -1 }] });
     expect(uiMirrorStyle("ltr")).toBeUndefined();
     expect(() => uiTextDirectionStyle("up" as never)).toThrow("Unsupported UI direction");
+  });
+
+  it("keeps text alignment physical on the web and relative to the layout on native", () => {
+    expect(uiTextDirectionStyle("ltr", "rtl")).toEqual({ textAlign: "left", writingDirection: "ltr" });
+    vi.stubEnv("EXPO_OS", "ios");
+    try {
+      expect(uiTextDirectionStyle("ar")).toEqual({ textAlign: "left", writingDirection: "rtl" });
+      expect(uiTextDirectionStyle("ltr", "rtl")).toEqual({ textAlign: "right", writingDirection: "ltr" });
+      expect(uiTextDirectionStyle("rtl", "ltr")).toEqual({ textAlign: "right", writingDirection: "rtl" });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("formats counts without grouping and uses Eastern Arabic-Indic digits", () => {

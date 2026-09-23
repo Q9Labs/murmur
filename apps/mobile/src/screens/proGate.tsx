@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Text } from "react-native";
 
+import { useUiLocale } from "../i18n/runtime";
 import { PrimaryAction, ScreenScaffold } from "./screenScaffold";
 import { useScreenStyles } from "./styles";
 
@@ -9,11 +10,12 @@ import { useScreenStyles } from "./styles";
 export function ProGate(props: { body: string; title: string }): ReactNode {
   const router = useRouter();
   const { styles } = useScreenStyles();
+  const { t } = useUiLocale();
   return (
     <ScreenScaffold
       footer={(
         <PrimaryAction
-          label="See Pro plans"
+          label={t("proGate.seePlans")}
           onPress={() => router.push({ params: { term: "monthly" }, pathname: "/plans" })}
         />
       )}

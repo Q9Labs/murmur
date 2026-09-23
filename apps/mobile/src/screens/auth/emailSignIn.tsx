@@ -1,18 +1,21 @@
 import { Check } from "lucide-react-native";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { failureCopy, LocalizedError } from "../../i18n/localizedError";
+import { type Translate, useUiLocale } from "../../i18n/runtime";
 import type { MurmurBillingContext } from "../../lib/billing/context";
 import {
   codeStep,
   type EmailSignInState,
-  failureMessage,
   initialEmailSignIn,
   isCompleteCode,
   isPlausibleEmail,
   normalizeEmail,
   sanitizeCode,
+  signInFailure,
 } from "./emailSignInState";
 import { type AuthStyles, useAuthStyles } from "./styles";
 
@@ -31,11 +34,11 @@ export type EmailSignInHandlers = {
   onVerify: () => void;
 };
 
-export function emailSignInTitle(state: EmailSignInState): string {
+export function emailSignInTitle(state: EmailSignInState, t: Translate): string {
   if (state.step === "done") {
-    return "You're signed in";
+    return t("auth.titleDone");
   }
-  return state.step === "code" ? "Enter the code" : "Sign in";
+  return t(state.step === "code" ? "auth.titleCode" : "auth.titleSignIn");
 }
 
 export function useEmailSignIn(
@@ -50,9 +53,9 @@ export function useEmailSignIn(
       : { email, error: null, pending: true, step: "email" });
     try {
       await billing.sendSignInCode(email);
-      setState(codeStep(email, resend ? "We sent a new code." : null));
+      setState(codeStep(email, resend ? "auth.codeResent" : null));
     } catch (failure) {
-      const error = failureMessage(failure, "Murmur could not send the code. Try again.");
+      const error = signInFailure(failure, "auth.sendFailed");
       setState(resend
         ? { ...codeStep(email), error }
         : { email, error, pending: false, step: "email" });
@@ -65,7 +68,7 @@ export function useEmailSignIn(
       await billing.verifySignInCode(email, code);
       setState({ email, step: "done" });
     } catch (failure) {
-      setState({ ...codeStep(email), error: failureMessage(failure, "That code didn't work. Try again.") });
+      setState({ ...codeStep(email), error: signInFailure(failure, "auth.codeFailed") });
     }
   }
 
@@ -87,7 +90,7 @@ export function useEmailSignIn(
         return;
       }
       if (!isPlausibleEmail(state.email)) {
-        setState({ email: state.email, error: "Enter a valid email address.", pending: false, step: "email" });
+        setState({ email: state.email, error: new LocalizedError("auth.invalidEmail"), pending: false, step: "email" });
         return;
       }
       void sendCode(normalizeEmail(state.email), false);
@@ -97,7 +100,7 @@ export function useEmailSignIn(
         return;
       }
       if (!isCompleteCode(state.code)) {
-        setState({ ...state, error: "Enter the 6-digit code from the email." });
+        setState({ ...state, error: new LocalizedError("auth.enterCode") });
         return;
       }
       void verify(state.email, state.code);
@@ -131,12 +134,13 @@ function EmailEntry(props: {
   styles: AuthStyles;
 }): ReactNode {
   const { colors } = useAuthStyles();
+  const ui = useUiLocale();
   const { state, styles } = props;
   const locked = state.pending || props.billingBusy;
   return (
     <View style={styles.flow}>
       <TextInput
-        accessibilityLabel="Email address"
+        accessibilityLabel={ui.t("auth.emailLabel")}
         autoCapitalize="none"
         autoComplete="email"
         autoCorrect={false}
@@ -152,11 +156,9 @@ function EmailEntry(props: {
         textContentType="emailAddress"
         value={state.email}
       />
-      {state.error ? (
-        <Text accessibilityLiveRegion="assertive" style={styles.error}>{state.error}</Text>
-      ) : null}
+      <ErrorLine error={state.error} fallback="auth.sendFailed" styles={styles} />
       <PrimaryButton
-        label={state.pending ? "Sending…" : "Email me a code"}
+        label={ui.t(state.pending ? "auth.sending" : "auth.emailMeCode")}
         onPress={props.handlers.onSendCode}
         pending={locked}
         styles={styles}
@@ -172,15 +174,14 @@ function CodeEntry(props: {
   styles: AuthStyles;
 }): ReactNode {
   const { colors } = useAuthStyles();
+  const { t } = useUiLocale();
   const { state, styles } = props;
   const pending = state.pending !== null || props.billingBusy;
   return (
     <View style={styles.flow}>
-      <Text style={styles.body}>
-        Sent to <Text style={styles.emphasis}>{state.email}</Text>
-      </Text>
+      <EmphasisText emphasis={state.email} style={styles.body} styles={styles} text={t("auth.sentTo", { email: state.email })} />
       <TextInput
-        accessibilityLabel="Six-digit sign-in code"
+        accessibilityLabel={t("auth.codeLabel")}
         autoComplete="one-time-code"
         autoFocus
         editable={!pending}
@@ -194,44 +195,81 @@ function CodeEntry(props: {
         textContentType="oneTimeCode"
         value={state.code}
       />
-      {state.error ? (
-        <Text accessibilityLiveRegion="assertive" style={styles.error}>{state.error}</Text>
-      ) : null}
+      <ErrorLine error={state.error} fallback="auth.codeFailed" styles={styles} />
       {state.notice ? (
-        <Text accessibilityLiveRegion="polite" style={styles.notice}>{state.notice}</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.notice}>{t(state.notice)}</Text>
       ) : null}
       <PrimaryButton
-        label={codeButtonLabel(state.pending)}
+        label={t(codeButtonLabel(state.pending))}
         onPress={props.handlers.onVerify}
         pending={pending}
         styles={styles}
       />
       <View style={styles.linkRow}>
-        <TextLink disabled={pending} label="Send a new code" onPress={props.handlers.onResend} styles={styles} />
-        <TextLink disabled={pending} label="Change email" onPress={props.handlers.onChangeEmail} styles={styles} />
+        <TextLink disabled={pending} label={t("auth.resend")} onPress={props.handlers.onResend} styles={styles} />
+        <TextLink disabled={pending} label={t("auth.changeEmail")} onPress={props.handlers.onChangeEmail} styles={styles} />
       </View>
     </View>
   );
 }
 
-function codeButtonLabel(pending: "resend" | "verify" | null): string {
+function codeButtonLabel(pending: "resend" | "verify" | null): MessageKey {
   if (pending === "verify") {
-    return "Signing in…";
+    return "auth.signingIn";
   }
-  return pending === "resend" ? "Sending…" : "Sign in";
+  return pending === "resend" ? "auth.sending" : "auth.signIn";
+}
+
+function ErrorLine(props: { error: Error | null; fallback: MessageKey; styles: AuthStyles }): ReactNode {
+  const ui = useUiLocale();
+  if (!props.error) {
+    return null;
+  }
+  return (
+    <Text accessibilityLiveRegion="assertive" style={props.styles.error}>
+      {failureCopy(props.error, ui, props.fallback)}
+    </Text>
+  );
+}
+
+// Keeps the email visually emphasised wherever the translation places it.
+function EmphasisText(props: {
+  emphasis: string;
+  live?: boolean;
+  style: StyleProp<TextStyle>;
+  styles: AuthStyles;
+  text: string;
+}): ReactNode {
+  const at = props.text.indexOf(props.emphasis);
+  const liveRegion = props.live ? "polite" : undefined;
+  if (at < 0) {
+    return <Text accessibilityLiveRegion={liveRegion} style={props.style}>{props.text}</Text>;
+  }
+  return (
+    <Text accessibilityLiveRegion={liveRegion} style={props.style}>
+      {props.text.slice(0, at)}
+      <Text style={props.styles.emphasis}>{props.emphasis}</Text>
+      {props.text.slice(at + props.emphasis.length)}
+    </Text>
+  );
 }
 
 function SignedIn(props: { doneAction: AuthDoneAction; email: string; styles: AuthStyles }): ReactNode {
   const { colors } = useAuthStyles();
+  const { t } = useUiLocale();
   const { styles } = props;
   return (
     <View style={styles.flow}>
       <View accessibilityElementsHidden importantForAccessibility="no" style={styles.doneBadge}>
         <Check color={colors.teal} size={30} strokeWidth={2.5} />
       </View>
-      <Text accessibilityLiveRegion="polite" style={[styles.body, styles.centered]}>
-        Signed in as <Text style={styles.emphasis}>{props.email}</Text>
-      </Text>
+      <EmphasisText
+        emphasis={props.email}
+        live
+        style={[styles.body, styles.centered]}
+        styles={styles}
+        text={t("auth.signedInAs", { email: props.email })}
+      />
       <PrimaryButton
         label={props.doneAction.label}
         onPress={props.doneAction.onPress}

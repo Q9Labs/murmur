@@ -26,6 +26,7 @@ vi.mock("./history/historyScreen", () => ({ HistoryScreen: screen("history") }))
 vi.mock("./insights/insightsConsentScreen", () => ({ InsightsConsentScreen: screen("insights-consent") }));
 vi.mock("./phoneAudio/phoneAudioScreen", () => ({ PhoneAudioScreen: screen("phone-audio") }));
 vi.mock("./plans/plansScreen", () => ({ PlansScreen: screen("plans") }));
+vi.mock("./settings/languageScreen", () => ({ LanguageScreen: screen("app-language") }));
 vi.mock("./settings/settingsScreen", () => ({ SettingsScreen: screen("settings") }));
 vi.mock("./settings/settingsControls", () => ({
   SettingsControlsFixture: ({ children }: { children: ReactNode }) => children,

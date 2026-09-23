@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { LocalizedError } from "../../i18n/localizedError";
+
 import {
   codeStep,
-  failureMessage,
   isCompleteCode,
   isPlausibleEmail,
   normalizeEmail,
   sanitizeCode,
+  signInFailure,
 } from "./emailSignInState";
 
 describe("email sign-in state", () => {
@@ -24,18 +26,21 @@ describe("email sign-in state", () => {
   });
 
   it("starts the code step clean, with an optional notice", () => {
-    expect(codeStep("a@b.co", "New code sent.")).toEqual({
+    expect(codeStep("a@b.co", "auth.codeResent")).toEqual({
       code: "",
       email: "a@b.co",
       error: null,
-      notice: "New code sent.",
+      notice: "auth.codeResent",
       pending: null,
       step: "code",
     });
   });
 
-  it("reads a failure's message or falls back", () => {
-    expect(failureMessage(new Error("That code has expired."), "fallback")).toBe("That code has expired.");
-    expect(failureMessage("boom", "fallback")).toBe("fallback");
+  it("keeps a real failure or falls back to a catalog message", () => {
+    const expired = new Error("That code has expired.");
+    expect(signInFailure(expired, "auth.codeFailed")).toBe(expired);
+    const fallback = signInFailure("boom", "auth.codeFailed");
+    expect(fallback).toBeInstanceOf(LocalizedError);
+    expect(fallback.message).toBe("That code didn't work. Try again.");
   });
 });

@@ -1,4 +1,10 @@
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { formatUiNumber, type UiText } from "../../i18n/runtime";
+
 export type PlanTerm = "monthly" | "yearly" | "pack";
+
+// The store billing period of a subscription, rendered through the catalog.
+export type PlanPeriod = "week" | "month" | "quarter" | "halfYear" | "year";
 
 export type PlanTier = "pro" | "pro_max";
 
@@ -14,7 +20,7 @@ export type MurmurPlan = {
   introPrice: PlanIntroPrice | null;
   // Minutes the plan grants (a month for subscriptions), from the shared billing catalog.
   minutes: number | null;
-  periodLabel: string | null;
+  period: PlanPeriod | null;
   price: string;
   priceAmount: number;
   pricePerMonth: string | null;
@@ -24,22 +30,35 @@ export type MurmurPlan = {
 };
 
 export type PlanTab = {
-  label: string;
   plans: MurmurPlan[];
   term: PlanTerm;
 };
 
-const tabOrder: ReadonlyArray<{ label: string; term: PlanTerm }> = [
-  { label: "Monthly", term: "monthly" },
-  { label: "Yearly", term: "yearly" },
-  { label: "Credit packs", term: "pack" },
-];
+const tabOrder: readonly PlanTerm[] = ["monthly", "yearly", "pack"];
 
-const packValidityLabel = "Valid 3 months";
+const termLabelKeys: { readonly [Term in PlanTerm]: MessageKey } = {
+  monthly: "plans.tabMonthly",
+  yearly: "plans.tabYearly",
+  pack: "plans.tabPacks",
+};
+
+type PeriodCopy = { readonly first: MessageKey; readonly per: MessageKey; readonly renewal: MessageKey };
+
+const periodKeys: { readonly [Period in PlanPeriod]: PeriodCopy } = {
+  week: { first: "plans.firstWeek", per: "plans.perWeek", renewal: "plans.renewsWeek" },
+  month: { first: "plans.firstMonth", per: "plans.perMonth", renewal: "plans.renewsMonth" },
+  quarter: { first: "plans.firstQuarter", per: "plans.perQuarter", renewal: "plans.renewsQuarter" },
+  halfYear: { first: "plans.firstHalfYear", per: "plans.perHalfYear", renewal: "plans.renewsHalfYear" },
+  year: { first: "plans.firstYear", per: "plans.perYear", renewal: "plans.renewsYear" },
+};
+
+export function planTermLabel(term: PlanTerm, ui: UiText): string {
+  return ui.t(termLabelKeys[term]);
+}
 
 export function planTabs(plans: MurmurPlan[]): PlanTab[] {
   return tabOrder
-    .map((tab) => ({ ...tab, plans: plans.filter((plan) => plan.term === tab.term).sort(byTier) }))
+    .map((term) => ({ plans: plans.filter((plan) => plan.term === term).sort(byTier), term }))
     .filter((tab) => tab.plans.length > 0);
 }
 
@@ -86,42 +105,49 @@ export function planTitle(packageId: string, tier: PlanTier | null, storeTitle: 
   return storeTitle;
 }
 
-export function planBenefits(plan: MurmurPlan, options: { phoneAudio: boolean }): string[] {
+export function planBenefits(plan: MurmurPlan, options: { phoneAudio: boolean }, ui: UiText): string[] {
   if (plan.term === "pack") {
-    return [plan.minutes === null ? plan.description.trim() : `${plan.minutes} minutes`, packValidityLabel]
-      .filter(Boolean);
+    const amount = plan.minutes === null ? plan.description.trim() : formatPlanMinutes(plan.minutes, ui);
+    return [amount, ui.t("plans.packValidity")].filter(Boolean);
   }
-  const allowance = plan.minutes === null ? plan.description.trim() : `${formatAllowance(plan.minutes)} a month`;
-  const lines = [introRenewalLine(plan) ?? perMonthLine(plan), allowance];
+  const allowance = plan.minutes === null
+    ? plan.description.trim()
+    : ui.t("plans.allowancePerMonth", { allowance: formatAllowance(plan.minutes, ui) });
+  const lines = [introRenewalLine(plan, ui) ?? perMonthLine(plan, ui), allowance];
   if (plan.tier === "pro_max") {
-    lines.push("Everything in Pro");
+    lines.push(ui.t("plans.everythingInPro"));
   } else {
-    lines.push(options.phoneAudio ? "Phone audio and history" : "Conversation history", "Sessions up to an hour");
+    lines.push(
+      ui.t(options.phoneAudio ? "plans.phoneAudioAndHistory" : "plans.conversationHistory"),
+      ui.t("plans.longSessions"),
+    );
   }
   return lines.filter((line): line is string => Boolean(line));
 }
 
-function perMonthLine(plan: MurmurPlan): string | null {
-  return plan.term === "yearly" && plan.pricePerMonth ? `${plan.pricePerMonth} a month` : null;
+function perMonthLine(plan: MurmurPlan, ui: UiText): string | null {
+  return plan.term === "yearly" && plan.pricePerMonth
+    ? ui.t("plans.pricePerMonth", { price: plan.pricePerMonth })
+    : null;
 }
 
-function introRenewalLine(plan: MurmurPlan): string | null {
-  if (!plan.introPrice || !plan.periodLabel) {
+function introRenewalLine(plan: MurmurPlan, ui: UiText): string | null {
+  if (!plan.introPrice || !plan.period) {
     return null;
   }
-  return `Then ${plan.price} a ${plan.periodLabel}`;
+  return ui.t(periodKeys[plan.period].renewal, { price: plan.price });
 }
 
-export function planDisplayPrice(plan: MurmurPlan): { price: string; suffix: string | null } {
-  if (plan.introPrice && plan.periodLabel) {
-    return { price: plan.introPrice.price, suffix: `first ${plan.periodLabel}` };
+export function planDisplayPrice(plan: MurmurPlan, ui: UiText): { price: string; suffix: string | null } {
+  if (plan.introPrice && plan.period) {
+    return { price: plan.introPrice.price, suffix: ui.t(periodKeys[plan.period].first) };
   }
-  return { price: plan.price, suffix: plan.periodLabel ? `/ ${plan.periodLabel}` : null };
+  return { price: plan.price, suffix: plan.period ? ui.t(periodKeys[plan.period].per) : null };
 }
 
-export function planAccessibilityLabel(plan: MurmurPlan, options: { phoneAudio: boolean }): string {
-  const { price, suffix } = planDisplayPrice(plan);
-  return [plan.title, suffix ? `${price} ${suffix}` : price, ...planBenefits(plan, options)].join(", ");
+export function planAccessibilityLabel(plan: MurmurPlan, options: { phoneAudio: boolean }, ui: UiText): string {
+  const { price, suffix } = planDisplayPrice(plan, ui);
+  return [plan.title, suffix ? `${price} ${suffix}` : price, ...planBenefits(plan, options, ui)].join(", ");
 }
 
 // Whole-percent discount of the best introductory price among the plans, for the offer banner.
@@ -135,18 +161,22 @@ export function introDiscountPercent(plans: MurmurPlan[]): number | null {
   return discounts.length > 0 ? Math.max(...discounts) : null;
 }
 
-export function formatAllowance(minutes: number): string {
+export function formatAllowance(minutes: number, ui: UiText): string {
   if (minutes % 60 !== 0) {
-    return `${minutes} minutes`;
+    return formatPlanMinutes(minutes, ui);
   }
   const hours = minutes / 60;
-  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  return ui.t(hours === 1 ? "plans.oneHour" : "plans.hours", { count: formatUiNumber(hours, ui.locale) });
 }
 
-export function planPurchaseLabel(plan: MurmurPlan): string {
-  const { price, suffix } = planDisplayPrice(plan);
+function formatPlanMinutes(minutes: number, ui: UiText): string {
+  return ui.t("plans.minutes", { count: formatUiNumber(minutes, ui.locale, { grouping: true }) });
+}
+
+export function planPurchaseLabel(plan: MurmurPlan, ui: UiText): string {
+  const { price, suffix } = planDisplayPrice(plan, ui);
   if (plan.term === "pack") {
-    return `Buy for ${price}`;
+    return ui.t("plans.buyFor", { price });
   }
-  return `Subscribe for ${suffix ? `${price} ${suffix}` : price}`;
+  return ui.t("plans.subscribeFor", { price: suffix ? `${price} ${suffix}` : price });
 }

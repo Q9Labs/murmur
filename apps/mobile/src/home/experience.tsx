@@ -184,6 +184,7 @@ function ReportSpanRow({
   span: TranslationSpan;
   targetLanguageRtl: boolean;
 }): ReactNode {
+  const { direction } = useUiLocale();
   return (
     <View style={styles.spanRow}>
       <PostHogMaskView>
@@ -192,10 +193,17 @@ function ReportSpanRow({
           sourceLanguageDirection === "auto"
             ? styles.autoText
             : sourceLanguageDirection === "rtl" ? styles.rtlText : styles.ltrText,
+          sourceLanguageDirection !== "auto" && uiTextDirectionStyle(sourceLanguageDirection, direction),
         ]}>
           {span.source_caption}
         </Text>
-        <Text style={[styles.spanTranslation, targetLanguageRtl ? styles.rtlText : styles.ltrText]}>
+        <Text
+          style={[
+            styles.spanTranslation,
+            targetLanguageRtl ? styles.rtlText : styles.ltrText,
+            uiTextDirectionStyle(targetLanguageRtl ? "rtl" : "ltr", direction),
+          ]}
+        >
           {span.committed_translated_caption ?? span.translated_caption}
         </Text>
       </PostHogMaskView>

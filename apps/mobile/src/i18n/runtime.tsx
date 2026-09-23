@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 
+import { textAlignFollowsLayout } from "../lib/config";
 import { catalogMessage, catalogs, interpolate, isMessageKey } from "./catalogs";
 import type { Catalog, MessageKey } from "./catalogs/en";
 import {
@@ -28,6 +29,9 @@ export type UiLocaleContextValue = {
   setPreference: (preference: UiLocalePreference) => Promise<void>;
   deleteLocale: () => Promise<void>;
 };
+
+// The slice of the UI locale that plain copy functions need.
+export type UiText = Pick<UiLocaleContextValue, "locale" | "t">;
 
 const fallbackTranslator = createTranslator("en");
 const fallbackContext: UiLocaleContextValue = {
@@ -77,13 +81,19 @@ export function uiContentDirectionStyle(value: UiLocale | UiDirection): { direct
   return { direction: resolveDirection(value) };
 }
 
-export function uiTextDirectionStyle(value: UiLocale | UiDirection): {
+// Aligns text to the start edge of its own reading direction. Pass the surrounding layout
+// direction when it can differ from the text, such as an Arabic caption in the English UI.
+export function uiTextDirectionStyle(
+  value: UiLocale | UiDirection,
+  layout: UiLocale | UiDirection = value,
+): {
   textAlign: "left" | "right";
   writingDirection: UiDirection;
 } {
   const direction = resolveDirection(value);
+  const swapped = textAlignFollowsLayout() && resolveDirection(layout) === "rtl";
   return {
-    textAlign: direction === "rtl" ? "right" : "left",
+    textAlign: (direction === "rtl") !== swapped ? "right" : "left",
     writingDirection: direction,
   };
 }
@@ -112,6 +122,15 @@ export function formatUiDate(
   options: Intl.DateTimeFormatOptions,
 ): string {
   return new Intl.DateTimeFormat(intlLocaleTag(locale), options).format(value);
+}
+
+// Translation languages keep their English name in the English UI and their own
+// name (endonym) everywhere else, which every listener can read.
+export function languageLabel(
+  language: { display_name: string; native_name: string },
+  locale: UiLocale,
+): string {
+  return locale === "en" ? language.display_name : language.native_name;
 }
 
 // Icons that point along the reading direction (chevrons, back arrows) flip in RTL.

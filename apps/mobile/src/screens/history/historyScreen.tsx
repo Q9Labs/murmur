@@ -2,22 +2,24 @@ import { useRouter } from "expo-router";
 import { useEffect, type ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 
+import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import { ProGate } from "../proGate";
 import { RowGroup } from "../rowGroup";
 import { ScreenScaffold } from "../screenScaffold";
 import { type ConversationRecord, useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
-import { conversationDetails, conversationStarted } from "./conversationFormat";
+import { conversationDetails, conversationStarted, conversationTextDirection } from "./conversationFormat";
 
-export const historyGate = {
-  body: "Keep your translations on this phone to read, copy or share later. History is part of Pro.",
-  title: "Conversation history",
-} as const;
+export function HistoryGate(): ReactNode {
+  const { t } = useUiLocale();
+  return <ProGate body={t("history.gateBody")} title={t("history.gateTitle")} />;
+}
 
 export function HistoryScreen(): ReactNode {
   const services = useScreenServices();
   const { styles } = useScreenStyles();
+  const { t } = useUiLocale();
   const { reloadConversations } = services;
   useEffect(() => {
     reloadConversations().catch((failure: unknown) => {
@@ -25,13 +27,13 @@ export function HistoryScreen(): ReactNode {
     });
   }, [reloadConversations]);
   if (!services.features.history) {
-    return <ProGate body={historyGate.body} title={historyGate.title} />;
+    return <HistoryGate />;
   }
   const conversations = [...services.conversations].sort((first, second) => second.startedAtMs - first.startedAtMs);
   return (
-    <ScreenScaffold title="History">
+    <ScreenScaffold title={t("history.title")}>
       {conversations.length === 0 ? (
-        <Text style={styles.body}>Your conversations will be saved here, on this phone only.</Text>
+        <Text style={styles.body}>{t("history.empty")}</Text>
       ) : (
         <RowGroup>
           {conversations.map((record) => <ConversationRow key={record.id} record={record} />)}
@@ -44,17 +46,23 @@ export function HistoryScreen(): ReactNode {
 function ConversationRow({ record }: { record: ConversationRecord }): ReactNode {
   const router = useRouter();
   const { styles } = useScreenStyles();
-  const started = conversationStarted(record);
-  const details = conversationDetails(record);
+  const ui = useUiLocale();
+  const started = conversationStarted(record, ui);
+  const details = conversationDetails(record, ui);
   return (
     <Pressable
-      accessibilityHint="Opens the conversation"
+      accessibilityHint={ui.t("history.openHint")}
       accessibilityLabel={`${started}, ${details}. ${record.text}`}
       accessibilityRole="button"
       onPress={() => router.push({ params: { id: record.id }, pathname: "/history/[id]" })}
       style={({ pressed }) => [styles.conversationRow, pressed && styles.pressed]}
     >
-      <Text numberOfLines={2} style={styles.conversationExcerpt}>{record.text}</Text>
+      <Text
+        numberOfLines={2}
+        style={[styles.conversationExcerpt, uiTextDirectionStyle(conversationTextDirection(record), ui.direction)]}
+      >
+        {record.text}
+      </Text>
       <Text style={styles.conversationMeta}>{`${started} · ${details}`}</Text>
     </Pressable>
   );

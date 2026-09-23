@@ -1,23 +1,26 @@
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { LocalizedError } from "../../i18n/localizedError";
+
 export type AuthFailure = {
   code?: string;
   message?: string;
   status?: number;
 };
 
-const authErrorCopy: Readonly<Partial<Record<string, string>>> = {
-  INVALID_EMAIL: "Enter a valid email address.",
-  INVALID_OTP: "That code doesn't match. Check the latest email from Murmur and try again.",
-  OTP_EXPIRED: "That code has expired. Send a new code to keep going.",
-  TOO_MANY_ATTEMPTS: "Too many tries with that code. Send a new code to keep going.",
+const authErrorKeys: Readonly<Partial<Record<string, MessageKey>>> = {
+  INVALID_EMAIL: "auth.invalidEmail",
+  INVALID_OTP: "auth.codeMismatch",
+  OTP_EXPIRED: "auth.codeExpired",
+  TOO_MANY_ATTEMPTS: "auth.tooManyTries",
 };
 
-export function authErrorMessage(failure: AuthFailure, fallback: string): string {
-  const copy = failure.code ? authErrorCopy[failure.code] : undefined;
-  if (copy) {
-    return copy;
+export function authError(failure: AuthFailure, fallback: MessageKey): Error {
+  const key = failure.code ? authErrorKeys[failure.code] : undefined;
+  if (key) {
+    return new LocalizedError(key);
   }
   if (failure.status === 429) {
-    return "Too many requests. Wait a minute, then try again.";
+    return new LocalizedError("auth.rateLimited");
   }
-  return failure.message || fallback;
+  return failure.message ? new Error(failure.message) : new LocalizedError(fallback);
 }

@@ -23,6 +23,21 @@ const intlTags: { readonly [Locale in UiLocale]: string } = {
   ur: "ur",
 };
 
+// Each UI language in its own name and script, for the language switcher.
+export const uiLocaleNames: { readonly [Locale in UiLocale]: string } = {
+  ar: "العربية",
+  de: "Deutsch",
+  en: "English",
+  es: "Español",
+  fr: "Français",
+  hi: "हिन्दी",
+  id: "Bahasa Indonesia",
+  ja: "日本語",
+  "pt-BR": "Português (Brasil)",
+  tr: "Türkçe",
+  ur: "اردو",
+};
+
 export function isUiLocale(value: unknown): value is UiLocale {
   return uiLocales.some((locale) => locale === value);
 }

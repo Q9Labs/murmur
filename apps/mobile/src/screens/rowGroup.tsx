@@ -2,6 +2,8 @@ import { ChevronRight } from "lucide-react-native";
 import { Children, type ReactNode } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
+import { uiMirrorStyle, useUiLocale } from "../i18n/runtime";
+
 import { useScreenStyles } from "./styles";
 
 export function RowGroup({ children }: { children: ReactNode }): ReactNode {
@@ -24,6 +26,7 @@ export function LinkRow(props: {
   value?: string;
 }): ReactNode {
   const { colors, styles } = useScreenStyles();
+  const { direction } = useUiLocale();
   const accessibilityLabel = props.value ? `${props.label}, ${props.value}` : props.label;
   return (
     <Pressable
@@ -37,7 +40,9 @@ export function LinkRow(props: {
       <Text style={[styles.rowLabel, props.tone === "danger" && styles.danger]}>{props.label}</Text>
       {props.value ? <Text style={styles.rowValue}>{props.value}</Text> : null}
       {props.tone === "danger" ? null : (
-        <ChevronRight color={colors.muted} size={20} strokeWidth={2} />
+        <View style={uiMirrorStyle(direction)}>
+          <ChevronRight color={colors.muted} size={20} strokeWidth={2} />
+        </View>
       )}
     </Pressable>
   );

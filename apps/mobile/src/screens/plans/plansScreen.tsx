@@ -2,6 +2,7 @@ import type { MobileTelemetryEvent } from "@murmur/protocol/telemetry";
 import { useRouter } from "expo-router";
 import { useEffect, type ReactNode } from "react";
 
+import { useUiLocale } from "../../i18n/runtime";
 import { useMurmurBilling } from "../../lib/billing/context";
 import { introDiscountPercent, type PlanTerm } from "../../lib/billing/planCatalog";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
@@ -27,6 +28,7 @@ export function planTermFromParam(value: string | string[] | undefined): PlanTer
 export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
+  const { t } = useUiLocale();
   const { plans, refresh } = usePlanList(billing.initialized, billing.loadPlans);
   const readyPlans = plans.status === "ready" ? plans.plans : [];
   const picker = usePlanPicker(readyPlans, props.initialTerm);
@@ -54,7 +56,7 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
   return (
     <ScreenScaffold
       footer={picker.selected ? <PlanCheckout mode={mode} plan={picker.selected} /> : null}
-      title="Plans"
+      title={t("plans.title")}
     >
       <OfferBanner
         discountPercent={discountPercent}

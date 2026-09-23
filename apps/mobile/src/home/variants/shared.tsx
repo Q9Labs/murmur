@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
+import type { UiDirection } from "../../i18n/types";
 import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
 import { formatLiveError, formatReportError } from "../errorCopy";
 import { styles as homeStyles } from "../styles";
@@ -135,7 +136,7 @@ export function SpanTimeline({
         <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
           {timelineEmptyText(
             viewModel.isLive,
-            showSource ? null : viewModel.targetLanguage.display_name,
+            showSource ? null : viewModel.targetLanguageDisplayName,
             t,
           )}
         </Text>
@@ -143,6 +144,7 @@ export function SpanTimeline({
       {visibleSpans.map((span) => (
         <SpanRow
           key={`${span.span_id}:${span.revision}`}
+          layout={direction}
           showSource={showSource}
           sourceDirection={sourceDirection}
           span={span}
@@ -153,6 +155,7 @@ export function SpanTimeline({
       ))}
       {showSource && live.tentative_source_caption.trim() ? (
         <TentativeCaption
+          layout={direction}
           sourceDirection={sourceDirection}
           text={live.tentative_source_caption}
           textStyles={textStyles}
@@ -163,22 +166,25 @@ export function SpanTimeline({
 }
 
 function TentativeCaption({
+  layout,
   sourceDirection,
   text,
   textStyles,
 }: {
+  layout: UiDirection;
   sourceDirection: "auto" | "ltr" | "rtl";
   text: string;
   textStyles: TimelineTextStyles;
 }): ReactNode {
   return (
-    <Text style={[textStyles.source, sourceTextStyle(sourceDirection, textStyles)]}>
+    <Text style={[textStyles.source, ...sourceTextStyles(sourceDirection, layout, textStyles)]}>
       {text}
     </Text>
   );
 }
 
 function SpanRow({
+  layout,
   showSource,
   sourceDirection,
   span,
@@ -186,6 +192,7 @@ function SpanRow({
   translate,
   textStyles,
 }: {
+  layout: UiDirection;
   showSource: boolean;
   sourceDirection: "auto" | "ltr" | "rtl";
   span: TranslationSpan;
@@ -200,12 +207,13 @@ function SpanRow({
           textStyles.translation,
           isPartialSpan(span) && textStyles.partial,
           targetRtl ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText,
+          uiTextDirectionStyle(targetRtl ? "rtl" : "ltr", layout),
         ]}
       >
         {timelineTranslationText(span, translate)}
       </Text>
       {showSource ? (
-        <Text style={[textStyles.source, sourceTextStyle(sourceDirection, textStyles)]}>
+        <Text style={[textStyles.source, ...sourceTextStyles(sourceDirection, layout, textStyles)]}>
           {span.source_caption}
         </Text>
       ) : null}
@@ -213,12 +221,14 @@ function SpanRow({
   );
 }
 
-function sourceTextStyle(
+function sourceTextStyles(
   direction: "auto" | "ltr" | "rtl",
+  layout: UiDirection,
   textStyles: TimelineTextStyles,
-): StyleProp<TextStyle> {
+): StyleProp<TextStyle>[] {
   if (direction === "auto") {
-    return homeStyles.autoText;
+    return [homeStyles.autoText];
   }
-  return direction === "rtl" ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText;
+  const base = direction === "rtl" ? textStyles.rtl : textStyles.ltr ?? homeStyles.ltrText;
+  return [base, uiTextDirectionStyle(direction, layout)];
 }

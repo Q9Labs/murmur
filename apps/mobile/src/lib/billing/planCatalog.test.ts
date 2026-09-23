@@ -10,16 +10,20 @@ import {
   planDisplayPrice,
   planPurchaseLabel,
   planTabs,
+  planTermLabel,
   planTier,
   planTitle,
 } from "./planCatalog";
+import { createTranslator, type UiText } from "../../i18n/runtime";
+
+const en: UiText = { locale: "en", t: createTranslator("en") };
 
 function plan(overrides: Partial<MurmurPlan> & Pick<MurmurPlan, "id" | "term">): MurmurPlan {
   return {
     description: "",
     introPrice: null,
     minutes: null,
-    periodLabel: null,
+    period: null,
     price: "$0",
     priceAmount: 0,
     pricePerMonth: null,
@@ -32,7 +36,7 @@ function plan(overrides: Partial<MurmurPlan> & Pick<MurmurPlan, "id" | "term">):
 const monthly = plan({
   id: "$rc_monthly",
   minutes: 120,
-  periodLabel: "month",
+  period: "month",
   price: "$9.99",
   priceAmount: 9.99,
   term: "monthly",
@@ -42,7 +46,7 @@ const monthly = plan({
 const maxMonthly = plan({
   id: "promax_monthly",
   minutes: 400,
-  periodLabel: "month",
+  period: "month",
   price: "$29.99",
   priceAmount: 29.99,
   term: "monthly",
@@ -52,7 +56,7 @@ const maxMonthly = plan({
 const yearly = plan({
   id: "$rc_annual",
   minutes: 120,
-  periodLabel: "year",
+  period: "year",
   price: "$99.99",
   priceAmount: 99.99,
   pricePerMonth: "$8.33",
@@ -74,7 +78,7 @@ const ios = { phoneAudio: false };
 describe("plan catalog", () => {
   it("orders tabs Monthly, Yearly, Credit packs, Pro before Pro Max, and hides empty tabs", () => {
     const tabs = planTabs([pack, maxMonthly, yearly, monthly]);
-    expect(tabs.map((tab) => tab.label)).toEqual(["Monthly", "Yearly", "Credit packs"]);
+    expect(tabs.map((tab) => planTermLabel(tab.term, en))).toEqual(["Monthly", "Yearly", "Credit packs"]);
     expect(tabs[0]?.plans.map((candidate) => candidate.title)).toEqual(["Pro", "Pro Max"]);
     expect(planTabs([pack]).map((tab) => tab.term)).toEqual(["pack"]);
   });
@@ -97,44 +101,58 @@ describe("plan catalog", () => {
   });
 
   it("writes short benefit lines per plan", () => {
-    expect(planBenefits(monthly, android)).toEqual([
+    expect(planBenefits(monthly, android, en)).toEqual([
       "2 hours a month",
       "Phone audio and history",
       "Sessions up to an hour",
     ]);
-    expect(planBenefits(monthly, ios)).toEqual(["2 hours a month", "Conversation history", "Sessions up to an hour"]);
-    expect(planBenefits(yearly, ios)[0]).toBe("$8.33 a month");
-    expect(planBenefits(maxMonthly, ios)).toEqual(["400 minutes a month", "Everything in Pro"]);
-    expect(planBenefits(pack, ios)).toEqual(["60 minutes", "Valid 3 months"]);
+    expect(planBenefits(monthly, ios, en)).toEqual(["2 hours a month", "Conversation history", "Sessions up to an hour"]);
+    expect(planBenefits(yearly, ios, en)[0]).toBe("$8.33 a month");
+    expect(planBenefits(maxMonthly, ios, en)).toEqual(["400 minutes a month", "Everything in Pro"]);
+    expect(planBenefits(pack, ios, en)).toEqual(["60 minutes", "Valid 3 months"]);
   });
 
   it("falls back to the store description when the catalog does not know the product", () => {
-    expect(planBenefits({ ...monthly, description: "90 minutes of live translation a month", minutes: null }, ios)[0])
+    expect(planBenefits({ ...monthly, description: "90 minutes of live translation a month", minutes: null }, ios, en)[0])
       .toBe("90 minutes of live translation a month");
-    expect(planBenefits({ ...pack, description: "30 minutes", minutes: null }, ios)).toEqual(["30 minutes", "Valid 3 months"]);
+    expect(planBenefits({ ...pack, description: "30 minutes", minutes: null }, ios, en)).toEqual(["30 minutes", "Valid 3 months"]);
   });
 
   it("shows an introductory price honestly, with the renewal price", () => {
     const offer = { ...monthly, introPrice: { amount: 7.99, price: "$7.99" } };
-    expect(planDisplayPrice(offer)).toEqual({ price: "$7.99", suffix: "first month" });
-    expect(planBenefits(offer, ios)[0]).toBe("Then $9.99 a month");
-    expect(planPurchaseLabel(offer)).toBe("Subscribe for $7.99 first month");
+    expect(planDisplayPrice(offer, en)).toEqual({ price: "$7.99", suffix: "first month" });
+    expect(planBenefits(offer, ios, en)[0]).toBe("Then $9.99 a month");
+    expect(planPurchaseLabel(offer, en)).toBe("Subscribe for $7.99 first month");
     expect(introDiscountPercent([offer, yearly])).toBe(20);
     expect(introDiscountPercent([monthly, yearly])).toBeNull();
     expect(introDiscountPercent([{ ...monthly, introPrice: { amount: 12, price: "$12" } }])).toBeNull();
   });
 
   it("labels prices and purchase buttons", () => {
-    expect(planDisplayPrice(yearly)).toEqual({ price: "$99.99", suffix: "/ year" });
-    expect(planDisplayPrice(pack)).toEqual({ price: "$7.99", suffix: null });
-    expect(planPurchaseLabel(yearly)).toBe("Subscribe for $99.99 / year");
-    expect(planPurchaseLabel(pack)).toBe("Buy for $7.99");
-    expect(planAccessibilityLabel(pack, ios)).toBe("Trip Pass, $7.99, 60 minutes, Valid 3 months");
+    expect(planDisplayPrice(yearly, en)).toEqual({ price: "$99.99", suffix: "/ year" });
+    expect(planDisplayPrice(pack, en)).toEqual({ price: "$7.99", suffix: null });
+    expect(planPurchaseLabel(yearly, en)).toBe("Subscribe for $99.99 / year");
+    expect(planPurchaseLabel(pack, en)).toBe("Buy for $7.99");
+    expect(planAccessibilityLabel(pack, ios, en)).toBe("Trip Pass, $7.99, 60 minutes, Valid 3 months");
   });
 
   it("formats allowances in hours when they are whole", () => {
-    expect(formatAllowance(60)).toBe("1 hour");
-    expect(formatAllowance(120)).toBe("2 hours");
-    expect(formatAllowance(90)).toBe("90 minutes");
+    expect(formatAllowance(60, en)).toBe("1 hour");
+    expect(formatAllowance(120, en)).toBe("2 hours");
+    expect(formatAllowance(90, en)).toBe("90 minutes");
+  });
+
+  it("localizes plan copy and keeps store prices and product names as given", () => {
+    const de: UiText = { locale: "de", t: createTranslator("de") };
+    const ar: UiText = { locale: "ar", t: createTranslator("ar") };
+    expect(planBenefits(monthly, android, de)).toEqual([
+      "2 Stunden pro Monat",
+      "Handy-Audio und Verlauf",
+      "Sitzungen bis zu einer Stunde",
+    ]);
+    expect(planTermLabel("monthly", de)).toBe("Monatlich");
+    expect(planDisplayPrice(pack, de)).toEqual({ price: "$7.99", suffix: null });
+    expect(formatAllowance(120, ar)).toBe("\u0662 ساعات");
+    expect(planAccessibilityLabel(pack, ios, ar)).toContain("Trip Pass");
   });
 });

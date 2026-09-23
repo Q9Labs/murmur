@@ -206,7 +206,7 @@ export function createAudioPlaybackPreferenceController(options: {
 }
 
 export default function HomeScreen(): ReactNode {
-  const { deleteLocale, t } = useUiLocale();
+  const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -279,8 +279,9 @@ export default function HomeScreen(): ReactNode {
       sourceLanguageCode,
       targetLanguageCode,
       translate: t,
+      uiLocale,
     }),
-    [captureSource, languagesReady, live, sourceLanguageCode, t, targetLanguageCode],
+    [captureSource, languagesReady, live, sourceLanguageCode, t, targetLanguageCode, uiLocale],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -472,10 +473,10 @@ export default function HomeScreen(): ReactNode {
     try {
       await updateAnonymousAnalyticsEnabled(enabled);
       setAnonymousAnalyticsEnabled(enabled);
-      setSettingsMessage(`Anonymous analytics ${enabled ? "enabled" : "disabled"}.`);
+      setSettingsMessage(t(enabled ? "settings.analyticsOn" : "settings.analyticsOff"));
     } catch (failure) {
       captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
-      setSettingsMessage("Could not save the analytics setting. Please try again.");
+      setSettingsMessage(t("settings.analyticsSaveError"));
     }
   }
 
@@ -484,7 +485,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     if (anonymousAnalyticsEnabled === null) {
-      setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
+      setSettingsMessage(t("settings.privacyLoading"));
       return;
     }
     await audioPreferenceController.waitForRestore();
@@ -606,9 +607,9 @@ export default function HomeScreen(): ReactNode {
     locked: settingsLocked,
     message: settingsMessage,
     openReport: () => setDiagnosticsOpen(true),
-    reportLabel: __DEV__ ? "Session diagnostics" : "Report a translation",
+    reportLabel: __DEV__ ? "settings.sessionDiagnostics" : "settings.reportTranslation",
     resetIdentity: () => settingsActionsRef.current.resetIdentity(),
-    share: () => void shareMurmur(),
+    share: () => void shareMurmur(translateRef.current),
   }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
 
@@ -645,7 +646,7 @@ export default function HomeScreen(): ReactNode {
         sourceLanguageDisplayName={viewModel.sourceLanguageDisplayName}
         step={onboardingStep}
         targetLanguageCode={targetLanguageCode}
-        targetLanguageDisplayName={viewModel.targetLanguage.display_name}
+        targetLanguageDisplayName={viewModel.targetLanguageDisplayName}
       />
     );
   }

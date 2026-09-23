@@ -7,7 +7,8 @@ import {
 } from "@murmur/protocol/languages";
 import { canStartSession, type TranslationSpan } from "@murmur/protocol/session";
 import type { AudioCaptureSource } from "../../modules/murmur-audio";
-import { createTranslator, type Translate } from "../i18n/runtime";
+import { createTranslator, languageLabel, type Translate } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
@@ -36,6 +37,7 @@ export type HomeViewModel = {
   sourceLanguageDisplayName: string;
   statusText: string;
   targetLanguage: LanguageDefinition;
+  targetLanguageDisplayName: string;
 };
 
 export function buildHomeViewModel(params: {
@@ -48,8 +50,10 @@ export function buildHomeViewModel(params: {
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   translate?: Translate;
+  uiLocale?: UiLocale;
 }): HomeViewModel {
   const translate = params.translate ?? fallbackTranslate;
+  const uiLocale = params.uiLocale ?? "en";
   const sourceLanguage = getSourceLanguage(params.sourceLanguageCode);
   const targetLanguage = getLanguage(params.targetLanguageCode);
   const latestTranslation = findLatestTranslation(params.live.spans);
@@ -93,7 +97,7 @@ export function buildHomeViewModel(params: {
       translate,
     }),
     sourceLanguage,
-    sourceLanguageDisplayName: sourceLanguage?.display_name ?? translate("home.autoDetect"),
+    sourceLanguageDisplayName: sourceLanguage ? languageLabel(sourceLanguage, uiLocale) : translate("home.autoDetect"),
     statusText: getStatusText(
       params.live.status,
       params.live.error,
@@ -101,6 +105,7 @@ export function buildHomeViewModel(params: {
       translate,
     ),
     targetLanguage,
+    targetLanguageDisplayName: languageLabel(targetLanguage, uiLocale),
   };
 }
 

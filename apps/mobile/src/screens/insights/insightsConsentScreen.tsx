@@ -2,6 +2,8 @@ import { useRouter } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
+import { failureCopy } from "../../i18n/localizedError";
+import { useUiLocale } from "../../i18n/runtime";
 import { ScreenScaffold, SecondaryAction, StatusLine } from "../screenScaffold";
 import { useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
@@ -12,6 +14,8 @@ export function InsightsConsentScreen(): ReactNode {
   const router = useRouter();
   const services = useScreenServices();
   const { styles } = useScreenStyles();
+  const ui = useUiLocale();
+  const { t } = ui;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +25,7 @@ export function InsightsConsentScreen(): ReactNode {
     services.setInsightsConsent(consent)
       .then(() => (router.canGoBack() ? router.back() : router.replace("/")))
       .catch((failure: unknown) => {
-        setError(failure instanceof Error ? failure.message : "Your choice wasn't saved. Try again.");
+        setError(failureCopy(failure, ui, "insights.saveFailed"));
       })
       .finally(() => setSaving(false));
   };
@@ -31,20 +35,17 @@ export function InsightsConsentScreen(): ReactNode {
       footer={(
         <View style={styles.choiceRow}>
           <View style={styles.choice}>
-            <SecondaryAction disabled={saving} label="Yes" onPress={() => choose(true)} />
+            <SecondaryAction disabled={saving} label={t("insights.yes")} onPress={() => choose(true)} />
           </View>
           <View style={styles.choice}>
-            <SecondaryAction disabled={saving} label="No" onPress={() => choose(false)} />
+            <SecondaryAction disabled={saving} label={t("insights.no")} onPress={() => choose(false)} />
           </View>
         </View>
       )}
-      title="Help improve Murmur?"
+      title={t("insights.title")}
     >
-      <Text style={styles.body}>
-        After a session, a third-party AI service can read the translation and write a short summary, like its
-        topic. We keep the summary, never the translation.
-      </Text>
-      <Text style={styles.body}>You can change this anytime in Settings.</Text>
+      <Text style={styles.body}>{t("insights.body")}</Text>
+      <Text style={styles.body}>{t("insights.changeLater")}</Text>
       <StatusLine error={error} notice={null} />
     </ScreenScaffold>
   );

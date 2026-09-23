@@ -5,7 +5,7 @@ import { anonymousClient, emailOTPClient } from "better-auth/client/plugins";
 
 import { getAppRelease } from "../appRelease";
 import { getWorkerBaseUrl } from "../config";
-import { authErrorMessage } from "./authErrors";
+import { authError } from "./authErrors";
 import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "../installIdentity";
 import { getAppleIdentity, getGoogleIdentity } from "./nativeProviders";
 
@@ -85,14 +85,14 @@ export async function sendEmailSignInCode(email: string): Promise<void> {
     type: "sign-in",
   });
   if (result.error) {
-    throw new Error(authErrorMessage(result.error, "Murmur could not send the sign-in code."));
+    throw authError(result.error, "auth.sendFailed");
   }
 }
 
 export async function verifyEmailSignInCode(email: string, otp: string): Promise<void> {
   const result = await murmurAuthClient.signIn.emailOtp({ email, otp });
   if (result.error) {
-    throw new Error(authErrorMessage(result.error, "The sign-in code is invalid or expired."));
+    throw authError(result.error, "auth.codeFailed");
   }
 }
 
@@ -110,7 +110,7 @@ export async function signInWithApple(): Promise<boolean> {
     },
   }, { headers: { cookie: await getMurmurCookie() } });
   if (result.error) {
-    throw new Error(authErrorMessage(result.error, "Apple sign-in failed."));
+    throw authError(result.error, "auth.appleFailed");
   }
   return true;
 }
@@ -125,7 +125,7 @@ export async function signInWithGoogle(): Promise<boolean> {
     idToken: { token },
   }, { headers: { cookie: await getMurmurCookie() } });
   if (result.error) {
-    throw new Error(authErrorMessage(result.error, "Google sign-in failed."));
+    throw authError(result.error, "auth.googleFailed");
   }
   return true;
 }

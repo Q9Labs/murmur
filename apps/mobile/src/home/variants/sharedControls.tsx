@@ -86,7 +86,7 @@ export function TextLanguageRow({
         style={({ pressed }) => [pressed && pressedStyle]}
       >
         <Text numberOfLines={1} style={[textStyle, uiTextDirectionStyle(direction)]}>
-          {viewModel.targetLanguage.display_name}
+          {viewModel.targetLanguageDisplayName}
         </Text>
       </Pressable>
     </View>

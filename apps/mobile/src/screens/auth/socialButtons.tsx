@@ -4,6 +4,8 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { useMurmurTheme } from "../../home/theme";
+import { failureCopy } from "../../i18n/localizedError";
+import { useUiLocale } from "../../i18n/runtime";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import { useScreenServices } from "../screenServices";
 
@@ -72,6 +74,7 @@ export function SocialSignInButtons(props: {
   onStart?: () => void;
 }): ReactNode {
   const services = useScreenServices();
+  const ui = useUiLocale();
   const nativeApple = useNativeAppleAuthentication();
   const dark = useMurmurTheme().dark;
   const [pending, setPending] = useState<SocialProvider | null>(null);
@@ -84,7 +87,7 @@ export function SocialSignInButtons(props: {
     const action = provider === "apple" ? services.signInWithApple : services.signInWithGoogle;
     action()
       .catch((failure: unknown) => {
-        props.onError(failure instanceof Error ? failure.message : "Sign-in didn't finish. Try again.");
+        props.onError(failureCopy(failure, ui, provider === "apple" ? "auth.appleFailed" : "auth.googleFailed"));
       })
       .finally(() => setPending(null));
   };
@@ -107,13 +110,13 @@ export function SocialSignInButtons(props: {
       {Platform.OS === "ios" && !nativeApple ? (
         <AppleSignInButton
           disabled={locked}
-          label={pending === "apple" ? "Signing in…" : "Continue with Apple"}
+          label={ui.t(pending === "apple" ? "auth.signingIn" : "auth.continueApple")}
           onPress={() => signIn("apple")}
         />
       ) : null}
       <GoogleSignInButton
         disabled={locked}
-        label={pending === "google" ? "Signing in…" : "Continue with Google"}
+        label={ui.t(pending === "google" ? "auth.signingIn" : "auth.continueGoogle")}
         onPress={() => signIn("google")}
       />
     </>
