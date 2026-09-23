@@ -9,6 +9,7 @@ import {
   type ReconciliationSnapshot,
 } from "./reconciliation";
 import type { MurmurPlan } from "./planCatalog";
+import { loadPlansWithTelemetry } from "./planLoading";
 
 export type MurmurBillingContext = {
   busy: boolean;
@@ -196,6 +197,12 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       : "The store finished, but your balance is still syncing. Tap Refresh balance shortly.");
   }, [loadCustomer, reconcileWithBackoff]);
 
+  const serverOfferingId = config.paywallOfferingId;
+  const loadPlans = useCallback(
+    () => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry),
+    [serverOfferingId],
+  );
+
   const value = useMemo<MurmurBillingContext>(() => ({
     busy,
     config,
@@ -218,12 +225,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       }
     },
     error,
-    loadPlans: async () => {
-      const { loadMurmurPlans } = await import("./revenueCat");
-      const plans = await loadMurmurPlans(config.paywallOfferingId);
-      captureBillingTelemetry("mobile_paywall_opened", { packageLabel: "plan_picker" });
-      return plans;
-    },
+    loadPlans,
     manageSubscription: () => runStoreAction(async () => {
       const { presentMurmurCustomerCenter } = await import("./revenueCat");
       await presentMurmurCustomerCenter();
@@ -324,6 +326,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     customer,
     error,
     loadCustomer,
+    loadPlans,
     notice,
     purchasesAvailable,
     reconcileWithBackoff,
