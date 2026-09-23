@@ -14,7 +14,7 @@ import {
 import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
 import { hashInstallId } from "../privacy";
-import { defaultServerConfig, getServerConfig } from "../serverConfig";
+import { getServerConfig } from "../serverConfig";
 
 const localDevelopmentSecret = "murmur-local-development-secret-change-before-deploy";
 const guestEmailDomain = "guest.murmur.invalid";
@@ -150,14 +150,18 @@ async function bootstrapFreeAllowance(
     ? await freeAllowanceClaimHashFromRequest(request, env)
     : null;
   const installId = request?.headers.get("x-murmur-install-id");
-  const config = installId && installId.length >= 8
-    ? await getServerConfig(env, {
-      appVersion: request?.headers.get("x-murmur-app-version") ?? null,
-      distinctId: `anonymous_install_${await hashInstallId(installId, env.SESSION_HASH_SALT ?? "local-development-salt")}`,
-      plan: "free",
-      platform: request?.headers.get("x-murmur-app-platform") ?? null,
-    })
-    : defaultServerConfig(env);
+  const salt = env.SESSION_HASH_SALT ?? "local-development-salt";
+  // Apps before 1.3.0 don't send an install id at sign-in, so fall back to a
+  // one-way customer hash so flags without targeting still apply.
+  const distinctId = installId && installId.length >= 8
+    ? `anonymous_install_${await hashInstallId(installId, salt)}`
+    : `anonymous_customer_${await hashInstallId(customerId, salt)}`;
+  const config = await getServerConfig(env, {
+    appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+    distinctId,
+    plan: "free",
+    platform: request?.headers.get("x-murmur-app-platform") ?? null,
+  });
   const ledger = await ensureCurrentAllowance({
     customerId,
     env,
