@@ -21,7 +21,7 @@ Murmur mobile
 Murmur mobile
   -> PostHog session-replay SDK connects directly to PostHog, not through the Worker
   -> PostHog receives replay traffic with the device IP visible to the provider
-  -> all text, text inputs, and images are masked; replay stops when analytics is off
+  -> captions, saved conversation text, shown email addresses, text inputs, and images are masked; replay stops when analytics is off
 
 Murmur mobile and Worker
   -> Sentry sanitizers remove user, content, request, and breadcrumb fields
@@ -67,7 +67,7 @@ AI providers do not use request content to train their models under their terms,
 - Install attribution: Android Play Install Referrer on first launch and iOS AdServices attribution token resolved with Apple. Only normalized source/campaign values are added to analytics; no audio or caption text is used for attribution.
 - Country: Cloudflare's connection country only; no city, region, or precise location.
 - Session insights: when analytics is on, a separate event may contain enum and numeric fields such as setting, speaker estimate, translation quality, sentiment, duration, and language pair. It does not contain transcript, topic, event name, summary, confusion phrase, intent, or free text.
-- Session replay: app screens and interactions are sent directly from the app to PostHog, not relayed by the Worker. All text, text inputs, and images are masked. The replay SDK sees the device IP at the network layer, and recording stops when Anonymous Analytics is off.
+- Session replay: app screens and interactions are sent directly from the app to PostHog, not relayed by the Worker. Live and saved translation text, email addresses shown on screen, text inputs, and images are masked; other interface text such as buttons and labels is visible. The replay SDK sees the device IP at the network layer, and recording stops when Anonymous Analytics is off.
 
 Every relayed PostHog event includes product, component, environment, and telemetry schema version. The PostHog distinct ID is a one-way Worker hash of the anonymous install id. The Worker disables provider-side IP geolocation and person profiles for relayed events. This suppression does not apply to direct session-replay traffic.
 
@@ -96,7 +96,7 @@ The Worker separately hashes a connecting network address to limit analytics ing
 
 ## Sentry Data Controls
 
-- Mobile disables screenshots, view hierarchy capture, Sentry replay, request-failure capture, profiles, breadcrumbs, default PII, and user or extra contexts. Product session replay is handled separately by PostHog with text, input, and image masking.
+- Mobile disables screenshots, view hierarchy capture, Sentry replay, request-failure capture, profiles, breadcrumbs, default PII, and user or extra contexts. Product session replay is handled separately by PostHog with caption, conversation, email, input, and image masking.
 - Worker disables cookies, request and response bodies, query strings, user information, GraphQL documents and variables, database query data, generative-AI inputs and outputs, and stack-frame variables. It allowlists only the Cloudflare Ray header and strips URL query strings.
 - Sentry tags contain bounded operational categories such as component, operation, stage, error code, environment, release, and the per-session application ID. They do not contain source or translated text.
 - Production performance traces are sampled at 10 percent. Development performance traces are disabled.
