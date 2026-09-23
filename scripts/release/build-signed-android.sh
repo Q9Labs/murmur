@@ -84,6 +84,8 @@ cd "$repo_root/apps/mobile"
 while IFS=$'\t' read -r key value; do
   export "$key=$value"
 done < <(jq -er '.build.production.env | to_entries[] | [.key, .value] | @tsv' eas.json)
+MURMUR_UPDATES_CHANNEL=$(jq -er '.build.production.channel' eas.json)
+export MURMUR_UPDATES_CHANNEL
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
 echo "Building the signed Murmur Android bundle."
