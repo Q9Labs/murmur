@@ -45,6 +45,7 @@ export type WorkerTelemetryEvent =
       acquisition_partner?: string;
       acquisition_source?: string;
       app_session_id: string;
+      capture_source: "microphone" | "phone_audio";
       device_integrity_available: boolean;
       device_integrity_platform: string | null;
       device_integrity_provider: string | null;

@@ -3,7 +3,13 @@
 import type { Env } from "../env";
 import { currentProAllowancePeriod, freeAllowancePeriod } from "./allowancePeriods";
 import { firstProGrantMs } from "./allowanceUpgrade";
-import { freeAllowanceMs, proAllowanceMs } from "./catalog";
+import {
+  findBillingProduct,
+  freeAllowanceMs,
+  proMaxAllowanceMs,
+  type BillingProduct,
+  type StoreProvider,
+} from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
 import { claimFreeAllowance } from "./freeAllowanceClaims";
 import type { LedgerCommandResult } from "./contracts";
@@ -12,18 +18,26 @@ type ActiveSubscriptionRow = {
   anchor_at_ms: number;
   episode_id: string;
   paid_through_ms: number;
+  product_id: string;
+  provider: StoreProvider;
 };
+type ActiveSubscription = ActiveSubscriptionRow & { product: BillingProduct };
 
 type UsedFreeRow = { used_free_ms: number };
+type ExistingGrantRow = { original_ms: number };
 
-export type CustomerPlan = "free" | "pro";
+export type CustomerPlan = "free" | "pro" | "pro_max";
 
 export async function currentCustomerPlan(
   database: D1Database | undefined,
   customerId: string,
   nowMs: number,
 ): Promise<CustomerPlan> {
-  return await findActiveSubscription(database, customerId, nowMs) ? "pro" : "free";
+  const subscription = await findActiveSubscription(database, customerId, nowMs);
+  if (!subscription) {
+    return "free";
+  }
+  return subscription.product.grantMs === proMaxAllowanceMs ? "pro_max" : "pro";
 }
 
 export async function ensureCurrentAllowance(params: {
@@ -94,13 +108,20 @@ export async function ensureCurrentAllowance(params: {
       period.periodKey,
       period.startsAtMs,
       expiresAtMs,
-      proAllowanceMs,
+      subscription.product.grantMs,
       params.nowMs,
     )
     .run();
-  const grantMs = period.periodKey.endsWith(":0")
-    ? firstProGrantMs(await usedFreeMs(database, params.customerId, period.startsAtMs))
-    : proAllowanceMs;
+  const existingGrant = await database
+    .prepare("SELECT original_ms FROM balance_grants WHERE customer_id = ? AND grant_key = ?")
+    .bind(params.customerId, period.periodKey)
+    .first<ExistingGrantRow>();
+  const grantMs = existingGrant?.original_ms ?? (period.periodKey.endsWith(":0")
+    ? firstProGrantMs(
+      await usedFreeMs(database, params.customerId, period.startsAtMs),
+      subscription.product.grantMs,
+    )
+    : subscription.product.grantMs);
   if (grantMs <= 0) {
     throw new Error("Free usage exhausted the first Pro allowance period");
   }
@@ -141,22 +162,32 @@ async function findActiveSubscription(
   database: D1Database | undefined,
   customerId: string,
   nowMs: number,
-): Promise<ActiveSubscriptionRow | null> {
+): Promise<ActiveSubscription | null> {
   if (!database) {
     return null;
   }
-  return database
+  const rows = await database
     .prepare(
-      `SELECT anchor_at_ms, episode_id, paid_through_ms
+      `SELECT anchor_at_ms, episode_id, paid_through_ms, product_id, provider
        FROM subscriptions
        WHERE customer_id = ?
          AND state IN ('active', 'grace', 'billing_retry')
-         AND paid_through_ms > ?
-       ORDER BY paid_through_ms DESC
-       LIMIT 1`,
+         AND paid_through_ms > ?`,
     )
     .bind(customerId, nowMs)
-    .first<ActiveSubscriptionRow>();
+    .all<ActiveSubscriptionRow>();
+  let selected: ActiveSubscription | null = null;
+  for (const row of rows.results) {
+    const product = findBillingProduct(row.provider, row.product_id);
+    if (!product || product.kind !== "subscription") {
+      continue;
+    }
+    if (!selected || product.grantMs > selected.product.grantMs ||
+      (product.grantMs === selected.product.grantMs && row.paid_through_ms > selected.paid_through_ms)) {
+      selected = { ...row, product };
+    }
+  }
+  return selected;
 }
 
 function unavailable(): { response: Response; result: LedgerCommandResult } {

@@ -246,6 +246,9 @@ export default function HomeScreen(): ReactNode {
     acquisition,
     analytics_enabled: anonymousAnalyticsEnabled === true,
     capture_source: captureSource,
+    history_customer_id: billing.customer && (billing.customer.features?.history ?? billing.customer.plan !== "free")
+      ? billing.customer.customerId
+      : null,
     network_type: networkType,
     playback_enabled: effectiveAudioPlaybackEnabled,
     source_language: sourceLanguageCode,
@@ -676,6 +679,8 @@ async function resetIdentity(
 
 async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
   await cancel();
+  const { deleteAllConversations } = await import("../lib/conversationHistory");
+  deleteAllConversations();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();

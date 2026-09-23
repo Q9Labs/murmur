@@ -22,6 +22,7 @@ import MurmurAudioModule, {
 } from "../../../modules/murmur-audio";
 import { getOrCreateInstallId } from "../installIdentity";
 import { getInsightsConsent } from "../insightsConsent";
+import { saveConversation } from "../conversationHistory";
 import {
   type DebugLogEntry,
   type LatencySample,
@@ -107,6 +108,7 @@ export function useLiveTranslation(
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectDeadlineRef = useRef<(() => void) | null>(null);
   const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxSessionSecondsRef = useRef(0);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMeaningfulAudioAtRef = useRef<number | null>(null);
   const finishingRef = useRef(false);
@@ -120,6 +122,8 @@ export function useLiveTranslation(
   );
   const playbackActiveRef = useRef(false);
   const playbackEnabledRef = useRef(params.playback_enabled);
+  const historyCustomerIdRef = useRef(params.history_customer_id);
+  historyCustomerIdRef.current = params.history_customer_id;
   const playbackSuppressedRef = useRef(false);
   const lastAudioStateRef = useRef<AudioStateEvent | null>(null);
   const localStopCleanupRef = useRef<LocalStopCleanup | null>(null);
@@ -203,19 +207,6 @@ export function useLiveTranslation(
       if (nextState !== "active" && sessionRef.current.state === "live") {
         sessionBackgroundedRef.current = true;
       }
-      if (nextState === "active" || finishingRef.current || permissionFlowRef.current) {
-        return;
-      }
-      const state = sessionRef.current.state;
-      if (canStartSession(state) || state === "cancelling" || state === "stopping") {
-        return;
-      }
-      setLiveError("session_backgrounded");
-      playbackSuppressedRef.current = true;
-      observeBackgroundOperation(
-        finishSession("failed"),
-        "finish_session_after_background",
-      );
     };
     const subscription = AppState.addEventListener("change", handleAppStateChange);
     return () => subscription.remove();
@@ -231,7 +222,8 @@ export function useLiveTranslation(
 
   function handleAudioState(state: AudioStateEvent): void {
     recordLatestAudioState(state);
-    if (finishForNativeBackground(state.reason)) {
+    if (state.reason === "notification_stop" && sessionRef.current.state === "live") {
+      observeBackgroundOperation(stop(), "stop_capture_from_notification");
       return;
     }
     handleDevicePlaybackState(state);
@@ -249,35 +241,11 @@ export function useLiveTranslation(
     }
   }
 
-  function finishForNativeBackground(reason: string): boolean {
-    if (
-      (reason !== "activity_background" && reason !== "app_background") ||
-      finishingRef.current ||
-      permissionFlowRef.current ||
-      canStartSession(sessionRef.current.state) ||
-      sessionRef.current.state === "cancelling" ||
-      sessionRef.current.state === "stopping"
-    ) {
-      return false;
-    }
-    setLiveError("session_backgrounded");
-    playbackSuppressedRef.current = true;
-    observeBackgroundOperation(
-      finishSession("failed"),
-      "finish_session_after_native_background",
-    );
-    return true;
-  }
-
   function handleDevicePlaybackState(state: AudioStateEvent): void {
     if (
       state.capture_source !== "device_playback" ||
       sessionRef.current.state !== "live"
     ) {
-      return;
-    }
-    if (state.reason === "notification_stop") {
-      observeBackgroundOperation(stop(), "stop_device_capture_from_notification");
       return;
     }
     const captureError = getDevicePlaybackCaptureError(state.reason);
@@ -367,15 +335,6 @@ export function useLiveTranslation(
       finishingRef.current ||
       activeRealtimeSessionTokenRef.current !== realtimeSessionToken
     ) {
-      return false;
-    }
-    if (AppState.currentState === "background" || AppState.currentState === "inactive") {
-      setLiveError("session_backgrounded");
-      playbackSuppressedRef.current = true;
-      observeBackgroundOperation(
-        finishSession("failed"),
-        "finish_session_found_in_background",
-      );
       return false;
     }
     return true;
@@ -519,6 +478,7 @@ export function useLiveTranslation(
       analytics_enabled: params.analytics_enabled,
       insights_consent: (await getInsightsConsent()) === true,
       app_install_id: appInstallId,
+      capture_source: params.capture_source,
       device_integrity: deviceIntegrity,
       playback_enabled: params.playback_enabled,
       source_language: params.source_language,
@@ -538,6 +498,7 @@ export function useLiveTranslation(
       return;
     }
     recordListenTiming("worker_session_ready");
+    maxSessionSecondsRef.current = response.limits.max_session_seconds;
     setSourceTranscriptEnabled(hasSourceTranscript(response));
 
     setSession((current) => {
@@ -667,7 +628,7 @@ export function useLiveTranslation(
         updated_at_ms: Date.now(),
       }));
       try {
-        await MurmurAudioModule.startCapture(params.capture_source);
+        await MurmurAudioModule.startCapture(params.capture_source, maxSessionSecondsRef.current);
       } catch (failure) {
         captureMobileFailure(failure, {
           app_session_id: sessionRef.current.identity.app_session_id,
@@ -868,6 +829,7 @@ export function useLiveTranslation(
     transition("ended");
   }
 
+  // fallow-ignore-next-line complexity
   async function finishSession(state: "ended" | "failed"): Promise<LiveTranslationCompletion> {
     if (finishingRef.current) {
       return getCompletionPromise() as Promise<LiveTranslationCompletion>;
@@ -906,6 +868,25 @@ export function useLiveTranslation(
       ),
     );
     const finalizedSpan = finalizeCurrentSpan(state);
+    if (historyCustomerIdRef.current && finalizedSpan?.committed_translated_caption) {
+      try {
+        saveConversation({
+          customer_id: historyCustomerIdRef.current,
+          id: sessionRef.current.identity.app_session_id,
+          source_language: sessionRef.current.source_language,
+          target_language: sessionRef.current.target_language,
+          started_at_ms: sessionStartedAtRef.current ?? sessionRef.current.created_at_ms,
+          duration_ms: Math.max(0, terminatedAtMs - (sessionStartedAtRef.current ?? sessionRef.current.created_at_ms)),
+          translation_text: finalizedSpan.committed_translated_caption,
+        });
+      } catch (failure) {
+        captureMobileFailure(failure, {
+          app_session_id: sessionRef.current.identity.app_session_id,
+          operation: "save_conversation_history",
+          stage: "session_runtime",
+        });
+      }
+    }
     transition(state);
     recordStopTiming("ui_ended_start_enabled");
     const completion: LiveTranslationCompletion = createLiveTranslationCompletion({

@@ -2,6 +2,7 @@ import {
   requestMurmurAppConfig,
   requestMurmurCustomer,
   requestMurmurReconciliation,
+  requestPhoneAudioGiftClaim,
 } from "../providers/murmurBillingApi";
 import { decodeAppConfig, type MurmurAppConfig } from "./appConfig";
 import { decodeCustomer, readCustomerError, type MurmurCustomer } from "./customerResponse";
@@ -19,6 +20,14 @@ export async function fetchMurmurCustomer(): Promise<MurmurCustomer> {
     throw new Error("Murmur returned an invalid account response.");
   }
   return customer;
+}
+
+export async function claimPhoneAudioGift(): Promise<void> {
+  const response = await requestPhoneAudioGiftClaim();
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    throw new Error(readCustomerError(payload) ?? `Phone audio gift claim failed (${response.status}).`);
+  }
 }
 
 export async function reconcileMurmurCustomer(

@@ -13,7 +13,10 @@ const previewCustomer: MurmurCustomer = {
   availableMs: freeAllowanceMinutes * 60_000,
   creditMs: 0,
   customerId: "preview-customer",
+  creditPacks: [],
   earliestExpiryAtMs: null,
+  entitlements: { pro: false, proMax: false },
+  features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
   fulfillmentEnabled: true,
   isRegistered: false,
   negativeMs: 0,
@@ -29,7 +32,12 @@ export const previewCheckoutPlanId = previewPlans.find((plan) => plan.term === "
 
 export const previewBilling: MurmurBillingContext = {
   busy: false,
-  config: { enabledLanguages: null, lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
+  config: {
+    enabledLanguages: null,
+    lowBalanceThresholdMinutes: 15,
+    paywallOfferingId: null,
+    personalOffer: null,
+  },
   configLoaded: true,
   customer: previewCustomer,
   deleteAccount: async () => undefined,
@@ -44,6 +52,8 @@ export const previewBilling: MurmurBillingContext = {
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
+  signInWithApple: async () => undefined,
+  signInWithGoogle: async () => undefined,
   switchAccount: async () => undefined,
   syncing: false,
   verifySignInCode: async () => undefined,

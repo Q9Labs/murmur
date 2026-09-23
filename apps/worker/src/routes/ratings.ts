@@ -1,5 +1,6 @@
 import { isInsightSetting } from "@murmur/protocol/insights";
 
+import { getMurmurSession } from "../auth/auth";
 import type { Env } from "../env";
 import { json } from "../http/response";
 import { hashInstallId } from "../privacy";
@@ -19,12 +20,13 @@ export async function submitRatingSurvey(request: Request, env: Env): Promise<Re
     now_ms: Date.now(),
   });
   if (!limit.ok) return json({ error: limit.code }, isRateLimiterUnavailable(limit) ? 503 : 429);
+  const session = await getMurmurSession(request, env);
   const hashedInstallId = await hashInstallId(body.app_install_id, salt);
   await env.BILLING_DB.prepare(
-    "INSERT INTO rating_surveys (id, hashed_install_id, stars, setting, other_text, created_at) " +
-    "VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO rating_surveys (id, customer_id, hashed_install_id, stars, setting, other_text, created_at) " +
+    "VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).bind(
-    crypto.randomUUID(), hashedInstallId, body.stars, body.answer,
+    crypto.randomUUID(), session?.user.id ?? null, hashedInstallId, body.stars, body.answer,
     body.answer === "other" ? body.other_text ?? null : null,
     new Date().toISOString(),
   ).run();

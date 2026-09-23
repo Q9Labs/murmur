@@ -42,6 +42,13 @@ export function getRevenueCatOfferingId(): string | undefined {
   return publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID);
 }
 
+export function getGoogleOAuthClientIds(): { web?: string; ios?: string } {
+  return {
+    web: publicConfigValue(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID),
+    ios: publicConfigValue(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID),
+  };
+}
+
 const uiPreviewScreens = [
   "auth-code",
   "auth-code-error",

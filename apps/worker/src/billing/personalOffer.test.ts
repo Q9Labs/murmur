@@ -83,7 +83,7 @@ describe("personal offers", () => {
   it("recognizes regional personal products", async () => {
     const { database, rows } = offerDatabase();
     await startPersonalOffer(database, "customer-2", 1_000, 48);
-    await redeemPersonalOffer(database, "customer-2", "murmur_pro_in_offer:monthly");
+    await redeemPersonalOffer(database, "customer-2", "murmur_pro_lite:monthly", "personal-20");
     expect(rows.get("customer-2")?.redeemed).toBe(1);
   });
 

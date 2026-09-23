@@ -47,6 +47,7 @@ export async function createWorkerSession(body: {
   analytics_enabled: boolean;
   insights_consent?: boolean;
   app_install_id: string;
+  capture_source: AudioCaptureSource;
   device_integrity: DeviceIntegrityPayload;
   playback_enabled?: boolean;
   source_language: SourceLanguageCode;
@@ -55,6 +56,7 @@ export async function createWorkerSession(body: {
   return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, {
     ...body,
     insights_consent: body.insights_consent === true,
+    capture_source: body.capture_source === "device_playback" ? "phone_audio" : "microphone",
     ...getAppRelease(),
   });
 }

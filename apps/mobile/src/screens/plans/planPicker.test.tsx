@@ -43,7 +43,7 @@ describe("plan picker", () => {
       <PlanPicker initialTerm="pack" mode={{ kind: "buy", onBuy, storeReady: true }} plans={fixturePlans} />,
     );
 
-    expect(markup).toContain("Never expires");
+    expect(markup).toContain("Valid 3 months from purchase");
     expect(markup).not.toContain("Renews automatically");
     const buy = recorded.controls.find((control) => control.accessibilityRole === "button");
     buy?.onPress?.();

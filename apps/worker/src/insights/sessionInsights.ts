@@ -143,10 +143,10 @@ export async function processSessionInsight(params: {
     const insight = await requestSessionInsight(key, params.configModel, params.translation.text);
     await database.prepare(
       "INSERT INTO session_insights " +
-      "(app_session_id, hashed_install_id, source_language, target_language, duration_ms, created_at, insight_json) " +
-      "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(app_session_id) DO NOTHING",
+      "(app_session_id, customer_id, hashed_install_id, source_language, target_language, duration_ms, created_at, insight_json) " +
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(app_session_id) DO NOTHING",
     ).bind(
-      params.session.appSessionId, params.session.hashedInstallId,
+      params.session.appSessionId, params.session.customerId, params.session.hashedInstallId,
       params.session.sourceLanguage, params.session.targetLanguage,
       params.translation.durationMs, params.session.createdAt, JSON.stringify(insight),
     ).run();

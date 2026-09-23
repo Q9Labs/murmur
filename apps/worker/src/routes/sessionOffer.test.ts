@@ -37,6 +37,7 @@ describe("session exhaustion offer", () => {
       1_000,
       { ...defaultServerConfig({}), personal_offer_enabled: true },
       "free",
+      300,
     );
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -58,6 +59,7 @@ describe("session exhaustion offer", () => {
       1_000,
       { ...defaultServerConfig({}), personal_offer_enabled: true },
       "pro",
+      3600,
     );
     expect(result.ok).toBe(false);
     expect(dependencies.queueOffer).not.toHaveBeenCalled();

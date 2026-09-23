@@ -9,7 +9,10 @@ export const fixtureCustomer: MurmurCustomer = {
   availableMs: 0,
   creditMs: 0,
   customerId: "customer-1",
+  creditPacks: [],
   earliestExpiryAtMs: null,
+  entitlements: { pro: false, proMax: false },
+  features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
   fulfillmentEnabled: true,
   isRegistered: false,
   negativeMs: 0,
@@ -21,7 +24,12 @@ export const fixtureCustomer: MurmurCustomer = {
 export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurBillingContext {
   return {
     busy: false,
-    config: { enabledLanguages: null, lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
+    config: {
+      enabledLanguages: null,
+      lowBalanceThresholdMinutes: 15,
+      paywallOfferingId: null,
+      personalOffer: null,
+    },
     configLoaded: true,
     customer: { ...fixtureCustomer, ...overrides },
     deleteAccount: vi.fn(async () => undefined),
@@ -36,6 +44,8 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
     refresh: vi.fn(async () => undefined),
     restorePurchases: vi.fn(async () => undefined),
     sendSignInCode: vi.fn(async () => undefined),
+    signInWithApple: vi.fn(async () => undefined),
+    signInWithGoogle: vi.fn(async () => undefined),
     switchAccount: vi.fn(async () => undefined),
     syncing: false,
     verifySignInCode: vi.fn(async () => undefined),
@@ -50,6 +60,7 @@ export const fixtureMonthly: MurmurPlan = {
   priceAmount: 9.99,
   pricePerMonth: null,
   term: "monthly",
+  tier: "pro",
   title: "Murmur Pro",
 };
 
@@ -61,6 +72,7 @@ export const fixtureYearly: MurmurPlan = {
   priceAmount: 99.99,
   pricePerMonth: "$8.33",
   term: "yearly",
+  tier: "pro",
   title: "Murmur Pro Annual",
 };
 
@@ -72,6 +84,7 @@ export const fixturePack: MurmurPlan = {
   priceAmount: 7.99,
   pricePerMonth: null,
   term: "pack",
+  tier: null,
   title: "Trip Pass",
 };
 

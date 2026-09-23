@@ -24,6 +24,7 @@ import {
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
 import { getCustomer } from "./routes/customer";
+import { claimPhoneAudioGiftRoute } from "./routes/phoneAudioGift";
 import { getConfig } from "./routes/config";
 import { reconcileBilling } from "./routes/reconcileBilling";
 import { receiveRevenueCatWebhook } from "./routes/revenueCatWebhook";
@@ -73,6 +74,10 @@ const handler = {
 
     if (url.pathname === "/v3/customer" && request.method === "GET") {
       return getCustomer(request, env, context);
+    }
+
+    if (url.pathname === "/v3/gifts/phone-audio/claim" && request.method === "POST") {
+      return claimPhoneAudioGiftRoute(request, env, context);
     }
 
     if (url.pathname === "/v3/config" && request.method === "GET") {

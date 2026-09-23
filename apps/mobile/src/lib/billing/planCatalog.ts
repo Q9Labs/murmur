@@ -1,4 +1,4 @@
-import type { BillingProduct } from "@murmur/protocol/billing/catalog";
+import { proMaxAllowanceMs, type BillingProduct } from "@murmur/protocol/billing/catalog";
 
 export type PlanTerm = "monthly" | "yearly" | "pack";
 
@@ -10,6 +10,7 @@ export type MurmurPlan = {
   priceAmount: number;
   pricePerMonth: string | null;
   term: PlanTerm;
+  tier: "pro" | "pro_max" | null;
   title: string;
 };
 
@@ -44,7 +45,8 @@ export type YearlySaving = {
 };
 
 export function yearlySaving(yearly: MurmurPlan, plans: MurmurPlan[]): YearlySaving | null {
-  const monthly = plans.find((plan) => plan.term === "monthly" && plan.periodLabel === "month");
+  const monthly = plans.find((plan) => plan.term === "monthly" &&
+    plan.periodLabel === "month" && plan.tier === yearly.tier);
   if (yearly.term !== "yearly" || !monthly || monthly.priceAmount <= 0) {
     return null;
   }
@@ -66,7 +68,7 @@ const roundingTolerance = 1e-9;
 export function planBenefits(plan: MurmurPlan, plans: MurmurPlan[]): string[] {
   const lines = plan.description.trim() ? [plan.description.trim()] : [];
   if (plan.term === "pack") {
-    return [...lines, "Never expires"];
+    return [...lines, "Valid 3 months from purchase"];
   }
   if (plan.term === "monthly") {
     return lines;
@@ -119,13 +121,15 @@ function catalogPlan(product: BillingProduct, priceUsdCents: number): MurmurPlan
     priceAmount: priceUsdCents / 100,
   };
   if (term === "pack") {
+    const title = product.code === "credits_300" ? "Event Pass" : "Trip Pass";
     return {
       ...shared,
       description: `${minutes} minutes of live translation`,
       periodLabel: null,
       pricePerMonth: null,
       term,
-      title: `${minutes}-minute pack`,
+      tier: null,
+      title: `${title}, ${minutes} minutes`,
     };
   }
   return {
@@ -134,7 +138,10 @@ function catalogPlan(product: BillingProduct, priceUsdCents: number): MurmurPlan
     periodLabel: subscriptionDetails[term].periodLabel,
     pricePerMonth: term === "yearly" ? formatUsd(priceUsdCents / 12) : null,
     term,
-    title: subscriptionDetails[term].title,
+    tier: product.grantMs === proMaxAllowanceMs ? "pro_max" : "pro",
+    title: product.grantMs === proMaxAllowanceMs
+      ? term === "yearly" ? "Murmur Pro Max Annual" : "Murmur Pro Max"
+      : subscriptionDetails[term].title,
   };
 }
 
@@ -142,7 +149,7 @@ function catalogTerm(product: BillingProduct): PlanTerm {
   if (product.kind === "credit_pack") {
     return "pack";
   }
-  return product.code.startsWith("pro_annual") ? "yearly" : "monthly";
+  return product.code.includes("annual") ? "yearly" : "monthly";
 }
 
 function formatAllowance(minutes: number): string {
