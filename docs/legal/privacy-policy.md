@@ -58,7 +58,7 @@ You can report an inaccurate, wrong-language, harmful, speech-related, or other 
 
 ## Third-Party Service Providers
 
-Murmur uses third-party services in these categories: a cloud hosting and infrastructure provider for Murmur's server, database, rate limits, and privacy-safe logs; a third-party AI service provider for live speech recognition, translation, translated speech, and consent-based session insights; an analytics provider for product analytics and masked session replay; a diagnostics provider for sanitized crash and performance monitoring; a payment and subscription provider and the relevant app stores for purchase validation and lifecycle records; and an email delivery provider for sign-in codes. These providers process data to provide services to Murmur.
+Murmur uses third-party services in these categories: a cloud hosting and infrastructure provider for Murmur's server, database, rate limits, and privacy-safe logs; a third-party AI service provider for live speech recognition, translation, translated speech, and consent-based session insights; an analytics provider for product analytics and masked session replay; a diagnostics provider for sanitized crash and performance monitoring; a payment and subscription provider and the relevant app stores for purchase validation and lifecycle records; and an email delivery provider for sign-in codes. These providers process data to provide services to Murmur. Under their terms, the AI service providers don't use this content to train their models, but they may keep request content for a limited period, typically up to 30 days, to monitor for abuse before deleting it.
 
 ## Retention
 
