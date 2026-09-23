@@ -78,7 +78,7 @@ The Worker separately hashes a connecting network address to limit analytics ing
 - Insight processing requires the user's separate insights-consent choice. The setting starts false, is requested after the first completed session, and can be changed in Settings.
 - Only translated text from sessions with insight consent is collected for insight processing. Sessions need at least 30 seconds of translation. The Worker holds translated text in memory during the session and sends it to OpenRouter at session end to derive a structured result: setting, optional event name, topic, domain terms, estimated speaker count, user intent, translation-quality score, possible confusions, sentiment, short summary, and product signals.
 - The Worker stores the JSON result in session_insights with hashed install id, app session id, language pair, duration, and created_at, then discards the translated text. The text is not written to Murmur storage or logs.
-- A daily job deletes stored insights after 24 months. Account deletion removes the account's insights sooner. Turning off insight consent stops collection for future sessions but does not delete existing insights.
+- A daily job deletes stored insights after 24 months. Account deletion removes the account's insights sooner. Turning off insight consent stops collection and deletes the account's stored insights and pending session context.
 - A separate session_insight PostHog event may contain enum and numeric fields only, and only when Anonymous Analytics is on.
 
 ## Ratings and Reports

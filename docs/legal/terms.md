@@ -14,7 +14,7 @@ Murmur is not intended for emergencies, medical diagnosis, legal advice, immigra
 
 Murmur sends the live audio you choose to share through its Cloudflare Worker to OpenAI Realtime for speech recognition and translation. OpenAI may return source captions, translated captions, and translated speech. Output can be delayed, incomplete, inaccurate, offensive, or inappropriate.
 
-AI Session Insights are optional and separate from live translation. Only translated text from a consented session is collected for this feature. For a session with at least 30 seconds of translation, Murmur sends the text to OpenRouter to create a short derived insight, then discards the text without storing it as a transcript. Murmur deletes each insight after 24 months in a daily job or earlier when the associated account is deleted. Turning off insights stops collection for future sessions but does not delete existing insights. The Privacy Policy explains the consent and deletion controls.
+AI Session Insights are optional and separate from live translation. Only translated text from a consented session is collected for this feature. For a session with at least 30 seconds of translation, Murmur sends the text to OpenRouter to create a short derived insight, then discards the text without storing it as a transcript. Murmur deletes each insight after 24 months in a daily job or earlier when the associated account is deleted. Turning off insights stops collection and deletes the insights already stored for your account. The Privacy Policy explains the consent and deletion controls.
 
 You can report translation issues in the app. Reports help support and quality review but do not guarantee that a specific translation will be corrected.
 

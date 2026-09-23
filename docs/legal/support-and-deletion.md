@@ -20,7 +20,7 @@ With Apple sign-in, Murmur stores your email address and, if you share it with A
 
 Deleting a Murmur account removes the account and authentication records, associated Session Insights, and rating responses linked to that account. The billing ledger may retain deleted-state purchase, entitlement, usage, refund, and reconciliation records. Account deletion does not cancel an Apple or Google subscription and does not erase local translation history.
 
-If a user consents to AI Session Insights, translated text from that consented session is sent to OpenRouter to create a derived insight. Turning off AI Session Insights stops collection for future sessions but does not delete existing insights. A daily job deletes insights after 24 months; account deletion removes associated insights sooner.
+If a user consents to AI Session Insights, translated text from that consented session is sent to OpenRouter to create a derived insight. Turning off AI Session Insights stops collection and deletes the insights already stored for your account. A daily job deletes insights after 24 months; account deletion removes associated insights sooner.
 
 A user-submitted rating survey sends stars, use-case choice, and optional Other text directly to Murmur's server, independently of Anonymous Analytics, and is retained for 24 months. Account deletion removes account-linked survey responses. Anonymous ratings have no account link and are not found by account deletion.
 

@@ -83,7 +83,7 @@ Better Auth session IP and user-agent data remain until that session expires or 
 ## Your Choices
 
 - Stop or cancel a live session at any time.
-- Decline AI session insights or turn them off in Settings to stop collecting translated text for future insights. Existing insights remain until account deletion or the 24-month retention job.
+- Decline AI session insights or turn them off in Settings to stop collecting translated text for insights and delete the insights already stored for your account.
 - Turn Anonymous Analytics off in Settings to stop new relayed analytics events, install-attribution reporting, and session replay. Essential sanitized crash and error monitoring can continue.
 - Delete individual history entries or use Delete Local Data to clear on-device history and local data. Reset Murmur Identity replaces the diagnostic install identifier only.
 - Delete your Murmur account and sign-in data in Account & billing. Store subscriptions must be cancelled separately.
