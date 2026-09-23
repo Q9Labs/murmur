@@ -9,6 +9,7 @@ import {
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
 import { useMurmurBilling } from "../lib/billing/context";
+import { isLanguageEnabled } from "./languageAvailability";
 import { ModalSheet } from "./modalSheet";
 import { useSheetStyles } from "./sheetStyles";
 import type { PickerMode } from "./types";
@@ -61,13 +62,6 @@ function getDisabledLanguage(params: {
   return params.sourceLanguageCode === autoSourceLanguageCode ? undefined : params.sourceLanguageCode;
 }
 
-function isLanguageOffered(
-  code: LanguageCode,
-  enabledLanguages: readonly LanguageCode[] | null,
-): boolean {
-  return enabledLanguages === null || enabledLanguages.includes(code);
-}
-
 function LanguagePickerModal({
   disabledLanguage,
   enabledLanguages,
@@ -87,7 +81,7 @@ function LanguagePickerModal({
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredLanguages = languageRegistry.filter((language) => {
-    if (!isLanguageOffered(language.app_code, enabledLanguages)) {
+    if (!isLanguageEnabled(language.app_code, enabledLanguages)) {
       return false;
     }
     const haystack = `${language.display_name} ${language.native_name}`.toLowerCase();

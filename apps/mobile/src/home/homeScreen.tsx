@@ -11,6 +11,7 @@ import {
   type LanguageCode,
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
+import { canStartSession } from "@murmur/protocol/session";
 
 import MurmurAudioModule, {
   type AudioCaptureSource,
@@ -52,6 +53,7 @@ import {
   setStoredAudioPlaybackEnabled,
 } from "./audioPlaybackPreference";
 import { HomeExperience } from "./experience";
+import { isLanguagePairEnabled, normalizeLanguagePair } from "./languageAvailability";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
@@ -235,6 +237,7 @@ export default function HomeScreen(): ReactNode {
   const [acquisition, setAcquisition] = useState(incomingAcquisition);
 
   const billing = useMurmurBilling();
+  const { enabledLanguages } = billing.config;
   const effectiveAudioPlaybackEnabled = captureSource === "microphone" && audioPlaybackEnabled;
   const live = useLiveTranslation({
     acquisition,
@@ -248,11 +251,15 @@ export default function HomeScreen(): ReactNode {
   const viewModel = useMemo(
     () => buildHomeViewModel({
       captureSource,
+      languagePairEnabled: isLanguagePairEnabled(
+        { source: sourceLanguageCode, target: targetLanguageCode },
+        enabledLanguages,
+      ),
       live,
       sourceLanguageCode,
       targetLanguageCode,
     }),
-    [captureSource, live, sourceLanguageCode, targetLanguageCode],
+    [captureSource, enabledLanguages, live, sourceLanguageCode, targetLanguageCode],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -262,6 +269,22 @@ export default function HomeScreen(): ReactNode {
       .join("|"),
     [live.spans],
   );
+
+  useEffect(() => {
+    if (!canStartSession(live.status)) {
+      return;
+    }
+    const normalized = normalizeLanguagePair(
+      { source: sourceLanguageCode, target: targetLanguageCode },
+      enabledLanguages,
+    );
+    if (normalized.source !== sourceLanguageCode) {
+      setSourceLanguageCode(normalized.source);
+    }
+    if (normalized.target !== targetLanguageCode) {
+      setTargetLanguageCode(normalized.target);
+    }
+  }, [enabledLanguages, live.status, sourceLanguageCode, targetLanguageCode]);
 
   useEffect(() => {
     setAcquisition(incomingAcquisition);
@@ -428,6 +451,9 @@ export default function HomeScreen(): ReactNode {
   }
 
   async function startLiveTranslation(): Promise<void> {
+    if (!isLanguagePairEnabled({ source: sourceLanguageCode, target: targetLanguageCode }, enabledLanguages)) {
+      return;
+    }
     if (anonymousAnalyticsEnabled === null) {
       setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
       return;

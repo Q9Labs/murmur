@@ -72,6 +72,17 @@ describe("home view model", () => {
     });
   });
 
+  it("cannot start when the server has disabled the language pair", () => {
+    const model = buildHomeViewModel({
+      languagePairEnabled: false,
+      live: makeLive(),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+
+    expect(model.canStart).toBe(false);
+  });
+
   it("uses the latest partial or committed caption", () => {
     const first = { ...createSpan("hello"), status: "committed" as const };
     const second = {

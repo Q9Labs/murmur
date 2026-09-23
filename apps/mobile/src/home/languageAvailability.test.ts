@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+
+import { isLanguagePairEnabled, normalizeLanguagePair } from "./languageAvailability";
+
+describe("language availability", () => {
+  it("leaves the pair alone when every language is enabled", () => {
+    expect(normalizeLanguagePair({ source: "en", target: "ar" }, null)).toEqual({ source: "en", target: "ar" });
+    expect(isLanguagePairEnabled({ source: "en", target: "ar" }, null)).toBe(true);
+  });
+
+  it("moves a disabled target and source onto enabled languages", () => {
+    expect(normalizeLanguagePair({ source: "en", target: "ar" }, ["en", "es"])).toEqual({ source: "en", target: "es" });
+    expect(normalizeLanguagePair({ source: "ar", target: "en" }, ["en", "es"])).toEqual({ source: "es", target: "en" });
+    expect(normalizeLanguagePair({ source: "ar", target: "fr" }, ["en", "es"])).toEqual({ source: "es", target: "en" });
+  });
+
+  it("keeps auto-detect as the source", () => {
+    expect(normalizeLanguagePair({ source: "auto", target: "ar" }, ["en"])).toEqual({ source: "auto", target: "en" });
+    expect(isLanguagePairEnabled({ source: "auto", target: "en" }, ["en"])).toBe(true);
+  });
+
+  it("blocks a pair when nothing is enabled", () => {
+    expect(normalizeLanguagePair({ source: "en", target: "ar" }, [])).toEqual({ source: "en", target: "ar" });
+    expect(isLanguagePairEnabled({ source: "en", target: "ar" }, [])).toBe(false);
+    expect(isLanguagePairEnabled({ source: "ar", target: "en" }, ["en"])).toBe(false);
+  });
+});
