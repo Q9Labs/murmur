@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appConfig, defaultServerConfig, getServerConfig, isBelowMinimumVersion } from "./serverConfig";
+import { posthogFlagsBody } from "./posthogFlagsFixture";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -15,7 +16,7 @@ describe("server configuration", () => {
   });
 
   it("evaluates typed flags with the worker telemetry identity", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    const fetchMock = vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: {
         free_allowance_minutes: true,
         source_transcript: true,
@@ -48,7 +49,7 @@ describe("server configuration", () => {
   });
 
   it("uses defaults for flags that don't match this user", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { output_audio_enabled: false, sessions_enabled: false },
       featureFlagPayloads: {},
     }))));
@@ -63,7 +64,7 @@ describe("server configuration", () => {
   });
 
   it("parses personal-offer flags", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: {
         personal_offer_enabled: true,
         personal_offer_hours: true,
@@ -107,7 +108,7 @@ describe("server configuration", () => {
   });
 
   it("falls back for malformed personal-offer payloads and accepts an explicit disabled flag", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: {
         personal_offer_enabled: true,
         personal_offer_hours: true,
@@ -130,6 +131,28 @@ describe("server configuration", () => {
       personal_offer_hours: 48,
       personal_offer_offering_id: "personal_offer",
     });
+  });
+
+  it("reads PostHog's /flags response shape", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      errorsWhileComputingFlags: false,
+      flags: {
+        free_allowance_minutes: {
+          enabled: true,
+          key: "free_allowance_minutes",
+          metadata: { description: null, has_experiment: false, id: 903399, payload: "7", version: 2 },
+          reason: { code: "condition_match", condition_index: 0, description: "Matched condition set 1" },
+          variant: null,
+        },
+      },
+    }))));
+    const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: "1.2.3",
+      distinctId: "anonymous_install_real_shape",
+      plan: "free",
+      platform: "ios",
+    });
+    expect(config.free_allowance_minutes).toBe(7);
   });
 
   it("compares dotted app versions numerically", () => {

@@ -26,6 +26,7 @@ import {
   parseClientCommand,
   proxyRealtimeSession,
 } from "./realtime";
+import { posthogFlagsBody } from "../posthogFlagsFixture";
 
 // cspell:ignore AQID AQIDBA
 
@@ -397,7 +398,7 @@ describe("app-facing realtime socket", () => {
   });
 
   it("enables and forwards source transcription when the server flag is on", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { source_transcript: true },
     }))));
     const { client, upstream } = await openTestRealtimeSession({
@@ -437,7 +438,7 @@ describe("app-facing realtime socket", () => {
   });
 
   it("suppresses translated audio when the server output-audio flag is off", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { output_audio_enabled: true },
       featureFlagPayloads: { output_audio_enabled: "false" },
     }))));
