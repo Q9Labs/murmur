@@ -17,7 +17,7 @@ vi.mock("../plans/planList", () => ({
   usePlanList: () => ({ plans: { plans: fixturePlans, status: "ready" }, refresh: vi.fn() }),
 }));
 
-import { planIdFromParam, SignInScreen } from "./signInScreen";
+import { checkoutDoneAction, findCheckoutPlan, planIdFromParam, SignInScreen } from "./signInScreen";
 
 function doneButton() {
   return recorded.controls.find(
@@ -61,5 +61,23 @@ describe("sign-in screen", () => {
     doneButton()?.onPress?.();
     expect(signInBilling.current?.purchasePlan).not.toHaveBeenCalled();
     expect(router.back).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the checkout intent while the plan list reloads", () => {
+    const purchasePlan = vi.fn(async () => undefined);
+    const leave = vi.fn();
+    const action = checkoutDoneAction({ leave, plan: null, planId: "$rc_annual", purchasePlan });
+
+    expect(findCheckoutPlan({ status: "loading" }, "$rc_annual")).toBeNull();
+    expect(action.label).toBe("Continue to checkout");
+    action.onPress();
+    expect(purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it("finds the chosen plan once the list is ready", () => {
+    expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "trip_pass")?.title).toBe("Trip Pass");
+    expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, undefined)).toBeNull();
+    expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "gone")).toBeNull();
   });
 });
