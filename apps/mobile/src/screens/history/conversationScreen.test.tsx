@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { router } from "../__tests__/navigation";
@@ -11,6 +12,9 @@ const native = vi.hoisted(() => ({
   copy: vi.fn(async () => true),
 }));
 
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: (props: { children: ReactNode }) => <section data-replay-mask="">{props.children}</section>,
+}));
 vi.mock("../proGate", () => ({ ProGate: (props: { title: string }) => <p>gate {props.title}</p> }));
 vi.mock("expo-clipboard", () => ({ setStringAsync: native.copy }));
 vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
@@ -35,6 +39,7 @@ describe("conversation screen", () => {
     const markup = renderToStaticMarkup(<ConversationScreen id="conversation-1" />);
 
     expect(markup).toContain("Welcome to the conference");
+    expect(markup).toMatch(/data-replay-mask="">[^<]*<[^>]*>Welcome to the conference/);
     expect(markup).toContain("Arabic to English · 12 min");
     findControl("Share")?.onPress?.();
     expect(state.services?.shareConversation).toHaveBeenCalledWith(fixtureConversation.id);

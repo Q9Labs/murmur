@@ -7,6 +7,24 @@ describe("iOS privacy manifest config", () => {
   it("declares Murmur's non-tracking App Privacy data categories in tracked config", () => {
     expect(privacyManifests.NSPrivacyTracking).toBe(false);
     expect(privacyManifests.NSPrivacyTrackingDomains).toEqual([]);
+    expect(privacyManifests.NSPrivacyAccessedAPITypes).toEqual([
+      {
+        NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
+        NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+      },
+      {
+        NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryFileTimestamp",
+        NSPrivacyAccessedAPITypeReasons: ["C617.1"],
+      },
+      {
+        NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace",
+        NSPrivacyAccessedAPITypeReasons: ["E174.1"],
+      },
+      {
+        NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategorySystemBootTime",
+        NSPrivacyAccessedAPITypeReasons: ["35F9.1"],
+      },
+    ]);
 
     const declaredTypes = privacyManifests.NSPrivacyCollectedDataTypes.map(
       (entry) => entry.NSPrivacyCollectedDataType,

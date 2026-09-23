@@ -9,7 +9,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { PostHogMaskView } from "posthog-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { hasTimeAvailable, lowBalanceMinutes } from "../../../lib/billing/allowance";
@@ -228,7 +227,6 @@ function TranslationStage(props: VariantShellProps): ReactNode {
   const translationOnly = !props.live.source_transcript_enabled;
   return (
     <View style={styles.flexFill}>
-      <PostHogMaskView style={styles.flexFill}>
       <SpanTimeline
         contentStyle={[styles.timelineContent, translationOnly && styles.timelineContentTranslationOnly]}
         autoScrollRef={props.autoScrollRef}
@@ -245,7 +243,6 @@ function TranslationStage(props: VariantShellProps): ReactNode {
         userInteractedRef={props.userInteractedRef}
         viewModel={props.viewModel}
       />
-      </PostHogMaskView>
     </View>
   );
 }
