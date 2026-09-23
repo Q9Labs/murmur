@@ -3,10 +3,12 @@ import type { AcquisitionContext } from "../acquisition";
 
 export type AppConfigResponse = {
   enabled_languages: LanguageCode[] | null;
+  launch_offer_ends_at: string | null;
   low_balance_threshold_minutes: number;
   min_app_version_android: string | null;
   min_app_version_ios: string | null;
   paywall_offering_id: string | null;
+  personal_offer: { offering_id: string; expires_at: string } | null;
   sessions_disabled_message: string;
   sessions_enabled: boolean;
 };

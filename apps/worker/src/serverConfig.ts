@@ -7,11 +7,14 @@ import { freeAllowanceMs } from "./billing/catalog";
 import { requiresDeviceIntegrity, type Env } from "./env";
 import { defaultRateLimits } from "./limits";
 
-export type ServerConfig = AppConfigResponse & {
+export type ServerConfig = Omit<AppConfigResponse, "personal_offer"> & {
   device_integrity_required: boolean;
   free_allowance_minutes: number;
   max_session_seconds: number;
   output_audio_enabled: boolean;
+  personal_offer_enabled: boolean;
+  personal_offer_hours: number;
+  personal_offer_offering_id: string;
   realtime_model: string;
   source_transcript: boolean;
 };
@@ -32,12 +35,16 @@ export function defaultServerConfig(env: Env): ServerConfig {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
     free_allowance_minutes: freeAllowanceMs / 60_000,
+    launch_offer_ends_at: null,
     low_balance_threshold_minutes: 15,
     max_session_seconds: defaultRateLimits.maxSessionSeconds,
     min_app_version_android: null,
     min_app_version_ios: null,
     output_audio_enabled: true,
     paywall_offering_id: null,
+    personal_offer_enabled: false,
+    personal_offer_hours: 48,
+    personal_offer_offering_id: "personal_offer",
     realtime_model: env.OPENAI_REALTIME_MODEL?.trim() || "gpt-realtime-translate",
     sessions_disabled_message: "Sessions are temporarily unavailable. Please try again later.",
     sessions_enabled: true,
@@ -83,49 +90,7 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
     if (typeof flags !== "object" || flags === null) {
       throw new Error("posthog_flags_invalid_response");
     }
-    const value = (name: keyof ServerConfig): unknown => {
-      const flag = Object.entries(flags).find(([key]) => key === name)?.[1];
-      // PostHog reports a flag that doesn't match this user as false, which must mean
-      // "use the default"; an explicit false value comes from the payload instead.
-      if (flag === undefined || flag === false) {
-        return undefined;
-      }
-      return flagPayload(payloads, name) ?? flag;
-    };
-    const boolean = (name: keyof ServerConfig, fallback: boolean): boolean =>
-      typeof value(name) === "boolean" ? value(name) === true : fallback;
-    const number = (name: keyof ServerConfig, fallback: number): number => {
-      const candidate = value(name);
-      return typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0
-        ? candidate
-        : fallback;
-    };
-    const string = (name: keyof ServerConfig, fallback: string): string => {
-      const candidate = value(name);
-      return typeof candidate === "string" ? candidate : fallback;
-    };
-    const optionalString = (name: keyof ServerConfig): string | null => {
-      const candidate = value(name);
-      return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
-    };
-    const languages = value("enabled_languages");
-    const config: ServerConfig = {
-      device_integrity_required: boolean("device_integrity_required", defaults.device_integrity_required),
-      enabled_languages: Array.isArray(languages) && languages.every(isLanguageCode)
-        ? languages
-        : defaults.enabled_languages,
-      free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
-      low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
-      max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
-      min_app_version_android: optionalString("min_app_version_android"),
-      min_app_version_ios: optionalString("min_app_version_ios"),
-      output_audio_enabled: boolean("output_audio_enabled", defaults.output_audio_enabled),
-      paywall_offering_id: optionalString("paywall_offering_id"),
-      realtime_model: string("realtime_model", defaults.realtime_model),
-      sessions_disabled_message: string("sessions_disabled_message", defaults.sessions_disabled_message),
-      sessions_enabled: boolean("sessions_enabled", defaults.sessions_enabled),
-      source_transcript: boolean("source_transcript", defaults.source_transcript),
-    };
+    const config = parseServerConfigFlags(defaults, flags, payloads);
     if (cache.size >= 256) {
       cache.clear();
     }
@@ -140,13 +105,78 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
   }
 }
 
-export function appConfig(config: ServerConfig): AppConfigResponse {
+function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads: unknown): ServerConfig {
+  const value = (name: keyof ServerConfig): unknown => {
+    const flag = Object.entries(flags).find(([key]) => key === name)?.[1];
+    // PostHog reports a flag that doesn't match this user as false, which must mean
+    // "use the default"; an explicit false value comes from the payload instead.
+    if (flag === undefined || flag === false) {
+      return undefined;
+    }
+    return flagPayload(payloads, name) ?? flag;
+  };
+  const boolean = (name: keyof ServerConfig, fallback: boolean): boolean =>
+    typeof value(name) === "boolean" ? value(name) === true : fallback;
+  const number = (name: keyof ServerConfig, fallback: number): number => {
+    const candidate = value(name);
+    return typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0
+      ? candidate
+      : fallback;
+  };
+  const string = (name: keyof ServerConfig, fallback: string): string => {
+    const candidate = value(name);
+    return typeof candidate === "string" ? candidate : fallback;
+  };
+  const optionalString = (name: keyof ServerConfig): string | null => {
+    const candidate = value(name);
+    return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+  };
+  const launchOfferEnd = optionalString("launch_offer_ends_at");
+  const validLaunchOfferEnd = launchOfferEnd && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(launchOfferEnd) &&
+    Number.isFinite(Date.parse(launchOfferEnd)) &&
+    new Date(launchOfferEnd).toISOString().slice(0, 19) === launchOfferEnd.slice(0, 19);
+  const languages = value("enabled_languages");
+  return {
+    device_integrity_required: boolean("device_integrity_required", defaults.device_integrity_required),
+    enabled_languages: Array.isArray(languages) && languages.every(isLanguageCode)
+      ? languages
+      : defaults.enabled_languages,
+    free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
+    launch_offer_ends_at: validLaunchOfferEnd ? launchOfferEnd : null,
+    low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
+    max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
+    min_app_version_android: optionalString("min_app_version_android"),
+    min_app_version_ios: optionalString("min_app_version_ios"),
+    output_audio_enabled: boolean("output_audio_enabled", defaults.output_audio_enabled),
+    paywall_offering_id: optionalString("paywall_offering_id"),
+    personal_offer_enabled: boolean("personal_offer_enabled", defaults.personal_offer_enabled),
+    personal_offer_hours: number("personal_offer_hours", defaults.personal_offer_hours),
+    personal_offer_offering_id: optionalString("personal_offer_offering_id") ?? defaults.personal_offer_offering_id,
+    realtime_model: string("realtime_model", defaults.realtime_model),
+    sessions_disabled_message: string("sessions_disabled_message", defaults.sessions_disabled_message),
+    sessions_enabled: boolean("sessions_enabled", defaults.sessions_enabled),
+    source_transcript: boolean("source_transcript", defaults.source_transcript),
+  };
+}
+
+export function appConfig(
+  config: ServerConfig,
+  personalOffer: AppConfigResponse["personal_offer"] = null,
+  nowMs = Date.now(),
+): AppConfigResponse {
+  const activePersonalOffer = personalOffer && Date.parse(personalOffer.expires_at) > nowMs
+    ? personalOffer
+    : null;
   return {
     enabled_languages: config.enabled_languages,
+    launch_offer_ends_at: config.launch_offer_ends_at && Date.parse(config.launch_offer_ends_at) > nowMs
+      ? config.launch_offer_ends_at
+      : null,
     low_balance_threshold_minutes: config.low_balance_threshold_minutes,
     min_app_version_android: config.min_app_version_android,
     min_app_version_ios: config.min_app_version_ios,
-    paywall_offering_id: config.paywall_offering_id,
+    paywall_offering_id: activePersonalOffer?.offering_id ?? config.paywall_offering_id,
+    personal_offer: activePersonalOffer,
     sessions_disabled_message: config.sessions_disabled_message,
     sessions_enabled: config.sessions_enabled,
   };
