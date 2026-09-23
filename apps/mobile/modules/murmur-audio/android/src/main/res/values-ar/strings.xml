@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">الترجمة المباشرة</string>
+  <string name="murmur_capture_channel_description">تُبقي Murmur يستمع أثناء الترجمة المباشرة.</string>
+  <string name="murmur_capture_microphone_title">يستمع في الخلفية</string>
+  <string name="murmur_capture_microphone_text">يترجم Murmur ما يسمعه.</string>
+  <string name="murmur_capture_phone_audio_title">يترجم صوت الهاتف</string>
+  <string name="murmur_capture_phone_audio_text">يترجم Murmur الصوت الذي يعمل على هذا الهاتف.</string>
+  <string name="murmur_capture_stop">إيقاف</string>
+</resources>
