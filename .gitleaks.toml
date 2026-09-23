@@ -27,3 +27,11 @@ regexTarget = "line"
 targetRules = ["generic-api-key"]
 paths = ['''^release/manifest\.json$''']
 regexes = ['''"keystore_sha256"\s*:\s*"[a-f0-9]{64}"''']
+
+[[allowlists]]
+description = "The PostHog project token is a public client-side ingestion key shipped in every app build."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^apps/mobile/eas\.json$''']
+regexes = ['''"EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN"\s*:\s*"phc_[A-Za-z0-9]{43}"''']
