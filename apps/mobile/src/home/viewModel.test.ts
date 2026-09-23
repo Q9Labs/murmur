@@ -9,6 +9,7 @@ import { buildHomeViewModel } from "./viewModel";
 function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTranslationController {
   return {
     cancel: async () => undefined,
+    clearRatingDecision: () => undefined,
     debug_log: [],
     diagnostics_snapshot: {
       capture: createAudioCaptureDiagnosticsTracker().snapshot(),
@@ -37,6 +38,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     latency_samples: [],
     invalidatePreparation: () => undefined,
     preparation_status: "ready",
+    rating_decision: null,
     prepare: async () => undefined,
     report_error: null,
     report_receipt_id: null,

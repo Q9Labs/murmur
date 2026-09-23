@@ -17,6 +17,8 @@ import {
   isBillingEnforced,
 } from "../env";
 import { json } from "../http/response";
+import { recordInsightsConsent } from "../insights/sessionInsights";
+import * as Sentry from "@sentry/cloudflare";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
 import {
@@ -90,21 +92,15 @@ export async function createSession(
     return billingUsage.response;
   }
   const sessionDurationMs = billingUsage.sessionDurationMs;
-  if (phoneAudio.giftCustomerId && env.BILLING_DB) {
-    try {
-      await openPhoneAudioGiftSession(env.BILLING_DB, phoneAudio.giftCustomerId, appSessionId);
-    } catch (failure) {
-      await callCustomerLedger(env.CUSTOMER_LEDGER, phoneAudio.giftCustomerId, {
-        action: "close_usage_session",
-        customerId: phoneAudio.giftCustomerId,
-        nowMs: Date.now(),
-        outcome: "failed",
-        usageSessionId: appSessionId,
-      });
-      await closeSessionDurable({ app_session_id: appSessionId, namespace: env.RATE_LIMITER, now_ms: Date.now() });
-      throw failure;
-    }
-  }
+  await openGiftUsageSession(env, appSessionId, phoneAudio.giftCustomerId);
+  await persistInsightsConsent({
+    appSessionId,
+    env,
+    hashedInstallId: authorized.hashedInstallId,
+    nowMs,
+    parsed: parsed.value,
+    request,
+  });
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
     event: "session_created",
@@ -162,6 +158,47 @@ export async function createSession(
     ),
     session_epoch: 1,
   });
+}
+
+async function openGiftUsageSession(env: Env, appSessionId: string, giftCustomerId: string | null): Promise<void> {
+  if (!giftCustomerId || !env.BILLING_DB) return;
+  try {
+    await openPhoneAudioGiftSession(env.BILLING_DB, giftCustomerId, appSessionId);
+  } catch (failure) {
+    await callCustomerLedger(env.CUSTOMER_LEDGER, giftCustomerId, {
+      action: "close_usage_session",
+      customerId: giftCustomerId,
+      nowMs: Date.now(),
+      outcome: "failed",
+      usageSessionId: appSessionId,
+    });
+    await closeSessionDurable({ app_session_id: appSessionId, namespace: env.RATE_LIMITER, now_ms: Date.now() });
+    throw failure;
+  }
+}
+
+async function persistInsightsConsent(params: {
+  appSessionId: string;
+  env: Env;
+  hashedInstallId: string;
+  nowMs: number;
+  parsed: ParsedCreateSessionRequest;
+  request: Request;
+}): Promise<void> {
+  try {
+    const customerSession = await getMurmurSession(params.request, params.env);
+    await recordInsightsConsent(params.env, {
+      appSessionId: params.appSessionId,
+      consent: params.parsed.insightsConsent,
+      createdAt: new Date(params.nowMs).toISOString(),
+      customerId: customerSession?.user.id ?? null,
+      hashedInstallId: params.hashedInstallId,
+      sourceLanguage: params.parsed.sourceLanguage,
+      targetLanguage: params.parsed.targetLanguage,
+    });
+  } catch (failure) {
+    Sentry.captureException(failure, { tags: { operation: "record_insights_consent" } });
+  }
 }
 
 async function prepareConfiguredSession(
@@ -320,6 +357,7 @@ export async function prepareBillingUsage(
 type ParsedCreateSessionRequest = {
   acquisition?: AcquisitionContext;
   analyticsEnabled: boolean;
+  insightsConsent: boolean;
   appInstallId: string;
   appPlatform: "android" | "ios" | null;
   appVersion: string | null;
@@ -339,11 +377,9 @@ function parseCreateSessionRequest(
   if (typeof body.app_install_id !== "string" || body.app_install_id.length < 8) {
     return { ok: false, response: json({ error: "invalid_install_id" }, 400) };
   }
-  if (body.playback_enabled !== undefined && typeof body.playback_enabled !== "boolean") {
-    return { ok: false, response: json({ error: "invalid_playback_enabled" }, 400) };
-  }
-  if (body.capture_source !== undefined && body.capture_source !== "microphone" && body.capture_source !== "phone_audio") {
-    return { ok: false, response: json({ error: "invalid_capture_source" }, 400) };
+  const optionError = invalidSessionOption(body);
+  if (optionError) {
+    return { ok: false, response: json({ error: optionError }, 400) };
   }
   const languagePair = parseLanguagePair(body.source_language, body.target_language);
   if ("error" in languagePair) {
@@ -355,6 +391,7 @@ function parseCreateSessionRequest(
     value: {
       acquisition: normalizeAcquisitionContext(body.acquisition),
       analyticsEnabled: body.analytics_enabled === true,
+      insightsConsent: body.insights_consent === true,
       appInstallId: body.app_install_id,
       captureSource: body.capture_source === "phone_audio" ? "phone_audio" : "microphone",
       deviceIntegrity,
@@ -365,6 +402,19 @@ function parseCreateSessionRequest(
       targetLanguage: languagePair.targetLanguage,
     },
   };
+}
+
+function invalidSessionOption(body: Record<string, unknown>): string | null {
+  if (body.playback_enabled !== undefined && typeof body.playback_enabled !== "boolean") {
+    return "invalid_playback_enabled";
+  }
+  if (body.insights_consent !== undefined && typeof body.insights_consent !== "boolean") {
+    return "invalid_insights_consent";
+  }
+  if (body.capture_source !== undefined && body.capture_source !== "microphone" && body.capture_source !== "phone_audio") {
+    return "invalid_capture_source";
+  }
+  return null;
 }
 
 function parseAppPlatform(explicit: unknown, integrityPlatform: string | null): "android" | "ios" | null {

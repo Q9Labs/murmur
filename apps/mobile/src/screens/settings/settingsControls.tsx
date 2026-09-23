@@ -6,8 +6,10 @@ import type { ReactNode } from "react";
 export type SettingsControls = {
   analyticsEnabled: boolean;
   changeAnalytics: (enabled: boolean) => void;
+  changeInsightsConsent: (enabled: boolean) => void;
   deleteLocalData: () => void;
   locked: boolean;
+  insightsConsent: boolean | null;
   message: string | null;
   openReport: () => void;
   reportLabel: string;

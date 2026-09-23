@@ -13,6 +13,7 @@ import {
 } from "../billing/freeAllowanceClaims";
 import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
+import { deleteCustomerInsightsAndRatings } from "../insights/deleteCustomerData";
 import { hashInstallId } from "../privacy";
 import { getServerConfig } from "../serverConfig";
 import { socialProviders } from "./socialProviders";
@@ -77,6 +78,7 @@ export function createMurmurAuth(
             if (!deletion.result.ok) {
               throw new Error(`customer deletion failed: ${deletion.result.code}`);
             }
+            await deleteCustomerInsightsAndRatings(database, user.id);
           },
         },
       },

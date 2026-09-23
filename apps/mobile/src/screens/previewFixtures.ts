@@ -94,8 +94,10 @@ function noop(): void {}
 export const previewSettingsControls: SettingsControls = {
   analyticsEnabled: true,
   changeAnalytics: noop,
+  changeInsightsConsent: noop,
   deleteLocalData: noop,
   locked: false,
+  insightsConsent: null,
   message: null,
   openReport: noop,
   reportLabel: "Report a translation",

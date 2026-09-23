@@ -36,6 +36,12 @@ vi.mock("../lib/engagement", () => ({
   markReviewRequested: vi.fn(async () => undefined),
   recordSessionOutcome: vi.fn(async () => ({ should_request_review: false })),
 }));
+vi.mock("../lib/ratings/ratings", () => ({ deleteRatingState: vi.fn(async () => undefined) }));
+vi.mock("../lib/insightsConsent", () => ({
+  deleteInsightsConsent: vi.fn(async () => undefined),
+  getInsightsConsent: vi.fn(async () => false),
+  setInsightsConsent: vi.fn(async () => undefined),
+}));
 vi.mock("../lib/installIdentity", () => ({
   acknowledgePrivacyDisclosure: vi.fn(async () => undefined),
   deleteLocalMurmurData: vi.fn(async () => undefined),

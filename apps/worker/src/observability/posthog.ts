@@ -8,6 +8,22 @@ const postHogUsCaptureUrl = "https://us.i.posthog.com/i/v0/e/";
 
 export type WorkerTelemetryEvent =
   | {
+      event: "install_attribution";
+      platform: "ios" | "android";
+      source: string;
+      campaign_id: string | null;
+    }
+  | {
+      event: "session_insight";
+      setting: string;
+      speakers_estimate: "1" | "2" | "3+";
+      translation_quality: number;
+      sentiment: "positive" | "neutral" | "negative";
+      duration_ms: number;
+      source_language: string;
+      target_language: string;
+    }
+  | {
       event: "worker_billing_fulfillment";
       event_type: string;
       idempotent: boolean;
@@ -66,6 +82,7 @@ export type WorkerTelemetryEvent =
 export type TelemetryExecutionContext = Pick<ExecutionContext, "waitUntil">;
 
 type PostHogCaptureParams = {
+  country?: string;
   distinct_id: string;
   env: Env;
   payload: MobileTelemetryEvent | WorkerTelemetryEvent;
@@ -79,6 +96,7 @@ function postHogEventProperties(params: PostHogCaptureParams) {
     $ip: null,
     $process_person_profile: false,
     component: event.startsWith("mobile_") ? "mobile" : "worker",
+    ...(params.country ? { country: params.country } : {}),
     distinct_id: params.distinct_id,
     environment: params.env.MURMUR_ENV ?? "development",
     product: "murmur",

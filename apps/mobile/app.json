@@ -163,7 +163,8 @@
         }
       ],
       "./plugins/withAndroidReleaseSigning",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "splash": {
       "backgroundColor": "#F8F4ED",

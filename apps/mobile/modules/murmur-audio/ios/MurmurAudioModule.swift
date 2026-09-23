@@ -1,4 +1,5 @@
 import AVFoundation
+import AdServices
 import CryptoKit
 import DeviceCheck
 import ExpoModulesCore
@@ -48,6 +49,10 @@ public class MurmurAudioModule: Module {
       AVAudioSession.sharedInstance().requestRecordPermission { granted in
         promise.resolve(granted)
       }
+    }
+
+    AsyncFunction("getAdServicesAttributionToken") {
+      return try AAAttribution.attributionToken()
     }
 
     AsyncFunction("getCaptureCapabilities") {

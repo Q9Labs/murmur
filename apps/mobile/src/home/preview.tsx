@@ -29,6 +29,7 @@ const previewTranslation =
 
 const previewLive: LiveTranslationController = {
   cancel: async () => undefined,
+  clearRatingDecision: noop,
   debug_log: [],
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
@@ -47,6 +48,7 @@ const previewLive: LiveTranslationController = {
   latency_samples: [],
   invalidatePreparation: noop,
   preparation_status: "ready",
+  rating_decision: null,
   prepare: async () => undefined,
   report_error: null,
   report_receipt_id: null,

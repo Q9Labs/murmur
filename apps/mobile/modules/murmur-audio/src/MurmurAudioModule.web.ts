@@ -55,6 +55,10 @@ class MurmurAudioWebModule extends NativeModule<MurmurAudioModuleEvents> {
     }
   }
 
+  async getAdServicesAttributionToken(): Promise<string> {
+    throw new Error("AdServices attribution is unavailable on web");
+  }
+
   async getCaptureCapabilities(): Promise<CaptureCapabilities> {
     return {
       device_playback_supported: false,

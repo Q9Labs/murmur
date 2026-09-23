@@ -14,12 +14,14 @@ import type {
 import type { MobileFailureStage } from "@murmur/protocol/telemetry";
 import * as Network from "expo-network";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 import MurmurAudioModule, {
   type AudioFrameEvent,
   type AudioStateEvent,
 } from "../../../modules/murmur-audio";
 import { getOrCreateInstallId } from "../installIdentity";
+import { getInsightsConsent } from "../insightsConsent";
 import { saveConversation } from "../conversationHistory";
 import {
   type DebugLogEntry,
@@ -36,6 +38,7 @@ import {
 import { reportTranslation } from "../providers/reportTranslation";
 import { captureMobileFailure } from "../observability/sentry";
 import { captureMobileTelemetry } from "../telemetry";
+import { recordCompletedSession, type SessionRatingDecision } from "../ratings/ratings";
 import {
   getGracefulSessionStopDelay,
   scheduleRealtimeConnectionDeadline,
@@ -82,6 +85,7 @@ export function useLiveTranslation(
   params: LiveTranslationParams,
 ): LiveTranslationController {
   const [session, setSession] = useState(() => createSession(params));
+  const [ratingDecision, setRatingDecision] = useState<SessionRatingDecision | null>(null);
   const [spans, setSpans] = useState<TranslationSpan[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sourceTranscriptEnabled, setSourceTranscriptEnabled] = useState(false);
@@ -97,6 +101,7 @@ export function useLiveTranslation(
   const activeRealtimeSessionTokenRef = useRef<string | null>(null);
   const captureStartedAtRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
+  const sessionBackgroundedRef = useRef(false);
   const errorRef = useRef<string | null>(null);
   const firstSourceReceivedRef = useRef(false);
   const firstTranslationReceivedRef = useRef(false);
@@ -194,6 +199,16 @@ export function useLiveTranslation(
         "finish_session_after_network_loss",
       );
     });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus): void => {
+      if (nextState !== "active" && sessionRef.current.state === "live") {
+        sessionBackgroundedRef.current = true;
+      }
+    };
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
     return () => subscription.remove();
   }, []);
 
@@ -411,11 +426,13 @@ export function useLiveTranslation(
     });
     timingRef.current!.beginListen(listenTappedAtMs);
     const freshSession = createSession(params);
+    setRatingDecision(null);
     const realtimeSessionToken = freshSession.identity.connection_id;
     sessionRef.current = freshSession;
     setSession(freshSession);
     activeRealtimeSessionTokenRef.current = realtimeSessionToken;
     sessionStartedAtRef.current = listenTappedAtMs;
+    sessionBackgroundedRef.current = false;
     captureStartedAtRef.current = null;
     setLiveError(null);
     setReportError(null);
@@ -459,6 +476,7 @@ export function useLiveTranslation(
     const response = await createWorkerSession({
       acquisition: params.acquisition,
       analytics_enabled: params.analytics_enabled,
+      insights_consent: (await getInsightsConsent()) === true,
       app_install_id: appInstallId,
       capture_source: params.capture_source,
       device_integrity: deviceIntegrity,
@@ -882,6 +900,8 @@ export function useLiveTranslation(
     captureMobileTelemetry({
       app_session_id: sessionRef.current.identity.app_session_id,
       committed_translation: completion.committed_caption_count > 0,
+      backgrounded: sessionBackgroundedRef.current,
+      capture_source: params.capture_source,
       duration_ms: completion.duration_ms,
       error_code: completion.error,
       event: "mobile_session_completed",
@@ -895,6 +915,11 @@ export function useLiveTranslation(
       target_language: sessionRef.current.target_language,
       translated_char_count: diagnostics.runtime.translated_char_count,
     });
+    const decision = await recordCompletedSession(completion).catch((failure: unknown) => {
+      captureMobileFailure(failure, { operation: "record_completed_session_rating" });
+      return null;
+    });
+    setRatingDecision(decision);
     resolveCompletion(completion);
     return completion;
   }
@@ -1050,6 +1075,7 @@ export function useLiveTranslation(
 
   return {
     cancel,
+    clearRatingDecision: () => setRatingDecision(null),
     debug_log: debugLog,
     diagnostics_snapshot: diagnosticsSnapshot,
     error,
@@ -1058,6 +1084,7 @@ export function useLiveTranslation(
     latency_samples: latencySamples,
     invalidatePreparation,
     preparation_status: preparationStatus,
+    rating_decision: ratingDecision,
     prepare,
     report_error: reportError,
     report_receipt_id: reportReceiptId,
