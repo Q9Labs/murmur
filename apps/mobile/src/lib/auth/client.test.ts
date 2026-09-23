@@ -7,11 +7,16 @@ const auth = vi.hoisted(() => ({
   requestHook: vi.fn(),
   signInAnonymous: vi.fn(),
   signInEmailOtp: vi.fn(),
+  signInSocial: vi.fn(),
   sendVerificationOtp: vi.fn(),
 }));
 const installIdentity = vi.hoisted(() => ({
   getOrCreateFreeAllowanceId: vi.fn(),
   getOrCreateInstallId: vi.fn(),
+}));
+const nativeProviders = vi.hoisted(() => ({
+  getAppleIdentity: vi.fn(),
+  getGoogleIdentity: vi.fn(),
 }));
 
 vi.mock("@better-auth/expo/client", () => ({ expoClient: vi.fn(() => ({})) }));
@@ -32,6 +37,7 @@ vi.mock("better-auth/react", () => ({
       signIn: {
         anonymous: auth.signInAnonymous,
         emailOtp: auth.signInEmailOtp,
+        social: auth.signInSocial,
       },
     };
   }),
@@ -41,11 +47,14 @@ vi.mock("../appRelease", () => ({
   getAppRelease: () => ({ app_platform: "android", app_version: "1.2.3" }),
 }));
 vi.mock("../installIdentity", () => installIdentity);
+vi.mock("./nativeProviders", () => nativeProviders);
 
 import {
   authenticatedWorkerHeaders,
   deleteMurmurAccount,
   sendEmailSignInCode,
+  signInWithApple,
+  signInWithGoogle,
   verifyEmailSignInCode,
 } from "./client";
 
@@ -56,9 +65,12 @@ beforeEach(() => {
   auth.signInAnonymous.mockResolvedValue({ error: null });
   auth.sendVerificationOtp.mockResolvedValue({ error: null });
   auth.signInEmailOtp.mockResolvedValue({ error: null });
+  auth.signInSocial.mockResolvedValue({ error: null });
   auth.deleteUser.mockResolvedValue({ error: null });
   installIdentity.getOrCreateFreeAllowanceId.mockResolvedValue("free_test_123");
   installIdentity.getOrCreateInstallId.mockResolvedValue("install_test_123");
+  nativeProviders.getAppleIdentity.mockResolvedValue({ token: "apple-token", nonce: "nonce-1" });
+  nativeProviders.getGoogleIdentity.mockResolvedValue("google-token");
 });
 
 describe("mobile Murmur authentication client", () => {
@@ -120,5 +132,28 @@ describe("mobile Murmur authentication client", () => {
       otp: "123456",
     });
     expect(auth.deleteUser).toHaveBeenCalledOnce();
+  });
+
+  it("passes native ID tokens and the guest cookie to Better Auth for linking", async () => {
+    await signInWithApple();
+    await signInWithGoogle();
+
+    expect(auth.signInSocial).toHaveBeenNthCalledWith(1, {
+      provider: "apple",
+      idToken: { token: "apple-token", nonce: "nonce-1", user: undefined },
+    }, { headers: { cookie: "murmur.session=test-cookie" } });
+    expect(auth.signInSocial).toHaveBeenNthCalledWith(2, {
+      provider: "google",
+      idToken: { token: "google-token" },
+    }, { headers: { cookie: "murmur.session=test-cookie" } });
+  });
+
+  it("does not change the account when native sign-in is cancelled", async () => {
+    nativeProviders.getAppleIdentity.mockResolvedValue(null);
+    nativeProviders.getGoogleIdentity.mockResolvedValue(null);
+
+    await expect(signInWithApple()).resolves.toBe(false);
+    await expect(signInWithGoogle()).resolves.toBe(false);
+    expect(auth.signInSocial).not.toHaveBeenCalled();
   });
 });

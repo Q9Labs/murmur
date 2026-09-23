@@ -1,21 +1,29 @@
-import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
+import {
+  autoSourceLanguageCode,
+  getLanguage,
+  type LanguageCode,
+  type SourceLanguageCode,
+} from "@murmur/protocol/languages";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { ComponentType, MutableRefObject, ReactNode } from "react";
 import { Text, View } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 import type { ScrollView } from "react-native";
 
 import type { AudioCaptureSource, AudioStateEvent } from "../../modules/murmur-audio";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
+import { uiTextDirectionStyle, useUiLocale } from "../i18n/runtime";
 import { DiagnosticsModal } from "./diagnosticsModal";
 import { LanguagePickerController } from "./languagePicker";
 import { ModalSheet } from "./modalSheet";
-import { OutOfMinutesSheetController, type OutOfMinutesReason } from "./outOfMinutesSheet";
+import { useMurmurBilling } from "../lib/billing/context";
+import { OutOfMinutesSheet } from "./outOfMinutesSheet";
 import { TranslationReportActions } from "./reportTranslation";
-import { SettingsModal } from "./settingsModals";
 import { styles } from "./styles";
 import type { PickerMode } from "./types";
 import { UpdateRequiredSheet } from "./updateRequiredSheet";
 import { BloomShell } from "./variants/bloom";
+import { useAppInBackground } from "./variants/bloom/backgroundListening";
 import type { UiVariant, VariantShellProps } from "./variants/types";
 import type { HomeViewModel } from "./viewModel";
 
@@ -24,7 +32,6 @@ const variantShells: Record<UiVariant, ComponentType<VariantShellProps>> = {
 };
 
 export function HomeExperience(props: {
-  anonymousAnalyticsEnabled: boolean;
   audioPlaybackAvailable: boolean;
   audioPlaybackEnabled: boolean;
   audioState: AudioStateEvent | null;
@@ -37,29 +44,20 @@ export function HomeExperience(props: {
   networkType: string;
   onCloseDiagnostics: () => void;
   onClosePicker: () => void;
-  onClosePurchaseSheet: () => void;
-  onCloseSettings: () => void;
+  onCloseOutOfMinutes: () => void;
   onCloseUpdateRequired: () => void;
-  onAnonymousAnalyticsEnabledChange: (enabled: boolean) => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onOpenLowBalance: () => void;
-  onDeleteLocalData: () => void;
-  onOpenDiagnostics: () => void;
   onOpenPicker: (mode: PickerMode) => void;
   onOpenSettings: () => void;
-  onAccountBillingOpened: () => void;
   onPrimaryAction: () => void;
-  onResetIdentity: () => void;
-  onShare: () => void;
   onSwapLanguages: () => void;
   pickerMode: PickerMode;
-  purchaseSheetReason: OutOfMinutesReason | null;
+  onSeePlans: () => void;
+  outOfMinutesOpen: boolean;
   setSourceLanguageCode: (language: SourceLanguageCode) => void;
   setTargetLanguageCode: (language: LanguageCode) => void;
-  settingsMessage: string | null;
-  settingsOpen: boolean;
-  openAccountBilling: boolean;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
   timelineRef: MutableRefObject<ScrollView | null>;
@@ -68,6 +66,8 @@ export function HomeExperience(props: {
   viewModel: HomeViewModel;
 }): ReactNode {
   const Shell = variantShells.bloom;
+  const { customer } = useMurmurBilling();
+  const inBackground = useAppInBackground();
   return (
     <>
       <Shell
@@ -77,6 +77,7 @@ export function HomeExperience(props: {
         autoScrollRef={props.autoScrollRef}
         captureSource={props.captureSource}
         devicePlaybackSupported={props.devicePlaybackSupported}
+        listeningInBackground={inBackground && props.viewModel.isLive}
         live={props.live}
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onCaptureSourceChange={props.onCaptureSourceChange}
@@ -97,27 +98,13 @@ export function HomeExperience(props: {
         sourceLanguageCode={props.sourceLanguageCode}
         targetLanguageCode={props.targetLanguageCode}
       />
-      <OutOfMinutesSheetController
-        onClose={props.onClosePurchaseSheet}
-        open={props.purchaseSheetReason !== null}
-        reason={props.purchaseSheetReason ?? "exhausted"}
+      <OutOfMinutesSheet
+        customer={customer}
+        onClose={props.onCloseOutOfMinutes}
+        onSeePlans={props.onSeePlans}
+        open={props.outOfMinutesOpen}
       />
       <UpdateRequiredSheet onClose={props.onCloseUpdateRequired} open={props.updateRequiredOpen} />
-      <SettingsModal
-        anonymousAnalyticsEnabled={props.anonymousAnalyticsEnabled}
-        developerToolsEnabled={props.developerToolsEnabled}
-        live={props.live}
-        onClose={props.onCloseSettings}
-        onAccountBillingOpened={props.onAccountBillingOpened}
-        onAnonymousAnalyticsEnabledChange={props.onAnonymousAnalyticsEnabledChange}
-        onDeleteLocalData={props.onDeleteLocalData}
-        onOpenDiagnostics={props.onOpenDiagnostics}
-        onResetIdentity={props.onResetIdentity}
-        onShare={props.onShare}
-        open={props.settingsOpen}
-        openAccountBilling={props.openAccountBilling}
-        settingsMessage={props.settingsMessage}
-      />
       {props.developerToolsEnabled ? (
         <DiagnosticsModal
           audioState={props.audioState}
@@ -135,6 +122,11 @@ export function HomeExperience(props: {
           live={props.live}
           onClose={props.onCloseDiagnostics}
           open={props.diagnosticsOpen}
+          sourceLanguageDirection={
+            props.sourceLanguageCode === autoSourceLanguageCode
+              ? "auto"
+              : getLanguage(props.sourceLanguageCode).rtl ? "rtl" : "ltr"
+          }
           targetLanguageRtl={props.viewModel.targetLanguage.rtl}
         />
       )}
@@ -146,26 +138,32 @@ export function TranslationReportModal({
   live,
   onClose,
   open,
+  sourceLanguageDirection,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
   onClose: () => void;
   open: boolean;
+  sourceLanguageDirection: "auto" | "ltr" | "rtl";
   targetLanguageRtl: boolean;
 }): ReactNode {
+  const { direction, t } = useUiLocale();
   const reportableSpans = [...live.spans.filter((span) => span.status === "committed")].reverse();
 
   return (
-    <ModalSheet onClose={onClose} open={open} scroll title="Report translation">
+    <ModalSheet onClose={onClose} open={open} scroll title={t("report.title")}>
       <View style={styles.timeline}>
         {reportableSpans.length === 0 ? (
-          <Text style={styles.timelineEmpty}>No committed translations yet.</Text>
+          <Text style={[styles.timelineEmpty, uiTextDirectionStyle(direction)]}>
+            {t("report.noCommittedTranslations")}
+          </Text>
         ) : (
           reportableSpans.map((span) => (
             <ReportSpanRow
               key={`${span.span_id}-${span.revision}`}
               live={live}
               span={span}
+              sourceLanguageDirection={sourceLanguageDirection}
               targetLanguageRtl={targetLanguageRtl}
             />
           ))
@@ -177,19 +175,38 @@ export function TranslationReportModal({
 
 function ReportSpanRow({
   live,
+  sourceLanguageDirection,
   span,
   targetLanguageRtl,
 }: {
   live: LiveTranslationController;
+  sourceLanguageDirection: "auto" | "ltr" | "rtl";
   span: TranslationSpan;
   targetLanguageRtl: boolean;
 }): ReactNode {
+  const { direction } = useUiLocale();
   return (
     <View style={styles.spanRow}>
-      <Text style={styles.spanSource}>{span.source_caption}</Text>
-      <Text style={[styles.spanTranslation, targetLanguageRtl && styles.rtlText]}>
-        {span.committed_translated_caption ?? span.translated_caption}
-      </Text>
+      <PostHogMaskView>
+        <Text style={[
+          styles.spanSource,
+          sourceLanguageDirection === "auto"
+            ? styles.autoText
+            : sourceLanguageDirection === "rtl" ? styles.rtlText : styles.ltrText,
+          sourceLanguageDirection !== "auto" && uiTextDirectionStyle(sourceLanguageDirection, direction),
+        ]}>
+          {span.source_caption}
+        </Text>
+        <Text
+          style={[
+            styles.spanTranslation,
+            targetLanguageRtl ? styles.rtlText : styles.ltrText,
+            uiTextDirectionStyle(targetLanguageRtl ? "rtl" : "ltr", direction),
+          ]}
+        >
+          {span.committed_translated_caption ?? span.translated_caption}
+        </Text>
+      </PostHogMaskView>
       <TranslationReportActions live={live} span={span} />
     </View>
   );

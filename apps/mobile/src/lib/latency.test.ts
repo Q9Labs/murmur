@@ -45,6 +45,26 @@ describe("latency percentiles", () => {
     expect(formatLatencyPercentiles(undefined)).toBe("n/a");
   });
 
+  it("accepts a display-only number formatter without changing report defaults", () => {
+    const arabicDigits = new Intl.NumberFormat("ar-u-nu-arab", { useGrouping: false });
+
+    expect(
+      formatLatencyPercentiles(
+        { count: 2, p50_ms: 120, p90_ms: 240, p95_ms: 300 },
+        {
+          formatCount: (count) => `العدد=${count}`,
+          formatNumber: (value) => arabicDigits.format(value),
+          formatPercentile: (percentile, value) =>
+            `المئين ${percentile}: ${value ?? "غير متاح"}${value ? " مللي ثانية" : ""}`,
+          unavailable: "غير متاح",
+        },
+      ),
+    ).toBe(
+      "العدد=٢ / المئين ٥٠: ١٢٠ مللي ثانية / المئين ٩٠: ٢٤٠ مللي ثانية / المئين ٩٥: ٣٠٠ مللي ثانية",
+    );
+    expect(formatLatencyPercentiles(undefined, { unavailable: "غير متاح" })).toBe("غير متاح");
+  });
+
   it("builds an exportable evidence report with run metadata", () => {
     const report = buildLatencyEvidenceReport({
       debugLog: [

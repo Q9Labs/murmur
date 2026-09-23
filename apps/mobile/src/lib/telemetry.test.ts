@@ -22,6 +22,8 @@ vi.mock("./anonymousAnalytics", () => ({
   setAnonymousAnalyticsEnabled: dependencies.setAnonymousAnalyticsEnabled,
 }));
 vi.mock("./config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
+vi.mock("./installAttribution", () => ({ captureInstallAttribution: vi.fn(async () => undefined) }));
+vi.mock("./replay", () => ({ setReplayAnalyticsEnabled: vi.fn(async () => undefined) }));
 vi.mock("./installIdentity", () => ({
   getOrCreateInstallId: dependencies.getOrCreateInstallId,
 }));

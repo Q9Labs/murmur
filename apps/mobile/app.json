@@ -9,6 +9,18 @@
     "scheme": "murmur",
     "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
+    "locales": {
+      "ar": "./locales/ar.json",
+      "hi": "./locales/hi.json",
+      "es": "./locales/es.json",
+      "fr": "./locales/fr.json",
+      "ur": "./locales/ur.json",
+      "pt-BR": "./locales/pt-BR.json",
+      "de": "./locales/de.json",
+      "id": "./locales/id.json",
+      "tr": "./locales/tr.json",
+      "ja": "./locales/ja.json"
+    },
     "ios": {
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
       "buildNumber": "17",
@@ -163,7 +175,8 @@
         }
       ],
       "./plugins/withAndroidReleaseSigning",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "splash": {
       "backgroundColor": "#F8F4ED",

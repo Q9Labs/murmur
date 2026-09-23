@@ -6,11 +6,12 @@ vi.mock("react-native", () => ({
   Share: { share },
 }));
 
+import { en } from "../screens/__tests__/uiText";
 import { shareMurmur } from "./shareMurmur";
 
 describe("share Murmur", () => {
   it("shares a tagged public landing URL without caption content", async () => {
-    await shareMurmur();
+    await shareMurmur(en.t);
 
     expect(share).toHaveBeenCalledWith({
       message: expect.stringContaining("https://murmur.q9labs.ai/?utm_source=murmur-app"),

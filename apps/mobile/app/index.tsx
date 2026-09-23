@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import HomeScreen from "../src/home/homeScreen";
 import { BloomPreview } from "../src/home/preview";
-import { getMurmurEnvironment, getUiPreviewScreen } from "../src/lib/config";
+import { getMurmurEnvironment, getUiPreviewLocale, getUiPreviewScreen } from "../src/lib/config";
 
 const previewScreen = __DEV__ || getMurmurEnvironment() === "preview"
   ? getUiPreviewScreen()
@@ -10,7 +10,7 @@ const previewScreen = __DEV__ || getMurmurEnvironment() === "preview"
 
 export default function IndexRoute(): ReactNode {
   if (previewScreen !== null) {
-    return <BloomPreview screen={previewScreen} />;
+    return <BloomPreview locale={getUiPreviewLocale()} screen={previewScreen} />;
   }
 
   return <HomeScreen />;

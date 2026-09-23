@@ -5,7 +5,9 @@ import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protoco
 import * as Sentry from "@sentry/cloudflare";
 
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
-import { currentCustomerPlan } from "../billing/allowanceService";
+import { currentCustomerPlan, type CustomerPlan } from "../billing/allowanceService";
+import { queuePersonalOfferStart } from "../billing/personalOffer";
+import { getSessionPhoneAudioGift, settlePhoneAudioGift } from "../billing/phoneAudioGift";
 import {
   createRealtimeUsageMeter,
   type RealtimeUsageMeter,
@@ -13,6 +15,7 @@ import {
 import { findOpenUsageSession } from "../billing/usageSessionStore";
 import { type Env, getRealtimeApiKey, isBillingEnforced } from "../env";
 import { getServerConfig, type ServerConfig } from "../serverConfig";
+import { createInsightCollector, discardInsightSession, loadInsightSession, processSessionInsight, type InsightSessionContext } from "../insights/sessionInsights";
 import {
   closeSocket,
   send,
@@ -87,6 +90,7 @@ export function connectRealtimeSocket(
   } as WorkerResponseInit);
 }
 
+// fallow-ignore-next-line complexity
 export async function proxyRealtimeSession(
   request: Request,
   client: WorkerWebSocket,
@@ -103,21 +107,33 @@ export async function proxyRealtimeSession(
     closeSocket(client, validated.code, validated.reason);
     return;
   }
+  const giftDatabase = env.BILLING_DB;
+  const phoneAudioGift = giftDatabase
+    ? await getSessionPhoneAudioGift(giftDatabase, appSessionId)
+    : null;
   const usageMeter = createRealtimeUsageMeter({
     availableMs: validated.availableMs,
     customerId: validated.customerId,
     enforceAllowance: validated.billingEnforced,
+    gift: phoneAudioGift && giftDatabase
+      ? {
+        remainingMs: phoneAudioGift.remainingMs,
+        settle: (totalMs) => settlePhoneAudioGift(giftDatabase, appSessionId, totalMs),
+      }
+      : undefined,
     namespace: env.CUSTOMER_LEDGER,
     usageSessionId: appSessionId,
   });
   let config: ServerConfig;
+  let customerPlan: CustomerPlan = "free";
   try {
+    customerPlan = validated.customerId
+      ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
+      : "free";
     config = await getServerConfig(env, {
       appVersion: url.searchParams.get("app_version"),
       distinctId: `anonymous_install_${validated.safetyIdentifier}`,
-      plan: validated.customerId
-        ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
-        : "free",
+      plan: customerPlan,
       platform: url.searchParams.get("app_platform"),
     });
   } catch (failure) {
@@ -131,6 +147,11 @@ export async function proxyRealtimeSession(
     throw failure;
   }
   const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
+  const insightCollector = createInsightCollector();
+  const insightSession = await loadInsightSession(env, appSessionId).catch((failure: unknown) => {
+    Sentry.captureException(failure, { tags: { operation: "load_insight_session" } });
+    return null;
+  });
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
@@ -162,6 +183,15 @@ export async function proxyRealtimeSession(
     }
     sessionFinished = true;
     telemetry.stats.closeReason ??= termination.reason;
+    if (termination.errorCode === "allowance_exhausted" && validated.customerId && customerPlan === "free") {
+      queuePersonalOfferStart({
+        config,
+        context,
+        customerId: validated.customerId,
+        database: env.BILLING_DB,
+        nowMs: Date.now(),
+      });
+    }
     providerAbort.abort();
     clearRealtimeTimers();
     if (termination.errorCode) {
@@ -193,6 +223,10 @@ export async function proxyRealtimeSession(
       telemetry,
       createSessionEndedEvent(telemetry, termination.outcome, termination.failureCode),
     );
+    queueSessionInsight({
+      analyticsEnabled: validated.analyticsEnabled,
+      appSessionId, collector: insightCollector, config, context, env, session: insightSession,
+    });
   };
   const clearRealtimeTimers = (): void => {
     if (deadlineTimer) {
@@ -343,14 +377,14 @@ export async function proxyRealtimeSession(
   }
   settlementTimer = setInterval(() => {
     void usageMeter.settle().then((settlement) => {
-      if (!settlement.exhausted || sessionFinished || !validated.billingEnforced) {
+      if ((!settlement.exhausted && !settlement.giftExhausted) || sessionFinished || !validated.billingEnforced) {
         return;
       }
       terminate({
-        errorCode: "allowance_exhausted",
-        failureCode: "allowance_exhausted",
+        errorCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
+        failureCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
         outcome: "failed",
-        reason: "allowance_exhausted",
+        reason: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
         retryable: false,
         socketCode: 1008,
       });
@@ -386,6 +420,7 @@ export async function proxyRealtimeSession(
     terminate,
     () => playback.enabled && config.output_audio_enabled,
     config.source_transcript,
+    (delta) => insightCollector.add(delta),
   );
   try {
     upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
@@ -564,17 +599,19 @@ function bindClientEvents(
     });
   };
   let audioQueue = Promise.resolve();
-  const stopForBilling = (code: "allowance_exhausted" | "billing_unavailable"): void => {
+  const stopForBilling = (code: "allowance_exhausted" | "phone_audio_gift_exhausted" | "billing_unavailable"): void => {
     terminate({
       errorCode: code,
       failureCode: code,
       outcome: "failed",
       reason: code,
       retryable: code === "billing_unavailable",
-      socketCode: code === "allowance_exhausted" ? 1008 : 1011,
+      socketCode: code === "billing_unavailable" ? 1011 : 1008,
     });
   };
+  // fallow-ignore-next-line complexity
   const queueAudio = (audio: ArrayBuffer): void => {
+    // fallow-ignore-next-line complexity
     audioQueue = audioQueue.then(async () => {
       if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
         return;
@@ -582,14 +619,14 @@ function bindClientEvents(
       let acceptance = usageMeter.checkAudio(audio.byteLength);
       if (acceptance === "settlement_required") {
         const settlement = await usageMeter.settle();
-        if (settlement.exhausted) {
-          stopForBilling("allowance_exhausted");
+        if (settlement.exhausted || settlement.giftExhausted) {
+          stopForBilling(settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted");
           return;
         }
         acceptance = usageMeter.checkAudio(audio.byteLength);
       }
       if (acceptance !== "accepted") {
-        stopForBilling("allowance_exhausted");
+        stopForBilling(acceptance === "phone_audio_gift_exhausted" ? acceptance : "allowance_exhausted");
         return;
       }
       if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
@@ -652,6 +689,7 @@ function bindProviderEvents(
   terminate: (termination: RealtimeTermination) => void,
   isPlaybackEnabled: () => boolean,
   sourceTranscript: boolean,
+  onTranslation: (delta: string) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
     try {
@@ -663,6 +701,9 @@ function bindProviderEvents(
         return;
       }
       if (output.kind === "event") {
+        if (output.event.kind === "translation_delta") {
+          onTranslation(output.event.delta);
+        }
         if (output.event.kind === "source_delta" && !sourceTranscript) {
           return;
         }
@@ -755,6 +796,33 @@ type RealtimeTermination = {
   retryable: boolean;
   socketCode: number;
 };
+
+function queueSessionInsight(params: {
+  analyticsEnabled: boolean;
+  appSessionId: string;
+  collector: ReturnType<typeof createInsightCollector>;
+  config: ServerConfig;
+  context?: TelemetryExecutionContext;
+  env: Env;
+  session: InsightSessionContext | null;
+}): void {
+  const translation = params.collector.finish();
+  if (!params.session) return;
+  const processing = translation
+    ? processSessionInsight({
+        analyticsEnabled: params.analyticsEnabled,
+        configModel: params.config.insights_model,
+        context: params.context,
+        env: params.env,
+        session: params.session,
+        translation,
+      })
+    : discardInsightSession(params.env, params.appSessionId).catch((failure: unknown) => {
+        Sentry.captureException(failure, { tags: { operation: "discard_insight_session" } });
+      });
+  if (params.context) params.context.waitUntil(processing);
+  else void processing;
+}
 
 type RealtimeTelemetry = {
   analyticsEnabled: boolean;

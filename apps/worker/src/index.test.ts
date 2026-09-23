@@ -8,6 +8,7 @@ vi.mock("@bradford-tech/supabase-integrity-attest", () => ({
 }));
 
 import worker from "./index";
+import { posthogFlagsBody } from "./posthogFlagsFixture";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -260,7 +261,7 @@ describe("worker routes", () => {
   });
 
   it("returns the source-transcript capability selected by the server flag", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { source_transcript: true },
     }))));
     const response = await worker.fetch(
@@ -274,7 +275,7 @@ describe("worker routes", () => {
   });
 
   it("refuses disabled sessions with the configured message", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { sessions_enabled: true, sessions_disabled_message: true },
       featureFlagPayloads: {
         sessions_disabled_message: '"Paused for maintenance"',
@@ -293,7 +294,7 @@ describe("worker routes", () => {
   });
 
   it("refuses a reported app version below the configured platform minimum", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
       featureFlags: { min_app_version_android: true },
       featureFlagPayloads: { min_app_version_android: '"1.2.10"' },
     }))));

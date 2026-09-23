@@ -9,6 +9,29 @@ import {
 
 function createBloomStyles(theme: MurmurTheme) {
   return StyleSheet.create({
+    backgroundDot: {
+      backgroundColor: theme.teal,
+      borderRadius: 999,
+      height: 8,
+      width: 8,
+    },
+    backgroundPill: {
+      alignItems: "center",
+      alignSelf: "center",
+      backgroundColor: theme.selected,
+      borderColor: theme.selectedBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: 8,
+      minHeight: 40,
+      paddingHorizontal: 16,
+    },
+    backgroundText: {
+      color: theme.primary,
+      fontSize: 15,
+      fontWeight: "800",
+    },
     checkbox: {
       alignItems: "center",
       borderColor: theme.muted,
@@ -121,12 +144,6 @@ function createBloomStyles(theme: MurmurTheme) {
       paddingHorizontal: 24,
       textAlign: "center",
     },
-    eyebrow: {
-      color: theme.teal,
-      fontSize: 14,
-      fontWeight: "700",
-      letterSpacing: 0.4,
-    },
     flexFill: {
       flex: 1,
     },
@@ -206,11 +223,46 @@ function createBloomStyles(theme: MurmurTheme) {
       justifyContent: "center",
       paddingHorizontal: 32,
     },
+    onboardingHero: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      minHeight: 240,
+      paddingVertical: 12,
+    },
+    onboardingLink: {
+      color: theme.primary,
+      fontSize: 15,
+      fontWeight: "700",
+      textDecorationLine: "underline",
+    },
     onboardingFooter: {
       alignItems: "stretch",
       paddingBottom: 26,
       paddingHorizontal: 28,
       paddingTop: 10,
+    },
+    privacyPoint: {
+      alignItems: "flex-start",
+      flexDirection: "row",
+      gap: 14,
+    },
+    privacyPointIcon: {
+      alignItems: "center",
+      backgroundColor: theme.selected,
+      borderColor: theme.selectedBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 38,
+      justifyContent: "center",
+      width: 38,
+    },
+    privacyPointText: {
+      color: theme.secondaryText,
+      flex: 1,
+      fontSize: 17,
+      lineHeight: 25,
+      paddingTop: 6,
     },
     pressed: {
       opacity: 0.55,
@@ -242,9 +294,18 @@ function createBloomStyles(theme: MurmurTheme) {
       textAlign: "right",
       writingDirection: "rtl",
     },
+    ltrText: {
+      textAlign: "left",
+      writingDirection: "ltr",
+    },
     screen: {
       backgroundColor: theme.background,
       flex: 1,
+    },
+    setupLabel: {
+      color: theme.secondaryText,
+      fontSize: 15,
+      fontWeight: "700",
     },
     setupRow: {
       borderBottomColor: theme.hairline,
@@ -262,26 +323,6 @@ function createBloomStyles(theme: MurmurTheme) {
       fontSize: 14,
       fontWeight: "700",
       textAlign: "center",
-    },
-    stageDot: {
-      backgroundColor: theme.teal,
-      borderRadius: 999,
-      height: 7,
-      width: 7,
-    },
-    stageHeader: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: 8,
-      paddingHorizontal: 30,
-      paddingTop: 28,
-    },
-    stageLabel: {
-      color: theme.muted,
-      flexShrink: 1,
-      fontSize: 14,
-      fontWeight: "700",
-      letterSpacing: 0.4,
     },
     sourceText: {
       color: theme.secondaryText,
@@ -303,13 +344,17 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     timelineContentTranslationOnly: {
       gap: 28,
-      paddingTop: 20,
     },
     timelineTranslation: {
       color: theme.primary,
       fontSize: 32,
       fontWeight: "800",
       lineHeight: 42,
+    },
+    welcomeBody: {
+      gap: 14,
+      paddingHorizontal: 32,
+      paddingTop: 8,
     },
     title: {
       color: theme.primary,

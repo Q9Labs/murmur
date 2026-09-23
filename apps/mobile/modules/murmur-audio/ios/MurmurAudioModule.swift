@@ -1,4 +1,5 @@
 import AVFoundation
+import AdServices
 import CryptoKit
 import DeviceCheck
 import ExpoModulesCore
@@ -6,7 +7,6 @@ import ExpoModulesCore
 private let murmurSampleRate = 24_000.0
 private let murmurFrameBytes = 960
 private let murmurFrameDurationMs = 20
-private let murmurMaxCaptureDurationSeconds = 300.0
 private let murmurAppAttestKeyId = "murmur.app_attest.key_id.v1"
 
 public class MurmurAudioModule: Module {
@@ -17,7 +17,6 @@ public class MurmurAudioModule: Module {
   private var converter: AVAudioConverter?
   private var captureDeadline: DispatchWorkItem?
   private var captureBuffer = Data()
-  private var appForeground = true
   private var captureActive = false
   private var captureSource = "microphone"
   private var playbackActive = false
@@ -52,6 +51,10 @@ public class MurmurAudioModule: Module {
       }
     }
 
+    AsyncFunction("getAdServicesAttributionToken") {
+      return try AAAttribution.attributionToken()
+    }
+
     AsyncFunction("getCaptureCapabilities") {
       return [
         "device_playback_supported": false,
@@ -73,8 +76,8 @@ public class MurmurAudioModule: Module {
       return self.statePayload(reason: "get_audio_state")
     }
 
-    AsyncFunction("startCapture") { (source: String) in
-      try self.startCaptureSync(source: source)
+    AsyncFunction("startCapture") { (source: String, maxSessionSeconds: Int) in
+      try self.startCaptureSync(source: source, maxSessionSeconds: maxSessionSeconds)
       return self.statePayload(reason: "capture_started")
     }.runOnQueue(.main)
 
@@ -106,32 +109,15 @@ public class MurmurAudioModule: Module {
       self.requestAppAttestToken(nonce: nonce, promise: promise)
     }
 
-    OnAppEntersBackground {
-      self.appForeground = false
-      self.stopCaptureSync(reason: "app_background")
-      self.clearPlaybackSync(reason: "app_background")
-    }
-
-    OnAppEntersForeground {
-      self.appForeground = true
-    }
-
     OnDestroy {
       self.stopCaptureSync(reason: "module_destroy")
       self.clearPlaybackSync(reason: "module_destroy")
     }
   }
 
-  private func startCaptureSync(source: String) throws {
+  private func startCaptureSync(source: String, maxSessionSeconds: Int) throws {
     if captureActive {
       return
-    }
-    guard appForeground else {
-      throw NSError(
-        domain: "MurmurAudio",
-        code: 2,
-        userInfo: [NSLocalizedDescriptionKey: "Audio capture requires the foreground"]
-      )
     }
     guard source == "microphone" else {
       throw NSError(
@@ -158,7 +144,7 @@ public class MurmurAudioModule: Module {
       }
     }
     captureActive = true
-    scheduleCaptureDeadline()
+    scheduleCaptureDeadline(maxSessionSeconds: maxSessionSeconds)
     emitState(reason: "capture_started")
   }
 
@@ -212,7 +198,7 @@ public class MurmurAudioModule: Module {
     }
   }
 
-  private func scheduleCaptureDeadline() {
+  private func scheduleCaptureDeadline(maxSessionSeconds: Int) {
     captureDeadline?.cancel()
     let deadline = DispatchWorkItem { [weak self] in
       guard let self, self.captureActive else {
@@ -223,7 +209,7 @@ public class MurmurAudioModule: Module {
     }
     captureDeadline = deadline
     DispatchQueue.main.asyncAfter(
-      deadline: .now() + murmurMaxCaptureDurationSeconds,
+      deadline: .now() + Double(max(1, min(maxSessionSeconds, 3600))),
       execute: deadline
     )
   }

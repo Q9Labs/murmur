@@ -8,11 +8,12 @@ import {
 
 declare class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
   requestMicrophonePermission(): Promise<boolean>;
+  getAdServicesAttributionToken(): Promise<string>;
   getCaptureCapabilities(): Promise<CaptureCapabilities>;
   requestDevicePlaybackPermission(): Promise<boolean>;
   requestOverlayPermission(): Promise<boolean>;
   getAudioState(): Promise<Record<string, unknown>>;
-  startCapture(source: AudioCaptureSource): Promise<Record<string, unknown>>;
+  startCapture(source: AudioCaptureSource, maxSessionSeconds: number): Promise<Record<string, unknown>>;
   stopCapture(reason?: string): Promise<Record<string, unknown>>;
   updateOverlayCaption(caption: string, rtl: boolean): Promise<Record<string, unknown>>;
   startPlayback(): Promise<Record<string, unknown>>;

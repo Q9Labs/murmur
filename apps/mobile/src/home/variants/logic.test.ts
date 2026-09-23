@@ -94,7 +94,7 @@ describe("span display helpers", () => {
     expect(timelineTranslationText({ ...createSpan("hi"), committed_translated_caption: "مرحبا" })).toBe("مرحبا");
     expect(timelineTranslationText({ ...createSpan("hi"), partial_translated_caption: "مرح" })).toBe("مرح");
     expect(timelineTranslationText({ ...createSpan("hi"), status: "failed" })).toBe("Translation failed");
-    expect(timelineTranslationText(createSpan("hi"))).toBe("Translating...");
+    expect(timelineTranslationText(createSpan("hi"))).toBe("Translating…");
   });
 
   it("marks partial and translating spans as partial", () => {

@@ -8,7 +8,7 @@ type GrantRow = {
   original_ms: number;
   remaining_ms: number;
 };
-type PaidValueRow = { paid_grant_count: number };
+type PaidGrantRow = { grant_id: string; remaining_ms: number };
 
 export async function mergeGuestCustomer(params: {
   database: D1Database | undefined;
@@ -33,7 +33,7 @@ export async function mergeGuestCustomer(params: {
     }
     return;
   }
-  const [sourceCustomer, destinationCustomer, paidValue] = await Promise.all([
+  const [sourceCustomer, destinationCustomer, paidGrants] = await Promise.all([
     database
       .prepare("SELECT state FROM customers WHERE customer_id = ?")
       .bind(params.sourceCustomerId)
@@ -44,18 +44,15 @@ export async function mergeGuestCustomer(params: {
       .first<CustomerRow>(),
     database
       .prepare(
-        `SELECT COUNT(*) AS paid_grant_count
+        `SELECT grant_id, remaining_ms
          FROM balance_grants
          WHERE customer_id = ? AND grant_kind != 'free' AND remaining_ms != 0`,
       )
       .bind(params.sourceCustomerId)
-      .first<PaidValueRow>(),
+      .all<PaidGrantRow>(),
   ]);
   if (sourceCustomer?.state !== "active" || destinationCustomer?.state !== "active") {
     throw new Error("account merge requires two active customers");
-  }
-  if ((paidValue?.paid_grant_count ?? 0) > 0) {
-    throw new Error("guest account with paid value requires audited support merge");
   }
 
   const periodPrefix = currentFreePeriodPrefix(params.nowMs);
@@ -63,16 +60,6 @@ export async function mergeGuestCustomer(params: {
     currentFreeGrant(database, params.sourceCustomerId, periodPrefix),
     currentFreeGrant(database, params.destinationCustomerId, periodPrefix),
   ]);
-  if (!sourceGrant || !destinationGrant) {
-    throw new Error("account merge could not find the current free allowance");
-  }
-  const destinationRemainingMs = mergedFreeRemainingMs({
-    destinationOriginalMs: destinationGrant.original_ms,
-    destinationRemainingMs: destinationGrant.remaining_ms,
-    sourceOriginalMs: sourceGrant.original_ms,
-    sourceRemainingMs: sourceGrant.remaining_ms,
-  });
-  const destinationDeltaMs = destinationRemainingMs - destinationGrant.remaining_ms;
   const mergeId = `merge:${params.sourceCustomerId}:${params.destinationCustomerId}`;
   const statements: D1PreparedStatement[] = [
     database
@@ -88,67 +75,85 @@ export async function mergeGuestCustomer(params: {
         params.nowMs,
       ),
   ];
-  if (sourceGrant.remaining_ms > 0) {
+  appendFreeGrantMergeStatements({
+    database,
+    destinationCustomerId: params.destinationCustomerId,
+    destinationGrant,
+    mergeId,
+    nowMs: params.nowMs,
+    sourceCustomerId: params.sourceCustomerId,
+    sourceGrant,
+    statements,
+  });
+  for (const grant of paidGrants.results) {
+    const key = `${mergeId}:paid:${grant.grant_id}`;
     statements.push(
       mergeLedgerEntry({
-        amountMs: -sourceGrant.remaining_ms,
+        amountMs: -grant.remaining_ms,
         customerId: params.sourceCustomerId,
         database,
-        grantId: sourceGrant.grant_id,
-        idempotencyKey: `${mergeId}:source-free`,
-        ledgerEntryId: `ledger:${mergeId}:source-free`,
+        grantId: grant.grant_id,
+        idempotencyKey: `${key}:source`,
+        ledgerEntryId: `ledger:${key}:source`,
         nowMs: params.nowMs,
         sourceCustomerId: params.sourceCustomerId,
       }),
-      database
-        .prepare(
-          `UPDATE balance_grants
-           SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
-           WHERE grant_id = ? AND customer_id = ?`,
-        )
-        .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
-      updateProjection(
-        database,
-        params.sourceCustomerId,
-        `ledger:${mergeId}:source-free`,
-        params.nowMs,
-      ),
-    );
-  }
-  if (destinationDeltaMs !== 0) {
-    statements.push(
       mergeLedgerEntry({
-        amountMs: destinationDeltaMs,
+        amountMs: grant.remaining_ms,
         customerId: params.destinationCustomerId,
         database,
-        grantId: destinationGrant.grant_id,
-        idempotencyKey: `${mergeId}:destination-free`,
-        ledgerEntryId: `ledger:${mergeId}:destination-free`,
+        grantId: grant.grant_id,
+        idempotencyKey: `${key}:destination`,
+        ledgerEntryId: `ledger:${key}:destination`,
         nowMs: params.nowMs,
         sourceCustomerId: params.sourceCustomerId,
       }),
-      database
-        .prepare(
-          `UPDATE balance_grants
-           SET remaining_ms = ?, state = ?, updated_at_ms = ?
-           WHERE grant_id = ? AND customer_id = ?`,
-        )
-        .bind(
-          destinationRemainingMs,
-          destinationRemainingMs > 0 ? "available" : "exhausted",
-          params.nowMs,
-          destinationGrant.grant_id,
-          params.destinationCustomerId,
-        ),
-      updateProjection(
-        database,
-        params.destinationCustomerId,
-        `ledger:${mergeId}:destination-free`,
-        params.nowMs,
-      ),
+      updateProjection(database, params.sourceCustomerId, `ledger:${key}:source`, params.nowMs),
+      updateProjection(database, params.destinationCustomerId, `ledger:${key}:destination`, params.nowMs),
     );
   }
   statements.push(
+    database
+      .prepare(
+        `INSERT INTO phone_audio_gifts (customer_id, claimed_at_ms, remaining_ms)
+         SELECT ?, claimed_at_ms, remaining_ms
+         FROM phone_audio_gifts WHERE customer_id = ?
+         ON CONFLICT(customer_id) DO UPDATE SET
+           claimed_at_ms = MIN(phone_audio_gifts.claimed_at_ms, excluded.claimed_at_ms),
+           remaining_ms = MIN(phone_audio_gifts.remaining_ms, excluded.remaining_ms)`,
+      )
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+    database
+      .prepare(
+        "UPDATE phone_audio_gift_sessions SET customer_id = ? WHERE customer_id = ?",
+      )
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+  );
+  statements.push(
+    database
+      .prepare(
+        `UPDATE balance_grants
+         SET customer_id = ?, updated_at_ms = ?
+         WHERE customer_id = ? AND grant_kind != 'free'`,
+      )
+      .bind(params.destinationCustomerId, params.nowMs, params.sourceCustomerId),
+    database
+      .prepare("UPDATE subscriptions SET customer_id = ? WHERE customer_id = ?")
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+    database
+      .prepare("UPDATE store_transactions SET customer_id = ? WHERE customer_id = ?")
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+    database
+      .prepare(
+        `INSERT INTO personal_offers (customer_id, started_at_ms, expires_at_ms, redeemed)
+         SELECT ?, started_at_ms, expires_at_ms, redeemed
+         FROM personal_offers WHERE customer_id = ?
+         ON CONFLICT(customer_id) DO UPDATE SET
+           started_at_ms = MIN(personal_offers.started_at_ms, excluded.started_at_ms),
+           expires_at_ms = MIN(personal_offers.expires_at_ms, excluded.expires_at_ms),
+           redeemed = MAX(personal_offers.redeemed, excluded.redeemed)`,
+      )
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
     database
       .prepare(
         `UPDATE usage_sessions
@@ -185,6 +190,89 @@ export async function mergeGuestCustomer(params: {
       .bind(params.nowMs, mergeId),
   );
   await database.batch(statements);
+}
+
+function appendFreeGrantMergeStatements(params: {
+  database: D1Database;
+  destinationCustomerId: string;
+  destinationGrant: GrantRow | null;
+  mergeId: string;
+  nowMs: number;
+  sourceCustomerId: string;
+  sourceGrant: GrantRow | null;
+  statements: D1PreparedStatement[];
+}): void {
+  const { database, destinationGrant, sourceGrant, statements } = params;
+  const destinationRemainingMs = sourceGrant && destinationGrant
+    ? mergedFreeRemainingMs({
+      destinationOriginalMs: destinationGrant.original_ms,
+      destinationRemainingMs: destinationGrant.remaining_ms,
+      sourceOriginalMs: sourceGrant.original_ms,
+      sourceRemainingMs: sourceGrant.remaining_ms,
+    })
+    : null;
+  if (sourceGrant && sourceGrant.remaining_ms > 0) {
+    statements.push(
+      mergeLedgerEntry({
+        amountMs: -sourceGrant.remaining_ms,
+        customerId: params.sourceCustomerId,
+        database,
+        grantId: sourceGrant.grant_id,
+        idempotencyKey: `${params.mergeId}:source-free`,
+        ledgerEntryId: `ledger:${params.mergeId}:source-free`,
+        nowMs: params.nowMs,
+        sourceCustomerId: params.sourceCustomerId,
+      }),
+      database
+        .prepare(
+          `UPDATE balance_grants
+           SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
+           WHERE grant_id = ? AND customer_id = ?`,
+        )
+        .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+      updateProjection(
+        database,
+        params.sourceCustomerId,
+        `ledger:${params.mergeId}:source-free`,
+        params.nowMs,
+      ),
+    );
+  }
+  if (destinationGrant && destinationRemainingMs !== null &&
+    destinationRemainingMs !== destinationGrant.remaining_ms) {
+    const destinationDeltaMs = destinationRemainingMs - destinationGrant.remaining_ms;
+    statements.push(
+      mergeLedgerEntry({
+        amountMs: destinationDeltaMs,
+        customerId: params.destinationCustomerId,
+        database,
+        grantId: destinationGrant.grant_id,
+        idempotencyKey: `${params.mergeId}:destination-free`,
+        ledgerEntryId: `ledger:${params.mergeId}:destination-free`,
+        nowMs: params.nowMs,
+        sourceCustomerId: params.sourceCustomerId,
+      }),
+      database
+        .prepare(
+          `UPDATE balance_grants
+           SET remaining_ms = ?, state = ?, updated_at_ms = ?
+           WHERE grant_id = ? AND customer_id = ?`,
+        )
+        .bind(
+          destinationRemainingMs,
+          destinationRemainingMs > 0 ? "available" : "exhausted",
+          params.nowMs,
+          destinationGrant.grant_id,
+          params.destinationCustomerId,
+        ),
+      updateProjection(
+        database,
+        params.destinationCustomerId,
+        `ledger:${params.mergeId}:destination-free`,
+        params.nowMs,
+      ),
+    );
+  }
 }
 
 async function currentFreeGrant(

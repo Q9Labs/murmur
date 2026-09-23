@@ -2,9 +2,11 @@ import type { NativeScrollEvent } from "react-native";
 
 import type { TranslationSpan } from "@murmur/protocol/session";
 import { isAllowanceExhaustedError, isUpdateRequiredError } from "../errorCopy";
+import { createTranslator, type Translate } from "../../i18n/runtime";
 import type { UiVariant } from "./types";
 
 const uiVariants = ["bloom"] as const;
+const englishTranslate = createTranslator("en");
 
 export function isUiVariant(value: unknown): value is UiVariant {
   return typeof value === "string" && (uiVariants as readonly string[]).includes(value);
@@ -61,10 +63,13 @@ export function formatClockTime(timestampMs: number): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-export function timelineTranslationText(span: TranslationSpan): string {
+export function timelineTranslationText(
+  span: TranslationSpan,
+  translate: Translate = englishTranslate,
+): string {
   return span.committed_translated_caption ||
     span.partial_translated_caption ||
-    (span.status === "failed" ? "Translation failed" : "Translating...");
+    translate(span.status === "failed" ? "home.translationFailed" : "home.translating");
 }
 
 export function isPartialSpan(span: TranslationSpan): boolean {
@@ -82,14 +87,18 @@ export function hasVisibleTimeline(spans: TranslationSpan[], tentativeSourceCapt
   return spans.some((span) => !shouldHideSpan(span)) || Boolean(tentativeSourceCaption.trim());
 }
 
-export function primaryStartLabel(error: string | null, timeAvailable: boolean): string {
+export function primaryStartLabel(
+  error: string | null,
+  timeAvailable: boolean,
+  translate: Translate = englishTranslate,
+): string {
   if (isUpdateRequiredError(error)) {
-    return "Update Murmur";
+    return translate("home.updateMurmur");
   }
   if (isAllowanceExhaustedError(error) && !timeAvailable) {
-    return "Get more time";
+    return translate("home.getMoreTime");
   }
-  return error && error !== "microphone_permission_denied" ? "Try again" : "Listen";
+  return translate(error && error !== "microphone_permission_denied" ? "home.tryAgain" : "home.listen");
 }
 
 export function normalizedMicLevel(rms: number): number {

@@ -5,9 +5,16 @@ vi.mock("../auth/auth", () => ({
 }));
 
 import { getMurmurSession } from "../auth/auth";
-import { getConfig } from "./config";
+import { getConfig, personalOfferOfferingId } from "./config";
 
 describe("GET /v3/config", () => {
+  it("uses the lite personal offering only in the four lite countries", () => {
+    for (const country of ["IN", "PK", "ID", "TR"]) {
+      expect(personalOfferOfferingId(country, "personal_offer")).toBe("lite_personal_offer");
+    }
+    expect(personalOfferOfferingId("US", "personal_offer")).toBe("personal_offer");
+    expect(personalOfferOfferingId(undefined, "personal_offer")).toBe("personal_offer");
+  });
   it("requires the same session as the customer route", async () => {
     vi.mocked(getMurmurSession).mockResolvedValueOnce(null);
     const response = await getConfig(new Request("https://worker.example/v3/config"), {});
@@ -24,6 +31,7 @@ describe("GET /v3/config", () => {
       min_app_version_android: null,
       min_app_version_ios: null,
       paywall_offering_id: null,
+      personal_offer: null,
       sessions_disabled_message: "Sessions are temporarily unavailable. Please try again later.",
       sessions_enabled: true,
     });

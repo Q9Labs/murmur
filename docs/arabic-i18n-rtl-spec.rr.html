@@ -1,0 +1,133 @@
+<rr-doc
+  title="Arabic UI localization and RTL"
+  register="spec"
+  project="Murmur"
+  risk="major"
+  summary="A typed English and MSA Arabic app shell with exact locale persistence, Arabic digits, and locale-derived RTL."
+>
+<rr-deck id="arabic-i18n-spec">
+
+<rr-slide spine="Start">
+  <h1>Arabic UI, without mixing it with speech</h1>
+  <p class="lede">Murmur gains a Git-owned MSA Arabic shell. The UI locale controls app copy, digits, and layout direction; source and target speech languages keep their own rules.</p>
+  <rr-tiles>
+    <rr-tile icon="globe" label="Languages" value="2" caption="English + MSA Arabic" tone="accent"></rr-tile>
+    <rr-tile icon="route" label="Direction" value="Locale" caption="RTL comes from the UI locale"></rr-tile>
+    <rr-tile icon="lock" label="Persistence" value="Local" caption="Browser local storage; native secure store"></rr-tile>
+    <rr-tile icon="check" label="Proof" value="AI" caption="Tests and bounded AI review"></rr-tile>
+  </rr-tiles>
+  <p><a href="arabic-i18n-rtl-spec.md">Read the executor spec</a></p>
+</rr-slide>
+
+<rr-slide spine="Gap" title="Today and goal">
+  <rr-panes>
+    <rr-before label="Today">
+      <p>The app shell is English and left-to-right. Arabic direction is limited to transcript text.</p>
+    </rr-before>
+    <rr-after label="Goal">
+      <p>The shell switches between English and MSA Arabic. Copy, digits, layout, and accessibility update together.</p>
+    </rr-after>
+  </rr-panes>
+  <rr-beat><p>Speech languages stay independent, so an English shell can show Arabic captions and an Arabic shell can show English captions.</p></rr-beat>
+  <rr-beat><p>English is the stable default. Murmur does not guess from the device or the active translation pair.</p></rr-beat>
+</rr-slide>
+
+<rr-slide spine="Rules" title="One exact locale drives the shell">
+  <rr-journey>
+    <rr-stop>saved exact locale</rr-stop><rr-sep/><rr-stop tone="new">typed catalog</rr-stop><rr-sep/><rr-stop>copy + digits + direction</rr-stop>
+  </rr-journey>
+  <rr-beat>
+    <rr-cols2>
+      <rr-card><h3>UI locale</h3><p>Owns buttons, messages, accessibility labels, Arabic digits, and app layout direction.</p></rr-card>
+      <rr-card><h3>Speech language</h3><p>Owns live translation and transcript writing direction. It does not change the shell.</p></rr-card>
+    </rr-cols2>
+  </rr-beat>
+  <rr-beat><rr-callout tone="amber">Future <strong>ar-SA</strong> and <strong>ar-AE</strong> are separate switcher languages and catalogs. The runtime never folds them into <strong>ar</strong>.</rr-callout></rr-beat>
+</rr-slide>
+
+<rr-slide spine="Preview" title="The Arabic settings path">
+  <p>The active language is visible in Settings. This illustrative preview shows the replacement view inside the same sheet, so native platforms never stack a second modal.</p>
+  <rr-mockup app="Murmur" id="murmur-arabic-settings" viewport="mobile" label="Arabic settings and UI-language picker">
+    <style>
+      .phone { min-height: 640px; background:#171319; color:#fff6ec; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; position:relative; overflow:hidden; }
+      .top { display:flex; direction:rtl; justify-content:space-between; align-items:center; padding:24px 20px; }
+      .brand { display:flex; gap:9px; align-items:center; font-weight:800; font-size:18px; }
+      .logo { width:30px; height:30px; border-radius:10px; background:#ff746a; display:grid; place-items:center; color:#24171f; }
+      .gear { width:42px; height:42px; border:1px solid rgba(250,243,231,.15); border-radius:999px; display:grid; place-items:center; }
+      .sheet { position:absolute; inset:115px 0 0; direction:rtl; background:#211b24; border:1px solid rgba(250,243,231,.15); border-radius:30px 30px 0 0; padding:10px 20px 28px; }
+      .handle { width:42px; height:5px; border-radius:999px; margin:0 auto 18px; background:rgba(250,243,231,.15); }
+      .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+      h2 { font-size:26px; margin:0; }
+      .close { width:36px; height:36px; border-radius:18px; background:#2a232d; display:grid; place-items:center; }
+      .row { display:flex; justify-content:space-between; align-items:center; min-height:68px; border-bottom:1px solid rgba(250,243,231,.15); font-size:17px; font-weight:700; }
+      .meta { color:#b9acbc; font-size:14px; font-weight:600; }
+      .selected { margin-top:12px; padding:0 12px; border:1px solid rgba(77,216,191,.38); background:rgba(77,216,191,.16); border-radius:16px; }
+      .check { color:#4dd8bf; font-size:20px; }
+    </style>
+    <div class="phone" lang="ar" dir="rtl">
+      <div class="top"><div class="brand"><span class="logo">م</span><span>Murmur</span></div><div class="gear">⚙</div></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="head"><h2>لغة التطبيق</h2><span class="close">×</span></div>
+        <div class="row selected"><div><div>العربية</div><div class="meta">العربية الفصحى</div></div><span class="check">✓</span></div>
+        <div class="row"><div><div>English</div><div class="meta">English</div></div><span></span></div>
+      </div>
+    </div>
+  </rr-mockup>
+</rr-slide>
+
+<rr-slide spine="Boundary" title="A small runtime, above every screen">
+  <rr-types label="Intended shapes">
+    <rr-sig name="restoreUiLocale" tone="new">() → Promise&lt;UiLocale&gt; · unreadable or invalid → en</rr-sig>
+    <rr-sig name="setUiLocale" tone="new">(locale: UiLocale) → Promise&lt;void&gt; · serialized, rejects on failure</rr-sig>
+    <rr-sig name="deleteUiLocale" tone="new">() → Promise&lt;void&gt; · provider resets only on success</rr-sig>
+    <rr-sig name="directionFor" tone="new">(locale: UiLocale) → ltr | rtl</rr-sig>
+    <rr-sig name="translate" tone="new">(key: MessageKey, values?) → string</rr-sig>
+    <rr-sig name="formatNumber" tone="new">(value: number) → string</rr-sig>
+  </rr-types>
+  <rr-stack label="Calls">
+    <rr-frame fn="RootLayout" file="app/_layout.tsx">
+      <rr-frame fn="UiLocaleProvider" file="src/i18n/provider.tsx" tone="new">
+        <rr-frame fn="catalog + storage + formatters" file="src/i18n/*" tone="new"></rr-frame>
+        <rr-frame fn="Expo Router stack" note="Onboarding, home, and sheets read one locale"></rr-frame>
+      </rr-frame>
+    </rr-frame>
+  </rr-stack>
+  <rr-beat><p>The provider waits for restore before it renders the app, so a saved Arabic choice does not flash English or left-to-right.</p></rr-beat>
+</rr-slide>
+
+<rr-slide spine="Route" title="Parallel work joins at the UI seam">
+  <rr-dag id="arabic-execution" label="Arabic i18n execution" cols="6" min="145">
+    <rr-dag-node id="contract" col="1" row="1" tone="done"><strong>Lock contract</strong><br>Orchestrator</rr-dag-node>
+    <rr-dag-node id="runtime" col="2" row="1" tone="done"><strong>Runtime + catalogs</strong><br>Worker</rr-dag-node>
+    <rr-dag-node id="picker" col="2" row="2" tone="done"><strong>Inline language list</strong><br>Worker</rr-dag-node>
+    <rr-dag-node id="runtime-proof" col="3" row="1" tone="done"><strong>Runtime proof</strong></rr-dag-node>
+    <rr-dag-node id="picker-proof" col="3" row="2" tone="done"><strong>Picker proof</strong></rr-dag-node>
+    <rr-dag-node id="surfaces" col="4" row="1" rows="2" tone="done"><strong>Reachable Bloom surfaces</strong><br>Worker</rr-dag-node>
+    <rr-dag-node id="join" col="5" row="1" rows="2" tone="done"><strong>Integrate</strong><br>Orchestrator</rr-dag-node>
+    <rr-dag-node id="proof" col="6" row="1" rows="2" tone="done"><strong>Gate + AI review</strong></rr-dag-node>
+    <rr-dag-edge from="contract" to="runtime"></rr-dag-edge>
+    <rr-dag-edge from="contract" to="picker"></rr-dag-edge>
+    <rr-dag-edge from="runtime" to="runtime-proof"></rr-dag-edge>
+    <rr-dag-edge from="picker" to="picker-proof"></rr-dag-edge>
+    <rr-dag-edge from="runtime-proof" to="surfaces" label="stable API" tone="critical"></rr-dag-edge>
+    <rr-dag-edge from="picker-proof" to="surfaces" label="stable component"></rr-dag-edge>
+    <rr-dag-edge from="surfaces" to="join" tone="critical"></rr-dag-edge>
+    <rr-dag-edge from="join" to="proof" tone="critical"></rr-dag-edge>
+  </rr-dag>
+</rr-slide>
+
+<rr-slide spine="Done" title="The release proof is observable">
+  <rr-checklist label="Acceptance">
+    <rr-done>English and Arabic catalogs have compile-time key parity</rr-done>
+    <rr-done>Saved Arabic restores before the app shell renders</rr-done>
+    <rr-done>Root, onboarding, home, settings, pickers, reports, and diagnostics use both catalogs</rr-done>
+    <rr-done>Every native modal gets locale direction; transcript text gets explicit speech-language direction</rr-done>
+    <rr-done>Arabic app-owned numbers use Eastern Arabic-Indic digits; exported diagnostics stay unchanged</rr-done>
+    <rr-done>Targeted tests, full gate, independent MSA review, and bounded code review pass</rr-done>
+  </rr-checklist>
+  <rr-callout>Store metadata, legal-page translation, worker copy, and device-locale guessing stay out of scope.</rr-callout>
+</rr-slide>
+
+</rr-deck>
+</rr-doc>

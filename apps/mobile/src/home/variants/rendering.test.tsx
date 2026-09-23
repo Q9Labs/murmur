@@ -65,6 +65,16 @@ vi.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children?: unknown }): unknown => children ?? null,
 }));
 
+const openURL = vi.hoisted(() => vi.fn(async () => true));
+
+vi.mock("expo-linking", () => ({ openURL }));
+vi.mock("lucide-react-native", () => ({
+  AudioLines: () => null,
+  ChartNoAxesColumn: () => null,
+  ShieldCheck: () => null,
+}));
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
+
 vi.mock("./hooks", () => ({
   useMicLevelValue: () => 0.75,
 }));
@@ -78,26 +88,30 @@ const onboardingTheme: OnboardingTheme = {
   checkboxMark: {},
   consentRow: {},
   copy: {},
-  eyebrow: {},
   footer: {},
+  hero: {},
+  iconColor: "#000000",
+  link: {},
+  point: {},
+  pointIcon: {},
+  pointText: {},
   pressed: {},
+  setupLabel: {},
   setupRow: {},
   setupValue: {},
   title: {},
+  welcomeBody: {},
 };
 
 const onboardingText: OnboardingText = {
   agreeLabel: "Agree",
   continueLabel: "Continue",
-  languagesEyebrowText: "Languages",
   languagesTitle: "Choose languages",
   listenLabel: "Listen",
-  privacyEyebrowText: "Privacy",
   privacyTitle: "Review",
   sourceLabel: "Speak",
   targetLabel: "Translate",
   welcomeCopy: "Start a conversation.",
-  welcomeEyebrowText: "Welcome",
   welcomeTitle: "Murmur",
 };
 
@@ -145,6 +159,7 @@ function shellProps(params: {
   return {
     audioPlaybackAvailable: true,
     audioPlaybackEnabled: true,
+    listeningInBackground: false,
     audioState: {
       audio_generation_id: 1,
       capture_source: "microphone",
@@ -207,7 +222,10 @@ describe("shared variant onboarding flow", () => {
     harness.controls.length = 0;
     const privacy = onboardingProps("privacy");
     const privacyMarkup = render(<OnboardingFlow {...privacy} text={onboardingText} theme={onboardingTheme} />);
-    expect(privacyMarkup).toContain("Murmur does not save audio or transcript history by default.");
+    expect(privacyMarkup).toContain("sent to a third-party AI service");
+    expect(privacyMarkup).not.toMatch(/OpenAI|PostHog|Sentry|Cloudflare/);
+    harness.controls.find((control) => control.accessibilityRole === "link")?.onPress?.();
+    expect(openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
     const consent = harness.controls.find((control) => control.accessibilityRole === "checkbox");
     expect(consent?.disabled).toBeUndefined();
     consent?.onPress?.();

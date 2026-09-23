@@ -54,6 +54,7 @@ export async function captureMobileTelemetry(
     salt,
   );
   queuePostHogEvent({
+    country: typeof request.cf?.country === "string" ? request.cf.country : undefined,
     context,
     distinct_id: `anonymous_install_${hashedInstallId}`,
     env,

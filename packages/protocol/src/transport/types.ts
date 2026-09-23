@@ -7,6 +7,7 @@ export type AppConfigResponse = {
   min_app_version_android: string | null;
   min_app_version_ios: string | null;
   paywall_offering_id: string | null;
+  personal_offer: { offering_id: string; expires_at: string } | null;
   sessions_disabled_message: string;
   sessions_enabled: boolean;
 };
@@ -17,6 +18,7 @@ export type CreateSessionRequest = {
   app_install_id: string;
   app_platform?: "android" | "ios";
   app_version?: string;
+  capture_source?: "microphone" | "phone_audio";
   device_integrity?: {
     available: boolean;
     key_id?: string;

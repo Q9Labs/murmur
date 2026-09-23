@@ -16,10 +16,10 @@ describe("guest account merge", () => {
   it("combines free usage from both customers", () => {
     expect(mergedFreeRemainingMs({
       destinationOriginalMs: freeAllowanceMs,
-      destinationRemainingMs: 4 * 60_000,
+      destinationRemainingMs: 6 * 60_000,
       sourceOriginalMs: freeAllowanceMs,
-      sourceRemainingMs: 3 * 60_000,
-    })).toBe(2 * 60_000);
+      sourceRemainingMs: 5 * 60_000,
+    })).toBe(4 * 60_000);
   });
 
   it("floors the merged free balance at zero", () => {

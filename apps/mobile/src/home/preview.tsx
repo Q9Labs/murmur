@@ -5,17 +5,19 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
-import { freeAllowanceMinutes } from "../lib/billing/allowance";
+import { UiLocaleOverride } from "../i18n/provider";
+import { useUiLocale } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import { type MurmurBillingContext, MurmurBillingFixtureProvider } from "../lib/billing/context";
-import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import type { UiPreviewScreen } from "../lib/config";
 import type { LiveTranslationController } from "../lib/live-translation/types";
 import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
 import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
-import { AccountBillingModal } from "./accountBillingModal";
 import { LanguagePickerController } from "./languagePicker";
-import { OutOfMinutesSheet, type PlanListState } from "./outOfMinutesSheet";
-import { SettingsModal } from "./settingsModals";
+import { previewBilling, previewBillingFor } from "../screens/previewFixtures";
+import { RatingSheet } from "../screens/rating/ratingSheet";
+import { screenPreviews } from "../screens/screenPreviews";
+import { OutOfMinutesSheet } from "./outOfMinutesSheet";
 import { UpdateRequiredSheet } from "./updateRequiredSheet";
 import { buildHomeViewModel } from "./viewModel";
 import { BloomOnboarding } from "./variants/bloom/onboarding";
@@ -29,42 +31,9 @@ const previewSourceCaption =
 const previewTranslation =
   "Hello, the city feels different when you understand every voice. Now I can follow the conversation live in English.";
 
-const previewCustomer: MurmurCustomer = {
-  allowanceMs: freeAllowanceMinutes * 60_000,
-  availableMs: freeAllowanceMinutes * 60_000,
-  creditMs: 0,
-  customerId: "preview-customer",
-  earliestExpiryAtMs: null,
-  fulfillmentEnabled: true,
-  isRegistered: false,
-  negativeMs: 0,
-  plan: "free",
-  purchasesEnabled: true,
-  revenueCatCustomerId: "preview:preview-customer",
-};
-
-const previewBilling: MurmurBillingContext = {
-  busy: false,
-  config: { lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
-  customer: previewCustomer,
-  deleteAccount: async () => undefined,
-  error: null,
-  loadPlans: async () => [],
-  manageSubscription: async () => undefined,
-  notice: null,
-  openPaywall: async () => undefined,
-  purchasePlan: async () => undefined,
-  purchasesAvailable: true,
-  refresh: async () => undefined,
-  restorePurchases: async () => undefined,
-  sendSignInCode: async () => undefined,
-  switchAccount: async () => undefined,
-  syncing: false,
-  verifySignInCode: async () => undefined,
-};
-
 const previewLive: LiveTranslationController = {
   cancel: async () => undefined,
+  clearRatingDecision: noop,
   debug_log: [],
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
@@ -83,6 +52,7 @@ const previewLive: LiveTranslationController = {
   latency_samples: [],
   invalidatePreparation: noop,
   preparation_status: "ready",
+  rating_decision: null,
   prepare: async () => undefined,
   report_error: null,
   report_receipt_id: null,
@@ -125,31 +95,11 @@ const previewLive: LiveTranslationController = {
   tentative_source_caption: "",
 };
 
-const previewSettingsLive: LiveTranslationController = {
-  ...previewLive,
-  status: "idle",
-};
-
 const previewTranslationOnlyLive: LiveTranslationController = {
   ...previewLive,
   source_transcript_enabled: false,
   spans: previewLive.spans.map((span) => ({ ...span, source_caption: "" })),
 };
-
-// US ladder from the pricing proposal, for screenshots only; the app always shows store prices.
-const previewPlans: PlanListState = {
-  plans: [
-    { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro · 2 hours a month" },
-    { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Pro Annual · 2 months free" },
-    { id: "trip_pass", kind: "top_up", price: "$7.99", title: "Trip Pass · 60 minutes" },
-    { id: "pack_300", kind: "top_up", price: "$29.99", title: "300-minute pack" },
-  ],
-  status: "ready",
-};
-
-function billingFor(customer: Partial<MurmurCustomer>): MurmurBillingContext {
-  return { ...previewBilling, customer: { ...previewCustomer, ...customer } };
-}
 
 const idleTranslationOnlyLive: LiveTranslationController = {
   ...previewTranslationOnlyLive,
@@ -166,11 +116,12 @@ function noop(): void {}
 export type PreviewScreen = UiPreviewScreen;
 
 const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
-  billing: () => <AccountBillingModal billing={previewBilling} onClose={noop} open />,
+  ...screenPreviews,
+  billing: screenPreviews["account-guest"],
   languages: () => <OnboardingPreview step="languages" />,
   "low-balance": () => (
     <TranslationPreview
-      billing={billingFor({ availableMs: 12 * 60_000, isRegistered: true, plan: "pro" })}
+      billing={previewBillingFor({ availableMs: 12 * 60_000, isRegistered: true, plan: "pro" })}
       live={idleTranslationOnlyLive}
     />
   ),
@@ -178,9 +129,11 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   "out-of-minutes-signed-in": () => <OutOfMinutesPreview registered />,
   picker: () => <PickerPreview mode="target" />,
   privacy: () => <OnboardingPreview step="privacy" />,
-  settings: () => <SettingsPreview />,
   "source-picker": () => <PickerPreview mode="source" />,
+  rating: () => <RatingPreview />,
+  "rating-answered": () => <RatingPreview answered />,
   translation: () => <TranslationPreview />,
+  "translation-background": () => <TranslationPreview listeningInBackground />,
   "translation-muted": () => <TranslationPreview audioPlaybackEnabled={false} />,
   "translation-only": () => <TranslationPreview live={previewTranslationOnlyLive} />,
   "update-required": () => (
@@ -192,22 +145,30 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   welcome: () => <WelcomePreview />,
 };
 
-export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
-  return previewRenderers[screen]();
+export function BloomPreview({ locale = null, screen }: { locale?: UiLocale | null; screen: PreviewScreen }): ReactNode {
+  const Screen = previewRenderers[screen];
+  return locale ? <UiLocaleOverride locale={locale}><Screen /></UiLocaleOverride> : <Screen />;
 }
 
 function OutOfMinutesPreview({ registered }: { registered: boolean }): ReactNode {
-  const billing = billingFor({ availableMs: 0, isRegistered: registered });
+  const billing = previewBillingFor({ availableMs: 0, isRegistered: registered });
   return (
     <>
       <TranslationPreview billing={billing} live={exhaustedLive} />
-      <OutOfMinutesSheet
-        billing={billing}
+      <OutOfMinutesSheet customer={billing.customer} onClose={noop} onSeePlans={noop} open />
+    </>
+  );
+}
+
+function RatingPreview({ answered = false }: { answered?: boolean }): ReactNode {
+  return (
+    <>
+      <TranslationPreview live={idleTranslationOnlyLive} />
+      <RatingSheet
+        initialAnswer={answered ? { otherText: "Parent evening at school", stars: 5, use: "other" } : undefined}
         onClose={noop}
-        onRetryPlans={noop}
+        onSubmit={noop}
         open
-        plans={previewPlans}
-        reason="exhausted"
       />
     </>
   );
@@ -228,27 +189,6 @@ function PickerPreview({ mode }: { mode: "source" | "target" }): ReactNode {
         setTargetLanguageCode={setTargetLanguageCode}
         sourceLanguageCode={sourceLanguageCode}
         targetLanguageCode={targetLanguageCode}
-      />
-    </>
-  );
-}
-
-function SettingsPreview(): ReactNode {
-  return (
-    <>
-      <TranslationPreview />
-      <SettingsModal
-        anonymousAnalyticsEnabled
-        developerToolsEnabled={false}
-        live={previewSettingsLive}
-        onClose={noop}
-        onAnonymousAnalyticsEnabledChange={noop}
-        onDeleteLocalData={noop}
-        onOpenDiagnostics={noop}
-        onResetIdentity={noop}
-        onShare={noop}
-        open
-        settingsMessage={null}
       />
     </>
   );
@@ -297,23 +237,28 @@ function WelcomePreview(): ReactNode {
 function TranslationPreview({
   audioPlaybackEnabled = true,
   billing = previewBilling,
+  listeningInBackground = false,
   live = previewLive,
 }: {
   audioPlaybackEnabled?: boolean;
   billing?: MurmurBillingContext;
+  listeningInBackground?: boolean;
   live?: LiveTranslationController;
 } = {}): ReactNode {
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
+  const { locale, t } = useUiLocale();
   const viewModel = useMemo(
     () =>
       buildHomeViewModel({
         live,
         sourceLanguageCode: previewSourceLanguage,
         targetLanguageCode: previewTargetLanguage,
+        translate: t,
+        uiLocale: locale,
       }),
-    [live],
+    [live, locale, t],
   );
   const props: VariantShellProps = {
     audioPlaybackAvailable: true,
@@ -322,6 +267,7 @@ function TranslationPreview({
     autoScrollRef,
     captureSource: "microphone",
     devicePlaybackSupported: true,
+    listeningInBackground,
     live,
     onAudioPlaybackEnabledChange: noop,
     onCaptureSourceChange: noop,

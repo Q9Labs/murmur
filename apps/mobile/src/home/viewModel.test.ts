@@ -9,6 +9,7 @@ import { buildHomeViewModel } from "./viewModel";
 function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTranslationController {
   return {
     cancel: async () => undefined,
+    clearRatingDecision: () => undefined,
     debug_log: [],
     diagnostics_snapshot: {
       capture: createAudioCaptureDiagnosticsTracker().snapshot(),
@@ -37,6 +38,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     latency_samples: [],
     invalidatePreparation: () => undefined,
     preparation_status: "ready",
+    rating_decision: null,
     prepare: async () => undefined,
     report_error: null,
     report_receipt_id: null,
@@ -70,6 +72,17 @@ describe("home view model", () => {
       sourceLanguageDisplayName: "English",
       statusText: "Ready",
     });
+  });
+
+  it("cannot start when the server has disabled the language pair", () => {
+    const model = buildHomeViewModel({
+      languagePairEnabled: false,
+      live: makeLive(),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+
+    expect(model.canStart).toBe(false);
   });
 
   it("uses the latest partial or committed caption", () => {
