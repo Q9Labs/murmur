@@ -21,10 +21,12 @@ function addHistoryBackupExclusion(contents) {
     guard let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
         return
     }
-    let historyDirectory = documents.appendingPathComponent("conversation-history", isDirectory: true)
+    var historyDirectory = documents.appendingPathComponent("conversation-history", isDirectory: true)
+    var resourceValues = URLResourceValues()
+    resourceValues.isExcludedFromBackup = true
     do {
         try fileManager.createDirectory(at: historyDirectory, withIntermediateDirectories: true)
-        try historyDirectory.setResourceValue(true, forKey: .isExcludedFromBackupKey)
+        try historyDirectory.setResourceValues(resourceValues)
     } catch {
         NSLog("Murmur could not exclude local history from backup: %@", error.localizedDescription)
     }

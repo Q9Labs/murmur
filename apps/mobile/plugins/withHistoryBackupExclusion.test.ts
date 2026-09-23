@@ -25,7 +25,8 @@ describe("local history platform backup exclusions", () => {
 
     expect(patched).toContain("excludeMurmurHistoryFromBackup()");
     expect(patched).toContain('appendingPathComponent("conversation-history", isDirectory: true)');
-    expect(patched).toContain(".isExcludedFromBackupKey");
+    expect(patched).toContain("resourceValues.isExcludedFromBackup = true");
+    expect(patched).toContain("setResourceValues(resourceValues)");
     expect(addHistoryBackupExclusion(patched)).toBe(patched);
   });
 
