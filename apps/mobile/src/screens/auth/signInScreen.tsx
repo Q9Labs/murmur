@@ -77,7 +77,7 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
 
   return (
     <ScreenScaffold title={emailSignInTitle(state)}>
-      <EmailSignInView doneAction={doneAction} handlers={handlers} state={state} />
+      <EmailSignInView billingBusy={billing.busy} doneAction={doneAction} handlers={handlers} state={state} />
     </ScreenScaffold>
   );
 }

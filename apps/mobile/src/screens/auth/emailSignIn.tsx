@@ -77,8 +77,15 @@ export function useEmailSignIn(
       }
     },
     onEmailChange: (email) => setState({ email, error: null, pending: false, step: "email" }),
-    onResend: () => void sendCode(state.email, true),
+    onResend: () => {
+      if (!billing.busy) {
+        void sendCode(state.email, true);
+      }
+    },
     onSendCode: () => {
+      if (billing.busy) {
+        return;
+      }
       if (!isPlausibleEmail(state.email)) {
         setState({ email: state.email, error: "Enter a valid email address.", pending: false, step: "email" });
         return;
@@ -86,7 +93,7 @@ export function useEmailSignIn(
       void sendCode(normalizeEmail(state.email), false);
     },
     onVerify: () => {
-      if (state.step !== "code") {
+      if (state.step !== "code" || billing.busy) {
         return;
       }
       if (!isCompleteCode(state.code)) {
@@ -101,6 +108,7 @@ export function useEmailSignIn(
 }
 
 export function EmailSignInView(props: {
+  billingBusy: boolean;
   doneAction: AuthDoneAction;
   handlers: EmailSignInHandlers;
   state: EmailSignInState;
@@ -111,18 +119,20 @@ export function EmailSignInView(props: {
     return <SignedIn doneAction={props.doneAction} email={state.email} styles={styles} />;
   }
   if (state.step === "code") {
-    return <CodeEntry handlers={props.handlers} state={state} styles={styles} />;
+    return <CodeEntry billingBusy={props.billingBusy} handlers={props.handlers} state={state} styles={styles} />;
   }
-  return <EmailEntry handlers={props.handlers} state={state} styles={styles} />;
+  return <EmailEntry billingBusy={props.billingBusy} handlers={props.handlers} state={state} styles={styles} />;
 }
 
 function EmailEntry(props: {
+  billingBusy: boolean;
   handlers: EmailSignInHandlers;
   state: Extract<EmailSignInState, { step: "email" }>;
   styles: AuthStyles;
 }): ReactNode {
   const { colors } = useAuthStyles();
   const { state, styles } = props;
+  const locked = state.pending || props.billingBusy;
   return (
     <View style={styles.flow}>
       <TextInput
@@ -131,7 +141,7 @@ function EmailEntry(props: {
         autoComplete="email"
         autoCorrect={false}
         autoFocus
-        editable={!state.pending}
+        editable={!locked}
         inputMode="email"
         onChangeText={props.handlers.onEmailChange}
         onSubmitEditing={props.handlers.onSendCode}
@@ -148,7 +158,7 @@ function EmailEntry(props: {
       <PrimaryButton
         label={state.pending ? "Sending…" : "Email me a code"}
         onPress={props.handlers.onSendCode}
-        pending={state.pending}
+        pending={locked}
         styles={styles}
       />
     </View>
@@ -156,13 +166,14 @@ function EmailEntry(props: {
 }
 
 function CodeEntry(props: {
+  billingBusy: boolean;
   handlers: EmailSignInHandlers;
   state: Extract<EmailSignInState, { step: "code" }>;
   styles: AuthStyles;
 }): ReactNode {
   const { colors } = useAuthStyles();
   const { state, styles } = props;
-  const pending = state.pending !== null;
+  const pending = state.pending !== null || props.billingBusy;
   return (
     <View style={styles.flow}>
       <Text style={styles.body}>

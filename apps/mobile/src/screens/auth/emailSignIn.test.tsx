@@ -22,13 +22,17 @@ const handlers = {
 };
 const done = { label: "Done", onPress: vi.fn() };
 
-function renderView(state: EmailSignInState, doneAction = done): string {
-  return renderToStaticMarkup(<EmailSignInView doneAction={doneAction} handlers={handlers} state={state} />);
+function renderView(state: EmailSignInState, doneAction = done, billingBusy = false): string {
+  return renderToStaticMarkup(
+    <EmailSignInView billingBusy={billingBusy} doneAction={doneAction} handlers={handlers} state={state} />,
+  );
 }
 
 function Flow(props: { billing: MurmurBillingContext; initialState: EmailSignInState }): ReactNode {
   const flow = useEmailSignIn(props.billing, props.initialState);
-  return <EmailSignInView doneAction={done} handlers={flow.handlers} state={flow.state} />;
+  return (
+    <EmailSignInView billingBusy={props.billing.busy} doneAction={done} handlers={flow.handlers} state={flow.state} />
+  );
 }
 
 function primaryButton() {
@@ -85,6 +89,35 @@ describe("email sign-in screens", () => {
     expect(markup).toContain("Subscribe for $99.99 / year");
     primaryButton()?.onPress?.();
     expect(onPress).toHaveBeenCalledOnce();
+  });
+});
+
+describe("email sign-in while billing is busy", () => {
+  it("disables the form while another billing operation runs", () => {
+    renderView({ email: "maya@example.com", error: null, pending: false, step: "email" }, done, true);
+    expect(recorded.inputs[0]?.editable).toBe(false);
+    expect(primaryButton()?.disabled).toBe(true);
+
+    resetRecorded();
+    renderView({ ...codeStep("maya@example.com"), code: "482913" }, done, true);
+    expect(recorded.inputs[0]?.editable).toBe(false);
+    expect(findControl("Send a new code")?.disabled).toBe(true);
+  });
+
+  it("does not send or verify a code while billing is busy", () => {
+    const billing = { ...fixtureBilling(), busy: true };
+    renderToStaticMarkup(
+      <Flow billing={billing} initialState={{ email: "maya@example.com", error: null, pending: false, step: "email" }} />,
+    );
+    primaryButton()?.onPress?.();
+
+    resetRecorded();
+    renderToStaticMarkup(<Flow billing={billing} initialState={{ ...codeStep("maya@example.com"), code: "482913" }} />);
+    primaryButton()?.onPress?.();
+    findControl("Send a new code")?.onPress?.();
+
+    expect(billing.sendSignInCode).not.toHaveBeenCalled();
+    expect(billing.verifySignInCode).not.toHaveBeenCalled();
   });
 });
 
