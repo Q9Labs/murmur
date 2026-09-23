@@ -7,6 +7,7 @@ import reactNativeTestHarness from "./reactNativeTestHarness";
 import { TranslationReportModal } from "./experience";
 
 vi.mock("react-native", () => reactNativeTestHarness);
+vi.mock("posthog-react-native", () => ({ PostHogMaskView: ({ children }: { children: ReactNode }) => children }));
 
 vi.mock("./diagnosticsModal", () => ({ DiagnosticsModal: () => null }));
 vi.mock("./languagePicker", () => ({ LanguagePickerController: () => null }));

@@ -1,4 +1,3 @@
-import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
@@ -19,22 +18,24 @@ import MurmurAudioModule, {
   type CaptureCapabilities,
 } from "../../modules/murmur-audio";
 import { getAcquisitionContextFromUrl } from "../lib/acquisition";
-import {
-  deleteEngagementState,
-  markReviewRequested,
-  recordSessionOutcome,
-} from "../lib/engagement";
+import { deleteEngagementState } from "../lib/engagement";
 import {
   acknowledgePrivacyDisclosure,
   deleteLocalMurmurData,
   hasAcknowledgedPrivacyDisclosure,
   resetInstallId,
 } from "../lib/installIdentity";
-import { requestMurmurReview } from "../lib/requestReview";
+import { claimRatingSlot, deleteRatingState, type SessionRatingDecision } from "../lib/ratings/ratings";
+import {
+  deletePhoneAudioGiftOffer,
+  hasOfferedPhoneAudioGift,
+  markPhoneAudioGiftOffered,
+} from "../lib/phoneAudioGiftOffer";
 import { shareMurmur } from "../lib/shareMurmur";
 import { captureMobileFailure } from "../lib/observability/sentry";
 import {
   captureOnboardingCompleted,
+  captureMobileTelemetry,
   initializeAnonymousAnalytics,
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
@@ -44,7 +45,7 @@ import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import { nextPostSessionPrompt, type PostSessionPrompt } from "../screens/postSessionPrompt";
 import { RatingSheet } from "../screens/rating/ratingSheet";
-import { useScreenServices } from "../screens/screenServices";
+import { type ScreenServices, useScreenServices } from "../screens/screenServices";
 import {
   type SettingsControls,
   usePublishSettingsControls,
@@ -254,6 +255,9 @@ export default function HomeScreen(): ReactNode {
     acquisition,
     analytics_enabled: anonymousAnalyticsEnabled === true,
     capture_source: captureSource,
+    history_customer_id: billing.customer && (billing.customer.features?.history ?? billing.customer.plan !== "free")
+      ? billing.customer.customerId
+      : null,
     network_type: networkType,
     playback_enabled: effectiveAudioPlaybackEnabled,
     source_language: sourceLanguageCode,
@@ -324,6 +328,12 @@ export default function HomeScreen(): ReactNode {
       void live.prepare();
     }
   }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
+    if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
+      captureMobileTelemetry({ event: "onboarding_step_viewed", step: onboardingStep });
+    }
+  }, [anonymousAnalyticsEnabled, onboardingStep]);
 
   useEffect(() => {
     let mounted = true;
@@ -429,6 +439,7 @@ export default function HomeScreen(): ReactNode {
   }, [autoScrollKey, live.tentative_source_caption]);
 
   async function acceptThirdPartyDataSharing(): Promise<void> {
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
     await acknowledgePrivacyDisclosure();
     setPrivacyAcknowledged(true);
     setPrivacyConsentChecked(false);
@@ -442,6 +453,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "languages" });
     captureOnboardingCompleted();
     await startLiveTranslation();
   }
@@ -495,17 +507,7 @@ export default function HomeScreen(): ReactNode {
 
   async function handlePrimaryAction(): Promise<void> {
     if (viewModel.isLive) {
-      const completion = await live.stop();
-      if (completion) {
-        const completed = await handleCompletedSessionEngagement(completion);
-        showPostSessionPrompt(nextPostSessionPrompt({
-          completed,
-          insightsConsent: services.insightsConsent,
-          phoneAudioGiftClaimable:
-            services.phoneAudioGift.claimable && captureCapabilities.device_playback_supported,
-          ratingDue: services.ratingDue,
-        }));
-      }
+      await live.stop();
       return;
     }
     if (isUpdateRequiredError(live.error)) {
@@ -526,6 +528,27 @@ export default function HomeScreen(): ReactNode {
     }
     await startLiveTranslation();
   }
+
+  // Every completed session brings a new decision; each one gets at most one prompt.
+  const ratingDecision = live.rating_decision;
+  const handledRatingDecisionRef = useRef<SessionRatingDecision | null>(null);
+  const phoneAudioGiftOfferable =
+    services.phoneAudioGift.claimable && captureCapabilities.device_playback_supported;
+  useEffect(() => {
+    if (!ratingDecision || handledRatingDecisionRef.current === ratingDecision) {
+      return;
+    }
+    handledRatingDecisionRef.current = ratingDecision;
+    choosePostSessionPrompt({
+      decision: ratingDecision,
+      insightsConsent: services.insightsConsent,
+      phoneAudioGiftOfferable,
+    })
+      .then(showPostSessionPrompt)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "choose_post_session_prompt" });
+      });
+  }, [phoneAudioGiftOfferable, ratingDecision, services.insightsConsent]);
 
   function showPostSessionPrompt(prompt: PostSessionPrompt | null): void {
     if (prompt === "insights_consent") {
@@ -554,7 +577,7 @@ export default function HomeScreen(): ReactNode {
     changeAnalytics: (enabled) => void changeAnonymousAnalyticsEnabled(enabled),
     deleteLocalData: () => {
       void audioPreferenceController.deleteLocalData(
-        () => deleteLocalData(live.cancel),
+        () => deleteLocalData(live.cancel, services),
         () => {
           live.invalidatePreparation();
           setAnonymousAnalyticsEnabled(true);
@@ -595,7 +618,10 @@ export default function HomeScreen(): ReactNode {
         canStart={viewModel.canStart}
         captureSource={captureSource}
         devicePlaybackSupported={captureCapabilities.device_playback_supported}
-        onContinue={() => setOnboardingStep("privacy")}
+        onContinue={() => {
+          captureMobileTelemetry({ event: "onboarding_step_completed", step: "welcome" });
+          setOnboardingStep("privacy");
+        }}
         onCaptureSourceChange={(source) => void selectCaptureSource(source)}
         onOpenPicker={setPickerMode}
         onPickerClose={() => setPickerMode(null)}
@@ -693,26 +719,39 @@ async function resetIdentity(
   setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
 }
 
-// Resolves whether the session counts as completed, for the post-session prompts.
-async function handleCompletedSessionEngagement(
-  outcome: Parameters<typeof recordSessionOutcome>[0]["outcome"],
-): Promise<boolean> {
-  const appVersion = Constants.expoConfig?.version ?? "unknown";
-  const engagement = await recordSessionOutcome({
-    app_version: appVersion,
-    outcome,
+async function choosePostSessionPrompt(params: {
+  decision: SessionRatingDecision;
+  insightsConsent: boolean | null;
+  phoneAudioGiftOfferable: boolean;
+}): Promise<PostSessionPrompt | null> {
+  const prompt = nextPostSessionPrompt({
+    askInsightsConsent: params.decision.askInsightsConsent && params.insightsConsent === null,
+    offerPhoneAudioGift: params.phoneAudioGiftOfferable && !await hasOfferedPhoneAudioGift(),
+    ratingEligible: params.decision.ratingEligible,
   });
-  if (engagement.should_request_review && await requestMurmurReview()) {
-    await markReviewRequested({ app_version: appVersion });
+  if (prompt === "phone_audio_gift") {
+    await markPhoneAudioGiftOffered();
   }
-  return engagement.qualified;
+  if (prompt !== "rating") {
+    return prompt;
+  }
+  return await claimRatingSlot() ? "rating" : null;
 }
 
-async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
+async function deleteLocalData(
+  cancel: () => Promise<void>,
+  services: Pick<ScreenServices, "clearInsightsConsent" | "reloadConversations">,
+): Promise<void> {
   await cancel();
+  const { deleteAllConversations } = await import("../lib/conversationHistory");
+  deleteAllConversations();
+  await services.reloadConversations();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await deleteRatingState();
+  await services.clearInsightsConsent();
+  await deletePhoneAudioGiftOffer();
   await resetAnonymousAnalyticsPreference();
 }

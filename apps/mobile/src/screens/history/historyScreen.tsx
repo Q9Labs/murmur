@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 
+import { captureMobileFailure } from "../../lib/observability/sentry";
 import { ProGate } from "../proGate";
 import { RowGroup } from "../rowGroup";
 import { ScreenScaffold } from "../screenScaffold";
@@ -17,6 +18,12 @@ export const historyGate = {
 export function HistoryScreen(): ReactNode {
   const services = useScreenServices();
   const { styles } = useScreenStyles();
+  const { reloadConversations } = services;
+  useEffect(() => {
+    reloadConversations().catch((failure: unknown) => {
+      captureMobileFailure(failure, { operation: "load_conversation_history" });
+    });
+  }, [reloadConversations]);
   if (!services.features.history) {
     return <ProGate body={historyGate.body} title={historyGate.title} />;
   }

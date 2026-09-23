@@ -14,13 +14,15 @@ export const fixtureConversation: ConversationRecord = {
 export function fixtureServices(overrides: Partial<ScreenServices> = {}): ScreenServices {
   return {
     claimPhoneAudioGift: vi.fn(async () => undefined),
+    clearInsightsConsent: vi.fn(async () => undefined),
     conversations: [],
     deleteConversation: vi.fn(async () => undefined),
     features: { history: false, phoneAudio: false },
     insightsConsent: null,
     phoneAudioGift: { claimable: false, remainingMs: 0 },
-    ratingDue: false,
+    reloadConversations: vi.fn(async () => undefined),
     setInsightsConsent: vi.fn(async () => undefined),
+    shareConversation: vi.fn(async () => undefined),
     signInWithApple: vi.fn(async () => undefined),
     signInWithGoogle: vi.fn(async () => undefined),
     submitRating: vi.fn(async () => undefined),

@@ -32,7 +32,10 @@ describe("preview fixtures", () => {
 
   it("describe a 20% personal offer that ends 47 hours 12 minutes from now", async () => {
     const billing = previewOfferBilling(1_000);
-    expect(billing.config.personalOfferExpiresAtMs).toBe(1_000 + (47 * 60 + 12) * 60_000);
+    expect(billing.config.personalOffer).toEqual({
+      expiresAt: new Date(1_000 + (47 * 60 + 12) * 60_000).toISOString(),
+      offeringId: billing.config.paywallOfferingId,
+    });
     await expect(billing.loadPlans()).resolves.toBe(previewOfferPlans);
     expect(introDiscountPercent(previewOfferPlans)).toBe(20);
   });

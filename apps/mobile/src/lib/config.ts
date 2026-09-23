@@ -12,6 +12,10 @@ export function getSentryDsn(): string | undefined {
   return process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined;
 }
 
+export function getPostHogProjectToken(): string | undefined {
+  return process.env.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() || undefined;
+}
+
 export type MurmurEnvironment = "development" | "preview" | "production" | "sandbox";
 
 export function getMurmurEnvironment(): MurmurEnvironment {
@@ -38,6 +42,13 @@ export function getRevenueCatOfferingId(): string | undefined {
   return publicConfigValue(process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID);
 }
 
+export function getGoogleOAuthClientIds(): { web?: string; ios?: string } {
+  return {
+    web: publicConfigValue(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID),
+    ios: publicConfigValue(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID),
+  };
+}
+
 const uiPreviewScreens = [
   "auth-code",
   "auth-code-error",
@@ -49,6 +60,7 @@ const uiPreviewScreens = [
   "auth-verifying",
   "account-guest",
   "account-pack",
+  "account-pro-max",
   "account-signed-in",
   "account-unsaved",
   "billing",

@@ -12,7 +12,10 @@ const previewCustomer: MurmurCustomer = {
   availableMs: freeAllowanceMinutes * 60_000,
   creditMs: 0,
   customerId: "preview-customer",
+  creditPacks: [],
   earliestExpiryAtMs: null,
+  entitlements: { pro: false, proMax: false },
+  features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
   fulfillmentEnabled: true,
   isRegistered: false,
   negativeMs: 0,
@@ -88,7 +91,12 @@ export const previewCheckoutPlanId = previewPlans.find((plan) => plan.term === "
 
 export const previewBilling: MurmurBillingContext = {
   busy: false,
-  config: { enabledLanguages: null, lowBalanceThresholdMinutes: 15, paywallOfferingId: null, personalOfferExpiresAtMs: null },
+  config: {
+    enabledLanguages: null,
+    lowBalanceThresholdMinutes: 15,
+    paywallOfferingId: null,
+    personalOffer: null,
+  },
   configLoaded: true,
   customer: previewCustomer,
   deleteAccount: async () => undefined,
@@ -103,6 +111,8 @@ export const previewBilling: MurmurBillingContext = {
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
+  signInWithApple: async () => undefined,
+  signInWithGoogle: async () => undefined,
   switchAccount: async () => undefined,
   syncing: false,
   verifySignInCode: async () => undefined,
@@ -116,6 +126,12 @@ export const previewSignedInBilling = previewBillingFor({
   availableMs: 97 * 60_000,
   isRegistered: true,
   plan: "pro",
+});
+
+export const previewProMaxBilling = previewBillingFor({
+  availableMs: 352 * 60_000,
+  isRegistered: true,
+  plan: "pro_max",
 });
 
 const previewEmail = "maya@example.com";
@@ -152,11 +168,17 @@ export const previewSettingsControls: SettingsControls = {
   share: noop,
 };
 
+const previewOfferingId = "personal_offer";
+
 // Ends 47 hours 12 minutes after the preview opens, like a freshly started offer.
 export function previewOfferBilling(nowMs: number): MurmurBillingContext {
   return {
     ...previewBilling,
-    config: { ...previewBilling.config, personalOfferExpiresAtMs: nowMs + (47 * 60 + 12) * 60_000 },
+    config: {
+      ...previewBilling.config,
+      paywallOfferingId: previewOfferingId,
+      personalOffer: { expiresAt: new Date(nowMs + (47 * 60 + 12) * 60_000).toISOString(), offeringId: previewOfferingId },
+    },
     loadPlans: async () => previewOfferPlans,
   };
 }
@@ -165,8 +187,12 @@ export const previewUnsavedBilling = previewBillingFor({ availableMs: 118 * 60_0
 
 export const previewPackBilling = previewBillingFor({
   availableMs: 64 * 60_000,
-  creditMs: 60 * 60_000,
-  earliestExpiryAtMs: Date.UTC(2026, 11, 22),
+  creditMs: 90 * 60_000,
+  creditPacks: [
+    { expiresAtMs: Date.UTC(2026, 11, 22, 12), grantId: "preview-trip", remainingMs: 60 * 60_000 },
+    { expiresAtMs: Date.UTC(2027, 1, 14, 12), grantId: "preview-event", remainingMs: 30 * 60_000 },
+  ],
+  earliestExpiryAtMs: Date.UTC(2026, 11, 22, 12),
   isRegistered: true,
 });
 
@@ -205,13 +231,15 @@ async function resolved(): Promise<void> {}
 
 export const previewServices: ScreenServices = {
   claimPhoneAudioGift: resolved,
+  clearInsightsConsent: resolved,
   conversations: previewConversations,
   deleteConversation: resolved,
   features: { history: true, phoneAudio: true },
   insightsConsent: null,
   phoneAudioGift: { claimable: false, remainingMs: 0 },
-  ratingDue: false,
+  reloadConversations: resolved,
   setInsightsConsent: resolved,
+  shareConversation: resolved,
   signInWithApple: resolved,
   signInWithGoogle: resolved,
   submitRating: resolved,

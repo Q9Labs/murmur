@@ -8,16 +8,29 @@ describe("app-facing server config", () => {
       enabled_languages: null,
       low_balance_threshold_minutes: 20,
       paywall_offering_id: "base_pro",
-    })).toEqual({ enabledLanguages: null, lowBalanceThresholdMinutes: 20, paywallOfferingId: "base_pro", personalOfferExpiresAtMs: null });
+    })).toEqual({
+      enabledLanguages: null,
+      lowBalanceThresholdMinutes: 20,
+      paywallOfferingId: "base_pro",
+      personalOffer: null,
+    });
   });
 
-  it("reads the personal offer's real expiry", () => {
+  it("keeps the server's lite offer and expiry for the paywall", () => {
     expect(decodeAppConfig({
-      paywall_offering_id: "personal_offer",
-      personal_offer: { expires_at: "2026-09-25T10:00:00.000Z", offering_id: "personal_offer" },
-    })?.personalOfferExpiresAtMs).toBe(Date.parse("2026-09-25T10:00:00.000Z"));
-    expect(decodeAppConfig({ personal_offer: { expires_at: "soon" } })?.personalOfferExpiresAtMs).toBeNull();
-    expect(decodeAppConfig({ personal_offer: null })?.personalOfferExpiresAtMs).toBeNull();
+      paywall_offering_id: "lite_personal_offer",
+      personal_offer: {
+        expires_at: "2026-09-25T10:00:00.000Z",
+        offering_id: "lite_personal_offer",
+      },
+    })).toMatchObject({
+      paywallOfferingId: "lite_personal_offer",
+      personalOffer: {
+        expiresAt: "2026-09-25T10:00:00.000Z",
+        offeringId: "lite_personal_offer",
+      },
+    });
+    expect(decodeAppConfig({ personal_offer: { offering_id: "personal_offer" } })).toBeNull();
   });
 
   it("keeps only known languages from enabled_languages", () => {

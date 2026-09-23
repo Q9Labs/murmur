@@ -3,15 +3,18 @@ import Purchases, {
   LOG_LEVEL,
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
+  type Price,
   type PurchasesOffering,
   type PurchasesPackage,
+  type PurchasesStoreProduct,
+  type SubscriptionOption,
 } from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
 import { findBillingProduct } from "@murmur/protocol/billing/catalog";
 
 import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
-import { type MurmurPlan, planTier, planTitle, type PlanTerm } from "./planCatalog";
+import { type MurmurPlan, type PlanIntroPrice, planTier, planTitle, type PlanTerm } from "./planCatalog";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -46,7 +49,8 @@ export type MurmurPlanPurchaseOutcome = "cancelled" | "purchased";
 export async function loadMurmurPlans(serverOfferingId: string | null): Promise<MurmurPlan[]> {
   requireRevenueCat();
   const offering = await loadOffering(serverOfferingId);
-  return offering.availablePackages.map(toMurmurPlan);
+  return offering.availablePackages.map((storePackage) =>
+    toMurmurPlan(storePackage, offering.identifier));
 }
 
 export async function purchaseMurmurPlan(
@@ -60,7 +64,12 @@ export async function purchaseMurmurPlan(
     throw new Error("That plan is no longer available from the store.");
   }
   try {
-    await Purchases.purchasePackage(selected);
+    const playOption = selectedPlayOption(selected, offering.identifier);
+    if (playOption) {
+      await Purchases.purchaseSubscriptionOption(playOption);
+    } else {
+      await Purchases.purchasePackage(selected);
+    }
     return "purchased";
   } catch (failure) {
     if (isUserCancellation(failure)) {
@@ -100,21 +109,20 @@ const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
   P6M: "6 months",
 };
 
-function toMurmurPlan(storePackage: PurchasesPackage): MurmurPlan {
+function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): MurmurPlan {
   const { product } = storePackage;
+  const playPrices = selectedPlayPrices(storePackage, offeringId);
   const term = planTerm(storePackage);
   const tier = planTier(storePackage.identifier, term);
   const storeTitle = product.title.replace(storeAppNameSuffix, "") || product.identifier;
   return {
     description: product.description,
     id: storePackage.identifier,
-    introPrice: product.introPrice
-      ? { amount: product.introPrice.price, price: product.introPrice.priceString }
-      : null,
+    introPrice: playPrices ? playPrices.intro : appleIntroPrice(product),
     minutes: catalogMinutes(product.identifier),
     periodLabel: planPeriodLabel(term, product.subscriptionPeriod),
-    price: product.priceString,
-    priceAmount: product.price,
+    price: playPrices?.full.formatted ?? product.priceString,
+    priceAmount: playPrices ? playPrices.full.amountMicros / 1_000_000 : product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
     term,
     tier,
@@ -122,17 +130,86 @@ function toMurmurPlan(storePackage: PurchasesPackage): MurmurPlan {
   };
 }
 
-function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {
-  if (term === "pack") {
-    return null;
-  }
-  return subscriptionPeriodLabels[subscriptionPeriod ?? ""] ?? (term === "yearly" ? "year" : "month");
+// The App Store carries the personal offer as an introductory price on the `.offer` products.
+function appleIntroPrice(product: PurchasesStoreProduct): PlanIntroPrice | null {
+  return product.introPrice
+    ? { amount: product.introPrice.price, price: product.introPrice.priceString }
+    : null;
 }
 
 // Minutes come from the shared billing catalog, matched by store product id.
 function catalogMinutes(storeProductId: string): number | null {
   const product = findBillingProduct(Platform.OS === "ios" ? "apple" : "google", storeProductId);
   return product ? Math.round(product.grantMs / 60_000) : null;
+}
+
+// Google Play carries the personal offer as the intro phase of the `personal-20` option.
+function selectedPlayPrices(
+  storePackage: PurchasesPackage,
+  offeringId: string,
+): { full: Price; intro: PlanIntroPrice | null } | null {
+  const option = selectedPlayOption(storePackage, offeringId);
+  if (!option) {
+    return null;
+  }
+  const full = option.fullPricePhase?.price ?? basePlayOption(storePackage.product)?.fullPricePhase?.price;
+  if (!full) {
+    throw new Error("That plan has no price available from Google Play.");
+  }
+  if (!personalPlayOffer(offeringId, storePackage.identifier)) {
+    return { full, intro: null };
+  }
+  const intro = option.introPhase?.price;
+  if (!intro) {
+    throw new Error("That plan has no offer price available from Google Play.");
+  }
+  return { full, intro: { amount: intro.amountMicros / 1_000_000, price: intro.formatted } };
+}
+
+function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {
+  if (term === "pack") {
+    return null;
+  }
+  return subscriptionPeriodLabels[subscriptionPeriod ?? ""] ??
+    (term === "yearly" ? "year" : "month");
+}
+
+function selectedPlayOption(
+  storePackage: PurchasesPackage,
+  offeringId: string,
+): SubscriptionOption | null {
+  if (Platform.OS !== "android" ||
+    storePackage.product.productCategory !== PRODUCT_CATEGORY.SUBSCRIPTION) {
+    return null;
+  }
+  const { product } = storePackage;
+  const base = basePlayOption(product);
+  if (!base) {
+    throw new Error("The base subscription plan is not available from Google Play.");
+  }
+  if (!personalPlayOffer(offeringId, storePackage.identifier)) {
+    return base;
+  }
+  const offer = product.subscriptionOptions?.find((option) =>
+    option.storeProductId === product.identifier && option.id === `${base.id}:personal-20`);
+  if (!offer) {
+    throw new Error("The personal offer is not available for this Google Play account.");
+  }
+  return offer;
+}
+
+function basePlayOption(product: PurchasesStoreProduct): SubscriptionOption | null {
+  const listedBase = product.subscriptionOptions?.find((option) =>
+    option.isBasePlan && option.storeProductId === product.identifier);
+  if (listedBase) {
+    return listedBase;
+  }
+  return product.defaultOption?.isBasePlan ? product.defaultOption : null;
+}
+
+function personalPlayOffer(offeringId: string, packageId: string): boolean {
+  return (offeringId === "personal_offer" || offeringId === "lite_personal_offer") &&
+    (packageId === "$rc_monthly" || packageId === "$rc_annual");
 }
 
 function planTerm(storePackage: PurchasesPackage): PlanTerm {

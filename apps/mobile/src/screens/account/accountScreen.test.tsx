@@ -91,14 +91,23 @@ describe("account screen", () => {
   it("shows how long pack minutes stay valid", () => {
     billingRef.current = fixtureBilling({
       availableMs: 60 * 60_000,
-      creditMs: 60 * 60_000,
-      earliestExpiryAtMs: Date.UTC(2026, 11, 22),
+      creditMs: 90 * 60_000,
+      creditPacks: [
+        { expiresAtMs: Date.UTC(2027, 0, 10, 12), grantId: "event", remainingMs: 30 * 60_000 },
+        { expiresAtMs: Date.UTC(2026, 11, 22, 12), grantId: "trip", remainingMs: 60 * 60_000 },
+        { expiresAtMs: Date.UTC(2026, 10, 1, 12), grantId: "spent", remainingMs: 0 },
+      ],
       isRegistered: true,
+      plan: "pro_max",
     });
     const markup = renderToStaticMarkup(<AccountScreen />);
+    const lines = packValidity(billingRef.current.customer);
 
-    expect(markup).toContain("Pack minutes valid until");
-    expect(packValidity(fixtureBilling({ creditMs: 0, earliestExpiryAtMs: 1 }).customer)).toBeNull();
-    expect(packValidity(null)).toBeNull();
+    expect(markup).toContain("left on Pro Max");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^1 hr pack\. Valid until /);
+    expect(lines[1]).toMatch(/^30 min pack\. Valid until /);
+    expect(markup).toContain(lines[0]);
+    expect(packValidity(null)).toEqual([]);
   });
 });

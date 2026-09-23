@@ -62,6 +62,8 @@ const validEvents: MobileTelemetryEvent[] = [
   {
     app_session_id: sessionId,
     committed_translation: true,
+    backgrounded: true,
+    capture_source: "microphone",
     duration_ms: 61_000,
     error_code: null,
     event: "mobile_session_completed",
@@ -89,6 +91,14 @@ const validEvents: MobileTelemetryEvent[] = [
     platform: "ios",
     result_category: "purchased",
   },
+  { event: "onboarding_step_viewed", step: "welcome" },
+  { event: "onboarding_step_completed", step: "language" },
+  { event: "plan_tab_viewed", tab: "monthly" },
+  { event: "offer_shown", offering_id: "personal_offer" },
+  { event: "offer_redeemed", offering_id: "personal_offer" },
+  { event: "account_saved", method: "apple" },
+  { event: "rating_submitted", stars: 5, answer: "travel" },
+  { event: "store_review_prompted", platform: "ios" },
 ];
 
 describe("mobile telemetry parsing", () => {
@@ -97,6 +107,21 @@ describe("mobile telemetry parsing", () => {
   });
 
   it("accepts every bounded enum value", () => {
+    for (const tab of ["monthly", "yearly", "credit_packs"]) {
+      expect(parseMobileTelemetryEvent({ event: "plan_tab_viewed", tab })).not.toBeNull();
+    }
+    for (const method of ["apple", "google", "email"]) {
+      expect(parseMobileTelemetryEvent({ event: "account_saved", method })).not.toBeNull();
+    }
+    for (const stars of [1, 2, 3, 4, 5]) {
+      expect(parseMobileTelemetryEvent({ event: "rating_submitted", stars, answer: "other" })).not.toBeNull();
+    }
+    expect(parseMobileTelemetryEvent({ event: "store_review_prompted", platform: "android" })).not.toBeNull();
+    expect(parseMobileTelemetryEvent({
+      ...validEvents.find((event) => event.event === "mobile_session_completed"),
+      backgrounded: false,
+      capture_source: "device_playback",
+    })).not.toBeNull();
     const platforms: TelemetryPlatform[] = ["android", "ios", "web", "unknown"];
     for (const platform of platforms) {
       expect(parseMobileTelemetryEvent({
@@ -153,6 +178,22 @@ describe("mobile telemetry parsing", () => {
       app_install_id: "install_12345678",
       payload: validEvents[7],
     });
+  });
+
+  it.each([
+    { event: "onboarding_step_viewed", step: "" },
+    { event: "onboarding_step_completed", step: "x".repeat(65) },
+    { event: "plan_tab_viewed", tab: "lifetime" },
+    { event: "offer_shown", offering_id: "" },
+    { event: "offer_redeemed", offering_id: "x".repeat(65) },
+    { event: "account_saved", method: "password" },
+    { event: "rating_submitted", stars: 0, answer: "travel" },
+    { event: "rating_submitted", stars: 5, answer: "private note" },
+    { event: "store_review_prompted", platform: "web" },
+    { ...validEvents.find((event) => event.event === "mobile_session_completed"), backgrounded: "true" },
+    { ...validEvents.find((event) => event.event === "mobile_session_completed"), capture_source: "screen" },
+  ])("rejects malformed insight telemetry fields", (event) => {
+    expect(parseMobileTelemetryEvent(event)).toBeNull();
   });
 
   it.each([

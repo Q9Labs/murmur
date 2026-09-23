@@ -1,9 +1,11 @@
 import { Mail } from "lucide-react-native";
-import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { useMurmurTheme } from "../../home/theme";
+import { captureMobileFailure } from "../../lib/observability/sentry";
+import { useScreenServices } from "../screenServices";
 
 // Button colors follow Apple's Sign in with Apple and Google's Sign-In branding
 // guidelines, so they are fixed rather than taken from the Murmur theme.
@@ -59,6 +61,88 @@ export function EmailSignInButton(props: SignInButtonProps): ReactNode {
   );
 }
 
+type SocialProvider = "apple" | "google";
+
+type AppleAuthentication = typeof import("expo-apple-authentication");
+
+// Apple appears wherever Google does on iOS, using Apple's own button when the device offers it.
+export function SocialSignInButtons(props: {
+  disabled: boolean;
+  onError: (message: string | null) => void;
+  onStart?: () => void;
+}): ReactNode {
+  const services = useScreenServices();
+  const nativeApple = useNativeAppleAuthentication();
+  const dark = useMurmurTheme().dark;
+  const [pending, setPending] = useState<SocialProvider | null>(null);
+  const locked = pending !== null || props.disabled;
+
+  const signIn = (provider: SocialProvider) => {
+    setPending(provider);
+    props.onError(null);
+    props.onStart?.();
+    const action = provider === "apple" ? services.signInWithApple : services.signInWithGoogle;
+    action()
+      .catch((failure: unknown) => {
+        props.onError(failure instanceof Error ? failure.message : "Sign-in didn't finish. Try again.");
+      })
+      .finally(() => setPending(null));
+  };
+
+  return (
+    <>
+      {Platform.OS === "ios" && nativeApple ? (
+        <View pointerEvents={locked ? "none" : "auto"} style={locked && styles.pressed}>
+          <nativeApple.AppleAuthenticationButton
+            buttonStyle={dark
+              ? nativeApple.AppleAuthenticationButtonStyle.WHITE
+              : nativeApple.AppleAuthenticationButtonStyle.BLACK}
+            buttonType={nativeApple.AppleAuthenticationButtonType.CONTINUE}
+            cornerRadius={28}
+            onPress={() => signIn("apple")}
+            style={styles.nativeApple}
+          />
+        </View>
+      ) : null}
+      {Platform.OS === "ios" && !nativeApple ? (
+        <AppleSignInButton
+          disabled={locked}
+          label={pending === "apple" ? "Signing in…" : "Continue with Apple"}
+          onPress={() => signIn("apple")}
+        />
+      ) : null}
+      <GoogleSignInButton
+        disabled={locked}
+        label={pending === "google" ? "Signing in…" : "Continue with Google"}
+        onPress={() => signIn("google")}
+      />
+    </>
+  );
+}
+
+function useNativeAppleAuthentication(): AppleAuthentication | null {
+  const [apple, setApple] = useState<AppleAuthentication | null>(null);
+  useEffect(() => {
+    if (Platform.OS !== "ios") {
+      return;
+    }
+    let active = true;
+    import("expo-apple-authentication")
+      .then(async (module) => {
+        if (active && await module.isAvailableAsync()) {
+          setApple(module);
+        }
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "load_apple_sign_in_button" });
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return apple;
+}
+
 function SignInButton(props: SignInButtonProps & {
   background: string;
   border: string;
@@ -98,6 +182,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 17,
     fontWeight: "600",
+  },
+  nativeApple: {
+    height: 56,
+    width: "100%",
   },
   pressed: {
     opacity: 0.6,

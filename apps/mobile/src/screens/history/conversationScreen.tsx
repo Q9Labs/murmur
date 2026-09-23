@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState, type ReactNode } from "react";
-import { Alert, Share, Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 
 import { ProGate } from "../proGate";
 import { PrimaryAction, ScreenScaffold, SecondaryAction, StatusLine } from "../screenScaffold";
@@ -36,7 +36,7 @@ function ConversationDetail({ record }: { record: ConversationRecord }): ReactNo
   const fail = (message: string) => setFeedback({ error: message, notice: null });
 
   const share = () => {
-    Share.share({ message: record.text }).catch(() => fail("Sharing didn't open. Try again."));
+    services.shareConversation(record.id).catch(() => fail("Sharing didn't open. Try again."));
   };
   const copy = () => {
     import("expo-clipboard")

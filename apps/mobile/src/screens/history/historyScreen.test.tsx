@@ -8,6 +8,7 @@ import type { ScreenServices } from "../screenServices";
 
 const state = vi.hoisted(() => ({ services: null as ScreenServices | null }));
 
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("../proGate", () => ({ ProGate: (props: { title: string }) => <p>gate {props.title}</p> }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));

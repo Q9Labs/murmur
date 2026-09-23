@@ -24,11 +24,15 @@ import {
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
 import { getCustomer } from "./routes/customer";
+import { claimPhoneAudioGiftRoute } from "./routes/phoneAudioGift";
 import { getConfig } from "./routes/config";
 import { reconcileBilling } from "./routes/reconcileBilling";
 import { receiveRevenueCatWebhook } from "./routes/revenueCatWebhook";
 import { createSession } from "./routes/session";
 import { captureMobileTelemetry } from "./routes/telemetry";
+import { updateInsightsConsent } from "./routes/insightsConsent";
+import { captureInstallAttribution } from "./routes/attribution";
+import { submitRatingSurvey } from "./routes/ratings";
 import { connectRealtimeSocket } from "./sockets/realtime";
 
 export { CustomerLedgerDurableObject, RateLimitDurableObject };
@@ -72,8 +76,24 @@ const handler = {
       return getCustomer(request, env, context);
     }
 
+    if (url.pathname === "/v3/gifts/phone-audio/claim" && request.method === "POST") {
+      return claimPhoneAudioGiftRoute(request, env, context);
+    }
+
     if (url.pathname === "/v3/config" && request.method === "GET") {
       return getConfig(request, env, context);
+    }
+
+    if (url.pathname === "/v3/insights/consent" && request.method === "PUT") {
+      return updateInsightsConsent(request, env);
+    }
+
+    if (url.pathname === "/v3/attribution" && request.method === "POST") {
+      return captureInstallAttribution(request, env, context);
+    }
+
+    if (url.pathname === "/v3/ratings" && request.method === "POST") {
+      return submitRatingSurvey(request, env);
     }
 
     if (url.pathname === "/v3/billing/reconcile" && request.method === "POST") {

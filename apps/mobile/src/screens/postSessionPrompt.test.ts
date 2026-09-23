@@ -2,18 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { nextPostSessionPrompt } from "./postSessionPrompt";
 
-const after = { completed: true, insightsConsent: true, phoneAudioGiftClaimable: false, ratingDue: false };
+const after = { askInsightsConsent: false, offerPhoneAudioGift: false, ratingEligible: false };
 
 describe("post-session prompt", () => {
-  it("asks nothing after a session that did not complete", () => {
-    expect(nextPostSessionPrompt({ ...after, completed: false, insightsConsent: null, ratingDue: true })).toBeNull();
+  it("asks nothing when no prompt is due", () => {
+    expect(nextPostSessionPrompt(after)).toBeNull();
   });
 
   it("asks for insights consent first, then offers the gift, then the rating", () => {
-    expect(nextPostSessionPrompt({ ...after, insightsConsent: null, phoneAudioGiftClaimable: true, ratingDue: true }))
+    expect(nextPostSessionPrompt({ askInsightsConsent: true, offerPhoneAudioGift: true, ratingEligible: true }))
       .toBe("insights_consent");
-    expect(nextPostSessionPrompt({ ...after, phoneAudioGiftClaimable: true, ratingDue: true })).toBe("phone_audio_gift");
-    expect(nextPostSessionPrompt({ ...after, insightsConsent: false, ratingDue: true })).toBe("rating");
-    expect(nextPostSessionPrompt(after)).toBeNull();
+    expect(nextPostSessionPrompt({ ...after, offerPhoneAudioGift: true, ratingEligible: true })).toBe("phone_audio_gift");
+    expect(nextPostSessionPrompt({ ...after, ratingEligible: true })).toBe("rating");
   });
 });

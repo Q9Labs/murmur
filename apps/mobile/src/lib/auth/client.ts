@@ -7,6 +7,7 @@ import { getAppRelease } from "../appRelease";
 import { getWorkerBaseUrl } from "../config";
 import { authErrorMessage } from "./authErrors";
 import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "../installIdentity";
+import { getAppleIdentity, getGoogleIdentity } from "./nativeProviders";
 
 const freeAllowanceIdHeader = "x-murmur-free-allowance-id";
 let guestSessionCreation: Promise<void> | null = null;
@@ -93,6 +94,40 @@ export async function verifyEmailSignInCode(email: string, otp: string): Promise
   if (result.error) {
     throw new Error(authErrorMessage(result.error, "The sign-in code is invalid or expired."));
   }
+}
+
+export async function signInWithApple(): Promise<boolean> {
+  const identity = await getAppleIdentity();
+  if (!identity) {
+    return false;
+  }
+  const result = await murmurAuthClient.signIn.social({
+    provider: "apple",
+    idToken: {
+      token: identity.token,
+      nonce: identity.nonce,
+      user: identity.user,
+    },
+  }, { headers: { cookie: await getMurmurCookie() } });
+  if (result.error) {
+    throw new Error(authErrorMessage(result.error, "Apple sign-in failed."));
+  }
+  return true;
+}
+
+export async function signInWithGoogle(): Promise<boolean> {
+  const token = await getGoogleIdentity();
+  if (!token) {
+    return false;
+  }
+  const result = await murmurAuthClient.signIn.social({
+    provider: "google",
+    idToken: { token },
+  }, { headers: { cookie: await getMurmurCookie() } });
+  if (result.error) {
+    throw new Error(authErrorMessage(result.error, "Google sign-in failed."));
+  }
+  return true;
 }
 
 export async function deleteMurmurAccount(): Promise<void> {

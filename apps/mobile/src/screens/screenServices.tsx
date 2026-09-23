@@ -1,12 +1,14 @@
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { useMurmurBilling } from "../lib/billing/context";
+import type { ConversationHistoryEntry } from "../lib/conversationHistory";
+import { captureMobileFailure } from "../lib/observability/sentry";
 import type { UsageSetting } from "./rating/usageChoices";
 
-// The seam between the 1.3.0 screens and the logic other lanes own (contract sections
-// 1 to 6). Each field is documented with the lane and API that replaces its placeholder.
+// The seam between the 1.3.0 screens and the billing, runtime, auth and insights APIs.
+// Native modules load lazily so screens and previews render without them.
 
 export type ConversationRecord = {
   durationMs: number;
@@ -27,65 +29,142 @@ export type ProFeatures = {
   phoneAudio: boolean;
 };
 
+export type RatingStars = 1 | 2 | 3 | 4 | 5;
+
 export type RatingAnswer = {
   otherText: string | null;
-  stars: number;
-  use: UsageSetting | null;
+  stars: RatingStars;
+  use: UsageSetting;
 };
 
 export type ScreenServices = {
-  // runtime lane: POST /v3/gifts/phone-audio/claim, then refetch /v3/customer.
   claimPhoneAudioGift: () => Promise<void>;
-  // runtime lane: sessions saved on the device when a Pro session ends.
+  clearInsightsConsent: () => Promise<void>;
+  // Saved on this phone when a Pro session ends; reloaded when History opens.
   conversations: ConversationRecord[];
   deleteConversation: (id: string) => Promise<void>;
-  // billing lane: /v3/customer `features.phone_audio` and `features.history`.
   features: ProFeatures;
-  // insights lane: the stored choice, sent as `insights_consent` on session create.
   insightsConsent: boolean | null;
-  // billing lane: /v3/customer `gifts.phone_audio`.
   phoneAudioGift: PhoneAudioGift;
-  // insights lane: the rating schedule in contract section 6.
-  ratingDue: boolean;
+  reloadConversations: () => Promise<void>;
   setInsightsConsent: (consent: boolean) => Promise<void>;
-  // auth lane: signInWithApple() and signInWithGoogle(), ending signed in like email.
+  shareConversation: (id: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  // insights lane: `rating_submitted`, then the store review prompt rules.
   submitRating: (answer: RatingAnswer) => Promise<void>;
 };
 
-async function notConnected(): Promise<void> {
-  throw new Error("This is not available in this build yet.");
-}
+const noGift: PhoneAudioGift = { claimable: false, remainingMs: 0 };
 
 const ScreenServicesContext = createContext<ScreenServices | null>(null);
 
-// Placeholder implementations until the owning lanes merge. They keep every screen
-// usable without pretending a server call happened.
 export function ScreenServicesProvider({ children }: { children: ReactNode }): ReactNode {
-  const { customer } = useMurmurBilling();
-  const [insightsConsent, setInsightsConsent] = useState<boolean | null>(null);
+  const { customer, refresh, signInWithApple, signInWithGoogle } = useMurmurBilling();
+  const [insightsConsent, setInsightsConsentState] = useState<boolean | null>(null);
   const [conversations, setConversations] = useState<ConversationRecord[]>([]);
-  const paid = customer !== null && customer.plan !== "free";
-  const services = useMemo<ScreenServices>(() => ({
-    claimPhoneAudioGift: notConnected,
+  const history = customer?.features.history ?? false;
+  const phoneAudio = customer?.features.phoneAudio ?? false;
+  const phoneAudioGift = customer?.gifts?.phoneAudio ?? noGift;
+  const historyCustomerId = history && customer ? customer.customerId : null;
+
+  const reloadConversations = useCallback(async () => {
+    setConversations(historyCustomerId ? await loadConversations(historyCustomerId) : []);
+  }, [historyCustomerId]);
+
+  useEffect(() => {
+    reloadConversations().catch((failure: unknown) => {
+      captureMobileFailure(failure, { operation: "load_conversation_history" });
+    });
+  }, [reloadConversations]);
+
+  useEffect(() => {
+    import("../lib/insightsConsent")
+      .then((consent) => consent.getInsightsConsent())
+      .then(setInsightsConsentState)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "read_insights_consent" });
+      });
+  }, []);
+
+  const services = useMemo<ScreenServices>(() => {
+    const requireHistoryCustomer = (): string => {
+      if (!historyCustomerId) {
+        throw new Error("Conversation history is part of Pro.");
+      }
+      return historyCustomerId;
+    };
+    return {
+      claimPhoneAudioGift: async () => {
+        const { claimPhoneAudioGift } = await import("../lib/billing/customerApi");
+        await claimPhoneAudioGift();
+        await refresh();
+      },
+      clearInsightsConsent: async () => {
+        const { deleteInsightsConsent } = await import("../lib/insightsConsent");
+        await deleteInsightsConsent();
+        setInsightsConsentState(null);
+      },
+      conversations,
+      deleteConversation: async (id) => {
+        const { deleteConversation } = await import("../lib/conversationHistory");
+        await deleteConversation(requireHistoryCustomer(), id);
+        await reloadConversations();
+      },
+      features: { history, phoneAudio },
+      insightsConsent,
+      phoneAudioGift,
+      reloadConversations,
+      setInsightsConsent: async (consent) => {
+        const { setInsightsConsent } = await import("../lib/insightsConsent");
+        await setInsightsConsent(consent);
+        setInsightsConsentState(consent);
+      },
+      shareConversation: async (id) => {
+        const { shareConversation } = await import("../lib/conversationHistory");
+        await shareConversation(requireHistoryCustomer(), id);
+      },
+      signInWithApple,
+      signInWithGoogle,
+      submitRating: async (answer) => {
+        const { submitRating } = await import("../lib/ratings/ratings");
+        await submitRating({
+          answer: answer.use,
+          ...(answer.otherText ? { otherText: answer.otherText } : {}),
+          stars: answer.stars,
+        });
+      },
+    };
+  }, [
     conversations,
-    deleteConversation: async (id) => {
-      setConversations((current) => current.filter((record) => record.id !== id));
-    },
-    features: { history: paid, phoneAudio: paid },
+    history,
+    historyCustomerId,
     insightsConsent,
-    phoneAudioGift: { claimable: false, remainingMs: 0 },
-    ratingDue: false,
-    setInsightsConsent: async (consent) => {
-      setInsightsConsent(consent);
-    },
-    signInWithApple: notConnected,
-    signInWithGoogle: notConnected,
-    submitRating: async () => undefined,
-  }), [conversations, insightsConsent, paid]);
+    phoneAudio,
+    phoneAudioGift,
+    refresh,
+    reloadConversations,
+    signInWithApple,
+    signInWithGoogle,
+  ]);
   return <ScreenServicesContext.Provider value={services}>{children}</ScreenServicesContext.Provider>;
+}
+
+async function loadConversations(customerId: string): Promise<ConversationRecord[]> {
+  const { getConversation, listConversations } = await import("../lib/conversationHistory");
+  const summaries = await listConversations(customerId);
+  const entries = await Promise.all(summaries.map((summary) => getConversation(customerId, summary.id)));
+  return entries.flatMap((entry) => (entry ? [toConversationRecord(entry)] : []));
+}
+
+function toConversationRecord(entry: ConversationHistoryEntry): ConversationRecord {
+  return {
+    durationMs: entry.duration_ms,
+    id: entry.id,
+    sourceLanguage: entry.source_language,
+    startedAtMs: entry.started_at_ms,
+    targetLanguage: entry.target_language,
+    text: entry.translation_text,
+  };
 }
 
 export function ScreenServicesFixture(props: { children: ReactNode; services: ScreenServices }): ReactNode {

@@ -9,16 +9,13 @@ import type { ScreenServices } from "../screenServices";
 const state = vi.hoisted(() => ({ services: null as ScreenServices | null }));
 const native = vi.hoisted(() => ({
   copy: vi.fn(async () => true),
-  share: vi.fn(async () => ({ action: "sharedAction" })),
 }));
 
 vi.mock("../proGate", () => ({ ProGate: (props: { title: string }) => <p>gate {props.title}</p> }));
 vi.mock("expo-clipboard", () => ({ setStringAsync: native.copy }));
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
-vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => ({
-  ...m.reactNativePrimitives,
-  Share: { share: native.share },
-})));
+vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
@@ -40,7 +37,7 @@ describe("conversation screen", () => {
     expect(markup).toContain("Welcome to the conference");
     expect(markup).toContain("Arabic to English · 12 min");
     findControl("Share")?.onPress?.();
-    expect(native.share).toHaveBeenCalledWith({ message: fixtureConversation.text });
+    expect(state.services?.shareConversation).toHaveBeenCalledWith(fixtureConversation.id);
     findControl("Copy")?.onPress?.();
     await vi.waitFor(() => expect(native.copy).toHaveBeenCalledWith(fixtureConversation.text));
   });

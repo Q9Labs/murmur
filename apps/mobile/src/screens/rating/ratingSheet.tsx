@@ -4,22 +4,23 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ModalSheet } from "../../home/modalSheet";
 import { darkMurmurTheme, lightMurmurTheme, type MurmurTheme, useMurmurTheme } from "../../home/theme";
-import type { RatingAnswer } from "../screenServices";
+import type { RatingAnswer, RatingStars } from "../screenServices";
 import { type UsageSetting, usageChoices } from "./usageChoices";
 
-const starValues = [1, 2, 3, 4, 5] as const;
+const starValues: readonly RatingStars[] = [1, 2, 3, 4, 5];
 
 export function RatingSheet(props: {
-  initialAnswer?: RatingAnswer;
+  initialAnswer?: Partial<RatingAnswer>;
   onClose: () => void;
   onSubmit: (answer: RatingAnswer) => void;
   open: boolean;
 }): ReactNode {
   const theme = useMurmurTheme();
   const styles = theme.dark ? darkStyles : lightStyles;
-  const [stars, setStars] = useState(props.initialAnswer?.stars ?? 0);
+  const [stars, setStars] = useState<RatingStars | null>(props.initialAnswer?.stars ?? null);
   const [use, setUse] = useState<UsageSetting | null>(props.initialAnswer?.use ?? null);
   const [otherText, setOtherText] = useState(props.initialAnswer?.otherText ?? "");
+  const ready = stars !== null && use !== null;
 
   return (
     <ModalSheet onClose={props.onClose} open={props.open} scroll title="How was Murmur?">
@@ -35,8 +36,8 @@ export function RatingSheet(props: {
             style={({ pressed }) => [styles.star, pressed && styles.pressed]}
           >
             <Star
-              color={value <= stars ? theme.gold : theme.muted}
-              fill={value <= stars ? theme.gold : "transparent"}
+              color={stars !== null && value <= stars ? theme.gold : theme.muted}
+              fill={stars !== null && value <= stars ? theme.gold : "transparent"}
               size={36}
               strokeWidth={1.75}
             />
@@ -74,16 +75,16 @@ export function RatingSheet(props: {
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: stars === 0 }}
-        disabled={stars === 0}
-        onPress={() => props.onSubmit({
+        accessibilityState={{ disabled: !ready }}
+        disabled={!ready}
+        onPress={() => stars !== null && use !== null && props.onSubmit({
           otherText: use === "other" && otherText.trim() ? otherText.trim() : null,
           stars,
           use,
         })}
-        style={({ pressed }) => [styles.button, stars === 0 && styles.buttonDisabled, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.button, !ready && styles.buttonDisabled, pressed && styles.pressed]}
       >
-        <Text style={[styles.buttonText, stars === 0 && styles.buttonTextDisabled]}>Send</Text>
+        <Text style={[styles.buttonText, !ready && styles.buttonTextDisabled]}>Send</Text>
       </Pressable>
     </ModalSheet>
   );

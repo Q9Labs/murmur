@@ -48,6 +48,14 @@ describe("rating sheet", () => {
     expect(onSubmit).toHaveBeenCalledWith({ otherText: "Parent evening", stars: 4, use: "other" });
   });
 
+  it("waits for both the stars and the answer before sending", () => {
+    renderToStaticMarkup(
+      <RatingSheet initialAnswer={{ stars: 5 }} onClose={vi.fn()} onSubmit={vi.fn()} open />,
+    );
+
+    expect(sendButton()?.disabled).toBe(true);
+  });
+
   it("drops the free text for a listed choice", () => {
     const onSubmit = vi.fn();
     renderToStaticMarkup(

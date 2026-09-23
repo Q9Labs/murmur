@@ -1,10 +1,11 @@
+import type { MobileTelemetryEvent } from "@murmur/protocol/telemetry";
 import { useRouter } from "expo-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { useMurmurBilling } from "../../lib/billing/context";
 import { introDiscountPercent, type PlanTerm } from "../../lib/billing/planCatalog";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
-import { OfferBanner } from "./offerBanner";
+import { OfferBanner, remainingOfferMs } from "./offerBanner";
 import { PlanListStatus, usePlanList } from "./planList";
 import { PlanCheckout, PlanPicker, usePlanPicker } from "./planPicker";
 import { purchaseMode } from "./purchaseMode";
@@ -30,6 +31,25 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
   const readyPlans = plans.status === "ready" ? plans.plans : [];
   const picker = usePlanPicker(readyPlans, props.initialTerm);
   const mode = purchaseMode(billing, () => router.replace("/save-purchase"));
+  const activeTerm = picker.activeTab?.term ?? null;
+  const offer = billing.config.personalOffer;
+  const discountPercent = introDiscountPercent(readyPlans);
+  const offerExpiresAtMs = offer ? Date.parse(offer.expiresAt) : null;
+  const offerOfferingId = offer && discountPercent !== null && remainingOfferMs(offerExpiresAtMs, Date.now()) > 0
+    ? offer.offeringId
+    : null;
+
+  useEffect(() => {
+    if (activeTerm) {
+      captureFunnelEvent({ event: "plan_tab_viewed", tab: activeTerm === "pack" ? "credit_packs" : activeTerm });
+    }
+  }, [activeTerm]);
+
+  useEffect(() => {
+    if (offerOfferingId) {
+      captureFunnelEvent({ event: "offer_shown", offering_id: offerOfferingId });
+    }
+  }, [offerOfferingId]);
 
   return (
     <ScreenScaffold
@@ -37,11 +57,15 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
       title="Plans"
     >
       <OfferBanner
-        discountPercent={introDiscountPercent(readyPlans)}
-        expiresAtMs={billing.config.personalOfferExpiresAtMs}
+        discountPercent={discountPercent}
+        expiresAtMs={offerExpiresAtMs}
       />
       {picker.activeTab ? <PlanPicker picker={picker} /> : <PlanListStatus onRetry={refresh} plans={plans} />}
       <StatusLine error={billing.error} notice={billing.notice} />
     </ScreenScaffold>
   );
+}
+
+function captureFunnelEvent(payload: MobileTelemetryEvent): void {
+  void import("../../lib/telemetry").then((telemetry) => telemetry.captureMobileTelemetry(payload));
 }

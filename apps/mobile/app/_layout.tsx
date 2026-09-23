@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useMurmurTheme } from "../src/home/theme";
 import { MurmurBillingProvider } from "../src/lib/billing/context";
 import { initializeSentry } from "../src/lib/observability/sentry";
+import { ReplayProvider } from "../src/lib/replayProvider";
 import { ScreenServicesProvider } from "../src/screens/screenServices";
 import { SettingsControlsProvider } from "../src/screens/settings/settingsControls";
 
@@ -20,6 +21,7 @@ function RootLayout(): ReactNode {
   }, [colors.background]);
 
   return (
+    <ReplayProvider>
     <MurmurBillingProvider>
       <ScreenServicesProvider>
         <SettingsControlsProvider>
@@ -32,6 +34,7 @@ function RootLayout(): ReactNode {
         </SettingsControlsProvider>
       </ScreenServicesProvider>
     </MurmurBillingProvider>
+    </ReplayProvider>
   );
 }
 

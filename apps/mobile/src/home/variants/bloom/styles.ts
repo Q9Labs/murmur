@@ -320,26 +320,6 @@ function createBloomStyles(theme: MurmurTheme) {
       fontWeight: "700",
       textAlign: "center",
     },
-    stageDot: {
-      backgroundColor: theme.teal,
-      borderRadius: 999,
-      height: 7,
-      width: 7,
-    },
-    stageHeader: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: 8,
-      paddingHorizontal: 30,
-      paddingTop: 28,
-    },
-    stageLabel: {
-      color: theme.muted,
-      flexShrink: 1,
-      fontSize: 14,
-      fontWeight: "700",
-      letterSpacing: 0.4,
-    },
     sourceText: {
       color: theme.secondaryText,
       fontSize: 18,
@@ -360,7 +340,6 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     timelineContentTranslationOnly: {
       gap: 28,
-      paddingTop: 20,
     },
     timelineTranslation: {
       color: theme.primary,

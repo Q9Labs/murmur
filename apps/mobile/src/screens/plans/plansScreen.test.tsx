@@ -24,6 +24,7 @@ vi.mock("./offerBanner", () => ({
     state.offer = props;
     return null;
   },
+  remainingOfferMs: (expiresAtMs: number | null, nowMs: number) => (expiresAtMs === null ? 0 : expiresAtMs - nowMs),
 }));
 vi.mock("./planList", () => ({
   PlanListStatus: () => <p>plan status</p>,
@@ -73,7 +74,7 @@ describe("plans screen", () => {
 
   it("passes the personal offer's real expiry and discount to the banner", () => {
     const expiresAtMs = Date.now() + 3_600_000;
-    state.billing = { ...fixtureBilling(), config: { ...fixtureBilling().config, personalOfferExpiresAtMs: expiresAtMs } };
+    state.billing = { ...fixtureBilling(), config: { ...fixtureBilling().config, personalOffer: { expiresAt: new Date(expiresAtMs).toISOString(), offeringId: "personal_offer" } } };
     state.plans = {
       plans: [{ ...fixtureMonthly, introPrice: { amount: 7.99, price: "$7.99" } }],
       status: "ready",

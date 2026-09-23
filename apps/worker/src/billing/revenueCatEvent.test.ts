@@ -4,7 +4,9 @@ import {
   decodeIgnoredRevenueCatEvent,
   decodeRevenueCatEvent,
   isIgnoredRevenueCatEventType,
+  revenueCatBillingProduct,
   revenueCatCustomerIds,
+  revenueCatOfferId,
 } from "./revenueCatEvent";
 
 describe("RevenueCat event decoding", () => {
@@ -47,6 +49,58 @@ describe("RevenueCat event decoding", () => {
       api_version: "1.0",
       event: { environment: "SANDBOX", id: "event", type: "TEST" },
     })).toBeNull();
+  });
+
+  it("maps Play personal-20 purchases in either personal offering", () => {
+    for (const [productId, offeringId, allowanceMinutes] of [
+      ["murmur_pro:monthly", "personal_offer", 120],
+      ["murmur_pro_lite:monthly", "lite_personal_offer", 90],
+    ] as const) {
+      const event = decodeRevenueCatEvent({
+        api_version: "1.0",
+        event: {
+          app_user_id: "guest-1",
+          environment: "PRODUCTION",
+          event_timestamp_ms: 1_800_000_000_000,
+          expiration_at_ms: 1_802_000_000_000,
+          id: `event-${productId}`,
+          offer_code: "personal-20",
+          presented_offering_id: offeringId,
+          product_id: productId,
+          store: "PLAY_STORE",
+          type: "INITIAL_PURCHASE",
+        },
+      });
+      expect(event).not.toBeNull();
+      if (!event || !event.provider || !event.productId) {
+        continue;
+      }
+      expect(revenueCatOfferId(event)).toBe("personal-20");
+      expect(revenueCatBillingProduct(event))
+        .toMatchObject({ grantMs: allowanceMinutes * 60_000, personalOffer: true });
+    }
+  });
+
+  it("keeps Pro Max and packs purchasable from personal offerings", () => {
+    for (const [productId, code] of [
+      ["murmur_promax:monthly", "pro_max_monthly"],
+      ["murmur_credits_300", "credits_300"],
+    ]) {
+      const event = decodeRevenueCatEvent({
+        api_version: "1.0",
+        event: {
+          app_user_id: "guest-1",
+          environment: "PRODUCTION",
+          event_timestamp_ms: 1_800_000_000_000,
+          id: `event-${productId}`,
+          presented_offering_id: "lite_personal_offer",
+          product_id: productId,
+          store: "PLAY_STORE",
+          type: "INITIAL_PURCHASE",
+        },
+      });
+      expect(event && revenueCatBillingProduct(event)?.code).toBe(code);
+    }
   });
 
   it("recognizes signed non-entitlement notifications without purchase fields", () => {

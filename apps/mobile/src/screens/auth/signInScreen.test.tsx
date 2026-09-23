@@ -3,16 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
 import { fixtureBilling, fixturePlans } from "../__tests__/billingFixture";
+import { fixtureServices } from "../__tests__/servicesFixture";
 import { router } from "../__tests__/navigation";
 import { recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
 const planLoads = vi.hoisted(() => [] as Array<{ load: () => Promise<unknown>; open: boolean }>);
 const signInBilling = vi.hoisted(() => ({ current: null as MurmurBillingContext | null }));
 
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
+vi.mock("../screenServices", () => ({ useScreenServices: () => fixtureServices() }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
-vi.mock("lucide-react-native", () => ({ Check: () => null }));
+vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("react-native-svg", () => ({ default: () => null, Path: () => null }));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => signInBilling.current }));
 vi.mock("../plans/planList", () => ({
   usePlanList: (open: boolean, load: () => Promise<unknown>) => {
@@ -48,8 +52,14 @@ describe("sign-in screen", () => {
     expect(planIdFromParam(" ")).toBeUndefined();
   });
 
-  it("titles the screen for the email step", () => {
-    expect(renderToStaticMarkup(<SignInScreen />)).toContain("Sign in");
+  it("titles the screen for the email step and offers Apple and Google there", () => {
+    const markup = renderToStaticMarkup(<SignInScreen />);
+
+    expect(markup).toContain("Sign in");
+    expect(markup).toContain("Continue with Apple");
+    expect(markup).toContain("Continue with Google");
+    expect(renderToStaticMarkup(<SignInScreen initialState={{ email: "maya@example.com", step: "done" }} />))
+      .not.toContain("Continue with Google");
   });
 
   it("buys the chosen plan right after signing in", () => {

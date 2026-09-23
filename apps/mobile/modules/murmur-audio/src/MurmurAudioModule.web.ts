@@ -55,6 +55,10 @@ class MurmurAudioWebModule extends NativeModule<MurmurAudioModuleEvents> {
     }
   }
 
+  async getAdServicesAttributionToken(): Promise<string> {
+    throw new Error("AdServices attribution is unavailable on web");
+  }
+
   async getCaptureCapabilities(): Promise<CaptureCapabilities> {
     return {
       device_playback_supported: false,
@@ -76,7 +80,7 @@ class MurmurAudioWebModule extends NativeModule<MurmurAudioModuleEvents> {
     return this.state("get_audio_state");
   }
 
-  async startCapture(source: AudioCaptureSource): Promise<AudioStateEvent> {
+  async startCapture(source: AudioCaptureSource, _maxSessionSeconds: number): Promise<AudioStateEvent> {
     if (source !== "microphone") {
       throw new Error("Device playback capture is unavailable in this browser");
     }

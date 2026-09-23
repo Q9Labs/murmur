@@ -19,6 +19,7 @@ import {
   previewFreeServices,
   previewOfferBilling,
   previewPackBilling,
+  previewProMaxBilling,
   previewServices,
   previewSettingsControls,
   previewSignedInBilling,
@@ -32,6 +33,7 @@ export type ScreenPreview =
   | AuthPreviewScreen
   | "account-guest"
   | "account-pack"
+  | "account-pro-max"
   | "account-signed-in"
   | "account-unsaved"
   | "history"
@@ -89,6 +91,7 @@ function PhoneAudioPreview({ services }: { services: ScreenServices }): ReactNod
 export const screenPreviews: Readonly<Record<ScreenPreview, () => ReactNode>> = {
   "account-guest": () => <WithFixtures><AccountScreen /></WithFixtures>,
   "account-pack": () => <WithFixtures billing={previewPackBilling}><AccountScreen /></WithFixtures>,
+  "account-pro-max": () => <WithFixtures billing={previewProMaxBilling}><AccountScreen /></WithFixtures>,
   "account-signed-in": () => <WithFixtures billing={previewSignedInBilling}><AccountScreen /></WithFixtures>,
   "account-unsaved": () => <WithFixtures billing={previewUnsavedBilling}><AccountScreen /></WithFixtures>,
   "auth-code": () => <AuthPreview screen="auth-code" />,

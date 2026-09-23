@@ -38,6 +38,15 @@ vi.mock("../lib/engagement", () => ({
   markReviewRequested: vi.fn(async () => undefined),
   recordSessionOutcome: vi.fn(async () => ({ should_request_review: false })),
 }));
+vi.mock("../lib/ratings/ratings", () => ({
+  claimRatingSlot: vi.fn(async () => false),
+  deleteRatingState: vi.fn(async () => undefined),
+}));
+vi.mock("../lib/phoneAudioGiftOffer", () => ({
+  deletePhoneAudioGiftOffer: vi.fn(async () => undefined),
+  hasOfferedPhoneAudioGift: vi.fn(async () => true),
+  markPhoneAudioGiftOffered: vi.fn(async () => undefined),
+}));
 vi.mock("../lib/installIdentity", () => ({
   acknowledgePrivacyDisclosure: vi.fn(async () => undefined),
   deleteLocalMurmurData: vi.fn(async () => undefined),

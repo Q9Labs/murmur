@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import type { BillingProduct, StoreProvider } from "./catalog";
+import { creditPackValidityMs, type BillingProduct, type StoreProvider } from "./catalog";
 import type { RevenueCatSubscription } from "./revenueCatApi";
 import type { RevenueCatEvent } from "./revenueCatEvent";
 import {
@@ -37,7 +37,7 @@ export class RevenueCatEventRepository {
         .prepare(
           `SELECT customer_id
            FROM customers
-           WHERE customer_id = ?`,
+           WHERE customer_id = ? AND state = 'active'`,
         )
         .bind(candidateId)
         .first<CustomerRow>();
@@ -171,7 +171,9 @@ export class RevenueCatEventRepository {
         params.product.kind,
         params.status,
         params.event.purchasedAtMs,
-        params.event.expirationAtMs,
+        params.product.kind === "credit_pack"
+          ? params.event.purchasedAtMs + creditPackValidityMs
+          : params.event.expirationAtMs,
         params.eventRowId,
         params.event.eventTimestampMs,
         params.event.eventTimestampMs,

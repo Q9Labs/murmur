@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   services: null as ScreenServices | null,
 }));
 
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => state.billing }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));

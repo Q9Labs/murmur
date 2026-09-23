@@ -86,18 +86,20 @@ export function reportAccountViewed(): void {
 const planNames: Readonly<Record<MurmurCustomer["plan"], string>> = {
   free: "Free",
   pro: "Pro",
+  pro_max: "Pro Max",
 };
 
 export function hasUnsavedPurchase(customer: MurmurCustomer): boolean {
   return !customer.isRegistered && (customer.plan !== "free" || customer.creditMs > 0);
 }
 
-export function packValidity(customer: MurmurCustomer | null): string | null {
-  if (!customer || customer.creditMs <= 0 || customer.earliestExpiryAtMs === null) {
-    return null;
-  }
-  const date = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(customer.earliestExpiryAtMs));
-  return `Pack minutes valid until ${date}`;
+// One line per credit pack still holding minutes, soonest to expire first.
+export function packValidity(customer: MurmurCustomer | null): string[] {
+  const packs = customer?.creditPacks.filter((pack) => pack.remainingMs > 0) ?? [];
+  const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+  return packs
+    .sort((first, second) => first.expiresAtMs - second.expiresAtMs)
+    .map((pack) => `${formatMinutes(pack.remainingMs)} pack. Valid until ${dateFormat.format(new Date(pack.expiresAtMs))}`);
 }
 
 function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNode {
@@ -108,13 +110,13 @@ function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNo
   const validity = packValidity(customer);
   return (
     <View
-      accessibilityLabel={[`${balance} left on the ${plan} plan`, validity].filter(Boolean).join(". ")}
+      accessibilityLabel={[`${balance} left on the ${plan} plan`, ...validity].join(". ")}
       accessible
       style={styles.hero}
     >
       <Text style={styles.balance}>{balance}</Text>
       <Text style={styles.detail}>left on {plan}</Text>
-      {validity ? <Text style={styles.validity}>{validity}</Text> : null}
+      {validity.map((line) => <Text key={line} style={styles.validity}>{line}</Text>)}
     </View>
   );
 }

@@ -67,7 +67,7 @@ describe("screen previews", () => {
   it("opens plans on the requested tab, with the offer where asked", () => {
     render("plans-offer");
     expect(seen.screens).toEqual(["plans:monthly"]);
-    expect(seen.billing[0]?.config.personalOfferExpiresAtMs).toBeGreaterThan(Date.now());
+    expect(Date.parse(seen.billing[0]?.config.personalOffer?.expiresAt ?? "")).toBeGreaterThan(Date.now());
     render("plans-packs");
     expect(seen.screens).toEqual(["plans:pack"]);
     render("auth-code");

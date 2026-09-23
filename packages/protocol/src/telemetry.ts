@@ -5,6 +5,7 @@ import {
   type SourceLanguageCode,
 } from "./languages";
 import type { ReportTranslationCategory } from "./transport/types";
+import { isInsightSetting } from "./insights";
 
 export type TelemetryPlatform = "android" | "ios" | "web" | "unknown";
 
@@ -27,6 +28,12 @@ export type MobileBillingTelemetryEventName =
   | "mobile_restore_succeeded";
 
 export type MobileTelemetryEvent =
+  | { event: "onboarding_step_viewed" | "onboarding_step_completed"; step: string }
+  | { event: "plan_tab_viewed"; tab: "monthly" | "yearly" | "credit_packs" }
+  | { event: "offer_shown" | "offer_redeemed"; offering_id: string }
+  | { event: "account_saved"; method: "apple" | "google" | "email" }
+  | { event: "rating_submitted"; stars: 1 | 2 | 3 | 4 | 5; answer: string }
+  | { event: "store_review_prompted"; platform: "ios" | "android" }
   | {
       app_version: string;
       backend_environment: string;
@@ -87,6 +94,8 @@ export type MobileTelemetryEvent =
   | {
       app_session_id: string;
       committed_translation: boolean;
+      backgrounded?: boolean;
+      capture_source?: "microphone" | "device_playback";
       duration_ms: number;
       error_code: string | null;
       event: "mobile_session_completed";
@@ -126,6 +135,14 @@ type TelemetryRequestCandidate = {
 };
 
 type TelemetryEventCandidate = {
+  answer?: unknown;
+  backgrounded?: unknown;
+  capture_source?: unknown;
+  method?: unknown;
+  offering_id?: unknown;
+  stars?: unknown;
+  step?: unknown;
+  tab?: unknown;
   app_session_id?: unknown;
   app_version?: unknown;
   backend_environment?: unknown;
@@ -176,6 +193,23 @@ const billingEventNames: readonly MobileBillingTelemetryEventName[] = [
 ];
 
 const telemetryEventParsers = new Map<string, TelemetryEventParser>([
+  ["onboarding_step_viewed", (value) => parseStepEvent(value, "onboarding_step_viewed")],
+  ["onboarding_step_completed", (value) => parseStepEvent(value, "onboarding_step_completed")],
+  ["plan_tab_viewed", (value) =>
+    value.tab === "monthly" || value.tab === "yearly" || value.tab === "credit_packs"
+      ? { event: "plan_tab_viewed", tab: value.tab } : null],
+  ["offer_shown", (value) => parseOfferEvent(value, "offer_shown")],
+  ["offer_redeemed", (value) => parseOfferEvent(value, "offer_redeemed")],
+  ["account_saved", (value) =>
+    value.method === "apple" || value.method === "google" || value.method === "email"
+      ? { event: "account_saved", method: value.method } : null],
+  ["rating_submitted", (value) =>
+    (value.stars === 1 || value.stars === 2 || value.stars === 3 || value.stars === 4 || value.stars === 5) &&
+    isInsightSetting(value.answer)
+      ? { event: "rating_submitted", stars: value.stars, answer: value.answer } : null],
+  ["store_review_prompted", (value) =>
+    value.platform === "ios" || value.platform === "android"
+      ? { event: "store_review_prompted", platform: value.platform } : null],
   ...billingEventNames.map((event): [string, TelemetryEventParser] => [
     event,
     (value) => parseBillingEvent(value, event),
@@ -193,6 +227,20 @@ const telemetryEventParsers = new Map<string, TelemetryEventParser>([
   ["mobile_session_completed", parseSessionCompletedEvent],
   ["mobile_translation_reported", parseTranslationReportedEvent],
 ]);
+
+function parseStepEvent(
+  value: TelemetryEventCandidate,
+  event: "onboarding_step_viewed" | "onboarding_step_completed",
+): MobileTelemetryEvent | null {
+  return isShortLabel(value.step) ? { event, step: value.step } : null;
+}
+
+function parseOfferEvent(
+  value: TelemetryEventCandidate,
+  event: "offer_shown" | "offer_redeemed",
+): MobileTelemetryEvent | null {
+  return isShortLabel(value.offering_id) ? { event, offering_id: value.offering_id } : null;
+}
 
 export function parseMobileTelemetryRequest(value: unknown): MobileTelemetryRequest | null {
   if (!isTelemetryRequestCandidate(value)) {
@@ -348,7 +396,8 @@ function parseSessionCompletedEvent(
 ): MobileTelemetryEvent | null {
   const context = parseSessionCompletionContext(value);
   const metrics = parseSessionCompletionMetrics(value);
-  if (!hasLanguagePair(value) || !isIdentifier(value.app_session_id) || !context || !metrics) {
+  const metadata = parseSessionMetadata(value);
+  if (!hasLanguagePair(value) || !isIdentifier(value.app_session_id) || !context || !metrics || !metadata) {
     return null;
   }
   return {
@@ -356,8 +405,23 @@ function parseSessionCompletedEvent(
     ...context,
     event: "mobile_session_completed",
     ...metrics,
+    ...metadata,
     source_language: value.source_language,
     target_language: value.target_language,
+  };
+}
+
+function parseSessionMetadata(value: TelemetryEventCandidate): {
+  backgrounded?: boolean;
+  capture_source?: "microphone" | "device_playback";
+} | null {
+  if (value.backgrounded !== undefined && typeof value.backgrounded !== "boolean") return null;
+  if (value.capture_source !== undefined &&
+      value.capture_source !== "microphone" && value.capture_source !== "device_playback") return null;
+  return {
+    ...(typeof value.backgrounded === "boolean" ? { backgrounded: value.backgrounded } : {}),
+    ...(value.capture_source === "microphone" || value.capture_source === "device_playback"
+      ? { capture_source: value.capture_source } : {}),
   };
 }
 

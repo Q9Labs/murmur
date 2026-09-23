@@ -1,21 +1,17 @@
 export type PostSessionPrompt = "insights_consent" | "phone_audio_gift" | "rating";
 
-// At most one prompt after a completed session, most important first. Whatever is
-// skipped comes back after a later session.
+// At most one prompt after a completed session, most important first. The rating is only
+// a candidate here: its own schedule decides afterwards whether this slot shows it.
 export function nextPostSessionPrompt(params: {
-  completed: boolean;
-  insightsConsent: boolean | null;
-  phoneAudioGiftClaimable: boolean;
-  ratingDue: boolean;
+  askInsightsConsent: boolean;
+  offerPhoneAudioGift: boolean;
+  ratingEligible: boolean;
 }): PostSessionPrompt | null {
-  if (!params.completed) {
-    return null;
-  }
-  if (params.insightsConsent === null) {
+  if (params.askInsightsConsent) {
     return "insights_consent";
   }
-  if (params.phoneAudioGiftClaimable) {
+  if (params.offerPhoneAudioGift) {
     return "phone_audio_gift";
   }
-  return params.ratingDue ? "rating" : null;
+  return params.ratingEligible ? "rating" : null;
 }

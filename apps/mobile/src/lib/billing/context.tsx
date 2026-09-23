@@ -29,6 +29,8 @@ export type MurmurBillingContext = {
   refresh: () => Promise<void>;
   restorePurchases: () => Promise<void>;
   sendSignInCode: (email: string) => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   switchAccount: () => Promise<void>;
   syncing: boolean;
   verifySignInCode: (email: string, otp: string) => Promise<void>;
@@ -51,6 +53,8 @@ const unavailableBillingContext: MurmurBillingContext = {
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
+  signInWithApple: async () => undefined,
+  signInWithGoogle: async () => undefined,
   switchAccount: async () => undefined,
   syncing: false,
   verifySignInCode: async () => undefined,
@@ -87,7 +91,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   const refresh = useCallback(async (): Promise<void> => {
     beginBusy();
     try {
-      await loadCustomer();
+      const { fetchMurmurAppConfig } = await import("./customerApi");
+      const [nextConfig] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
+      setConfig(nextConfig);
       setError(null);
     } catch (failure) {
       setError(errorMessage(failure));
@@ -121,7 +127,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     void (async () => {
       try {
         const nextCustomer = await loadCustomer();
-        if (active && nextCustomer.isRegistered && nextCustomer.fulfillmentEnabled) {
+        if (active && nextCustomer.fulfillmentEnabled) {
           const { reconcileMurmurCustomer } = await import("./customerApi");
           reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
           captureBillingTelemetry("mobile_reconciliation_succeeded", { resultCategory: "login" });
@@ -226,6 +232,18 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     return loadMurmurPlans(serverOfferingId);
   }, [serverOfferingId]);
 
+  const completeSignIn = useCallback(async (method: AccountSaveMethod): Promise<void> => {
+    const nextCustomer = await loadCustomer();
+    if (nextCustomer.fulfillmentEnabled) {
+      const { reconcileMurmurCustomer } = await import("./customerApi");
+      reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
+      await loadCustomer();
+    }
+    captureBillingTelemetry("mobile_registration_completed");
+    captureAccountSaved(method);
+    setError(null);
+  }, [loadCustomer]);
+
   const value = useMemo<MurmurBillingContext>(() => ({
     busy,
     config,
@@ -276,6 +294,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
           return;
         }
         await completeStorePurchase();
+        if (config.personalOffer) {
+          captureOfferRedeemed(config.personalOffer.offeringId);
+        }
         purchased = true;
       });
       return purchased;
@@ -283,10 +304,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     purchasesAvailable,
     refresh,
     restorePurchases: () => runStoreAction(async () => {
-      if (!customer?.isRegistered) {
-        throw new Error("Add and verify an email before restoring purchases.");
-      }
-      if (!customer.fulfillmentEnabled) {
+      if (!customer?.fulfillmentEnabled) {
         throw new Error("Purchase restoration is temporarily unavailable.");
       }
       const { restoreMurmurPurchases } = await import("./revenueCat");
@@ -316,6 +334,28 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         endBusy();
       }
     },
+    signInWithApple: async () => {
+      beginBusy();
+      try {
+        const { signInWithApple } = await import("../auth/client");
+        if (await signInWithApple()) {
+          await completeSignIn("apple");
+        }
+      } finally {
+        endBusy();
+      }
+    },
+    signInWithGoogle: async () => {
+      beginBusy();
+      try {
+        const { signInWithGoogle } = await import("../auth/client");
+        if (await signInWithGoogle()) {
+          await completeSignIn("google");
+        }
+      } finally {
+        endBusy();
+      }
+    },
     switchAccount: async () => {
       beginBusy();
       try {
@@ -338,14 +378,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { verifyEmailSignInCode } = await import("../auth/client");
         await verifyEmailSignInCode(email, otp);
-        const nextCustomer = await loadCustomer();
-        if (nextCustomer.fulfillmentEnabled) {
-          const { reconcileMurmurCustomer } = await import("./customerApi");
-          reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
-          await loadCustomer();
-        }
-        captureBillingTelemetry("mobile_registration_completed");
-        setError(null);
+        await completeSignIn("email");
       } finally {
         endBusy();
       }
@@ -354,6 +387,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     beginBusy,
     busy,
     completeStorePurchase,
+    completeSignIn,
     config,
     configLoaded,
     customer,
@@ -390,8 +424,8 @@ function delay(milliseconds: number): Promise<void> {
 }
 
 function assertPaywallAvailable(customer: MurmurCustomer | null): asserts customer is MurmurCustomer {
-  if (!customer?.isRegistered) {
-    throw new Error("Add and verify an email before making a purchase.");
+  if (!customer) {
+    throw new Error("Your Murmur account is still loading.");
   }
   if (!customer.purchasesEnabled) {
     throw new Error("New purchases are temporarily unavailable.");
@@ -424,6 +458,17 @@ function reportAppConfigFailure(failure: unknown): void {
 
 function errorMessage(failure: unknown): string {
   return failure instanceof Error ? failure.message : "Murmur billing is temporarily unavailable.";
+}
+
+type AccountSaveMethod = "apple" | "google" | "email";
+
+function captureAccountSaved(method: AccountSaveMethod): void {
+  void import("../telemetry").then((telemetry) => telemetry.captureMobileTelemetry({ event: "account_saved", method }));
+}
+
+function captureOfferRedeemed(offeringId: string): void {
+  void import("../telemetry").then((telemetry) =>
+    telemetry.captureMobileTelemetry({ event: "offer_redeemed", offering_id: offeringId }));
 }
 
 function captureBillingTelemetry(

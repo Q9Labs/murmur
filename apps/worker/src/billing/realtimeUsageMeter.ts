@@ -3,19 +3,22 @@ import { callCustomerLedger } from "./customerLedgerDurableObject";
 const pcm16BytesPerMillisecond = 48;
 const maxUnsettledMs = 5_000;
 
-export type AudioAcceptance = "accepted" | "allowance_exhausted" | "settlement_required";
+export type AudioAcceptance = "accepted" | "allowance_exhausted" | "phone_audio_gift_exhausted" | "settlement_required";
+
+type Settlement = { availableMs: number; exhausted: boolean; giftExhausted: boolean };
 
 export type RealtimeUsageMeter = {
   checkAudio: (byteLength: number) => AudioAcceptance;
   close: (outcome: "closed" | "failed") => Promise<void>;
   recordAudio: (byteLength: number) => void;
-  settle: () => Promise<{ availableMs: number; exhausted: boolean }>;
+  settle: () => Promise<Settlement>;
 };
 
 export function createRealtimeUsageMeter(params: {
   availableMs: number;
   customerId: string | null;
   enforceAllowance?: boolean;
+  gift?: { remainingMs: number; settle: (totalMs: number) => Promise<number> };
   namespace: DurableObjectNamespace | undefined;
   usageSessionId: string;
 }): RealtimeUsageMeter {
@@ -23,7 +26,8 @@ export function createRealtimeUsageMeter(params: {
   let availableMs = params.availableMs;
   let nextSettlementSequence = 1;
   let settledMs = 0;
-  let activeSettlement: Promise<{ availableMs: number; exhausted: boolean }> | null = null;
+  let activeSettlement: Promise<Settlement> | null = null;
+  let giftExhausted = false;
   let acceptingAudio = true;
   let closing: Promise<void> | null = null;
   let usageSessionClosed = false;
@@ -37,6 +41,9 @@ export function createRealtimeUsageMeter(params: {
       return "allowance_exhausted";
     }
     const targetAcceptedMs = acceptedMs(acceptedAudioBytes + byteLength);
+    if (params.gift && (giftExhausted || targetAcceptedMs > params.gift.remainingMs)) {
+      return "phone_audio_gift_exhausted";
+    }
     const nextUnsettledMs = targetAcceptedMs - settledMs;
     if (params.enforceAllowance === false) {
       return "accepted";
@@ -57,14 +64,14 @@ export function createRealtimeUsageMeter(params: {
     acceptedAudioBytes += byteLength;
   }
 
-  async function settleOnce(): Promise<{ availableMs: number; exhausted: boolean }> {
+  async function settleOnce(): Promise<Settlement> {
     if (usageSessionClosed || !params.customerId) {
-      return { availableMs, exhausted: availableMs <= 0 };
+      return { availableMs, exhausted: availableMs <= 0, giftExhausted };
     }
     const targetSettledMs = acceptedMs();
     const amountMs = targetSettledMs - settledMs;
     if (amountMs <= 0) {
-      return { availableMs, exhausted: availableMs <= 0 };
+      return { availableMs, exhausted: availableMs <= 0, giftExhausted };
     }
     const ledger = await callCustomerLedger(params.namespace, params.customerId, {
       action: "settle_usage",
@@ -77,7 +84,7 @@ export function createRealtimeUsageMeter(params: {
     if (!ledger.result.ok) {
       if (ledger.result.code === "allowance_exhausted") {
         availableMs = ledger.result.availableMs;
-        return { availableMs, exhausted: true };
+        return { availableMs, exhausted: true, giftExhausted };
       }
       throw new Error(`usage settlement failed: ${ledger.result.code}`);
     }
@@ -85,12 +92,16 @@ export function createRealtimeUsageMeter(params: {
       throw new Error("usage settlement returned no balance");
     }
     availableMs = ledger.result.balance.availableMs;
+    if (params.gift) {
+      const remainingMs = await params.gift.settle(targetSettledMs);
+      giftExhausted = remainingMs <= 0;
+    }
     settledMs = targetSettledMs;
     nextSettlementSequence += 1;
-    return { availableMs, exhausted: availableMs <= 0 };
+    return { availableMs, exhausted: availableMs <= 0, giftExhausted };
   }
 
-  async function settle(): Promise<{ availableMs: number; exhausted: boolean }> {
+  async function settle(): Promise<Settlement> {
     if (activeSettlement) {
       return activeSettlement;
     }

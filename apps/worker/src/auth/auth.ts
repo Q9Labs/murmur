@@ -13,8 +13,10 @@ import {
 } from "../billing/freeAllowanceClaims";
 import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
+import { deleteCustomerInsightsAndRatings } from "../insights/deleteCustomerData";
 import { hashInstallId } from "../privacy";
-import { defaultServerConfig, getServerConfig } from "../serverConfig";
+import { getServerConfig } from "../serverConfig";
+import { socialProviders } from "./socialProviders";
 
 const localDevelopmentSecret = "murmur-local-development-secret-change-before-deploy";
 const guestEmailDomain = "guest.murmur.invalid";
@@ -76,6 +78,7 @@ export function createMurmurAuth(
             if (!deletion.result.ok) {
               throw new Error(`customer deletion failed: ${deletion.result.code}`);
             }
+            await deleteCustomerInsightsAndRatings(database, user.id);
           },
         },
       },
@@ -127,6 +130,7 @@ export function createMurmurAuth(
       window: 60,
     },
     secret,
+    socialProviders: socialProviders(env),
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       freshAge: 60 * 60 * 24,
@@ -135,7 +139,7 @@ export function createMurmurAuth(
     user: {
       deleteUser: { enabled: true },
     },
-    trustedOrigins: trustedOrigins(env.MURMUR_ENV),
+    trustedOrigins: [...trustedOrigins(env.MURMUR_ENV), "https://appleid.apple.com"],
   });
 }
 
@@ -150,14 +154,18 @@ async function bootstrapFreeAllowance(
     ? await freeAllowanceClaimHashFromRequest(request, env)
     : null;
   const installId = request?.headers.get("x-murmur-install-id");
-  const config = installId && installId.length >= 8
-    ? await getServerConfig(env, {
-      appVersion: request?.headers.get("x-murmur-app-version") ?? null,
-      distinctId: `anonymous_install_${await hashInstallId(installId, env.SESSION_HASH_SALT ?? "local-development-salt")}`,
-      plan: "free",
-      platform: request?.headers.get("x-murmur-app-platform") ?? null,
-    })
-    : defaultServerConfig(env);
+  const salt = env.SESSION_HASH_SALT ?? "local-development-salt";
+  // Apps before 1.3.0 don't send an install id at sign-in, so fall back to a
+  // one-way customer hash so flags without targeting still apply.
+  const distinctId = installId && installId.length >= 8
+    ? `anonymous_install_${await hashInstallId(installId, salt)}`
+    : `anonymous_customer_${await hashInstallId(customerId, salt)}`;
+  const config = await getServerConfig(env, {
+    appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+    distinctId,
+    plan: "free",
+    platform: request?.headers.get("x-murmur-app-platform") ?? null,
+  });
   const ledger = await ensureCurrentAllowance({
     customerId,
     env,
