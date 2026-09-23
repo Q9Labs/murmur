@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// cspell:ignore magick
+// cspell:ignore magick rsvg Geeza Kohinoor Hiragino Nastaliq Noto roundrectangle
 
 import { spawnSync } from "node:child_process";
 import {
@@ -8,11 +8,15 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { screenshotHeadlines } from "./store-screenshot-headlines.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
@@ -25,103 +29,232 @@ const placeholderColor = "#00FF00";
 const placeholderFuzz = "15%";
 const panelHueMask = "g > r * 1.2 && g > b * 1.2 && g > 0 ? 1 : 0";
 const placeholderCleanupMargin = 6;
+const headlineColor = "#F9F6EE";
+const pngExtension = /\.png$/i;
+
+// Each app language maps to the store locales that show its screenshots.
+// Store locale names follow the store-listing localization (App Store, Google Play).
+const storeLocales = [
+  { android: ["en-US", "en-GB"], appLocale: "en", ios: "en-US" },
+  { android: ["ar"], appLocale: "ar", ios: "ar-SA" },
+  { android: ["de-DE"], appLocale: "de", ios: "de-DE" },
+  { android: ["es-419"], appLocale: "es", ios: "es-MX" },
+  { android: ["fr-FR"], appLocale: "fr", ios: "fr-FR" },
+  { android: ["hi-IN"], appLocale: "hi", ios: "hi" },
+  { android: ["id"], appLocale: "id", ios: "id" },
+  { android: ["ja-JP"], appLocale: "ja", ios: "ja" },
+  { android: ["pt-BR"], appLocale: "pt-BR", ios: "pt-BR" },
+  { android: ["tr-TR"], appLocale: "tr", ios: "tr" },
+  { android: ["ur"], appLocale: "ur", ios: "ur-PK" },
+];
+
+const defaultHeadlineFont = { direction: "ltr", family: "Helvetica Neue", weight: 700 };
+const headlineFonts = {
+  ar: { direction: "rtl", family: "Geeza Pro", weight: 700 },
+  hi: { direction: "ltr", family: "Kohinoor Devanagari", weight: 600 },
+  ja: { direction: "ltr", family: "Hiragino Sans", weight: 600 },
+  ur: { direction: "rtl", family: "Noto Nastaliq Urdu", weight: 700 },
+};
+
+// Headline placement as fractions of the output canvas: the band the compositions reserve above the phone.
 const screenshotSets = [
   {
-    height: 2868,
-    outputDirectory: "fastlane/metadata/en-US/screenshots",
-    width: 1320,
+    captureDirectory: "store-assets/source/screenshots/ios",
     compositionDirectory: "store-assets/source/store-screenshot-compositions/option-b/ios",
+    screenCornerRadius: 0.095,
+    headlineLayout: { centerY: 0.162, fontSize: 0.058, marginX: 0.082, maxWidth: 0.76 },
+    height: 2868,
+    outputDirectories: (locale) => [`fastlane/metadata/${locale.ios}/screenshots`],
+    platform: "ios",
     screenshots: [
-      ["ios-01-live-translation.png", "store-assets/source/screenshots/ios/ios-caption-dark.png", "01-live-translation.png"],
-      ["ios-02-follow-live.png", "store-assets/source/screenshots/ios/ios-welcome-dark.png", "02-follow-live.png"],
-      ["ios-03-choose-language.png", "store-assets/source/screenshots/ios/ios-language-picker-dark.png", "03-choose-language.png"],
-      ["ios-04-no-account.png", "store-assets/source/screenshots/ios/ios-privacy-dark.png", "04-no-account.png"],
-      ["ios-05-privacy-controls.png", "store-assets/source/screenshots/ios/ios-settings-dark.png", "05-privacy-controls.png"],
-      ["ios-06-choose-audio.png", "store-assets/source/screenshots/ios/ios-translation-muted-dark.png", "06-choose-audio.png"],
-      ["ios-07-tap-listen.png", "store-assets/source/screenshots/ios/ios-languages-dark.png", "07-set-direction.png"],
+      { composition: "ios-01.png", headline: "live", screen: "translation", target: "01-live-translation.png" },
+      { composition: "ios-03.png", headline: "languages", screen: "picker", target: "02-choose-languages.png" },
+      {
+        composition: "ios-06.png",
+        headline: "spokenTranslation",
+        screen: "translation-only",
+        target: "03-hear-translation.png",
+      },
+      {
+        composition: "ios-02.png",
+        headline: "background",
+        screen: "translation-background",
+        target: "04-background-listening.png",
+      },
+      { composition: "ios-04.png", headline: "plans", screen: "plans-packs", target: "05-plans.png" },
+      { composition: "ios-05.png", headline: "privacy", screen: "privacy", target: "06-privacy.png" },
+      { composition: "ios-07.png", headline: "noAccount", screen: "account-guest", target: "07-no-account.png" },
+      { composition: "ios-01.png", headline: "appLanguage", screen: "app-language", target: "08-app-language.png" },
     ],
+    width: 1320,
   },
   {
-    height: 1920,
-    mirrorOutputDirectory: "fastlane/metadata/android/en-GB/images/phoneScreenshots",
-    outputDirectory: "fastlane/metadata/android/en-US/images/phoneScreenshots",
-    width: 1080,
+    captureDirectory: "store-assets/source/screenshots/android",
     compositionDirectory: "store-assets/source/store-screenshot-compositions/option-b/android",
+    screenCornerRadius: 0.045,
+    headlineLayout: { centerY: 0.19, fontSize: 0.058, marginX: 0.089, maxWidth: 0.76 },
+    height: 1920,
+    outputDirectories: (locale) =>
+      locale.android.map((code) => `fastlane/metadata/android/${code}/images/phoneScreenshots`),
+    platform: "android",
     screenshots: [
-      ["android-01-live-translation.png", "store-assets/source/screenshots/android-captures/android-translation-dark.png", "01-live-translation.png"],
-      ["android-02-follow-live.png", "store-assets/source/screenshots/android-captures/android-welcome-dark.png", "02-follow-live.png"],
-      ["android-03-choose-language.png", "store-assets/source/screenshots/android-captures/android-picker-dark.png", "03-choose-language.png"],
-      ["android-04-no-account.png", "store-assets/source/screenshots/android-captures/android-privacy-dark.png", "04-no-account.png"],
-      ["android-05-choose-audio.png", "store-assets/source/screenshots/android-captures/android-translation-muted-dark.png", "05-choose-audio.png"],
+      { composition: "android-01.png", headline: "live", screen: "translation", target: "01-live-translation.png" },
+      { composition: "android-03.png", headline: "languages", screen: "picker", target: "02-choose-languages.png" },
+      {
+        composition: "android-05.png",
+        headline: "phoneAudio",
+        screen: "translation-phone-audio",
+        target: "03-phone-audio.png",
+      },
+      {
+        composition: "android-02.png",
+        headline: "background",
+        screen: "translation-background",
+        target: "04-background-listening.png",
+      },
+      { composition: "android-04.png", headline: "plans", screen: "plans-packs", target: "05-plans.png" },
+      { composition: "android-01.png", headline: "privacy", screen: "privacy", target: "06-privacy.png" },
+      { composition: "android-03.png", headline: "noAccount", screen: "account-guest", target: "07-no-account.png" },
+      { composition: "android-05.png", headline: "appLanguage", screen: "app-language", target: "08-app-language.png" },
     ],
+    width: 1080,
   },
 ];
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+  main(process.argv.slice(2));
 }
 
-export { findPlaceholder, readPngSize, renderScreenshot, screenshotSets };
+export {
+  captureRelativePath,
+  findPlaceholder,
+  headlineFontFor,
+  readPngSize,
+  renderScreenshot,
+  screenshotHeadlines,
+  screenshotSets,
+  storeLocales,
+};
 
-function main() {
+// Optional arguments limit the run to those app locales, e.g. `node build-store-screenshots.mjs en ar`.
+function main(requestedLocales) {
   if (existsSync(screenshotRedesignMarkerPath)) {
     console.error("Store screenshot generation is paused while the screenshot redesign is pending.");
     process.exit(1);
   }
 
+  const locales = selectLocales(requestedLocales);
   const temporaryDirectory = mkdtempSync(join(tmpdir(), "murmur-store-screenshots-"));
   try {
     requireCommand("magick");
-    generateScreenshotSets(temporaryDirectory);
-    console.log("Store screenshots generated with verified app captures in generated compositions.");
+    requireCommand("rsvg-convert", "--version");
+    for (const set of screenshotSets) {
+      generateLocalizedSets(set, locales, temporaryDirectory);
+    }
+    console.log("Store screenshots generated with verified app captures and localized headlines.");
   } finally {
     rmSync(temporaryDirectory, { force: true, recursive: true });
   }
 }
 
-function generateScreenshotSets(temporaryDirectory) {
-  for (const set of screenshotSets) {
-    generateScreenshotSet(set, temporaryDirectory);
+function selectLocales(requestedLocales) {
+  if (requestedLocales.length === 0) {
+    return storeLocales;
+  }
+  return requestedLocales.map((appLocale) => {
+    const locale = storeLocales.find((candidate) => candidate.appLocale === appLocale);
+    if (!locale) {
+      throw new Error(`Unknown app locale for store screenshots: ${appLocale}`);
+    }
+    return locale;
+  });
+}
+
+function generateLocalizedSets(set, locales, temporaryDirectory) {
+  for (const locale of locales) {
+    generateScreenshotSet(set, locale, temporaryDirectory);
   }
 }
 
-function generateScreenshotSet(set, temporaryDirectory) {
-  const outputDirectory = ensureOutputDirectory(set.outputDirectory);
-  ensureMirrorDirectory(set.mirrorOutputDirectory);
+function captureRelativePath(set, appLocale, screen) {
+  return `${set.captureDirectory}/${appLocale}/${screen}.png`;
+}
+
+function headlineFontFor(appLocale) {
+  return headlineFonts[appLocale] ?? defaultHeadlineFont;
+}
+
+function generateScreenshotSet(set, locale, temporaryDirectory) {
+  const headlines = screenshotHeadlines[locale.appLocale];
+  if (!headlines) {
+    throw new Error(`Missing screenshot headlines for ${locale.appLocale}`);
+  }
+  const [outputDirectory, ...mirrorDirectories] = set.outputDirectories(locale).map(resetOutputDirectory);
   for (const screenshot of set.screenshots) {
-    generateScreenshot(set, screenshot, outputDirectory, temporaryDirectory);
+    const outputPath = join(outputDirectory, screenshot.target);
+    generateScreenshot({ headlines, locale, outputPath, screenshot, set, temporaryDirectory });
+    for (const mirrorDirectory of mirrorDirectories) {
+      copyFileSync(outputPath, join(mirrorDirectory, screenshot.target));
+    }
   }
 }
 
-function generateScreenshot(set, screenshot, outputDirectory, temporaryDirectory) {
-  const [composition, source, target] = screenshot;
-  const compositionPath = join(mobileRoot, set.compositionDirectory, composition);
-  const sourcePath = join(mobileRoot, source);
-  assertInput(compositionPath, `Missing generated screenshot composition: ${composition}`);
-  assertInput(sourcePath, `Missing verified source screenshot: ${source}`);
+function generateScreenshot({ headlines, locale, outputPath, screenshot, set, temporaryDirectory }) {
+  const compositionPath = join(mobileRoot, set.compositionDirectory, screenshot.composition);
+  const sourceRelativePath = captureRelativePath(set, locale.appLocale, screenshot.screen);
+  const sourcePath = join(mobileRoot, sourceRelativePath);
+  const headline = headlines[screenshot.headline];
+  assertInput(compositionPath, `Missing generated screenshot composition: ${screenshot.composition}`);
+  assertInput(sourcePath, `Missing verified source screenshot: ${sourceRelativePath}`);
+  if (!headline) {
+    throw new Error(`Missing ${locale.appLocale} headline: ${screenshot.headline}`);
+  }
 
-  const outputPath = join(outputDirectory, target);
+  const stem = `${set.platform}-${locale.appLocale}-${basename(screenshot.target, ".png")}`;
+  const workDirectory = join(temporaryDirectory, stem);
+  mkdirSync(workDirectory);
+  const productPath = join(workDirectory, "product.png");
+  const font = headlineFontFor(locale.appLocale);
   renderScreenshot({
-    compositionPath,
+    compositionPath: orientComposition(compositionPath, font, workDirectory),
+    cornerRadiusRatio: set.screenCornerRadius,
     height: set.height,
-    outputPath,
+    outputPath: productPath,
     sourcePath,
-    temporaryDirectory,
+    temporaryDirectory: workDirectory,
     width: set.width,
   });
-  mirrorScreenshot(set.mirrorOutputDirectory, target, outputPath);
+  addHeadline({
+    font,
+    headline,
+    inputPath: productPath,
+    layout: set.headlineLayout,
+    outputPath,
+    size: { height: set.height, width: set.width },
+    workDirectory,
+  });
 }
 
-function ensureOutputDirectory(relativeDirectory) {
+// Right-to-left headlines sit at the right edge, so the decorative arcs move to the left.
+function orientComposition(compositionPath, font, workDirectory) {
+  if (font.direction !== "rtl") {
+    return compositionPath;
+  }
+  const mirroredPath = join(workDirectory, "composition-mirrored.png");
+  runMagick([compositionPath, "-flop", mirroredPath], `mirror ${compositionPath}`);
+  return mirroredPath;
+}
+
+// Stale PNGs from an older screenshot list must not ship next to the current set.
+function resetOutputDirectory(relativeDirectory) {
   const outputDirectory = join(mobileRoot, relativeDirectory);
   mkdirSync(outputDirectory, { recursive: true });
-  return outputDirectory;
-}
-
-function ensureMirrorDirectory(relativeDirectory) {
-  if (relativeDirectory) {
-    ensureOutputDirectory(relativeDirectory);
+  for (const file of readdirSync(outputDirectory)) {
+    if (pngExtension.test(file)) {
+      rmSync(join(outputDirectory, file));
+    }
   }
+  return outputDirectory;
 }
 
 function assertInput(filePath, message) {
@@ -130,17 +263,99 @@ function assertInput(filePath, message) {
   }
 }
 
-function mirrorScreenshot(relativeDirectory, target, outputPath) {
-  if (relativeDirectory) {
-    copyFileSync(outputPath, join(mobileRoot, relativeDirectory, target));
+function addHeadline({ font, headline, inputPath, layout, outputPath, size, workDirectory }) {
+  const fontSize = Math.round(size.width * layout.fontSize);
+  const maxWidth = Math.round(size.width * layout.maxWidth);
+  const svgPath = join(workDirectory, "headline.svg");
+  const rasterPath = join(workDirectory, "headline-raster.png");
+  const fittedPath = join(workDirectory, "headline.png");
+  writeFileSync(svgPath, headlineSvg({ font, fontSize, headline }));
+  runCommand("rsvg-convert", ["--output", rasterPath, svgPath], `render headline for ${outputPath}`);
+  runMagick(
+    [
+      rasterPath,
+      "-define",
+      "trim:edges=east,west",
+      "-trim",
+      "+repage",
+      "-resize",
+      `${maxWidth}x>`,
+      fittedPath,
+    ],
+    `fit headline for ${outputPath}`,
+  );
+  const headlineSize = readPngSize(fittedPath);
+  const marginX = Math.round(size.width * layout.marginX);
+  const x = font.direction === "rtl" ? size.width - marginX - headlineSize.width : marginX;
+  const y = Math.round(size.height * layout.centerY - headlineSize.height / 2);
+  runMagick(
+    [
+      inputPath,
+      fittedPath,
+      "-geometry",
+      `+${x}+${y}`,
+      "-compose",
+      "Over",
+      "-composite",
+      "-colorspace",
+      "sRGB",
+      "-depth",
+      "8",
+      "-alpha",
+      "off",
+      "-strip",
+      "-define",
+      "png:color-type=2",
+      outputPath,
+    ],
+    `place headline for ${outputPath}`,
+  );
+}
+
+// The canvas is wide enough for any single line; the fit step trims and scales it to the layout.
+function headlineSvg({ font, fontSize, headline }) {
+  const width = fontSize * 40;
+  const height = Math.round(fontSize * 2.6);
+  const baseline = Math.round(fontSize * 1.6);
+  const anchor = font.direction === "rtl" ? `x="${width - fontSize}" direction="rtl"` : `x="${fontSize}"`;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
+    `<text ${anchor} y="${baseline}" text-anchor="start" font-family="${font.family}" font-weight="${font.weight}"`,
+    ` font-size="${fontSize}" fill="${headlineColor}">${escapeXml(headline)}</text>`,
+    "</svg>",
+  ].join("");
+}
+
+function escapeXml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function runCommand(command, args, action) {
+  const result = spawnSync(command, args, { encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(`${command} failed to ${action}: ${commandError(result)}`);
   }
 }
 
-function renderScreenshot({ compositionPath, height, outputPath, sourcePath, temporaryDirectory, width }) {
+// The capture gets a smooth geometric corner; the generated placeholder edge is too noisy to reuse as a mask.
+function renderScreenshot({
+  compositionPath,
+  cornerRadiusRatio,
+  height,
+  outputPath,
+  sourcePath,
+  temporaryDirectory,
+  width,
+}) {
   const compositionSize = readPngSize(compositionPath);
   const placeholder = findPlaceholder(compositionPath);
   const panel = scalePlaceholder(placeholder, compositionSize, { height, width });
   const cleanupPanel = expandPanel(panel, { height, width }, placeholderCleanupMargin);
+  const cornerRadius = Math.round(panel.width * cornerRadiusRatio);
   const fileStem = basename(outputPath, ".png");
   const basePath = join(temporaryDirectory, `${fileStem}-base.png`);
   const capturePath = join(temporaryDirectory, `${fileStem}-capture.png`);
@@ -168,17 +383,13 @@ function renderScreenshot({ compositionPath, height, outputPath, sourcePath, tem
   );
   runMagick(
     [
-      basePath,
-      "-crop",
-      `${panel.width}x${panel.height}+${panel.x}+${panel.y}`,
-      "+repage",
-      "-alpha",
-      "off",
-      "-channel",
-      "RGB",
-      "-fx",
-      panelHueMask,
-      "+channel",
+      "-size",
+      `${panel.width}x${panel.height}`,
+      "xc:black",
+      "-fill",
+      "white",
+      "-draw",
+      `roundrectangle 0,0 ${panel.width - 1},${panel.height - 1} ${cornerRadius},${cornerRadius}`,
       "-colorspace",
       "gray",
       "-depth",
@@ -344,8 +555,8 @@ function readPngSize(filePath) {
   return { height: source.readUInt32BE(20), width: source.readUInt32BE(16) };
 }
 
-function requireCommand(command) {
-  const result = spawnSync(command, ["-version"], { encoding: "utf8" });
+function requireCommand(command, versionFlag = "-version") {
+  const result = spawnSync(command, [versionFlag], { encoding: "utf8" });
   if (result.status !== 0) {
     throw new Error(`${command} is required to build store screenshots.`);
   }
