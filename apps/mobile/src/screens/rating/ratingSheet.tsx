@@ -2,6 +2,7 @@ import { Star } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { formatUiNumber, useUiLocale } from "../../i18n/runtime";
 import { ModalSheet } from "../../home/modalSheet";
 import { darkMurmurTheme, lightMurmurTheme, type MurmurTheme, useMurmurTheme } from "../../home/theme";
 import type { RatingAnswer, RatingStars } from "../screenServices";
@@ -17,17 +18,18 @@ export function RatingSheet(props: {
 }): ReactNode {
   const theme = useMurmurTheme();
   const styles = theme.dark ? darkStyles : lightStyles;
+  const { locale, t } = useUiLocale();
   const [stars, setStars] = useState<RatingStars | null>(props.initialAnswer?.stars ?? null);
   const [use, setUse] = useState<UsageSetting | null>(props.initialAnswer?.use ?? null);
   const [otherText, setOtherText] = useState(props.initialAnswer?.otherText ?? "");
   const ready = stars !== null && use !== null;
 
   return (
-    <ModalSheet onClose={props.onClose} open={props.open} scroll title="How was Murmur?">
-      <View accessibilityLabel="Rating" accessibilityRole="radiogroup" style={styles.stars}>
+    <ModalSheet onClose={props.onClose} open={props.open} scroll title={t("rating.title")}>
+      <View accessibilityLabel={t("rating.starsLabel")} accessibilityRole="radiogroup" style={styles.stars}>
         {starValues.map((value) => (
           <Pressable
-            accessibilityLabel={`${value} ${value === 1 ? "star" : "stars"}`}
+            accessibilityLabel={t(value === 1 ? "rating.oneStar" : "rating.stars", { count: formatUiNumber(value, locale) })}
             accessibilityRole="radio"
             accessibilityState={{ checked: stars === value }}
             hitSlop={4}
@@ -44,30 +46,31 @@ export function RatingSheet(props: {
           </Pressable>
         ))}
       </View>
-      <Text accessibilityRole="header" style={styles.question}>What did you use Murmur for?</Text>
+      <Text accessibilityRole="header" style={styles.question}>{t("rating.question")}</Text>
       <View accessibilityRole="radiogroup" style={styles.choices}>
         {usageChoices.map((choice) => {
           const selected = use === choice.value;
+          const label = t(choice.labelKey);
           return (
             <Pressable
-              accessibilityLabel={choice.label}
+              accessibilityLabel={label}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
               key={choice.value}
               onPress={() => setUse(selected ? null : choice.value)}
               style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{choice.label}</Text>
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
             </Pressable>
           );
         })}
       </View>
       {use === "other" ? (
         <TextInput
-          accessibilityLabel="What else did you use Murmur for?"
+          accessibilityLabel={t("rating.otherLabel")}
           maxLength={200}
           onChangeText={setOtherText}
-          placeholder="Tell us (optional)"
+          placeholder={t("rating.otherPlaceholder")}
           placeholderTextColor={theme.muted}
           style={styles.input}
           value={otherText}
@@ -84,7 +87,7 @@ export function RatingSheet(props: {
         })}
         style={({ pressed }) => [styles.button, !ready && styles.buttonDisabled, pressed && styles.pressed]}
       >
-        <Text style={[styles.buttonText, !ready && styles.buttonTextDisabled]}>Send</Text>
+        <Text style={[styles.buttonText, !ready && styles.buttonTextDisabled]}>{t("rating.send")}</Text>
       </Pressable>
     </ModalSheet>
   );

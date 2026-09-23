@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">براہِ راست ترجمہ</string>
+  <string name="murmur_capture_channel_description">براہِ راست ترجمے کے دوران Murmur کو سنتا رہنے دیتا ہے۔</string>
+  <string name="murmur_capture_microphone_title">پس منظر میں سن رہا ہے</string>
+  <string name="murmur_capture_microphone_text">Murmur جو سن رہا ہے اس کا ترجمہ کر رہا ہے۔</string>
+  <string name="murmur_capture_phone_audio_title">فون کی آواز کا ترجمہ ہو رہا ہے</string>
+  <string name="murmur_capture_phone_audio_text">Murmur اس فون پر چلنے والی آواز کا ترجمہ کر رہا ہے۔</string>
+  <string name="murmur_capture_stop">روکیں</string>
+</resources>

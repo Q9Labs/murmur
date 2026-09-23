@@ -14,7 +14,15 @@ import RevenueCatUI from "react-native-purchases-ui";
 import { findBillingProduct } from "@murmur/protocol/billing/catalog";
 
 import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
-import { type MurmurPlan, type PlanIntroPrice, planTier, planTitle, type PlanTerm } from "./planCatalog";
+import { LocalizedError } from "../../i18n/localizedError";
+import {
+  type MurmurPlan,
+  type PlanIntroPrice,
+  type PlanPeriod,
+  planTier,
+  planTitle,
+  type PlanTerm,
+} from "./planCatalog";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -61,7 +69,7 @@ export async function purchaseMurmurPlan(
   const offering = await loadOffering(serverOfferingId);
   const selected = offering.availablePackages.find((candidate) => candidate.identifier === planId);
   if (!selected) {
-    throw new Error("That plan is no longer available from the store.");
+    throw new LocalizedError("billing.planGone");
   }
   try {
     const playOption = selectedPlayOption(selected, offering.identifier);
@@ -94,19 +102,19 @@ async function loadOffering(serverOfferingId: string | null): Promise<PurchasesO
   const offeringId = serverOfferingId ?? getRevenueCatOfferingId();
   const offering = offeringId ? offerings.all[offeringId] : offerings.current;
   if (!offering) {
-    throw new Error("Murmur products are not available from the store yet.");
+    throw new LocalizedError("billing.productsMissing");
   }
   return offering;
 }
 
 const storeAppNameSuffix = /\s*\([^)]*\)\s*$/;
 
-const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
+const subscriptionPeriods: Readonly<Partial<Record<string, PlanPeriod>>> = {
   P1M: "month",
   P1W: "week",
   P1Y: "year",
-  P3M: "3 months",
-  P6M: "6 months",
+  P3M: "quarter",
+  P6M: "halfYear",
 };
 
 function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): MurmurPlan {
@@ -120,7 +128,7 @@ function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): Murmu
     id: storePackage.identifier,
     introPrice: playPrices ? playPrices.intro : appleIntroPrice(product),
     minutes: catalogMinutes(product.identifier),
-    periodLabel: planPeriodLabel(term, product.subscriptionPeriod),
+    period: planPeriod(term, product.subscriptionPeriod),
     price: playPrices?.full.formatted ?? product.priceString,
     priceAmount: playPrices ? playPrices.full.amountMicros / 1_000_000 : product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
@@ -154,23 +162,23 @@ function selectedPlayPrices(
   }
   const full = option.fullPricePhase?.price ?? basePlayOption(storePackage.product)?.fullPricePhase?.price;
   if (!full) {
-    throw new Error("That plan has no price available from Google Play.");
+    throw new LocalizedError("billing.storePriceMissing");
   }
   if (!personalPlayOffer(offeringId, storePackage.identifier)) {
     return { full, intro: null };
   }
   const intro = option.introPhase?.price;
   if (!intro) {
-    throw new Error("That plan has no offer price available from Google Play.");
+    throw new LocalizedError("billing.offerPriceMissing");
   }
   return { full, intro: { amount: intro.amountMicros / 1_000_000, price: intro.formatted } };
 }
 
-function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {
+function planPeriod(term: PlanTerm, subscriptionPeriod: string | null): PlanPeriod | null {
   if (term === "pack") {
     return null;
   }
-  return subscriptionPeriodLabels[subscriptionPeriod ?? ""] ??
+  return subscriptionPeriods[subscriptionPeriod ?? ""] ??
     (term === "yearly" ? "year" : "month");
 }
 
@@ -185,7 +193,7 @@ function selectedPlayOption(
   const { product } = storePackage;
   const base = basePlayOption(product);
   if (!base) {
-    throw new Error("The base subscription plan is not available from Google Play.");
+    throw new LocalizedError("billing.basePlanMissing");
   }
   if (!personalPlayOffer(offeringId, storePackage.identifier)) {
     return base;
@@ -193,7 +201,7 @@ function selectedPlayOption(
   const offer = product.subscriptionOptions?.find((option) =>
     option.storeProductId === product.identifier && option.id === `${base.id}:personal-20`);
   if (!offer) {
-    throw new Error("The personal offer is not available for this Google Play account.");
+    throw new LocalizedError("billing.personalOfferMissing");
   }
   return offer;
 }
@@ -233,6 +241,6 @@ function revenueCatApiKey(): string | null {
 
 function requireRevenueCat(): void {
   if (!configuredApiKey) {
-    throw new Error("Purchases are not configured in this build.");
+    throw new LocalizedError("billing.notConfigured");
   }
 }

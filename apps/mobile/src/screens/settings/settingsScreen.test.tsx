@@ -32,7 +32,7 @@ function controls(overrides: Partial<SettingsControls> = {}): SettingsControls {
     locked: false,
     message: null,
     openReport: vi.fn(),
-    reportLabel: "Report a translation",
+    reportLabel: "settings.reportTranslation",
     resetIdentity: vi.fn(),
     share: vi.fn(),
     ...overrides,
@@ -55,7 +55,7 @@ describe("settings screen", () => {
     expect(router.push).toHaveBeenCalledWith("/account");
     recorded.switches[0]?.onValueChange?.(false);
     expect(controlsRef.current.changeAnalytics).toHaveBeenCalledWith(false);
-    findControl("Report a translation")?.onPress?.();
+    findControl("Report translation")?.onPress?.();
     expect(controlsRef.current.openReport).toHaveBeenCalledOnce();
     expect(router.back).toHaveBeenCalledOnce();
     findControl("Privacy policy")?.onPress?.();

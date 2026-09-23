@@ -7,12 +7,16 @@ import {
 } from "@murmur/protocol/languages";
 import { canStartSession, type TranslationSpan } from "@murmur/protocol/session";
 import type { AudioCaptureSource } from "../../modules/murmur-audio";
+import { createTranslator, languageLabel, type Translate } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import type { LiveTranslationController } from "../lib/useLiveTranslation";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
   getHealthText,
   getStatusText,
 } from "./statusLabels";
+
+const fallbackTranslate = createTranslator("en");
 
 export type HomeViewModel = {
   canChangeLanguages: boolean;
@@ -33,6 +37,7 @@ export type HomeViewModel = {
   sourceLanguageDisplayName: string;
   statusText: string;
   targetLanguage: LanguageDefinition;
+  targetLanguageDisplayName: string;
 };
 
 export function buildHomeViewModel(params: {
@@ -44,7 +49,11 @@ export function buildHomeViewModel(params: {
   >;
   sourceLanguageCode: SourceLanguageCode;
   targetLanguageCode: LanguageCode;
+  translate?: Translate;
+  uiLocale?: UiLocale;
 }): HomeViewModel {
+  const translate = params.translate ?? fallbackTranslate;
+  const uiLocale = params.uiLocale ?? "en";
   const sourceLanguage = getSourceLanguage(params.sourceLanguageCode);
   const targetLanguage = getLanguage(params.targetLanguageCode);
   const latestTranslation = findLatestTranslation(params.live.spans);
@@ -66,7 +75,7 @@ export function buildHomeViewModel(params: {
     pendingCount: countPendingSpans(params.live.spans),
     hasSourceText,
     hasTranslatedText,
-    healthText: getHealthText(params.live.status, params.live.error),
+    healthText: getHealthText(params.live.status, params.live.error, translate),
     isLive,
     latestProviderRoute: getLatestProviderRoute(params.live.spans) ?? "openai:gpt-realtime-translate",
     latestSourceCaption,
@@ -77,6 +86,7 @@ export function buildHomeViewModel(params: {
       hasTranslatedText,
       isLive,
       latestTranslationText,
+      translate,
     }),
     secondaryCanvasText: buildSecondaryCanvasText({
       captureSource: params.captureSource ?? "microphone",
@@ -84,15 +94,18 @@ export function buildHomeViewModel(params: {
       hasSourceText,
       isLive,
       latestSourceCaption,
+      translate,
     }),
     sourceLanguage,
-    sourceLanguageDisplayName: sourceLanguage?.display_name ?? "Auto detect",
+    sourceLanguageDisplayName: sourceLanguage ? languageLabel(sourceLanguage, uiLocale) : translate("home.autoDetect"),
     statusText: getStatusText(
       params.live.status,
       params.live.error,
       params.live.preparation_status,
+      translate,
     ),
     targetLanguage,
+    targetLanguageDisplayName: languageLabel(targetLanguage, uiLocale),
   };
 }
 
@@ -147,20 +160,21 @@ function buildPrimaryCanvasText(params: {
   hasTranslatedText: boolean;
   isLive: boolean;
   latestTranslationText: string;
+  translate: Translate;
 }): string {
   if (params.hasTranslatedText) {
     return params.latestTranslationText;
   }
   if (params.isLive) {
-    return "Listening";
+    return params.translate("home.listening");
   }
   if (params.error === "microphone_permission_denied") {
-    return "Microphone access needed";
+    return params.translate("home.microphoneAccessNeeded");
   }
   if (params.error === "device_playback_permission_denied") {
-    return "Phone audio access needed";
+    return params.translate("status.phoneAudioAccessNeeded");
   }
-  return "Ready to translate";
+  return params.translate("home.readyToTranslate");
 }
 
 function buildSecondaryCanvasText(params: {
@@ -169,20 +183,21 @@ function buildSecondaryCanvasText(params: {
   hasSourceText: boolean;
   isLive: boolean;
   latestSourceCaption: string;
+  translate: Translate;
 }): string {
   if (params.hasSourceText) {
     return params.latestSourceCaption;
   }
   if (params.isLive) {
     return params.captureSource === "device_playback"
-      ? "Play audio in another app. Captions will appear here and in the floating bubble."
-      : "Speak now. Captions will appear here.";
+      ? params.translate("home.playAudioCaptions")
+      : params.translate("home.speakNowCaptions");
   }
   if (params.error === "microphone_permission_denied") {
-    return "Allow microphone access to start listening.";
+    return params.translate("home.allowMicrophone");
   }
   if (params.error === "device_playback_permission_denied") {
-    return "Allow audio recording and screen sharing to translate phone playback.";
+    return params.translate("home.allowPhoneAudio");
   }
-  return "Choose a direction, then tap Listen.";
+  return params.translate("home.chooseDirection");
 }

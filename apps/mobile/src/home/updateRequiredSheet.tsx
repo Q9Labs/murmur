@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Image, Platform, Pressable, StyleSheet, Text } from "react-native";
 
+import type { MessageKey } from "../i18n/catalogs/en";
+import { useUiLocale } from "../i18n/runtime";
 import { captureMobileFailure } from "../lib/observability/sentry";
 import { updateRequiredIllustration } from "./illustrations";
 import { ModalSheet } from "./modalSheet";
@@ -15,7 +17,7 @@ import {
 } from "./theme";
 
 type StoreListing = {
-  label: string;
+  label: MessageKey;
   url: string;
 };
 
@@ -26,16 +28,17 @@ type StoreConfig = {
 
 export function storeListing(platform: string, config: StoreConfig | null | undefined): StoreListing | null {
   if (platform === "ios" && config?.ios?.appStoreUrl) {
-    return { label: "Update in the App Store", url: config.ios.appStoreUrl };
+    return { label: "update.appStore", url: config.ios.appStoreUrl };
   }
   if (platform === "android" && config?.android?.playStoreUrl) {
-    return { label: "Update on Google Play", url: config.android.playStoreUrl };
+    return { label: "update.googlePlay", url: config.android.playStoreUrl };
   }
   return null;
 }
 
 export function UpdateRequiredSheet(props: { onClose: () => void; open: boolean }): ReactNode {
   const styles = useUpdateRequiredStyles();
+  const { t } = useUiLocale();
   const [openFailed, setOpenFailed] = useState(false);
   const listing = storeListing(Platform.OS, Constants.expoConfig);
 
@@ -48,7 +51,7 @@ export function UpdateRequiredSheet(props: { onClose: () => void; open: boolean 
   }
 
   return (
-    <ModalSheet onClose={props.onClose} open={props.open} scroll title="Update Murmur">
+    <ModalSheet onClose={props.onClose} open={props.open} scroll title={t("update.title")}>
       <Image
         accessibilityIgnoresInvertColors
         accessible={false}
@@ -56,23 +59,18 @@ export function UpdateRequiredSheet(props: { onClose: () => void; open: boolean 
         source={updateRequiredIllustration}
         style={styles.illustration}
       />
-      <Text style={styles.body}>
-        A newer version of Murmur is ready. This version can no longer start translations, so
-        update to keep the conversation going.
-      </Text>
+      <Text style={styles.body}>{t("update.body")}</Text>
       {listing ? (
         <Pressable
           accessibilityRole="link"
           onPress={() => openStore(listing.url)}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
-          <Text style={styles.buttonText}>{listing.label}</Text>
+          <Text style={styles.buttonText}>{t(listing.label)}</Text>
         </Pressable>
       ) : null}
       {openFailed || !listing ? (
-        <Text accessibilityLiveRegion="assertive" style={styles.caption}>
-          Open your app store and search for Murmur to update.
-        </Text>
+        <Text accessibilityLiveRegion="assertive" style={styles.caption}>{t("update.searchStore")}</Text>
       ) : null}
     </ModalSheet>
   );

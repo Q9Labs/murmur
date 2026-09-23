@@ -19,12 +19,14 @@ vi.mock("../settings/settingsControls", () => ({ useSettingsControls: () => acco
 vi.mock("../../lib/telemetry", () => telemetry);
 
 import { AccountScreen, hasUnsavedPurchase, packValidity, reportAccountViewed } from "./accountScreen";
+import { en } from "../__tests__/uiText";
 
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
   accountLock.locked = false;
 });
+
 
 describe("account screen", () => {
   it("shows a guest their balance, sign-in and one primary action", () => {
@@ -101,13 +103,13 @@ describe("account screen", () => {
       plan: "pro_max",
     });
     const markup = renderToStaticMarkup(<AccountScreen />);
-    const lines = packValidity(billingRef.current.customer);
+    const lines = packValidity(billingRef.current.customer, en);
 
     expect(markup).toContain("left on Pro Max");
     expect(lines).toHaveLength(2);
     expect(lines[0]).toMatch(/^1 hr pack\. Valid until /);
     expect(lines[1]).toMatch(/^30 min pack\. Valid until /);
     expect(markup).toContain(lines[0]);
-    expect(packValidity(null)).toEqual([]);
+    expect(packValidity(null, en)).toEqual([]);
   });
 });

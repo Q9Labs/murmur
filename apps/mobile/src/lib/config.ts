@@ -1,3 +1,5 @@
+import { isUiLocale, type UiLocale } from "../i18n/types";
+
 export function getWorkerBaseUrl(): string {
   if (process.env.EXPO_PUBLIC_MURMUR_WORKER_URL) {
     return process.env.EXPO_PUBLIC_MURMUR_WORKER_URL;
@@ -14,6 +16,12 @@ export function getSentryDsn(): string | undefined {
 
 export function getPostHogProjectToken(): string | undefined {
   return process.env.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() || undefined;
+}
+
+// React Native on iOS and Android reads textAlign "left"/"right" as start/end inside an RTL
+// layout, while the web keeps them physical. babel-preset-expo replaces EXPO_OS per platform at build time.
+export function textAlignFollowsLayout(): boolean {
+  return process.env.EXPO_OS === "ios" || process.env.EXPO_OS === "android";
 }
 
 export type MurmurEnvironment = "development" | "preview" | "production" | "sandbox";
@@ -63,6 +71,7 @@ const uiPreviewScreens = [
   "account-pro-max",
   "account-signed-in",
   "account-unsaved",
+  "app-language",
   "billing",
   "history",
   "history-detail",
@@ -104,6 +113,12 @@ export function toUiPreviewScreen(value: string | undefined): UiPreviewScreen | 
 
 export function getUiPreviewScreen(): UiPreviewScreen | null {
   return toUiPreviewScreen(process.env.EXPO_PUBLIC_MURMUR_UI_PREVIEW);
+}
+
+// Renders previews in a fixed UI language, for locale review and store screenshots.
+export function getUiPreviewLocale(): UiLocale | null {
+  const value = process.env.EXPO_PUBLIC_MURMUR_UI_PREVIEW_LOCALE;
+  return isUiLocale(value) ? value : null;
 }
 
 function publicConfigValue(value: string | undefined): string | undefined {

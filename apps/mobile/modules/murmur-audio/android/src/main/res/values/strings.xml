@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">Live translation</string>
+  <string name="murmur_capture_channel_description">Keeps Murmur listening during live translation.</string>
+  <string name="murmur_capture_microphone_title">Listening in background</string>
+  <string name="murmur_capture_microphone_text">Murmur is translating what it hears.</string>
+  <string name="murmur_capture_phone_audio_title">Translating phone audio</string>
+  <string name="murmur_capture_phone_audio_text">Murmur is translating audio playing on this phone.</string>
+  <string name="murmur_capture_stop">Stop</string>
+</resources>

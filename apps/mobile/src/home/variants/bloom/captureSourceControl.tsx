@@ -3,6 +3,7 @@ import type { ComponentType, ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { AudioCaptureSource } from "../../../../modules/murmur-audio";
+import { useUiLocale } from "../../../i18n/runtime";
 import { useBloomStyles } from "./styles";
 
 export function CaptureSourceControl({
@@ -17,6 +18,7 @@ export function CaptureSourceControl({
   source: AudioCaptureSource;
 }): ReactNode {
   const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
   if (!devicePlaybackSupported) {
     return null;
   }
@@ -28,21 +30,19 @@ export function CaptureSourceControl({
           active={source === "microphone"}
           disabled={disabled}
           icon={Mic}
-          label="Microphone"
+          label={t("capture.microphone")}
           onPress={() => onChange("microphone")}
         />
         <SourceOption
           active={source === "device_playback"}
           disabled={disabled}
           icon={Smartphone}
-          label="Phone audio"
+          label={t("capture.phoneAudio")}
           onPress={() => onChange("device_playback")}
         />
       </View>
       {source === "device_playback" ? (
-        <Text style={styles.captureSourceHint}>
-          Play media in another app. Protected audio may stay silent. Floating captions show when allowed.
-        </Text>
+        <Text style={styles.captureSourceHint}>{t("home.phoneAudioHint")}</Text>
       ) : null}
     </View>
   );

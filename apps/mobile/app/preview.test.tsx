@@ -9,7 +9,7 @@ vi.mock("../src/home/preview", () => ({
   BloomPreview: () => null,
 }));
 
-import { normalizePreviewScreen } from "./preview";
+import { normalizePreviewLocale, normalizePreviewScreen } from "./preview";
 
 describe("preview route", () => {
   it("selects only supported deterministic screens", () => {
@@ -28,5 +28,12 @@ describe("preview route", () => {
     expect(normalizePreviewScreen(["welcome"])).toBe("welcome");
     expect(normalizePreviewScreen("unknown")).toBe("welcome");
     expect(normalizePreviewScreen(undefined)).toBe("welcome");
+  });
+
+  it("renders previews in a requested UI language", () => {
+    expect(normalizePreviewLocale("ar")).toBe("ar");
+    expect(normalizePreviewLocale(["pt-BR"])).toBe("pt-BR");
+    expect(normalizePreviewLocale("xx")).toBeNull();
+    expect(normalizePreviewLocale(undefined)).toBeNull();
   });
 });

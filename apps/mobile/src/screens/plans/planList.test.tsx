@@ -22,7 +22,7 @@ describe("plan list states", () => {
   it("offers a retry when the store fails", () => {
     const onRetry = vi.fn();
     const markup = renderToStaticMarkup(
-      <PlanListStatus onRetry={onRetry} plans={{ message: "Store is down.", status: "failed" }} />,
+      <PlanListStatus onRetry={onRetry} plans={{ failure: new Error("Store is down."), status: "failed" }} />,
     );
 
     expect(markup).toContain("Store is down.");

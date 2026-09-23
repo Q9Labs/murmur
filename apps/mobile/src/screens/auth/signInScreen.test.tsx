@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
+import { en } from "../__tests__/uiText";
 import { fixtureBilling, fixturePlans } from "../__tests__/billingFixture";
 import { fixtureServices } from "../__tests__/servicesFixture";
 import { router } from "../__tests__/navigation";
@@ -86,7 +87,7 @@ describe("sign-in screen", () => {
   it("keeps the checkout intent while the plan list reloads", () => {
     const purchasePlan = vi.fn(async () => true);
     const leave = vi.fn();
-    const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan });
+    const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en });
 
     expect(findCheckoutPlan({ status: "loading" }, "$rc_annual")).toBeNull();
     expect(action.label).toBe("Continue to checkout");
@@ -116,12 +117,12 @@ describe("sign-in screen", () => {
   it("does not offer checkout when purchases can't go through", () => {
     const leave = vi.fn();
     const purchasePlan = vi.fn(async () => true);
-    const unavailable = checkoutDoneAction({ availability: "unavailable", leave, plan: null, planId: "$rc_annual", purchasePlan });
+    const unavailable = checkoutDoneAction({ availability: "unavailable", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en });
     expect(unavailable.label).toBe("Back to plans");
     unavailable.onPress();
     expect(purchasePlan).not.toHaveBeenCalled();
 
-    expect(checkoutDoneAction({ availability: "busy", leave, plan: null, planId: "$rc_annual", purchasePlan }).disabled)
+    expect(checkoutDoneAction({ availability: "busy", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en }).disabled)
       .toBe(true);
   });
 

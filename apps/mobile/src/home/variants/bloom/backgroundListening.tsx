@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AppState, type AppStateStatus, Text, View } from "react-native";
 
+import { useUiLocale } from "../../../i18n/runtime";
 import { useBloomStyles } from "./styles";
 
 export function isAppInBackground(state: AppStateStatus): boolean {
@@ -20,16 +21,17 @@ export function useAppInBackground(): boolean {
 // locked, so the app switcher and the moment of return both say what is happening.
 export function BackgroundListeningPill(): ReactNode {
   const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
   return (
     <View
-      accessibilityLabel="Listening in background"
+      accessibilityLabel={t("home.backgroundListening")}
       accessibilityLiveRegion="polite"
       accessibilityRole="text"
       accessible
       style={styles.backgroundPill}
     >
       <View style={styles.backgroundDot} />
-      <Text style={styles.backgroundText}>Listening in background</Text>
+      <Text style={styles.backgroundText}>{t("home.backgroundListening")}</Text>
     </View>
   );
 }

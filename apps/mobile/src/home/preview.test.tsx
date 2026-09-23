@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,6 +10,10 @@ const harness = vi.hoisted(() => ({
   screenPreview: null as string | null,
   shellProps: null as Record<string, unknown> | null,
   updateRequiredProps: null as Record<string, unknown> | null,
+}));
+
+vi.mock("../i18n/provider", () => ({
+  UiLocaleOverride: (props: { children: ReactNode }) => props.children,
 }));
 
 vi.mock("./languagePicker", () => ({

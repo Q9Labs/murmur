@@ -16,7 +16,7 @@ export async function getLocalValue(storageId: string): Promise<string | null> {
 
 export async function setLocalValue(storageId: string, value: string): Promise<void> {
   if (Platform.OS === "web") {
-    getWebStorage()?.setItem(storageId, value);
+    requireWebStorage().setItem(storageId, value);
     return;
   }
   await SecureStore.setItemAsync(storageId, value);
@@ -24,7 +24,7 @@ export async function setLocalValue(storageId: string, value: string): Promise<v
 
 export async function deleteLocalValue(storageId: string): Promise<void> {
   if (Platform.OS === "web") {
-    getWebStorage()?.removeItem(storageId);
+    requireWebStorage().removeItem(storageId);
     return;
   }
   await SecureStore.deleteItemAsync(storageId);
@@ -32,4 +32,12 @@ export async function deleteLocalValue(storageId: string): Promise<void> {
 
 function getWebStorage(): WebStorage | undefined {
   return (globalThis as typeof globalThis & { localStorage?: WebStorage }).localStorage;
+}
+
+function requireWebStorage(): WebStorage {
+  const storage = getWebStorage();
+  if (!storage) {
+    throw new Error("Browser local storage is unavailable.");
+  }
+  return storage;
 }

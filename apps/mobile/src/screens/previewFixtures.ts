@@ -1,4 +1,5 @@
-import { authErrorMessage } from "../lib/auth/authErrors";
+import { LocalizedError } from "../i18n/localizedError";
+import { authError } from "../lib/auth/authErrors";
 import { freeAllowanceMinutes } from "../lib/billing/allowance";
 import type { MurmurBillingContext } from "../lib/billing/context";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
@@ -36,7 +37,7 @@ function subscription(
     id,
     introPrice: null,
     minutes,
-    periodLabel: term === "monthly" ? "month" : "year",
+    period: term === "monthly" ? "month" : "year",
     price: formatUsd(price),
     priceAmount: price,
     pricePerMonth: term === "yearly" ? formatUsd(Math.floor((price / 12) * 100) / 100) : null,
@@ -52,7 +53,7 @@ function pass(id: string, title: string, price: number, minutes: number): Murmur
     id,
     introPrice: null,
     minutes,
-    periodLabel: null,
+    period: null,
     price: formatUsd(price),
     priceAmount: price,
     pricePerMonth: null,
@@ -138,12 +139,12 @@ const previewEmail = "maya@example.com";
 
 export const previewAuthStates = {
   "auth-code": codeStep(previewEmail),
-  "auth-code-error": { ...codeStep(previewEmail), error: authErrorMessage({ code: "INVALID_OTP" }, "") },
-  "auth-code-expired": { ...codeStep(previewEmail), error: authErrorMessage({ code: "OTP_EXPIRED" }, "") },
+  "auth-code-error": { ...codeStep(previewEmail), error: authError({ code: "INVALID_OTP" }, "auth.codeFailed") },
+  "auth-code-expired": { ...codeStep(previewEmail), error: authError({ code: "OTP_EXPIRED" }, "auth.codeFailed") },
   "auth-email": { email: "", error: null, pending: false, step: "email" },
   "auth-email-error": {
     email: "maya@example",
-    error: "Enter a valid email address.",
+    error: new LocalizedError("auth.invalidEmail"),
     pending: false,
     step: "email",
   },
@@ -163,7 +164,7 @@ export const previewSettingsControls: SettingsControls = {
   locked: false,
   message: null,
   openReport: noop,
-  reportLabel: "Report a translation",
+  reportLabel: "settings.reportTranslation",
   resetIdentity: noop,
   share: noop,
 };

@@ -16,7 +16,7 @@ const controls: SettingsControls = {
   locked: true,
   message: null,
   openReport: vi.fn(),
-  reportLabel: "Session diagnostics",
+  reportLabel: "settings.sessionDiagnostics",
   resetIdentity: vi.fn(),
   share: vi.fn(),
 };
@@ -34,6 +34,6 @@ describe("settings controls bridge", () => {
   it("serves fixture controls for previews", () => {
     expect(renderToStaticMarkup(
       <SettingsControlsFixture controls={controls}><Probe /></SettingsControlsFixture>,
-    )).toBe("Session diagnostics");
+    )).toBe("settings.sessionDiagnostics");
   });
 });

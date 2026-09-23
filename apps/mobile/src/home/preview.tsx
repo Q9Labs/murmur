@@ -5,6 +5,9 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
+import { UiLocaleOverride } from "../i18n/provider";
+import { useUiLocale } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import { type MurmurBillingContext, MurmurBillingFixtureProvider } from "../lib/billing/context";
 import type { UiPreviewScreen } from "../lib/config";
 import type { LiveTranslationController } from "../lib/live-translation/types";
@@ -142,8 +145,9 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   welcome: () => <WelcomePreview />,
 };
 
-export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
-  return previewRenderers[screen]();
+export function BloomPreview({ locale = null, screen }: { locale?: UiLocale | null; screen: PreviewScreen }): ReactNode {
+  const Screen = previewRenderers[screen];
+  return locale ? <UiLocaleOverride locale={locale}><Screen /></UiLocaleOverride> : <Screen />;
 }
 
 function OutOfMinutesPreview({ registered }: { registered: boolean }): ReactNode {
@@ -244,14 +248,17 @@ function TranslationPreview({
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
+  const { locale, t } = useUiLocale();
   const viewModel = useMemo(
     () =>
       buildHomeViewModel({
         live,
         sourceLanguageCode: previewSourceLanguage,
         targetLanguageCode: previewTargetLanguage,
+        translate: t,
+        uiLocale: locale,
       }),
-    [live],
+    [live, locale, t],
   );
   const props: VariantShellProps = {
     audioPlaybackAvailable: true,

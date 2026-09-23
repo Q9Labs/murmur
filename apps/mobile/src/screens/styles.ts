@@ -6,8 +6,12 @@ import {
   type MurmurTheme,
   useMurmurTheme,
 } from "../home/theme";
+import { uiTextDirectionStyle, useUiLocale } from "../i18n/runtime";
+import type { UiDirection } from "../i18n/types";
 
-function createScreenStyles(theme: MurmurTheme) {
+function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
+  // Block text follows the reading direction; centred button labels keep their own alignment.
+  const text = uiTextDirectionStyle(direction);
   return StyleSheet.create({
     backButton: {
       alignItems: "center",
@@ -20,12 +24,14 @@ function createScreenStyles(theme: MurmurTheme) {
       width: 42,
     },
     body: {
+      ...text,
       color: theme.secondaryText,
       fontSize: 17,
       fontWeight: "500",
       lineHeight: 25,
     },
     bodyStrong: {
+      ...text,
       color: theme.primary,
       fontSize: 20,
       fontWeight: "800",
@@ -44,12 +50,14 @@ function createScreenStyles(theme: MurmurTheme) {
       paddingTop: 8,
     },
     conversationExcerpt: {
+      ...text,
       color: theme.primary,
       fontSize: 17,
       fontWeight: "700",
       lineHeight: 24,
     },
     conversationMeta: {
+      ...text,
       color: theme.secondaryText,
       fontSize: 15,
       fontWeight: "600",
@@ -62,6 +70,7 @@ function createScreenStyles(theme: MurmurTheme) {
       paddingVertical: 14,
     },
     conversationText: {
+      ...text,
       color: theme.primary,
       fontSize: 20,
       fontWeight: "600",
@@ -103,12 +112,14 @@ function createScreenStyles(theme: MurmurTheme) {
       paddingTop: 10,
     },
     message: {
+      ...text,
       color: theme.secondaryText,
       fontSize: 15,
       fontWeight: "600",
       lineHeight: 22,
     },
     messageError: {
+      ...text,
       color: theme.danger,
       fontSize: 15,
       fontWeight: "700",
@@ -158,6 +169,7 @@ function createScreenStyles(theme: MurmurTheme) {
       borderTopWidth: 1,
     },
     rowLabel: {
+      ...text,
       color: theme.primary,
       flex: 1,
       fontSize: 17,
@@ -188,6 +200,7 @@ function createScreenStyles(theme: MurmurTheme) {
       flex: 1,
     },
     title: {
+      ...text,
       color: theme.primary,
       fontSize: 34,
       fontWeight: "800",
@@ -198,10 +211,13 @@ function createScreenStyles(theme: MurmurTheme) {
 
 export type ScreenStyles = ReturnType<typeof createScreenStyles>;
 
-const lightStyles = createScreenStyles(lightMurmurTheme);
-const darkStyles = createScreenStyles(darkMurmurTheme);
+const screenStyles = {
+  ltr: { dark: createScreenStyles(darkMurmurTheme, "ltr"), light: createScreenStyles(lightMurmurTheme, "ltr") },
+  rtl: { dark: createScreenStyles(darkMurmurTheme, "rtl"), light: createScreenStyles(lightMurmurTheme, "rtl") },
+} as const;
 
 export function useScreenStyles(): { colors: MurmurTheme; styles: ScreenStyles } {
   const colors = useMurmurTheme();
-  return { colors, styles: colors.dark ? darkStyles : lightStyles };
+  const { direction } = useUiLocale();
+  return { colors, styles: screenStyles[direction][colors.dark ? "dark" : "light"] };
 }

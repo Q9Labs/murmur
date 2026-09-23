@@ -47,7 +47,7 @@ describe("preview fixtures", () => {
     expect(previewPackBilling.customer?.creditMs).toBeGreaterThan(0);
     expect(previewBillingFor({ availableMs: 0 }).customer?.availableMs).toBe(0);
     expect(Object.keys(previewAuthStates)).toContain("auth-code-error");
-    expect(previewAuthStates["auth-code-error"].error).toContain("doesn't match");
+    expect(previewAuthStates["auth-code-error"].error?.message).toContain("doesn't match");
   });
 
   it("give Pro screens conversations and free screens the gates", async () => {

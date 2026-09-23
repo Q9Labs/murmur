@@ -2,6 +2,8 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 
+import { useUiLocale } from "../../i18n/runtime";
+import { uiLocaleNames } from "../../i18n/types";
 import { useMurmurBilling } from "../../lib/billing/context";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import { LinkRow, RowGroup, SwitchRow } from "../rowGroup";
@@ -27,54 +29,61 @@ export function SettingsScreen(): ReactNode {
   const controls = useSettingsControls();
   const services = useScreenServices();
   const locked = controls?.locked === true;
-  const accountValue = billing.customer?.isRegistered ? "Signed in" : "Guest";
+  const { preference, t } = useUiLocale();
+  const languageValue = preference === "system" ? t("settings.systemDefault") : uiLocaleNames[preference];
+  const accountValue = t(billing.customer?.isRegistered ? "settings.signedIn" : "settings.guest");
 
   return (
-    <ScreenScaffold title="Settings">
+    <ScreenScaffold title={t("settings.title")}>
       <RowGroup>
         <LinkRow
           disabled={locked}
-          label="Account"
+          label={t("settings.account")}
           onPress={() => router.push("/account")}
           value={accountValue}
         />
-        <LinkRow label="Conversation history" onPress={() => router.push("/history")} />
+        <LinkRow label={t("settings.history")} onPress={() => router.push("/history")} />
+        <LinkRow
+          label={t("settings.appLanguage")}
+          onPress={() => router.push("/language")}
+          value={languageValue}
+        />
       </RowGroup>
       {controls ? (
         <RowGroup>
           <SwitchRow
             disabled={locked}
-            label="Anonymous analytics"
+            label={t("settings.analytics")}
             onChange={controls.changeAnalytics}
             value={controls.analyticsEnabled}
           />
           <SwitchRow
             disabled={locked}
-            label="Help improve Murmur"
+            label={t("settings.helpImprove")}
             onChange={(consent) => void services.setInsightsConsent(consent)}
             value={services.insightsConsent === true}
           />
-          <LinkRow disabled={locked} label="Share Murmur" onPress={controls.share} />
+          <LinkRow disabled={locked} label={t("settings.shareMurmur")} onPress={controls.share} />
         </RowGroup>
       ) : null}
       <RowGroup>
         {controls ? (
           <LinkRow
-            label={controls.reportLabel}
+            label={t(controls.reportLabel)}
             onPress={() => {
               controls.openReport();
               router.back();
             }}
           />
         ) : null}
-        <LinkRow label="Support" onPress={() => openLink(legalUrls.support)} />
-        <LinkRow label="Privacy policy" onPress={() => openLink(legalUrls.privacy)} />
-        <LinkRow label="Terms of use" onPress={() => openLink(legalUrls.terms)} />
+        <LinkRow label={t("settings.support")} onPress={() => openLink(legalUrls.support)} />
+        <LinkRow label={t("settings.privacyPolicy")} onPress={() => openLink(legalUrls.privacy)} />
+        <LinkRow label={t("settings.termsOfUse")} onPress={() => openLink(legalUrls.terms)} />
       </RowGroup>
       {controls ? (
         <RowGroup>
-          <LinkRow disabled={locked} label="Reset Murmur identity" onPress={controls.resetIdentity} />
-          <LinkRow disabled={locked} label="Delete local data" onPress={controls.deleteLocalData} tone="danger" />
+          <LinkRow disabled={locked} label={t("settings.resetMurmurIdentity")} onPress={controls.resetIdentity} />
+          <LinkRow disabled={locked} label={t("settings.deleteLocalData")} onPress={controls.deleteLocalData} tone="danger" />
         </RowGroup>
       ) : null}
       <StatusLine error={null} notice={controls?.message ?? null} />

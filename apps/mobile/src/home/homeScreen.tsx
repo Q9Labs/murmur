@@ -50,6 +50,8 @@ import {
   type SettingsControls,
   usePublishSettingsControls,
 } from "../screens/settings/settingsControls";
+import type { MessageKey } from "../i18n/catalogs/en";
+import { createTranslator, type Translate, useUiLocale } from "../i18n/runtime";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
   deleteStoredAudioPlaybackEnabled,
@@ -63,10 +65,7 @@ import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 import { isAllowanceExhaustedError, isUpdateRequiredError } from "./errorCopy";
 
-const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
-const localDataDeletedMessage =
-  "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared.";
-const localDataDeleteError = "Could not delete local data. Please try again.";
+const englishTranslate = createTranslator("en");
 const defaultCaptureCapabilities: CaptureCapabilities = {
   device_playback_supported: false,
   floating_overlay_supported: false,
@@ -83,6 +82,7 @@ export function createAudioPlaybackPreferenceController(options: {
   onEnabledChange: (enabled: boolean) => void;
   onMessage: (message: string | null) => void;
   setStored: (enabled: boolean) => Promise<void>;
+  translate?: Translate;
 }): {
   deleteLocalData: (operation: () => Promise<void>, onDeleted: () => void) => Promise<void>;
   dispose: () => void;
@@ -150,7 +150,7 @@ export function createAudioPlaybackPreferenceController(options: {
       } catch {
         if (isCurrent(version) && currentEnabled === enabled) {
           applyEnabled(persistedEnabled);
-          options.onMessage(audioPlaybackSaveError);
+          options.onMessage(message("home.audioSaveError"));
         }
       }
     }).catch(() => undefined);
@@ -174,10 +174,10 @@ export function createAudioPlaybackPreferenceController(options: {
       }
       applyEnabled(true);
       onDeleted();
-      options.onMessage(localDataDeletedMessage);
+      options.onMessage(englishTranslate("home.localDataDeleted"));
     }).catch(() => {
       if (isCurrent(version)) {
-        options.onMessage(localDataDeleteError);
+        options.onMessage(message("home.localDataDeleteError"));
       }
     });
   }
@@ -192,6 +192,10 @@ export function createAudioPlaybackPreferenceController(options: {
     restoreVersion += 1;
   }
 
+  function message(key: MessageKey): string {
+    return options.translate?.(key) ?? englishTranslate(key);
+  }
+
   return {
     deleteLocalData,
     dispose,
@@ -202,6 +206,7 @@ export function createAudioPlaybackPreferenceController(options: {
 }
 
 export default function HomeScreen(): ReactNode {
+  const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -226,12 +231,15 @@ export default function HomeScreen(): ReactNode {
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
   const audioPreferenceControllerRef = useRef<AudioPlaybackPreferenceController | null>(null);
+  const translateRef = useRef(t);
+  translateRef.current = t;
   if (!audioPreferenceControllerRef.current) {
     audioPreferenceControllerRef.current = createAudioPlaybackPreferenceController({
       getStored: getStoredAudioPlaybackEnabled,
       onEnabledChange: setAudioPlaybackEnabled,
       onMessage: setSettingsMessage,
       setStored: setStoredAudioPlaybackEnabled,
+      translate: (key, values) => translateRef.current(key, values),
     });
   }
   const audioPreferenceController = audioPreferenceControllerRef.current;
@@ -270,8 +278,10 @@ export default function HomeScreen(): ReactNode {
       live,
       sourceLanguageCode,
       targetLanguageCode,
+      translate: t,
+      uiLocale,
     }),
-    [captureSource, languagesReady, live, sourceLanguageCode, targetLanguageCode],
+    [captureSource, languagesReady, live, sourceLanguageCode, t, targetLanguageCode, uiLocale],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -463,10 +473,10 @@ export default function HomeScreen(): ReactNode {
     try {
       await updateAnonymousAnalyticsEnabled(enabled);
       setAnonymousAnalyticsEnabled(enabled);
-      setSettingsMessage(`Anonymous analytics ${enabled ? "enabled" : "disabled"}.`);
+      setSettingsMessage(t(enabled ? "settings.analyticsOn" : "settings.analyticsOff"));
     } catch (failure) {
       captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
-      setSettingsMessage("Could not save the analytics setting. Please try again.");
+      setSettingsMessage(t("settings.analyticsSaveError"));
     }
   }
 
@@ -475,7 +485,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     if (anonymousAnalyticsEnabled === null) {
-      setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
+      setSettingsMessage(t("settings.privacyLoading"));
       return;
     }
     await audioPreferenceController.waitForRestore();
@@ -577,7 +587,7 @@ export default function HomeScreen(): ReactNode {
     changeAnalytics: (enabled) => void changeAnonymousAnalyticsEnabled(enabled),
     deleteLocalData: () => {
       void audioPreferenceController.deleteLocalData(
-        () => deleteLocalData(live.cancel, services),
+        () => deleteLocalData(live.cancel, services, deleteLocale),
         () => {
           live.invalidatePreparation();
           setAnonymousAnalyticsEnabled(true);
@@ -587,7 +597,7 @@ export default function HomeScreen(): ReactNode {
         },
       );
     },
-    resetIdentity: () => void resetIdentity(live, setSettingsMessage),
+    resetIdentity: () => void resetIdentity(live, setSettingsMessage, t("home.identityReset")),
   };
   const settingsLocked = live.status === "live";
   const settingsControls = useMemo<SettingsControls>(() => ({
@@ -597,9 +607,9 @@ export default function HomeScreen(): ReactNode {
     locked: settingsLocked,
     message: settingsMessage,
     openReport: () => setDiagnosticsOpen(true),
-    reportLabel: __DEV__ ? "Session diagnostics" : "Report a translation",
+    reportLabel: __DEV__ ? "settings.sessionDiagnostics" : "settings.reportTranslation",
     resetIdentity: () => settingsActionsRef.current.resetIdentity(),
-    share: () => void shareMurmur(),
+    share: () => void shareMurmur(translateRef.current),
   }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
 
@@ -636,7 +646,7 @@ export default function HomeScreen(): ReactNode {
         sourceLanguageDisplayName={viewModel.sourceLanguageDisplayName}
         step={onboardingStep}
         targetLanguageCode={targetLanguageCode}
-        targetLanguageDisplayName={viewModel.targetLanguage.display_name}
+        targetLanguageDisplayName={viewModel.targetLanguageDisplayName}
       />
     );
   }
@@ -712,11 +722,12 @@ function newestAudioState(
 async function resetIdentity(
   live: Pick<ReturnType<typeof useLiveTranslation>, "invalidatePreparation" | "prepare">,
   setMessage: (message: string | null) => void,
+  successMessage: string,
 ): Promise<void> {
   await resetInstallId();
   live.invalidatePreparation();
   await live.prepare();
-  setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
+  setMessage(successMessage);
 }
 
 async function choosePostSessionPrompt(params: {
@@ -741,6 +752,7 @@ async function choosePostSessionPrompt(params: {
 async function deleteLocalData(
   cancel: () => Promise<void>,
   services: Pick<ScreenServices, "clearInsightsConsent" | "reloadConversations">,
+  deleteLocale: () => Promise<void>,
 ): Promise<void> {
   await cancel();
   const { deleteAllConversations } = await import("../lib/conversationHistory");
@@ -754,4 +766,5 @@ async function deleteLocalData(
   await services.clearInsightsConsent();
   await deletePhoneAudioGiftOffer();
   await resetAnonymousAnalyticsPreference();
+  await deleteLocale();
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">Traduction en direct</string>
+  <string name="murmur_capture_channel_description">Permet à Murmur d’écouter pendant la traduction en direct.</string>
+  <string name="murmur_capture_microphone_title">Écoute en arrière-plan</string>
+  <string name="murmur_capture_microphone_text">Murmur traduit ce qu’il entend.</string>
+  <string name="murmur_capture_phone_audio_title">Traduction du son du téléphone</string>
+  <string name="murmur_capture_phone_audio_text">Murmur traduit le son joué sur ce téléphone.</string>
+  <string name="murmur_capture_stop">Arrêter</string>
+</resources>

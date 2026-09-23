@@ -275,10 +275,10 @@ class MurmurForegroundService : Service() {
     val manager = getSystemService(NotificationManager::class.java)
     val channel = NotificationChannel(
       MURMUR_CAPTURE_CHANNEL_ID,
-      "Live translation",
+      getString(R.string.murmur_capture_channel_name),
       NotificationManager.IMPORTANCE_LOW
     )
-    channel.description = "Keeps Murmur listening during live translation."
+    channel.description = getString(R.string.murmur_capture_channel_description)
     manager.createNotificationChannel(channel)
   }
 
@@ -300,14 +300,14 @@ class MurmurForegroundService : Service() {
     )
     return builder
       .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-      .setContentTitle(if (isDevicePlayback) "Translating phone audio" else "Listening in background")
-      .setContentText(if (isDevicePlayback) "Murmur is translating audio playing on this phone." else "Murmur is translating what it hears.")
+      .setContentTitle(getString(if (isDevicePlayback) R.string.murmur_capture_phone_audio_title else R.string.murmur_capture_microphone_title))
+      .setContentText(getString(if (isDevicePlayback) R.string.murmur_capture_phone_audio_text else R.string.murmur_capture_microphone_text))
       .setOngoing(true)
       .setCategory(Notification.CATEGORY_SERVICE)
       .addAction(
         Notification.Action.Builder(
           android.R.drawable.ic_menu_close_clear_cancel,
-          "Stop",
+          getString(R.string.murmur_capture_stop),
           stopPendingIntent
         ).build()
       )

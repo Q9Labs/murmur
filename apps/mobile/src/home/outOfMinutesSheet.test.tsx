@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fixtureCustomer } from "../screens/__tests__/billingFixture";
 import { recorded, resetRecorded } from "../screens/__tests__/reactNativePrimitives";
+import { en } from "../screens/__tests__/uiText";
 
 vi.mock("react-native", () => import("../screens/__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("./modalSheet", () => import("./__tests__/modalSheetMock"));
@@ -28,8 +29,8 @@ describe("out-of-minutes sheet", () => {
   });
 
   it("words the message for paid customers", () => {
-    expect(outOfMinutesMessage({ ...fixtureCustomer, plan: "pro" })).toBe("You've used all your translation time.");
-    expect(outOfMinutesMessage(null)).toContain("7 free minutes");
+    expect(outOfMinutesMessage({ ...fixtureCustomer, plan: "pro" }, en)).toBe("You've used all your translation time.");
+    expect(outOfMinutesMessage(null, en)).toContain("7 free minutes");
   });
 
   it("closes once a refreshed balance is larger than when it opened", () => {

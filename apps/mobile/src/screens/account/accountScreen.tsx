@@ -3,6 +3,8 @@ import { ChevronRight } from "lucide-react-native";
 import { useEffect, type ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { formatUiDate, uiMirrorStyle, useUiLocale, type Translate, type UiText } from "../../i18n/runtime";
 import { useMurmurBilling } from "../../lib/billing/context";
 import type { MurmurCustomer } from "../../lib/billing/customerResponse";
 import { darkMurmurTheme, lightMurmurTheme, type MurmurTheme, useMurmurTheme } from "../../home/theme";
@@ -14,6 +16,7 @@ import { useSettingsControls } from "../settings/settingsControls";
 export function AccountScreen(): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
+  const { t } = useUiLocale();
   const customer = billing.customer;
   const registered = customer?.isRegistered === true;
   const locked = useSettingsControls()?.locked === true;
@@ -26,49 +29,49 @@ export function AccountScreen(): ReactNode {
   return (
     <ScreenScaffold
       footer={
-        <PrimaryAction disabled={locked} label="Get more time" onPress={() => router.push("/plans")} />
+        <PrimaryAction disabled={locked} label={t("home.getMoreTime")} onPress={() => router.push("/plans")} />
       }
-      title="Account"
+      title={t("account.title")}
     >
       <BalanceHero customer={customer} />
       {unsavedPurchase ? <SavePurchaseReminder onPress={() => router.push("/save-purchase")} /> : null}
-      <StatusLine error={null} notice={locked ? "Stop translating to manage your account." : null} />
+      <StatusLine error={null} notice={locked ? t("account.locked") : null} />
       {registered ? (
         <RowGroup>
           <LinkRow
             disabled={storeUnavailable}
-            label="Restore purchases"
+            label={t("account.restorePurchases")}
             onPress={() => void billing.restorePurchases()}
           />
           {customer !== null && customer.plan !== "free" ? (
             <LinkRow
               disabled={storeUnavailable}
-              label="Manage subscription"
+              label={t("account.manageSubscription")}
               onPress={() => void billing.manageSubscription()}
             />
           ) : null}
           <LinkRow
             disabled={busy}
-            label={billing.syncing ? "Syncing balance…" : "Refresh balance"}
+            label={t(billing.syncing ? "account.syncingBalance" : "account.refreshBalance")}
             onPress={() => void billing.refresh()}
           />
           <LinkRow
             disabled={busy}
-            label="Use a different account"
-            onPress={() => confirmAccountSwitch(billing.switchAccount)}
+            label={t("account.switchAccount")}
+            onPress={() => confirmAccountSwitch(billing.switchAccount, t)}
           />
         </RowGroup>
       ) : null}
       {!registered && !unsavedPurchase ? (
         <RowGroup>
-          <LinkRow disabled={locked} label="Sign in" onPress={() => router.push("/sign-in")} />
+          <LinkRow disabled={locked} label={t("account.signIn")} onPress={() => router.push("/sign-in")} />
         </RowGroup>
       ) : null}
       <RowGroup>
         <LinkRow
           disabled={busy}
-          label="Delete account"
-          onPress={() => confirmAccountDeletion(billing.deleteAccount)}
+          label={t("account.deleteAccount")}
+          onPress={() => confirmAccountDeletion(billing.deleteAccount, t)}
           tone="danger"
         />
       </RowGroup>
@@ -83,10 +86,11 @@ export function reportAccountViewed(): void {
   });
 }
 
-const planNames: Readonly<Record<MurmurCustomer["plan"], string>> = {
-  free: "Free",
-  pro: "Pro",
-  pro_max: "Pro Max",
+// Pro and Pro Max are product names and stay as they are in every language.
+const planNames: { readonly [Plan in MurmurCustomer["plan"]]: MessageKey } = {
+  free: "account.planFree",
+  pro: "account.planPro",
+  pro_max: "account.planProMax",
 };
 
 export function hasUnsavedPurchase(customer: MurmurCustomer): boolean {
@@ -94,28 +98,31 @@ export function hasUnsavedPurchase(customer: MurmurCustomer): boolean {
 }
 
 // One line per credit pack still holding minutes, soonest to expire first.
-export function packValidity(customer: MurmurCustomer | null): string[] {
+export function packValidity(customer: MurmurCustomer | null, ui: UiText): string[] {
   const packs = customer?.creditPacks.filter((pack) => pack.remainingMs > 0) ?? [];
-  const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
   return packs
     .sort((first, second) => first.expiresAtMs - second.expiresAtMs)
-    .map((pack) => `${formatMinutes(pack.remainingMs)} pack. Valid until ${dateFormat.format(new Date(pack.expiresAtMs))}`);
+    .map((pack) => ui.t("account.packValidity", {
+      date: formatUiDate(pack.expiresAtMs, ui.locale, { dateStyle: "medium" }),
+      minutes: formatMinutes(pack.remainingMs, ui),
+    }));
 }
 
 function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNode {
   const colors = useMurmurTheme();
   const styles = colors.dark ? darkStyles : lightStyles;
-  const balance = customer ? formatMinutes(customer.availableMs) : "…";
-  const plan = planNames[customer?.plan ?? "free"];
-  const validity = packValidity(customer);
+  const ui = useUiLocale();
+  const balance = customer ? formatMinutes(customer.availableMs, ui) : "…";
+  const plan = ui.t(planNames[customer?.plan ?? "free"]);
+  const validity = packValidity(customer, ui);
   return (
     <View
-      accessibilityLabel={[`${balance} left on the ${plan} plan`, ...validity].join(". ")}
+      accessibilityLabel={[ui.t("account.balanceSpoken", { balance, plan }), ...validity].join(". ")}
       accessible
       style={styles.hero}
     >
       <Text style={styles.balance}>{balance}</Text>
-      <Text style={styles.detail}>left on {plan}</Text>
+      <Text style={styles.detail}>{ui.t("account.balancePlan", { plan })}</Text>
       {validity.map((line) => <Text key={line} style={styles.validity}>{line}</Text>)}
     </View>
   );
@@ -124,42 +131,45 @@ function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNo
 function SavePurchaseReminder({ onPress }: { onPress: () => void }): ReactNode {
   const colors = useMurmurTheme();
   const styles = colors.dark ? darkStyles : lightStyles;
+  const { direction, t } = useUiLocale();
   return (
     <Pressable
-      accessibilityHint="Sign in so your purchase stays yours on a new phone"
-      accessibilityLabel="Save your purchase"
+      accessibilityHint={t("savePurchase.hint")}
+      accessibilityLabel={t("savePurchase.title")}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.reminder, pressed && styles.pressed]}
     >
       <View style={styles.reminderDot} />
       <View style={styles.reminderText}>
-        <Text style={styles.reminderTitle}>Save your purchase</Text>
-        <Text style={styles.reminderBody}>Sign in to keep it on a new phone.</Text>
+        <Text style={styles.reminderTitle}>{t("savePurchase.title")}</Text>
+        <Text style={styles.reminderBody}>{t("savePurchase.reminder")}</Text>
       </View>
-      <ChevronRight color={colors.muted} size={20} strokeWidth={2} />
+      <View style={uiMirrorStyle(direction)}>
+        <ChevronRight color={colors.muted} size={20} strokeWidth={2} />
+      </View>
     </Pressable>
   );
 }
 
-function confirmAccountSwitch(switchAccount: () => Promise<void>): void {
+function confirmAccountSwitch(switchAccount: () => Promise<void>, t: Translate): void {
   Alert.alert(
-    "Use a different account?",
-    "This device leaves the current account. Its balance stays safe, and you can sign in again to get it back.",
+    t("account.switchTitle"),
+    t("account.switchBody"),
     [
-      { style: "cancel", text: "Keep this account" },
-      { onPress: () => void switchAccount(), text: "Switch account" },
+      { style: "cancel", text: t("account.switchKeep") },
+      { onPress: () => void switchAccount(), text: t("account.switchConfirm") },
     ],
   );
 }
 
-function confirmAccountDeletion(deleteAccount: () => Promise<void>): void {
+function confirmAccountDeletion(deleteAccount: () => Promise<void>, t: Translate): void {
   Alert.alert(
-    "Delete your Murmur account?",
-    "This deletes your sign-in and its remaining balance. App Store and Google Play subscriptions must be cancelled in the store.",
+    t("account.deleteTitle"),
+    t("account.deleteBody"),
     [
-      { style: "cancel", text: "Keep account" },
-      { onPress: () => void deleteAccount(), style: "destructive", text: "Delete account" },
+      { style: "cancel", text: t("account.deleteKeep") },
+      { onPress: () => void deleteAccount(), style: "destructive", text: t("account.deleteAccount") },
     ],
   );
 }

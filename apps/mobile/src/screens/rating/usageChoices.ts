@@ -1,18 +1,17 @@
 // The answers to "What did you use Murmur for?" match the session insight `setting` values.
 export const usageChoices = [
-  { label: "Conference", value: "conference" },
-  { label: "Lecture", value: "lecture" },
-  { label: "Travel", value: "travel" },
-  { label: "Business meeting", value: "business_meeting" },
-  { label: "Medical", value: "medical" },
-  { label: "Legal", value: "legal" },
-  { label: "Education", value: "education" },
-  { label: "Religious", value: "religious" },
-  { label: "TV, video or radio", value: "media" },
-  { label: "Family and friends", value: "family_social" },
-  { label: "Customer service", value: "customer_service" },
-  { label: "Other", value: "other" },
+  { labelKey: "rating.useConference", value: "conference" },
+  { labelKey: "rating.useLecture", value: "lecture" },
+  { labelKey: "rating.useTravel", value: "travel" },
+  { labelKey: "rating.useBusinessMeeting", value: "business_meeting" },
+  { labelKey: "rating.useMedical", value: "medical" },
+  { labelKey: "rating.useLegal", value: "legal" },
+  { labelKey: "rating.useEducation", value: "education" },
+  { labelKey: "rating.useReligious", value: "religious" },
+  { labelKey: "rating.useMedia", value: "media" },
+  { labelKey: "rating.useFamilySocial", value: "family_social" },
+  { labelKey: "rating.useCustomerService", value: "customer_service" },
+  { labelKey: "rating.useOther", value: "other" },
 ] as const;
 
 export type UsageSetting = (typeof usageChoices)[number]["value"];
-

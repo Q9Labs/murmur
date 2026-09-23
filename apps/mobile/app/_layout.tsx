@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useMurmurTheme } from "../src/home/theme";
+import { UiLocaleProvider } from "../src/i18n/provider";
 import { MurmurBillingProvider } from "../src/lib/billing/context";
 import { initializeSentry } from "../src/lib/observability/sentry";
 import { ReplayProvider } from "../src/lib/replayProvider";
@@ -14,6 +15,14 @@ import { SettingsControlsProvider } from "../src/screens/settings/settingsContro
 initializeSentry();
 
 function RootLayout(): ReactNode {
+  return (
+    <UiLocaleProvider>
+      <ThemedStack />
+    </UiLocaleProvider>
+  );
+}
+
+function ThemedStack(): ReactNode {
   const colors = useMurmurTheme();
 
   useEffect(() => {
