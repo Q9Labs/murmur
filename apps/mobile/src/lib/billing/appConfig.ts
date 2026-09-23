@@ -6,12 +6,15 @@ export type MurmurAppConfig = {
   enabledLanguages: LanguageCode[] | null;
   lowBalanceThresholdMinutes: number;
   paywallOfferingId: string | null;
+  // When the worker's personal offer ends; null when there is no active offer.
+  personalOfferExpiresAtMs: number | null;
 };
 
 export const defaultAppConfig: MurmurAppConfig = {
   enabledLanguages: null,
   lowBalanceThresholdMinutes: defaultLowBalanceThresholdMinutes,
   paywallOfferingId: null,
+  personalOfferExpiresAtMs: null,
 };
 
 export function decodeAppConfig(payload: unknown): MurmurAppConfig | null {
@@ -28,7 +31,17 @@ export function decodeAppConfig(payload: unknown): MurmurAppConfig | null {
     paywallOfferingId: typeof offeringId === "string" && offeringId.trim()
       ? offeringId.trim()
       : null,
+    personalOfferExpiresAtMs: decodePersonalOfferExpiry(Reflect.get(payload, "personal_offer")),
   };
+}
+
+function decodePersonalOfferExpiry(value: unknown): number | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const expiresAt = Reflect.get(value, "expires_at");
+  const expiresAtMs = typeof expiresAt === "string" ? Date.parse(expiresAt) : Number.NaN;
+  return Number.isFinite(expiresAtMs) ? expiresAtMs : null;
 }
 
 // An explicit [] disables every language. A non-array, or a non-empty list with no known

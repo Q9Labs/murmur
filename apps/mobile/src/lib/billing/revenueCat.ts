@@ -8,8 +8,10 @@ import Purchases, {
 } from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
+import { findBillingProduct } from "@murmur/protocol/billing/catalog";
+
 import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
-import type { MurmurPlan, PlanTerm } from "./planCatalog";
+import { type MurmurPlan, planTier, planTitle, type PlanTerm } from "./planCatalog";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -101,20 +103,36 @@ const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
 function toMurmurPlan(storePackage: PurchasesPackage): MurmurPlan {
   const { product } = storePackage;
   const term = planTerm(storePackage);
-  const periodLabel = term === "pack"
-    ? null
-    : subscriptionPeriodLabels[product.subscriptionPeriod ?? ""] ??
-      (term === "yearly" ? "year" : "month");
+  const tier = planTier(storePackage.identifier, term);
+  const storeTitle = product.title.replace(storeAppNameSuffix, "") || product.identifier;
   return {
     description: product.description,
     id: storePackage.identifier,
-    periodLabel,
+    introPrice: product.introPrice
+      ? { amount: product.introPrice.price, price: product.introPrice.priceString }
+      : null,
+    minutes: catalogMinutes(product.identifier),
+    periodLabel: planPeriodLabel(term, product.subscriptionPeriod),
     price: product.priceString,
     priceAmount: product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
     term,
-    title: product.title.replace(storeAppNameSuffix, "") || product.identifier,
+    tier,
+    title: planTitle(storePackage.identifier, tier, storeTitle),
   };
+}
+
+function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {
+  if (term === "pack") {
+    return null;
+  }
+  return subscriptionPeriodLabels[subscriptionPeriod ?? ""] ?? (term === "yearly" ? "year" : "month");
+}
+
+// Minutes come from the shared billing catalog, matched by store product id.
+function catalogMinutes(storeProductId: string): number | null {
+  const product = findBillingProduct(Platform.OS === "ios" ? "apple" : "google", storeProductId);
+  return product ? Math.round(product.grantMs / 60_000) : null;
 }
 
 function planTerm(storePackage: PurchasesPackage): PlanTerm {

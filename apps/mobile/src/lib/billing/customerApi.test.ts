@@ -91,6 +91,7 @@ describe("fetchMurmurAppConfig", () => {
       enabledLanguages: null,
       lowBalanceThresholdMinutes: 10,
       paywallOfferingId: null,
+      personalOfferExpiresAtMs: null,
     });
   });
 });

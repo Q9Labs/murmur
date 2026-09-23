@@ -23,7 +23,8 @@ export type MurmurBillingContext = {
   loadPlans: () => Promise<MurmurPlan[]>;
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
-  purchasePlan: (planId: string) => Promise<void>;
+  // Resolves true only when the store completed a purchase, so the UI can offer to save it.
+  purchasePlan: (planId: string) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<void>;
   restorePurchases: () => Promise<void>;
@@ -45,7 +46,7 @@ const unavailableBillingContext: MurmurBillingContext = {
   loadPlansSilently: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
-  purchasePlan: async () => undefined,
+  purchasePlan: async () => false,
   purchasesAvailable: false,
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
@@ -257,23 +258,28 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice,
-    purchasePlan: (planId) => runStoreAction(async () => {
-      assertPaywallAvailable(customer);
-      const { purchaseMurmurPlan } = await import("./revenueCat");
-      captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
-      const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
-        (failure: unknown) => {
-          capturePaywallFailure("store_error");
-          throw failure;
-        },
-      );
-      if (outcome === "cancelled") {
-        capturePaywallCancellation();
-        setNotice("No purchase was made.");
-        return;
-      }
-      await completeStorePurchase();
-    }),
+    purchasePlan: async (planId) => {
+      let purchased = false;
+      await runStoreAction(async () => {
+        assertPaywallAvailable(customer);
+        const { purchaseMurmurPlan } = await import("./revenueCat");
+        captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
+        const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
+          (failure: unknown) => {
+            capturePaywallFailure("store_error");
+            throw failure;
+          },
+        );
+        if (outcome === "cancelled") {
+          capturePaywallCancellation();
+          setNotice("No purchase was made.");
+          return;
+        }
+        await completeStorePurchase();
+        purchased = true;
+      });
+      return purchased;
+    },
     purchasesAvailable,
     refresh,
     restorePurchases: () => runStoreAction(async () => {

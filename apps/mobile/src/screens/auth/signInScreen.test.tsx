@@ -74,7 +74,7 @@ describe("sign-in screen", () => {
   });
 
   it("keeps the checkout intent while the plan list reloads", () => {
-    const purchasePlan = vi.fn(async () => undefined);
+    const purchasePlan = vi.fn(async () => true);
     const leave = vi.fn();
     const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan });
 
@@ -86,7 +86,7 @@ describe("sign-in screen", () => {
   });
 
   it("finds the chosen plan once the list is ready", () => {
-    expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "trip_pass")?.title).toBe("Trip Pass");
+    expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "trip_pass_60")?.title).toBe("Trip Pass");
     expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, undefined)).toBeNull();
     expect(findCheckoutPlan({ plans: fixturePlans, status: "ready" }, "gone")).toBeNull();
   });
@@ -105,7 +105,7 @@ describe("sign-in screen", () => {
 
   it("does not offer checkout when purchases can't go through", () => {
     const leave = vi.fn();
-    const purchasePlan = vi.fn(async () => undefined);
+    const purchasePlan = vi.fn(async () => true);
     const unavailable = checkoutDoneAction({ availability: "unavailable", leave, plan: null, planId: "$rc_annual", purchasePlan });
     expect(unavailable.label).toBe("Back to plans");
     unavailable.onPress();

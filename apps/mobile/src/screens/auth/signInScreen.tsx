@@ -35,7 +35,7 @@ export function checkoutDoneAction(params: {
   leave: () => void;
   plan: MurmurPlan | null;
   planId: string | undefined;
-  purchasePlan: (planId: string) => Promise<void>;
+  purchasePlan: (planId: string) => Promise<boolean>;
 }): AuthDoneAction {
   const { planId } = params;
   if (planId === undefined) {

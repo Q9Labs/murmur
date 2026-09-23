@@ -2,9 +2,11 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 
 import { useMurmurBilling } from "../../lib/billing/context";
-import type { PlanTerm } from "../../lib/billing/planCatalog";
+import { introDiscountPercent, type PlanTerm } from "../../lib/billing/planCatalog";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
-import { PlanList, usePlanList } from "./planList";
+import { OfferBanner } from "./offerBanner";
+import { PlanListStatus, usePlanList } from "./planList";
+import { PlanCheckout, PlanPicker, usePlanPicker } from "./planPicker";
 import { purchaseMode } from "./purchaseMode";
 
 export function planTermFromParam(value: string | string[] | undefined): PlanTerm | undefined {
@@ -21,21 +23,24 @@ export function planTermFromParam(value: string | string[] | undefined): PlanTer
   }
 }
 
-export function PlansScreen(props: { initialTerm?: PlanTerm; offer?: ReactNode }): ReactNode {
+export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
   const { plans, refresh } = usePlanList(billing.initialized, billing.loadPlans);
+  const readyPlans = plans.status === "ready" ? plans.plans : [];
+  const picker = usePlanPicker(readyPlans, props.initialTerm);
+  const mode = purchaseMode(billing, () => router.replace("/save-purchase"));
 
   return (
-    <ScreenScaffold title="Plans">
-      {props.offer ?? null}
-      <PlanList
-        initialTerm={props.initialTerm}
-        mode={purchaseMode(billing, (plan) =>
-          router.push({ params: { plan: plan.id }, pathname: "/sign-in" }))}
-        onRetry={refresh}
-        plans={plans}
+    <ScreenScaffold
+      footer={picker.selected ? <PlanCheckout mode={mode} plan={picker.selected} /> : null}
+      title="Plans"
+    >
+      <OfferBanner
+        discountPercent={introDiscountPercent(readyPlans)}
+        expiresAtMs={billing.config.personalOfferExpiresAtMs}
       />
+      {picker.activeTab ? <PlanPicker picker={picker} /> : <PlanListStatus onRetry={refresh} plans={plans} />}
       <StatusLine error={billing.error} notice={billing.notice} />
     </ScreenScaffold>
   );
