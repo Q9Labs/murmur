@@ -5,6 +5,7 @@ import { anonymousClient, emailOTPClient } from "better-auth/client/plugins";
 
 import { getAppRelease } from "../appRelease";
 import { getWorkerBaseUrl } from "../config";
+import { authErrorMessage } from "./authErrors";
 import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "../installIdentity";
 
 const freeAllowanceIdHeader = "x-murmur-free-allowance-id";
@@ -83,14 +84,14 @@ export async function sendEmailSignInCode(email: string): Promise<void> {
     type: "sign-in",
   });
   if (result.error) {
-    throw new Error(result.error.message ?? "Murmur could not send the sign-in code.");
+    throw new Error(authErrorMessage(result.error, "Murmur could not send the sign-in code."));
   }
 }
 
 export async function verifyEmailSignInCode(email: string, otp: string): Promise<void> {
   const result = await murmurAuthClient.signIn.emailOtp({ email, otp });
   if (result.error) {
-    throw new Error(result.error.message ?? "The sign-in code is invalid or expired.");
+    throw new Error(authErrorMessage(result.error, "The sign-in code is invalid or expired."));
   }
 }
 

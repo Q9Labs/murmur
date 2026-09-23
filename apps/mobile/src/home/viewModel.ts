@@ -37,6 +37,7 @@ export type HomeViewModel = {
 
 export function buildHomeViewModel(params: {
   captureSource?: AudioCaptureSource;
+  languagePairEnabled?: boolean;
   live: Pick<
     LiveTranslationController,
     "error" | "preparation_status" | "spans" | "status" | "tentative_source_caption"
@@ -56,7 +57,7 @@ export function buildHomeViewModel(params: {
 
   return {
     canChangeLanguages,
-    canStart: canStartTranslation({
+    canStart: params.languagePairEnabled !== false && canStartTranslation({
       canChangeLanguages,
       sourceLanguageCode: params.sourceLanguageCode,
       targetLanguageCode: params.targetLanguageCode,

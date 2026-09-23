@@ -5,7 +5,6 @@ const store = vi.hoisted(() => ({
   getOfferings: vi.fn(),
   logIn: vi.fn(),
   presentCustomerCenter: vi.fn(),
-  presentPaywall: vi.fn(),
   purchasePackage: vi.fn(),
   restorePurchases: vi.fn(),
 }));
@@ -29,19 +28,12 @@ vi.mock("react-native-purchases", () => ({
     setLogLevel: vi.fn(),
   },
   LOG_LEVEL: { DEBUG: "DEBUG" },
+  PACKAGE_TYPE: { ANNUAL: "ANNUAL", CUSTOM: "CUSTOM", MONTHLY: "MONTHLY" },
   PRODUCT_CATEGORY: { NON_SUBSCRIPTION: "NON_SUBSCRIPTION", SUBSCRIPTION: "SUBSCRIPTION" },
 }));
 vi.mock("react-native-purchases-ui", () => ({
   default: {
     presentCustomerCenter: store.presentCustomerCenter,
-    presentPaywall: store.presentPaywall,
-  },
-  PAYWALL_RESULT: {
-    CANCELLED: "CANCELLED",
-    ERROR: "ERROR",
-    NOT_PRESENTED: "NOT_PRESENTED",
-    PURCHASED: "PURCHASED",
-    RESTORED: "RESTORED",
   },
 }));
 
@@ -49,22 +41,29 @@ import {
   configureRevenueCat,
   loadMurmurPlans,
   presentMurmurCustomerCenter,
-  presentMurmurPaywall,
   purchaseMurmurPlan,
   restoreMurmurPurchases,
 } from "./revenueCat";
 
 function storePackage(params: {
+  amount: number;
   category: "NON_SUBSCRIPTION" | "SUBSCRIPTION";
+  description: string;
   identifier: string;
+  packageType?: string;
   period?: string;
+  perMonth?: string;
   price: string;
   title: string;
 }) {
   return {
     identifier: params.identifier,
+    packageType: params.packageType ?? "CUSTOM",
     product: {
+      description: params.description,
       identifier: `product.${params.identifier}`,
+      price: params.amount,
+      pricePerMonthString: params.perMonth ?? null,
       priceString: params.price,
       productCategory: params.category,
       subscriptionPeriod: params.period ?? null,
@@ -74,9 +73,35 @@ function storePackage(params: {
 }
 
 const launchPackages = [
-  storePackage({ category: "NON_SUBSCRIPTION", identifier: "pack_60", price: "$7.99", title: "1 hour (Murmur - Live Translate)" }),
-  storePackage({ category: "SUBSCRIPTION", identifier: "$rc_monthly", period: "P1M", price: "$9.99", title: "Murmur Pro" }),
-  storePackage({ category: "SUBSCRIPTION", identifier: "$rc_annual", period: "P1Y", price: "$99.99", title: "Murmur Pro Annual" }),
+  storePackage({
+    amount: 7.99,
+    category: "NON_SUBSCRIPTION",
+    description: "60 minutes of live translation",
+    identifier: "pack_60",
+    price: "$7.99",
+    title: "Trip Pass (Murmur - Live Translate)",
+  }),
+  storePackage({
+    amount: 9.99,
+    category: "SUBSCRIPTION",
+    description: "2 hours of live translation a month",
+    identifier: "$rc_monthly",
+    packageType: "MONTHLY",
+    period: "P1M",
+    perMonth: "$9.99",
+    price: "$9.99",
+    title: "Murmur Pro",
+  }),
+  storePackage({
+    amount: 99.99,
+    category: "SUBSCRIPTION",
+    description: "2 hours of live translation a month",
+    identifier: "$rc_annual",
+    packageType: "ANNUAL",
+    perMonth: "$8.33",
+    price: "$99.99",
+    title: "Murmur Pro Annual",
+  }),
 ];
 
 beforeEach(() => {
@@ -91,7 +116,6 @@ beforeEach(() => {
   });
   store.logIn.mockResolvedValue(undefined);
   store.presentCustomerCenter.mockResolvedValue(undefined);
-  store.presentPaywall.mockResolvedValue("PURCHASED");
   store.restorePurchases.mockResolvedValue(undefined);
 });
 
@@ -107,27 +131,49 @@ describe("RevenueCat mobile adapter", () => {
     expect(store.logIn).toHaveBeenCalledWith("customer-2");
   });
 
-  it("opens the configured paywall, restore flow, and customer center", async () => {
+  it("opens the restore flow and customer center", async () => {
     await configureRevenueCat("customer-2");
-    await expect(presentMurmurPaywall()).resolves.toBe("purchased");
     await restoreMurmurPurchases();
     await presentMurmurCustomerCenter();
 
-    expect(store.presentPaywall).toHaveBeenCalledWith({
-      displayCloseButton: true,
-      offering: { availablePackages: [], identifier: "sandbox" },
-    });
     expect(store.restorePurchases).toHaveBeenCalledOnce();
     expect(store.presentCustomerCenter).toHaveBeenCalledOnce();
   });
 
-  it("lists Pro plans before top-ups with store prices from the server-chosen offering", async () => {
+  it("maps the server-chosen offering to monthly, yearly and pack plans with store prices", async () => {
     await configureRevenueCat("customer-2");
 
     await expect(loadMurmurPlans("launch")).resolves.toEqual([
-      { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro" },
-      { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Murmur Pro Annual" },
-      { id: "pack_60", kind: "top_up", price: "$7.99", title: "1 hour" },
+      {
+        description: "60 minutes of live translation",
+        id: "pack_60",
+        periodLabel: null,
+        price: "$7.99",
+        priceAmount: 7.99,
+        pricePerMonth: null,
+        term: "pack",
+        title: "Trip Pass",
+      },
+      {
+        description: "2 hours of live translation a month",
+        id: "$rc_monthly",
+        periodLabel: "month",
+        price: "$9.99",
+        priceAmount: 9.99,
+        pricePerMonth: null,
+        term: "monthly",
+        title: "Murmur Pro",
+      },
+      {
+        description: "2 hours of live translation a month",
+        id: "$rc_annual",
+        periodLabel: "year",
+        price: "$99.99",
+        priceAmount: 99.99,
+        pricePerMonth: "$8.33",
+        term: "yearly",
+        title: "Murmur Pro Annual",
+      },
     ]);
   });
 

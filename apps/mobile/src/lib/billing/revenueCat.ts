@@ -1,13 +1,15 @@
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
+  PACKAGE_TYPE,
   PRODUCT_CATEGORY,
   type PurchasesOffering,
   type PurchasesPackage,
 } from "react-native-purchases";
-import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
+import RevenueCatUI from "react-native-purchases-ui";
 
 import { getRevenueCatApiKeys, getRevenueCatOfferingId } from "../config";
+import type { MurmurPlan, PlanTerm } from "./planCatalog";
 
 let configuredApiKey: string | null = null;
 let configuredCustomerId: string | null = null;
@@ -37,48 +39,12 @@ export async function configureRevenueCat(customerId: string): Promise<boolean> 
   return true;
 }
 
-export type MurmurPaywallOutcome = "cancelled" | "failed" | "not_presented" | "purchased" | "restored";
-
-export type MurmurPlan = {
-  id: string;
-  kind: "pro" | "top_up";
-  price: string;
-  title: string;
-};
-
 export type MurmurPlanPurchaseOutcome = "cancelled" | "purchased";
-
-export async function presentMurmurPaywall(
-  serverOfferingId: string | null = null,
-): Promise<MurmurPaywallOutcome> {
-  requireRevenueCat();
-  const offering = await loadOffering(serverOfferingId);
-  const result = await RevenueCatUI.presentPaywall({
-    displayCloseButton: true,
-    offering,
-  });
-  switch (result) {
-    case PAYWALL_RESULT.PURCHASED:
-      return "purchased";
-    case PAYWALL_RESULT.RESTORED:
-      return "restored";
-    case PAYWALL_RESULT.CANCELLED:
-      return "cancelled";
-    case PAYWALL_RESULT.ERROR:
-      return "failed";
-    default:
-      return "not_presented";
-  }
-}
 
 export async function loadMurmurPlans(serverOfferingId: string | null): Promise<MurmurPlan[]> {
   requireRevenueCat();
   const offering = await loadOffering(serverOfferingId);
-  const plans = offering.availablePackages.map(toMurmurPlan);
-  return [
-    ...plans.filter((plan) => plan.kind === "pro"),
-    ...plans.filter((plan) => plan.kind === "top_up"),
-  ];
+  return offering.availablePackages.map(toMurmurPlan);
 }
 
 export async function purchaseMurmurPlan(
@@ -134,16 +100,30 @@ const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
 
 function toMurmurPlan(storePackage: PurchasesPackage): MurmurPlan {
   const { product } = storePackage;
-  const isSubscription = product.productCategory === PRODUCT_CATEGORY.SUBSCRIPTION;
-  const period = product.subscriptionPeriod
-    ? subscriptionPeriodLabels[product.subscriptionPeriod]
-    : undefined;
+  const term = planTerm(storePackage);
+  const periodLabel = term === "pack"
+    ? null
+    : subscriptionPeriodLabels[product.subscriptionPeriod ?? ""] ??
+      (term === "yearly" ? "year" : "month");
   return {
+    description: product.description,
     id: storePackage.identifier,
-    kind: isSubscription ? "pro" : "top_up",
-    price: period ? `${product.priceString} / ${period}` : product.priceString,
+    periodLabel,
+    price: product.priceString,
+    priceAmount: product.price,
+    pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
+    term,
     title: product.title.replace(storeAppNameSuffix, "") || product.identifier,
   };
+}
+
+function planTerm(storePackage: PurchasesPackage): PlanTerm {
+  if (storePackage.product.productCategory !== PRODUCT_CATEGORY.SUBSCRIPTION) {
+    return "pack";
+  }
+  const isYearly = storePackage.packageType === PACKAGE_TYPE.ANNUAL ||
+    storePackage.product.subscriptionPeriod === "P1Y";
+  return isYearly ? "yearly" : "monthly";
 }
 
 function isUserCancellation(failure: unknown): boolean {

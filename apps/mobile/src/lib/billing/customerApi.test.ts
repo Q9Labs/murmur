@@ -88,6 +88,7 @@ describe("fetchMurmurAppConfig", () => {
     configRequest.mockResolvedValue(Response.json({ low_balance_threshold_minutes: 10 }));
 
     await expect(fetchMurmurAppConfig()).resolves.toEqual({
+      enabledLanguages: null,
       lowBalanceThresholdMinutes: 10,
       paywallOfferingId: null,
     });
