@@ -44,6 +44,8 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
     refresh: vi.fn(async () => undefined),
     restorePurchases: vi.fn(async () => undefined),
     sendSignInCode: vi.fn(async () => undefined),
+    signInWithApple: vi.fn(async () => undefined),
+    signInWithGoogle: vi.fn(async () => undefined),
     switchAccount: vi.fn(async () => undefined),
     syncing: false,
     verifySignInCode: vi.fn(async () => undefined),
@@ -58,6 +60,7 @@ export const fixtureMonthly: MurmurPlan = {
   priceAmount: 9.99,
   pricePerMonth: null,
   term: "monthly",
+  tier: "pro",
   title: "Murmur Pro",
 };
 
@@ -69,6 +72,7 @@ export const fixtureYearly: MurmurPlan = {
   priceAmount: 99.99,
   pricePerMonth: "$8.33",
   term: "yearly",
+  tier: "pro",
   title: "Murmur Pro Annual",
 };
 
@@ -80,6 +84,7 @@ export const fixturePack: MurmurPlan = {
   priceAmount: 7.99,
   pricePerMonth: null,
   term: "pack",
+  tier: null,
   title: "Trip Pass",
 };
 

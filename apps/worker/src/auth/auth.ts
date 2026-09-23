@@ -15,6 +15,7 @@ import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
 import { hashInstallId } from "../privacy";
 import { getServerConfig } from "../serverConfig";
+import { socialProviders } from "./socialProviders";
 
 const localDevelopmentSecret = "murmur-local-development-secret-change-before-deploy";
 const guestEmailDomain = "guest.murmur.invalid";
@@ -127,6 +128,7 @@ export function createMurmurAuth(
       window: 60,
     },
     secret,
+    socialProviders: socialProviders(env),
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       freshAge: 60 * 60 * 24,
@@ -135,7 +137,7 @@ export function createMurmurAuth(
     user: {
       deleteUser: { enabled: true },
     },
-    trustedOrigins: trustedOrigins(env.MURMUR_ENV),
+    trustedOrigins: [...trustedOrigins(env.MURMUR_ENV), "https://appleid.apple.com"],
   });
 }
 

@@ -49,6 +49,7 @@ import {
   purchaseMurmurPlan,
   restoreMurmurPurchases,
 } from "./revenueCat";
+import { yearlySaving } from "./planCatalog";
 
 function storePackage(params: {
   amount: number;
@@ -158,6 +159,7 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 7.99,
         pricePerMonth: null,
         term: "pack",
+        tier: null,
         title: "Trip Pass",
       },
       {
@@ -168,6 +170,7 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 9.99,
         pricePerMonth: null,
         term: "monthly",
+        tier: "pro",
         title: "Murmur Pro",
       },
       {
@@ -178,9 +181,36 @@ describe("RevenueCat mobile adapter", () => {
         priceAmount: 99.99,
         pricePerMonth: "$8.33",
         term: "yearly",
+        tier: "pro",
         title: "Murmur Pro Annual",
       },
     ]);
+  });
+
+  it("uses the matching live Pro Max price when showing annual savings", async () => {
+    await configureRevenueCat("customer-2");
+    const proMaxPackages = [
+      storePackage({
+        amount: 29.99, category: "SUBSCRIPTION", description: "400 minutes a month",
+        identifier: "promax_monthly", packageType: "MONTHLY", period: "P1M",
+        price: "$29.99", title: "Murmur Pro Max",
+      }),
+      storePackage({
+        amount: 299.99, category: "SUBSCRIPTION", description: "400 minutes a month",
+        identifier: "promax_annual", packageType: "ANNUAL", period: "P1Y",
+        price: "$299.99", title: "Murmur Pro Max Annual",
+      }),
+    ];
+    store.getOfferings.mockResolvedValue({
+      all: { max: { availablePackages: [...launchPackages, ...proMaxPackages], identifier: "max" } },
+      current: null,
+    });
+
+    const plans = await loadMurmurPlans("max");
+    const annual = plans.find((plan) => plan.id === "promax_annual");
+    expect(annual?.tier).toBe("pro_max");
+    if (!annual) throw new Error("Pro Max annual plan was not loaded");
+    expect(yearlySaving(annual, plans)).toEqual({ monthsFree: 1, percent: 16 });
   });
 
   it("buys the chosen package and reports a store cancellation separately", async () => {

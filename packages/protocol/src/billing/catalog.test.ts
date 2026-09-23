@@ -50,6 +50,19 @@ describe("billing catalog", () => {
     expect(ids.some((id) => id.includes("180") || id.includes("540"))).toBe(false);
   });
 
+  it("recognizes retired purchases for entitlement and refund handling without offering them for sale", () => {
+    expect(findBillingProduct("google", "murmur_pro_offer:monthly")?.grantMs).toBe(180 * 60_000);
+    expect(findBillingProduct("apple", "com.q9labsai.murmur.pro.annual.in.offer")?.grantMs)
+      .toBe(liteProAllowanceMs);
+    expect(findBillingProduct("google", "murmur_pro_in_offer:annual")?.kind).toBe("subscription");
+    expect(findBillingProduct("apple", "com.q9labsai.murmur.credits.180")?.grantMs)
+      .toBe(180 * 60_000);
+    expect(findBillingProduct("google", "murmur_credits_540")?.kind).toBe("credit_pack");
+    expect(isPersonalOfferProduct("murmur_pro_offer:monthly")).toBe(true);
+    expect(billingProducts.some((product) => product.code === "credits_180" || product.code === "credits_540"))
+      .toBe(false);
+  });
+
   it("does not accept an unknown store product", () => {
     expect(findBillingProduct("apple", "com.example.unknown")).toBeNull();
     expect(findBillingProduct("google", "unknown")).toBeNull();

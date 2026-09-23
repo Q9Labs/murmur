@@ -19,6 +19,7 @@ function plan(overrides: Partial<MurmurPlan> & Pick<MurmurPlan, "id" | "term">):
     price: "$0",
     priceAmount: 0,
     pricePerMonth: null,
+    tier: overrides.term === "pack" ? null : "pro",
     title: overrides.id,
     ...overrides,
   };
@@ -136,6 +137,7 @@ describe("plan catalog", () => {
         priceAmount: 9.99,
         pricePerMonth: null,
         term: "monthly",
+        tier: "pro",
         title: "Murmur Pro",
       },
       {
@@ -146,6 +148,7 @@ describe("plan catalog", () => {
         priceAmount: 99.99,
         pricePerMonth: "$8.33",
         term: "yearly",
+        tier: "pro",
         title: "Murmur Pro Annual",
       },
       {
@@ -156,6 +159,7 @@ describe("plan catalog", () => {
         priceAmount: 7.99,
         pricePerMonth: null,
         term: "pack",
+        tier: null,
         title: "Trip Pass, 60 minutes",
       },
       {
@@ -166,8 +170,23 @@ describe("plan catalog", () => {
         priceAmount: 29.99,
         pricePerMonth: null,
         term: "monthly",
+        tier: "pro_max",
         title: "Murmur Pro Max",
       },
     ]);
+  });
+
+  it("compares annual Pro Max savings with Pro Max monthly rather than Pro monthly", () => {
+    const proMaxMonthly = plan({
+      id: "promax_monthly", periodLabel: "month", priceAmount: 29.99,
+      term: "monthly", tier: "pro_max",
+    });
+    const proMaxYearly = plan({
+      id: "promax_annual", periodLabel: "year", priceAmount: 299.99,
+      term: "yearly", tier: "pro_max",
+    });
+    expect(yearlySaving(proMaxYearly, [monthly, proMaxMonthly, proMaxYearly]))
+      .toEqual({ monthsFree: 1, percent: 16 });
+    expect(yearlySaving(proMaxYearly, [monthly, proMaxYearly])).toBeNull();
   });
 });

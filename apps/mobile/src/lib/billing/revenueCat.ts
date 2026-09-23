@@ -110,6 +110,7 @@ function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): Murmu
   const { product } = storePackage;
   const selectedPrice = selectedPlayPrice(storePackage, offeringId);
   const term = planTerm(storePackage);
+  const subscriptionTier = storePackage.identifier.startsWith("promax_") ? "pro_max" : "pro";
   return {
     description: product.description,
     id: storePackage.identifier,
@@ -118,6 +119,7 @@ function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): Murmu
     priceAmount: selectedPrice ? selectedPrice.amountMicros / 1_000_000 : product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
     term,
+    tier: term === "pack" ? null : subscriptionTier,
     title: product.title.replace(storeAppNameSuffix, "") || product.identifier,
   };
 }

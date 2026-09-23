@@ -24,6 +24,7 @@ type ActiveSubscriptionRow = {
 type ActiveSubscription = ActiveSubscriptionRow & { product: BillingProduct };
 
 type UsedFreeRow = { used_free_ms: number };
+type ExistingGrantRow = { original_ms: number };
 
 export type CustomerPlan = "free" | "pro" | "pro_max";
 
@@ -111,12 +112,16 @@ export async function ensureCurrentAllowance(params: {
       params.nowMs,
     )
     .run();
-  const grantMs = period.periodKey.endsWith(":0")
+  const existingGrant = await database
+    .prepare("SELECT original_ms FROM balance_grants WHERE customer_id = ? AND grant_key = ?")
+    .bind(params.customerId, period.periodKey)
+    .first<ExistingGrantRow>();
+  const grantMs = existingGrant?.original_ms ?? (period.periodKey.endsWith(":0")
     ? firstProGrantMs(
       await usedFreeMs(database, params.customerId, period.startsAtMs),
       subscription.product.grantMs,
     )
-    : subscription.product.grantMs;
+    : subscription.product.grantMs);
   if (grantMs <= 0) {
     throw new Error("Free usage exhausted the first Pro allowance period");
   }

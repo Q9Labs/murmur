@@ -10,6 +10,7 @@ export type MurmurPlan = {
   priceAmount: number;
   pricePerMonth: string | null;
   term: PlanTerm;
+  tier: "pro" | "pro_max" | null;
   title: string;
 };
 
@@ -44,7 +45,8 @@ export type YearlySaving = {
 };
 
 export function yearlySaving(yearly: MurmurPlan, plans: MurmurPlan[]): YearlySaving | null {
-  const monthly = plans.find((plan) => plan.term === "monthly" && plan.periodLabel === "month");
+  const monthly = plans.find((plan) => plan.term === "monthly" &&
+    plan.periodLabel === "month" && plan.tier === yearly.tier);
   if (yearly.term !== "yearly" || !monthly || monthly.priceAmount <= 0) {
     return null;
   }
@@ -126,6 +128,7 @@ function catalogPlan(product: BillingProduct, priceUsdCents: number): MurmurPlan
       periodLabel: null,
       pricePerMonth: null,
       term,
+      tier: null,
       title: `${title}, ${minutes} minutes`,
     };
   }
@@ -135,6 +138,7 @@ function catalogPlan(product: BillingProduct, priceUsdCents: number): MurmurPlan
     periodLabel: subscriptionDetails[term].periodLabel,
     pricePerMonth: term === "yearly" ? formatUsd(priceUsdCents / 12) : null,
     term,
+    tier: product.grantMs === proMaxAllowanceMs ? "pro_max" : "pro",
     title: product.grantMs === proMaxAllowanceMs
       ? term === "yearly" ? "Murmur Pro Max Annual" : "Murmur Pro Max"
       : subscriptionDetails[term].title,
