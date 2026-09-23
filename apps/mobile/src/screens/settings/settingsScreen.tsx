@@ -30,7 +30,12 @@ export function SettingsScreen(): ReactNode {
   return (
     <ScreenScaffold title="Settings">
       <RowGroup>
-        <LinkRow label="Account" onPress={() => router.push("/account")} value={accountValue} />
+        <LinkRow
+          disabled={locked}
+          label="Account"
+          onPress={() => router.push("/account")}
+          value={accountValue}
+        />
       </RowGroup>
       {controls ? (
         <RowGroup>

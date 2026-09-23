@@ -7,18 +7,21 @@ import { router } from "../__tests__/navigation";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
 const billingRef = vi.hoisted(() => ({ current: null as MurmurBillingContext | null }));
+const accountLock = vi.hoisted(() => ({ locked: false }));
 
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => billingRef.current }));
+vi.mock("../settings/settingsControls", () => ({ useSettingsControls: () => accountLock }));
 
 import { AccountScreen, formatMinutes } from "./accountScreen";
 
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
+  accountLock.locked = false;
 });
 
 describe("account screen", () => {
@@ -50,6 +53,17 @@ describe("account screen", () => {
     findControl("Use a different account")?.onPress?.();
     recorded.alerts[1]?.buttons[1]?.onPress?.();
     expect(billingRef.current.switchAccount).toHaveBeenCalledOnce();
+  });
+
+  it("locks every account action during a live session", () => {
+    accountLock.locked = true;
+    billingRef.current = fixtureBilling({ isRegistered: true, plan: "pro" });
+    const markup = renderToStaticMarkup(<AccountScreen />);
+
+    expect(markup).toContain("Stop translating to manage your account.");
+    for (const label of ["Restore purchases", "Manage subscription", "Refresh balance", "Use a different account", "Delete account"]) {
+      expect(findControl(label)?.disabled).toBe(true);
+    }
   });
 
   it("formats minutes and hours", () => {

@@ -64,6 +64,7 @@ describe("settings screen", () => {
     renderToStaticMarkup(<SettingsScreen />);
 
     expect(findControl("Delete local data")?.disabled).toBe(true);
+    expect(findControl("Account, Guest")?.disabled).toBe(true);
     expect(recorded.switches[0]?.disabled).toBe(true);
   });
 

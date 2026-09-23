@@ -7,20 +7,26 @@ import type { MurmurCustomer } from "../../lib/billing/customerResponse";
 import { darkMurmurTheme, lightMurmurTheme, type MurmurTheme, useMurmurTheme } from "../../home/theme";
 import { LinkRow, RowGroup } from "../rowGroup";
 import { PrimaryAction, ScreenScaffold, StatusLine } from "../screenScaffold";
+import { useSettingsControls } from "../settings/settingsControls";
 
 export function AccountScreen(): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
   const customer = billing.customer;
   const registered = customer?.isRegistered === true;
-  const storeUnavailable = billing.busy || !billing.purchasesAvailable;
+  const locked = useSettingsControls()?.locked === true;
+  const busy = billing.busy || locked;
+  const storeUnavailable = busy || !billing.purchasesAvailable;
 
   return (
     <ScreenScaffold
-      footer={<PrimaryAction label="Get more time" onPress={() => router.push("/plans")} />}
+      footer={
+        <PrimaryAction disabled={locked} label="Get more time" onPress={() => router.push("/plans")} />
+      }
       title="Account"
     >
       <BalanceHero customer={customer} />
+      <StatusLine error={null} notice={locked ? "Stop translating to manage your account." : null} />
       {registered ? (
         <RowGroup>
           <LinkRow
@@ -36,24 +42,24 @@ export function AccountScreen(): ReactNode {
             />
           ) : null}
           <LinkRow
-            disabled={billing.busy}
+            disabled={busy}
             label={billing.syncing ? "Syncing balance…" : "Refresh balance"}
             onPress={() => void billing.refresh()}
           />
           <LinkRow
-            disabled={billing.busy}
+            disabled={busy}
             label="Use a different account"
             onPress={() => confirmAccountSwitch(billing.switchAccount)}
           />
         </RowGroup>
       ) : (
         <RowGroup>
-          <LinkRow label="Sign in" onPress={() => router.push("/sign-in")} />
+          <LinkRow disabled={locked} label="Sign in" onPress={() => router.push("/sign-in")} />
         </RowGroup>
       )}
       <RowGroup>
         <LinkRow
-          disabled={billing.busy}
+          disabled={busy}
           label="Delete account"
           onPress={() => confirmAccountDeletion(billing.deleteAccount)}
           tone="danger"

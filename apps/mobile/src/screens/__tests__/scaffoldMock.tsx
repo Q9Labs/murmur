@@ -12,8 +12,13 @@ export function ScreenScaffold(props: { children: ReactNode; footer?: ReactNode;
   );
 }
 
-export function PrimaryAction(props: { label: string; onPress: () => void }): ReactNode {
-  recorded.controls.push({ accessibilityLabel: props.label, accessibilityRole: "button", onPress: props.onPress });
+export function PrimaryAction(props: { disabled?: boolean; label: string; onPress: () => void }): ReactNode {
+  recorded.controls.push({
+    accessibilityLabel: props.label,
+    accessibilityRole: "button",
+    disabled: props.disabled,
+    onPress: props.onPress,
+  });
   return <button>{props.label}</button>;
 }
 
