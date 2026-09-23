@@ -16,6 +16,8 @@ import {
   isBillingEnforced,
 } from "../env";
 import { json } from "../http/response";
+import { recordInsightsConsent } from "../insights/sessionInsights";
+import * as Sentry from "@sentry/cloudflare";
 import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { hashInstallId, logWorkerEvent } from "../privacy";
 import {
@@ -83,6 +85,20 @@ export async function createSession(
     return billingUsage.response;
   }
   const sessionDurationMs = billingUsage.sessionDurationMs;
+  try {
+    const customerSession = await getMurmurSession(request, env);
+    await recordInsightsConsent(env, {
+      appSessionId,
+      consent: parsed.value.insightsConsent,
+      createdAt: new Date(nowMs).toISOString(),
+      customerId: customerSession?.user.id ?? null,
+      hashedInstallId: authorized.hashedInstallId,
+      sourceLanguage: parsed.value.sourceLanguage,
+      targetLanguage: parsed.value.targetLanguage,
+    });
+  } catch (failure) {
+    Sentry.captureException(failure, { tags: { operation: "record_insights_consent" } });
+  }
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
     event: "session_created",
@@ -272,6 +288,7 @@ export async function prepareBillingUsage(
 type ParsedCreateSessionRequest = {
   acquisition?: AcquisitionContext;
   analyticsEnabled: boolean;
+  insightsConsent: boolean;
   appInstallId: string;
   appPlatform: "android" | "ios" | null;
   appVersion: string | null;
@@ -293,6 +310,9 @@ function parseCreateSessionRequest(
   if (body.playback_enabled !== undefined && typeof body.playback_enabled !== "boolean") {
     return { ok: false, response: json({ error: "invalid_playback_enabled" }, 400) };
   }
+  if (body.insights_consent !== undefined && typeof body.insights_consent !== "boolean") {
+    return { ok: false, response: json({ error: "invalid_insights_consent" }, 400) };
+  }
   const languagePair = parseLanguagePair(body.source_language, body.target_language);
   if ("error" in languagePair) {
     return { ok: false, response: json({ error: languagePair.error }, 400) };
@@ -303,6 +323,7 @@ function parseCreateSessionRequest(
     value: {
       acquisition: normalizeAcquisitionContext(body.acquisition),
       analyticsEnabled: body.analytics_enabled === true,
+      insightsConsent: body.insights_consent === true,
       appInstallId: body.app_install_id,
       deviceIntegrity,
       appPlatform: parseAppPlatform(body.app_platform, deviceIntegrity.platform),

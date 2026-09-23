@@ -12,6 +12,7 @@ describe("server configuration", () => {
     expect(config.source_transcript).toBe(false);
     expect(config.free_allowance_minutes).toBe(5);
     expect(config.max_session_seconds).toBe(300);
+    expect(config.insights_model).toBe("openai/gpt-6-luna");
   });
 
   it("evaluates typed flags with the worker telemetry identity", async () => {

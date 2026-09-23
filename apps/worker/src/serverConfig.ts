@@ -10,6 +10,7 @@ import { defaultRateLimits } from "./limits";
 export type ServerConfig = Omit<AppConfigResponse, "personal_offer"> & {
   device_integrity_required: boolean;
   free_allowance_minutes: number;
+  insights_model: string;
   max_session_seconds: number;
   output_audio_enabled: boolean;
   personal_offer_enabled: boolean;
@@ -35,6 +36,7 @@ export function defaultServerConfig(env: Env): ServerConfig {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
     free_allowance_minutes: freeAllowanceMs / 60_000,
+    insights_model: "openai/gpt-6-luna",
     low_balance_threshold_minutes: 15,
     max_session_seconds: defaultRateLimits.maxSessionSeconds,
     min_app_version_android: null,
@@ -137,6 +139,7 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
       ? languages
       : defaults.enabled_languages,
     free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
+    insights_model: string("insights_model", defaults.insights_model),
     low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
     max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
     min_app_version_android: optionalString("min_app_version_android"),

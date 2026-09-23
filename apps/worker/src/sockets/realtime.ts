@@ -14,6 +14,7 @@ import {
 import { findOpenUsageSession } from "../billing/usageSessionStore";
 import { type Env, getRealtimeApiKey, isBillingEnforced } from "../env";
 import { getServerConfig, type ServerConfig } from "../serverConfig";
+import { createInsightCollector, discardInsightSession, loadInsightSession, processSessionInsight, type InsightSessionContext } from "../insights/sessionInsights";
 import {
   closeSocket,
   send,
@@ -134,6 +135,11 @@ export async function proxyRealtimeSession(
     throw failure;
   }
   const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
+  const insightCollector = createInsightCollector();
+  const insightSession = await loadInsightSession(env, appSessionId).catch((failure: unknown) => {
+    Sentry.captureException(failure, { tags: { operation: "load_insight_session" } });
+    return null;
+  });
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
@@ -205,6 +211,10 @@ export async function proxyRealtimeSession(
       telemetry,
       createSessionEndedEvent(telemetry, termination.outcome, termination.failureCode),
     );
+    queueSessionInsight({
+      analyticsEnabled: validated.analyticsEnabled,
+      appSessionId, collector: insightCollector, config, context, env, session: insightSession,
+    });
   };
   const clearRealtimeTimers = (): void => {
     if (deadlineTimer) {
@@ -398,6 +408,7 @@ export async function proxyRealtimeSession(
     terminate,
     () => playback.enabled && config.output_audio_enabled,
     config.source_transcript,
+    (delta) => insightCollector.add(delta),
   );
   try {
     upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
@@ -664,6 +675,7 @@ function bindProviderEvents(
   terminate: (termination: RealtimeTermination) => void,
   isPlaybackEnabled: () => boolean,
   sourceTranscript: boolean,
+  onTranslation: (delta: string) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
     try {
@@ -675,6 +687,9 @@ function bindProviderEvents(
         return;
       }
       if (output.kind === "event") {
+        if (output.event.kind === "translation_delta") {
+          onTranslation(output.event.delta);
+        }
         if (output.event.kind === "source_delta" && !sourceTranscript) {
           return;
         }
@@ -767,6 +782,33 @@ type RealtimeTermination = {
   retryable: boolean;
   socketCode: number;
 };
+
+function queueSessionInsight(params: {
+  analyticsEnabled: boolean;
+  appSessionId: string;
+  collector: ReturnType<typeof createInsightCollector>;
+  config: ServerConfig;
+  context?: TelemetryExecutionContext;
+  env: Env;
+  session: InsightSessionContext | null;
+}): void {
+  const translation = params.collector.finish();
+  if (!params.session) return;
+  const processing = translation
+    ? processSessionInsight({
+        analyticsEnabled: params.analyticsEnabled,
+        configModel: params.config.insights_model,
+        context: params.context,
+        env: params.env,
+        session: params.session,
+        translation,
+      })
+    : discardInsightSession(params.env, params.appSessionId).catch((failure: unknown) => {
+        Sentry.captureException(failure, { tags: { operation: "discard_insight_session" } });
+      });
+  if (params.context) params.context.waitUntil(processing);
+  else void processing;
+}
 
 type RealtimeTelemetry = {
   analyticsEnabled: boolean;

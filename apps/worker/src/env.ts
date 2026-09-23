@@ -20,6 +20,7 @@ export type Env = {
   MURMUR_REQUIRE_DEVICE_INTEGRITY?: string;
   OPENAI_API_KEY?: string;
   OPENAI_REALTIME_MODEL?: string;
+  OPENROUTER_API_KEY?: string;
   POSTHOG_PROJECT_TOKEN?: string;
   RATE_LIMITER?: DurableObjectNamespace;
   RESEND_API_KEY?: string;
