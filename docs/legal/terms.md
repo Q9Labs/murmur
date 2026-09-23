@@ -20,7 +20,7 @@ You can report translation issues in the app. Reports help support and quality r
 
 ## Accounts, Plans, Credits, and Usage
 
-Murmur creates a guest customer account automatically. A guest can use the available Free allowance and can purchase, restore, and reconcile store purchases without adding an email or creating a registered account. You may save a guest purchase to an account using Apple, Google, or email sign-in; Murmur then links the guest's purchase and remaining balance to that account so they can be recovered on another device.
+Murmur creates a guest customer account automatically. A guest can use the available Free allowance and can purchase, restore, and reconcile store purchases without adding an email or creating a registered account. You may save a guest purchase to an account using Apple, Google, or email sign-in; Murmur then links the guest's purchase and remaining balance to that account so they can be recovered on another device. Apple provides your email address and, if you share it with Apple on first sign-in, your name; Murmur stores those details with your account until account deletion. Google provides your email address and, when available, your name and profile image; Murmur stores the profile information Google provides with your account until account deletion.
 
 The app shows the current Free allowance, plan limits, credit value, price, and renewal terms before purchase. Paid allowances and credit packs are subject to the expiry shown in the app; credit packs expire 90 days after purchase. Monthly plans renew each month. Annual plans renew yearly, with allowance timing shown in the app. Unused Free or plan allowances do not roll over.
 

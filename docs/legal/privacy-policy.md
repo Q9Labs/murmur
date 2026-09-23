@@ -28,7 +28,7 @@ Murmur stores the derived insight, not the transcript. The record is associated 
 
 Murmur creates a random guest customer identifier so it can provide Free time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.
 
-You may save a purchase by signing in with Apple, Google, or email. For Apple sign-in, the app requests your email address and full name; Murmur receives your email address and your name if you choose to share it and Apple provides it on first sign-in, along with Apple's stable account identifier. For Google sign-in, Murmur receives your email address and Google's stable account identifier. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.
+You may save a purchase by signing in with Apple, Google, or email. For Apple sign-in, Murmur receives your email address and, if you share it with Apple on first sign-in, your name. Murmur stores your email address, the name you share, and Apple's stable account identifier with your account until you delete the account. For Google sign-in, Murmur receives your email address and, when Google provides them, your name and profile image. Murmur stores the received profile information and Google's stable account identifier with your account until you delete the account. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.
 
 Murmur stores plan state, credit grants, usage debits, renewal, restore and refund records, and store transaction identifiers in an entitlement ledger. RevenueCat and the applicable app store help validate and manage purchases. Murmur does not receive or store payment-card details.
 
@@ -66,7 +66,7 @@ Murmur sends data to these service providers to operate the app:
 - **PostHog** receives relayed product analytics and direct session-replay traffic.
 - **Sentry** receives sanitized crash, error, and performance diagnostics.
 - **RevenueCat** processes subscription and purchase lifecycle information.
-- **Apple and Google** provide sign-in and app-store purchase services. Apple also receives iOS AdServices attribution requests; Google services provide Android Play Install Referrer and Play Integrity flows.
+- **Apple and Google** provide sign-in and app-store purchase services. Apple also receives iOS AdServices attribution requests; Google services provide Android Play Install Referrer and Play Integrity flows. The sign-in profile information Murmur stores with your account is described above and is removed when you delete the account.
 - **Resend** delivers email sign-in codes.
 - **A report webhook operator**, if Murmur's report webhook is configured, may receive submitted report data.
 

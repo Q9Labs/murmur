@@ -51,7 +51,7 @@ User-submitted translation report
 - **PostHog:** allowlisted product events through the Worker relay and direct session-replay traffic.
 - **Sentry:** sanitized mobile and Worker crash, error, and performance diagnostics.
 - **RevenueCat:** subscription and purchase lifecycle information.
-- **Apple and Google:** sign-in and app-store purchase services; Apple AdServices attribution resolution on iOS; Play Install Referrer and Play Integrity services on Android.
+- **Apple and Google:** sign-in and app-store purchase services; Apple AdServices attribution resolution on iOS; Play Install Referrer and Play Integrity services on Android. Apple provides the email address and any name shared on first sign-in; Google provides the email address and, when available, name and profile image. Murmur stores the received profile information with the account until account deletion.
 - **Resend:** email sign-in code delivery.
 - **The operator of REPORT_WEBHOOK_URL, when configured:** user-submitted translation reports.
 

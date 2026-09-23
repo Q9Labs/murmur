@@ -16,6 +16,8 @@ Current public support surface:
 
 Murmur creates a random guest customer account when the app first starts. Guests can purchase, restore, and reconcile purchases without an email or registered account. A user can optionally save a guest purchase to an Apple, Google, or email account; Murmur links the guest's purchase and remaining balance to that account. Murmur does not keep cloud transcript history. For eligible paid users, Murmur saves translated captions locally on the device only.
 
+With Apple sign-in, Murmur stores your email address and, if you share it with Apple on first sign-in, your name with your account until account deletion. Google sign-in provides your email address and, when available, your name and profile image; Murmur stores the profile information Google provides with your account until account deletion.
+
 Deleting a Murmur account removes the account and authentication records, associated Session Insights, and rating responses linked to that account. The billing ledger may retain deleted-state purchase, entitlement, usage, refund, and reconciliation records. Account deletion does not cancel an Apple or Google subscription and does not erase local translation history.
 
 If a user consents to AI Session Insights, translated text from that consented session is sent to OpenRouter to create a derived insight. Turning off AI Session Insights stops collection for future sessions but does not delete existing insights. A daily job deletes insights after 24 months; account deletion removes associated insights sooner.
