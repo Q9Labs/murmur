@@ -26,13 +26,48 @@ describe("decodeCustomer", () => {
       availableMs: 1_800_000,
       creditMs: 0,
       customerId: "customer_1",
+      creditPacks: [],
       earliestExpiryAtMs: 1_800_000_000_000,
+      entitlements: { pro: false, proMax: false },
+      features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
       fulfillmentEnabled: true,
       isRegistered: false,
       negativeMs: 0,
       plan: "free",
       purchasesEnabled: false,
       revenueCatCustomerId: "customer_1",
+    });
+  });
+
+  it("decodes Pro Max features and individual pack expiries", () => {
+    expect(decodeCustomer({
+      balance: {
+        allowance_ms: 400 * 60_000,
+        available_ms: 430 * 60_000,
+        credit_ms: 30 * 60_000,
+        earliest_expiry_at_ms: 1_800_000_000_000,
+        negative_ms: 0,
+      },
+      credit_packs: [{
+        grant_id: `grant:${"transaction-".repeat(30)}`,
+        remaining_ms: 30 * 60_000,
+        expires_at_ms: 1_801_000_000_000,
+      }],
+      customer_id: "customer_1",
+      entitlements: { pro: true, pro_max: true },
+      features: { history: true, max_session_seconds: 3_600, phone_audio: true },
+      is_registered: false,
+      plan: "pro_max",
+      purchases_enabled: true,
+    })).toMatchObject({
+      creditPacks: [{
+        grantId: `grant:${"transaction-".repeat(30)}`,
+        remainingMs: 30 * 60_000,
+        expiresAtMs: 1_801_000_000_000,
+      }],
+      entitlements: { pro: true, proMax: true },
+      features: { history: true, maxSessionSeconds: 3_600, phoneAudio: true },
+      plan: "pro_max",
     });
   });
 
@@ -91,6 +126,7 @@ describe("fetchMurmurAppConfig", () => {
       enabledLanguages: null,
       lowBalanceThresholdMinutes: 10,
       paywallOfferingId: null,
+      personalOffer: null,
     });
   });
 });

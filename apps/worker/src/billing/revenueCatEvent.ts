@@ -1,4 +1,8 @@
-import type { StoreProvider } from "./catalog";
+import {
+  findBillingProduct,
+  type BillingProduct,
+  type StoreProvider,
+} from "./catalog";
 
 export type RevenueCatEvent = {
   aliases: string[];
@@ -11,6 +15,8 @@ export type RevenueCatEvent = {
   originalAppUserId: string;
   originalPurchasedAtMs: number | null;
   originalTransactionId: string | null;
+  offerId?: string | null;
+  presentedOfferingId?: string | null;
   productId: string | null;
   provider: StoreProvider | null;
   purchasedAtMs: number | null;
@@ -93,6 +99,8 @@ export function decodeRevenueCatEvent(payload: unknown): RevenueCatEvent | null 
     originalAppUserId,
     originalPurchasedAtMs: optionalInteger(event, "original_purchase_at_ms"),
     originalTransactionId: optionalString(event, "original_transaction_id"),
+    offerId: optionalString(event, "offer_code"),
+    presentedOfferingId: optionalString(event, "presented_offering_id"),
     productId: optionalString(event, "product_id"),
     provider,
     purchasedAtMs: optionalInteger(event, "purchased_at_ms"),
@@ -112,6 +120,22 @@ function revenueCatEventObject(payload: unknown): object | null {
 
 export function revenueCatCustomerIds(event: RevenueCatEvent): string[] {
   return [...new Set([event.appUserId, event.originalAppUserId, ...event.aliases])];
+}
+
+export function revenueCatOfferId(event: RevenueCatEvent): string | null {
+  return event.offerId === "personal-20" ||
+    event.presentedOfferingId === "personal_offer" ||
+    event.presentedOfferingId === "lite_personal_offer"
+    ? "personal-20"
+    : null;
+}
+
+export function revenueCatBillingProduct(event: RevenueCatEvent): BillingProduct | null {
+  if (!event.provider || !event.productId) {
+    return null;
+  }
+  return findBillingProduct(event.provider, event.productId, revenueCatOfferId(event)) ??
+    findBillingProduct(event.provider, event.productId);
 }
 
 function requiredString(value: object, key: string): string | null {

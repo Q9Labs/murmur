@@ -5,6 +5,8 @@ import Purchases, {
   PRODUCT_CATEGORY,
   type PurchasesOffering,
   type PurchasesPackage,
+  type PurchasesStoreProduct,
+  type SubscriptionOption,
 } from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
@@ -44,7 +46,8 @@ export type MurmurPlanPurchaseOutcome = "cancelled" | "purchased";
 export async function loadMurmurPlans(serverOfferingId: string | null): Promise<MurmurPlan[]> {
   requireRevenueCat();
   const offering = await loadOffering(serverOfferingId);
-  return offering.availablePackages.map(toMurmurPlan);
+  return offering.availablePackages.map((storePackage) =>
+    toMurmurPlan(storePackage, offering.identifier));
 }
 
 export async function purchaseMurmurPlan(
@@ -58,7 +61,12 @@ export async function purchaseMurmurPlan(
     throw new Error("That plan is no longer available from the store.");
   }
   try {
-    await Purchases.purchasePackage(selected);
+    const playOption = selectedPlayOption(selected, offering.identifier);
+    if (playOption) {
+      await Purchases.purchaseSubscriptionOption(playOption);
+    } else {
+      await Purchases.purchasePackage(selected);
+    }
     return "purchased";
   } catch (failure) {
     if (isUserCancellation(failure)) {
@@ -98,23 +106,80 @@ const subscriptionPeriodLabels: Readonly<Partial<Record<string, string>>> = {
   P6M: "6 months",
 };
 
-function toMurmurPlan(storePackage: PurchasesPackage): MurmurPlan {
+function toMurmurPlan(storePackage: PurchasesPackage, offeringId: string): MurmurPlan {
   const { product } = storePackage;
+  const selectedPrice = selectedPlayPrice(storePackage, offeringId);
   const term = planTerm(storePackage);
-  const periodLabel = term === "pack"
-    ? null
-    : subscriptionPeriodLabels[product.subscriptionPeriod ?? ""] ??
-      (term === "yearly" ? "year" : "month");
   return {
     description: product.description,
     id: storePackage.identifier,
-    periodLabel,
-    price: product.priceString,
-    priceAmount: product.price,
+    periodLabel: planPeriodLabel(term, product.subscriptionPeriod),
+    price: selectedPrice?.formatted ?? product.priceString,
+    priceAmount: selectedPrice ? selectedPrice.amountMicros / 1_000_000 : product.price,
     pricePerMonth: term === "yearly" ? product.pricePerMonthString : null,
     term,
     title: product.title.replace(storeAppNameSuffix, "") || product.identifier,
   };
+}
+
+function selectedPlayPrice(storePackage: PurchasesPackage, offeringId: string) {
+  const option = selectedPlayOption(storePackage, offeringId);
+  if (!option) {
+    return null;
+  }
+  const price = personalPlayOffer(offeringId, storePackage.identifier)
+    ? option.introPhase?.price
+    : option.fullPricePhase?.price;
+  if (!price) {
+    throw new Error("That plan has no price available from Google Play.");
+  }
+  return price;
+}
+
+function planPeriodLabel(term: PlanTerm, subscriptionPeriod: string | null): string | null {
+  if (term === "pack") {
+    return null;
+  }
+  return subscriptionPeriodLabels[subscriptionPeriod ?? ""] ??
+    (term === "yearly" ? "year" : "month");
+}
+
+function selectedPlayOption(
+  storePackage: PurchasesPackage,
+  offeringId: string,
+): SubscriptionOption | null {
+  if (Platform.OS !== "android" ||
+    storePackage.product.productCategory !== PRODUCT_CATEGORY.SUBSCRIPTION) {
+    return null;
+  }
+  const { product } = storePackage;
+  const base = basePlayOption(product);
+  if (!base) {
+    throw new Error("The base subscription plan is not available from Google Play.");
+  }
+  if (!personalPlayOffer(offeringId, storePackage.identifier)) {
+    return base;
+  }
+  const offer = product.subscriptionOptions?.find((option) =>
+    option.storeProductId === product.identifier && option.id === `${base.id}:personal-20`);
+  if (!offer) {
+    throw new Error("The personal offer is not available for this Google Play account.");
+  }
+  return offer;
+}
+
+function basePlayOption(product: PurchasesStoreProduct): SubscriptionOption | null {
+  const listedBase = product.subscriptionOptions?.find((option) =>
+    option.isBasePlan && option.storeProductId === product.identifier);
+  if (listedBase) {
+    return listedBase;
+  }
+  return product.defaultOption?.isBasePlan ? product.defaultOption : null;
+}
+
+function personalPlayOffer(offeringId: string, packageId: string): boolean {
+  return (offeringId === "personal_offer" || offeringId === "lite_personal_offer") &&
+    (packageId === "$rc_monthly" || packageId === "$rc_annual");
 }
 
 function planTerm(storePackage: PurchasesPackage): PlanTerm {
