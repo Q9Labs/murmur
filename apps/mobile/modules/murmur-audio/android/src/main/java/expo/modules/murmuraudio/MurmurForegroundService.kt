@@ -341,8 +341,8 @@ class MurmurForegroundService : Service() {
     )
     return builder
       .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-      .setContentTitle(if (isDevicePlayback) "Murmur is capturing phone audio" else "Murmur is listening")
-      .setContentText(if (isDevicePlayback) "Device Audio translation is active" else "Live microphone translation is active")
+      .setContentTitle(if (isDevicePlayback) "Translating phone audio" else "Listening in background")
+      .setContentText(if (isDevicePlayback) "Murmur is translating audio playing on this phone." else "Murmur is translating what it hears.")
       .setOngoing(true)
       .setCategory(Notification.CATEGORY_SERVICE)
       .addAction(

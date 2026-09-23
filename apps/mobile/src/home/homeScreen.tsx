@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -42,6 +42,9 @@ import {
 import { hasTimeAvailable } from "../lib/billing/allowance";
 import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
+import { nextPostSessionPrompt, type PostSessionPrompt } from "../screens/postSessionPrompt";
+import { RatingSheet } from "../screens/rating/ratingSheet";
+import { useScreenServices } from "../screens/screenServices";
 import {
   type SettingsControls,
   usePublishSettingsControls,
@@ -205,6 +208,9 @@ export default function HomeScreen(): ReactNode {
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const router = useRouter();
+  const services = useScreenServices();
+  const { capture } = useLocalSearchParams<{ capture?: string }>();
+  const [ratingOpen, setRatingOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [outOfMinutesOpen, setOutOfMinutesOpen] = useState(false);
   const [updateRequiredOpen, setUpdateRequiredOpen] = useState(false);
@@ -468,6 +474,10 @@ export default function HomeScreen(): ReactNode {
     if (source === "device_playback" && !captureCapabilities.device_playback_supported) {
       return;
     }
+    if (source === "device_playback" && !services.features.phoneAudio) {
+      router.push("/phone-audio");
+      return;
+    }
     setCaptureSource(source);
     if (
       source !== "device_playback" ||
@@ -487,7 +497,14 @@ export default function HomeScreen(): ReactNode {
     if (viewModel.isLive) {
       const completion = await live.stop();
       if (completion) {
-        await handleCompletedSessionEngagement(completion);
+        const completed = await handleCompletedSessionEngagement(completion);
+        showPostSessionPrompt(nextPostSessionPrompt({
+          completed,
+          insightsConsent: services.insightsConsent,
+          phoneAudioGiftClaimable:
+            services.phoneAudioGift.claimable && captureCapabilities.device_playback_supported,
+          ratingDue: services.ratingDue,
+        }));
       }
       return;
     }
@@ -508,6 +525,16 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     await startLiveTranslation();
+  }
+
+  function showPostSessionPrompt(prompt: PostSessionPrompt | null): void {
+    if (prompt === "insights_consent") {
+      router.push("/insights-consent");
+    } else if (prompt === "phone_audio_gift") {
+      router.push("/phone-audio");
+    } else if (prompt === "rating") {
+      setRatingOpen(true);
+    }
   }
 
   function swapLanguages(): void {
@@ -553,6 +580,15 @@ export default function HomeScreen(): ReactNode {
   }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
 
+  // The Phone audio screen returns here with ?capture=phone-audio once the listener can use it.
+  const phoneAudioAvailable = services.features.phoneAudio;
+  useEffect(() => {
+    if (capture === "phone-audio" && phoneAudioAvailable) {
+      setCaptureSource("device_playback");
+      router.setParams({ capture: undefined });
+    }
+  }, [capture, phoneAudioAvailable, router]);
+
   if (onboardingStep !== "done") {
     return (
       <OnboardingScreen
@@ -580,45 +616,57 @@ export default function HomeScreen(): ReactNode {
   }
 
   return (
-    <HomeExperience
-      audioPlaybackAvailable={captureSource === "microphone"}
-      audioPlaybackEnabled={effectiveAudioPlaybackEnabled}
-      audioState={audioState}
-      autoScrollRef={autoScrollRef}
-      diagnosticsOpen={diagnosticsOpen}
-      developerToolsEnabled={__DEV__}
-      captureSource={captureSource}
-      devicePlaybackSupported={captureCapabilities.device_playback_supported}
-      live={live}
-      networkType={networkType}
-      onCloseDiagnostics={() => setDiagnosticsOpen(false)}
-      onClosePicker={() => setPickerMode(null)}
-      onCloseOutOfMinutes={() => setOutOfMinutesOpen(false)}
-      onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
-      onCaptureSourceChange={(source) => void selectCaptureSource(source)}
-      onAudioPlaybackEnabledChange={(enabled) => {
-        void audioPreferenceController.setEnabled(enabled);
-      }}
-      onOpenLowBalance={() => router.push("/plans")}
-      onOpenPicker={setPickerMode}
-      onOpenSettings={() => router.push("/settings")}
-      onPrimaryAction={() => void handlePrimaryAction()}
-      onSeePlans={() => {
-        setOutOfMinutesOpen(false);
-        router.push("/plans");
-      }}
-      onSwapLanguages={swapLanguages}
-      outOfMinutesOpen={outOfMinutesOpen}
-      pickerMode={pickerMode}
-      setSourceLanguageCode={setSourceLanguageCode}
-      setTargetLanguageCode={setTargetLanguageCode}
-      sourceLanguageCode={sourceLanguageCode}
-      targetLanguageCode={targetLanguageCode}
-      timelineRef={timelineRef}
-      updateRequiredOpen={updateRequiredOpen}
-      userInteractedRef={userInteractedRef}
-      viewModel={viewModel}
-    />
+    <>
+      <HomeExperience
+        audioPlaybackAvailable={captureSource === "microphone"}
+        audioPlaybackEnabled={effectiveAudioPlaybackEnabled}
+        audioState={audioState}
+        autoScrollRef={autoScrollRef}
+        diagnosticsOpen={diagnosticsOpen}
+        developerToolsEnabled={__DEV__}
+        captureSource={captureSource}
+        devicePlaybackSupported={captureCapabilities.device_playback_supported}
+        live={live}
+        networkType={networkType}
+        onCloseDiagnostics={() => setDiagnosticsOpen(false)}
+        onClosePicker={() => setPickerMode(null)}
+        onCloseOutOfMinutes={() => setOutOfMinutesOpen(false)}
+        onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
+        onCaptureSourceChange={(source) => void selectCaptureSource(source)}
+        onAudioPlaybackEnabledChange={(enabled) => {
+          void audioPreferenceController.setEnabled(enabled);
+        }}
+        onOpenLowBalance={() => router.push("/plans")}
+        onOpenPicker={setPickerMode}
+        onOpenSettings={() => router.push("/settings")}
+        onPrimaryAction={() => void handlePrimaryAction()}
+        onSeePlans={() => {
+          setOutOfMinutesOpen(false);
+          router.push("/plans");
+        }}
+        onSwapLanguages={swapLanguages}
+        outOfMinutesOpen={outOfMinutesOpen}
+        pickerMode={pickerMode}
+        setSourceLanguageCode={setSourceLanguageCode}
+        setTargetLanguageCode={setTargetLanguageCode}
+        sourceLanguageCode={sourceLanguageCode}
+        targetLanguageCode={targetLanguageCode}
+        timelineRef={timelineRef}
+        updateRequiredOpen={updateRequiredOpen}
+        userInteractedRef={userInteractedRef}
+        viewModel={viewModel}
+      />
+      <RatingSheet
+        onClose={() => setRatingOpen(false)}
+        onSubmit={(answer) => {
+          setRatingOpen(false);
+          services.submitRating(answer).catch((failure: unknown) => {
+            captureMobileFailure(failure, { operation: "submit_rating" });
+          });
+        }}
+        open={ratingOpen}
+      />
+    </>
   );
 }
 
@@ -645,20 +693,19 @@ async function resetIdentity(
   setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
 }
 
+// Resolves whether the session counts as completed, for the post-session prompts.
 async function handleCompletedSessionEngagement(
   outcome: Parameters<typeof recordSessionOutcome>[0]["outcome"],
-): Promise<void> {
+): Promise<boolean> {
   const appVersion = Constants.expoConfig?.version ?? "unknown";
   const engagement = await recordSessionOutcome({
     app_version: appVersion,
     outcome,
   });
-  if (!engagement.should_request_review) {
-    return;
-  }
-  if (await requestMurmurReview()) {
+  if (engagement.should_request_review && await requestMurmurReview()) {
     await markReviewRequested({ app_version: appVersion });
   }
+  return engagement.qualified;
 }
 
 async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {

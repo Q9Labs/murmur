@@ -19,6 +19,7 @@ export type VariantShellProps = {
   captureSource: AudioCaptureSource;
   devicePlaybackSupported: boolean;
   live: LiveTranslationController;
+  listeningInBackground: boolean;
   onAudioPlaybackEnabledChange: (enabled: boolean) => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenLowBalance: () => void;

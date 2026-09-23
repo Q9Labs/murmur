@@ -1,4 +1,5 @@
-import { Settings as SettingsIcon } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { History as HistoryIcon, Settings as SettingsIcon } from "lucide-react-native";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
   Animated,
@@ -20,6 +21,7 @@ import { SpanTimeline, StatusMessages } from "../shared";
 import { PrimaryAction, TextLanguageRow } from "../sharedControls";
 import type { VariantShellProps } from "../types";
 import { TranslatedAudioControl } from "./audioControl";
+import { BackgroundListeningPill } from "./backgroundListening";
 import { CaptureSourceControl } from "./captureSourceControl";
 import { useBloomStyles } from "./styles";
 
@@ -68,9 +70,11 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         {lowBalance ? (
           <LowBalancePill minutes={lowBalance} onPress={props.onOpenLowBalance} />
         ) : null}
-        <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-          {viewModel.statusText}
-        </Text>
+        {props.listeningInBackground ? <BackgroundListeningPill /> : (
+          <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
+            {viewModel.statusText}
+          </Text>
+        )}
         <CaptureSourceControl
           devicePlaybackSupported={props.devicePlaybackSupported}
           disabled={!viewModel.canChangeLanguages}
@@ -142,10 +146,19 @@ function BloomChrome({
   onOpenSettings: () => void;
 }): ReactNode {
   const { colors, styles } = useBloomStyles();
+  const router = useRouter();
   return (
     <View style={styles.chrome}>
       <BrandMark />
       <View style={styles.chromeActions}>
+        <Pressable
+          accessibilityLabel="Open conversation history"
+          accessibilityRole="button"
+          onPress={() => router.push("/history")}
+          style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
+        >
+          <HistoryIcon color={colors.primary} size={20} strokeWidth={2} />
+        </Pressable>
         <TranslatedAudioControl
           disabled={!audioPlaybackAvailable}
           enabled={audioPlaybackEnabled}
