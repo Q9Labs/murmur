@@ -8,7 +8,7 @@ import {
   didReconciliationAdvance,
   type ReconciliationSnapshot,
 } from "./reconciliation";
-import type { MurmurPaywallOutcome, MurmurPlan } from "./revenueCat";
+import type { MurmurPlan } from "./planCatalog";
 
 export type MurmurBillingContext = {
   busy: boolean;
@@ -19,7 +19,6 @@ export type MurmurBillingContext = {
   manageSubscription: () => Promise<void>;
   loadPlans: () => Promise<MurmurPlan[]>;
   notice: string | null;
-  openPaywall: () => Promise<void>;
   purchasePlan: (planId: string) => Promise<void>;
   purchasesAvailable: boolean;
   refresh: () => Promise<void>;
@@ -39,7 +38,6 @@ const unavailableBillingContext: MurmurBillingContext = {
   loadPlans: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
-  openPaywall: async () => undefined,
   purchasePlan: async () => undefined,
   purchasesAvailable: false,
   refresh: async () => undefined,
@@ -186,12 +184,12 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       setBusy(false);
     }
   }, []);
-  const completeStorePurchase = useCallback(async (outcome: "purchased" | "restored") => {
+  const completeStorePurchase = useCallback(async () => {
     captureBillingTelemetry("mobile_checkout_succeeded", {
-      packageLabel: "store_paywall",
-      resultCategory: outcome,
+      packageLabel: "plan_picker",
+      resultCategory: "purchased",
     });
-    const converged = await reconcileWithBackoff(outcome === "restored" ? "restore" : "purchase");
+    const converged = await reconcileWithBackoff("purchase");
     await loadCustomer();
     setNotice(converged
       ? "Purchase verified. Your balance is up to date."
@@ -222,7 +220,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     error,
     loadPlans: async () => {
       const { loadMurmurPlans } = await import("./revenueCat");
-      return loadMurmurPlans(config.paywallOfferingId);
+      const plans = await loadMurmurPlans(config.paywallOfferingId);
+      captureBillingTelemetry("mobile_paywall_opened", { packageLabel: "plan_picker" });
+      return plans;
     },
     manageSubscription: () => runStoreAction(async () => {
       const { presentMurmurCustomerCenter } = await import("./revenueCat");
@@ -230,20 +230,6 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice,
-    openPaywall: () => runStoreAction(async () => {
-      assertPaywallAvailable(customer);
-      const outcome = await presentPaywallWithTelemetry(config.paywallOfferingId);
-      if (isAbandonedPaywall(outcome)) {
-        capturePaywallCancellation(outcome);
-        setNotice("No purchase was made.");
-        return;
-      }
-      if (outcome === "failed") {
-        capturePaywallFailure(outcome);
-        throw new Error("The store could not complete the purchase.");
-      }
-      await completeStorePurchase(outcome);
-    }),
     purchasePlan: (planId) => runStoreAction(async () => {
       assertPaywallAvailable(customer);
       const { purchaseMurmurPlan } = await import("./revenueCat");
@@ -255,11 +241,11 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         },
       );
       if (outcome === "cancelled") {
-        capturePaywallCancellation("cancelled");
+        capturePaywallCancellation();
         setNotice("No purchase was made.");
         return;
       }
-      await completeStorePurchase("purchased");
+      await completeStorePurchase();
     }),
     purchasesAvailable,
     refresh,
@@ -293,10 +279,6 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { sendEmailSignInCode } = await import("../auth/client");
         await sendEmailSignInCode(email);
-        setError(null);
-      } catch (failure) {
-        setError(errorMessage(failure));
-        throw failure;
       } finally {
         setBusy(false);
       }
@@ -331,9 +313,6 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         }
         captureBillingTelemetry("mobile_registration_completed");
         setError(null);
-      } catch (failure) {
-        setError(errorMessage(failure));
-        throw failure;
       } finally {
         setBusy(false);
       }
@@ -383,36 +362,16 @@ function assertPaywallAvailable(customer: MurmurCustomer | null): asserts custom
   }
 }
 
-async function presentPaywallWithTelemetry(
-  serverOfferingId: string | null,
-): Promise<MurmurPaywallOutcome> {
-  const { presentMurmurPaywall } = await import("./revenueCat");
-  captureBillingTelemetry("mobile_paywall_opened", { packageLabel: "store_paywall" });
-  captureBillingTelemetry("mobile_checkout_started", { packageLabel: "store_paywall" });
-  try {
-    return await presentMurmurPaywall(serverOfferingId);
-  } catch (failure) {
-    capturePaywallFailure("store_error");
-    throw failure;
-  }
-}
-
-function isAbandonedPaywall(
-  outcome: MurmurPaywallOutcome,
-): outcome is "cancelled" | "not_presented" {
-  return outcome === "cancelled" || outcome === "not_presented";
-}
-
-function capturePaywallCancellation(outcome: "cancelled" | "not_presented"): void {
+function capturePaywallCancellation(): void {
   captureBillingTelemetry("mobile_checkout_cancelled", {
-    packageLabel: "store_paywall",
-    resultCategory: outcome,
+    packageLabel: "plan_picker",
+    resultCategory: "cancelled",
   });
 }
 
-function capturePaywallFailure(resultCategory: "failed" | "store_error"): void {
+function capturePaywallFailure(resultCategory: "store_error"): void {
   captureBillingTelemetry("mobile_checkout_failed", {
-    packageLabel: "store_paywall",
+    packageLabel: "plan_picker",
     resultCategory,
   });
   captureBillingTelemetry("mobile_paywall_failed", { resultCategory });
