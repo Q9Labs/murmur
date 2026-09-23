@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "../viewModel";
 import { OnboardingFlow, type OnboardingText, type OnboardingTheme } from "./onboardingFlow";
-import { timelineScrollHandlers } from "./shared";
+import { SpanTimeline, timelineScrollHandlers } from "./shared";
 import type { VariantOnboardingProps, VariantShellProps } from "./types";
 
 const harness = vi.hoisted(() => ({
@@ -163,7 +163,7 @@ function shellProps(params: {
     live: liveState as VariantShellProps["live"],
     onAudioPlaybackEnabledChange: vi.fn(),
     onCaptureSourceChange: vi.fn(),
-    onOpenAccountBilling: vi.fn(),
+    onOpenLowBalance: vi.fn(),
     onOpenPicker: vi.fn(),
     onOpenSettings: vi.fn(),
     onPrimaryAction: vi.fn(),
@@ -258,5 +258,42 @@ describe("timeline scroll behavior", () => {
     expect(scrollToEnd).toHaveBeenCalledOnce();
     expect(refs.autoScrollRef.current).toBe(false);
     expect(refs.userInteractedRef.current).toBe(true);
+  });
+});
+
+describe("translation-only timeline", () => {
+  const textStyles = { partial: {}, rtl: {}, source: {}, translation: {} };
+
+  function renderTimeline(sourceTranscriptEnabled: boolean, hasTimeline = true): string {
+    const props = shellProps({ hasTimeline, isLive: true });
+    return render(
+      <SpanTimeline
+        autoScrollRef={props.autoScrollRef}
+        live={{ ...props.live, source_transcript_enabled: sourceTranscriptEnabled }}
+        textStyles={textStyles}
+        timelineRef={props.timelineRef}
+        userInteractedRef={props.userInteractedRef}
+        viewModel={props.viewModel}
+      />,
+    );
+  }
+
+  it("shows only translations when the worker turns the source transcript off", () => {
+    const markup = renderTimeline(false);
+
+    expect(markup).toContain("مرحبا");
+    expect(markup).not.toContain("hello");
+    expect(markup).not.toContain("tentative caption");
+  });
+
+  it("keeps source captions when the worker enables them", () => {
+    const markup = renderTimeline(true);
+
+    expect(markup).toContain("hello");
+    expect(markup).toContain("tentative caption");
+  });
+
+  it("invites the listener in the target language before anything is heard", () => {
+    expect(renderTimeline(false, false)).toContain("Listening. Arabic will appear here as people speak.");
   });
 });

@@ -4,9 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 const harness = vi.hoisted(() => ({
   billingProps: null as Record<string, unknown> | null,
   onboardingProps: null as Record<string, unknown> | null,
+  outOfMinutesProps: null as Record<string, unknown> | null,
   pickerProps: null as Record<string, unknown> | null,
   settingsProps: null as Record<string, unknown> | null,
   shellProps: null as Record<string, unknown> | null,
+  updateRequiredProps: null as Record<string, unknown> | null,
 }));
 
 vi.mock("./accountBillingModal", () => ({
@@ -19,6 +21,20 @@ vi.mock("./accountBillingModal", () => ({
 vi.mock("./languagePicker", () => ({
   LanguagePickerController: (props: Record<string, unknown>) => {
     harness.pickerProps = props;
+    return null;
+  },
+}));
+
+vi.mock("./outOfMinutesSheet", () => ({
+  OutOfMinutesSheet: (props: Record<string, unknown>) => {
+    harness.outOfMinutesProps = props;
+    return null;
+  },
+}));
+
+vi.mock("./updateRequiredSheet", () => ({
+  UpdateRequiredSheet: (props: Record<string, unknown>) => {
+    harness.updateRequiredProps = props;
     return null;
   },
 }));
@@ -47,14 +63,14 @@ vi.mock("./variants/bloom/onboarding", () => ({
 import { BloomPreview } from "./preview";
 
 describe("Bloom preview", () => {
-  it("renders billing with a stable 10-minute fixture", () => {
+  it("renders billing with a stable free-allowance fixture", () => {
     renderToStaticMarkup(<BloomPreview screen="billing" />);
 
     expect(harness.billingProps?.["billing"]).toMatchObject({
       busy: false,
       customer: {
-        allowanceMs: 600_000,
-        availableMs: 600_000,
+        allowanceMs: 300_000,
+        availableMs: 300_000,
         plan: "free",
       },
       error: null,
@@ -146,5 +162,56 @@ describe("Bloom preview", () => {
     expect(harness.shellProps).toMatchObject({
       audioPlaybackEnabled: false,
     });
+  });
+
+  it("renders the translation-only layout without source captions", () => {
+    renderToStaticMarkup(<BloomPreview screen="translation-only" />);
+
+    expect(harness.shellProps?.["live"]).toMatchObject({
+      source_transcript_enabled: false,
+      spans: [{ source_caption: "" }],
+    });
+  });
+
+  it("renders the out-of-minutes sheet for an anonymous listener with Pro first", () => {
+    renderToStaticMarkup(<BloomPreview screen="out-of-minutes" />);
+
+    expect(harness.outOfMinutesProps).toMatchObject({
+      billing: { customer: { availableMs: 0, isRegistered: false } },
+      open: true,
+      plans: {
+        plans: [
+          { kind: "pro", price: "$9.99 / month" },
+          { kind: "pro", price: "$99.99 / year" },
+          { kind: "top_up", price: "$7.99" },
+          { kind: "top_up", price: "$29.99" },
+        ],
+        status: "ready",
+      },
+      reason: "exhausted",
+    });
+    expect(harness.shellProps?.["live"]).toMatchObject({ error: "allowance_exhausted" });
+  });
+
+  it("renders the out-of-minutes sheet for a signed-in listener", () => {
+    renderToStaticMarkup(<BloomPreview screen="out-of-minutes-signed-in" />);
+
+    expect(harness.outOfMinutesProps).toMatchObject({
+      billing: { customer: { availableMs: 0, isRegistered: true } },
+      reason: "exhausted",
+    });
+  });
+
+  it("renders a paid listener with a low balance on an idle stage", () => {
+    renderToStaticMarkup(<BloomPreview screen="low-balance" />);
+
+    expect(harness.shellProps?.["live"]).toMatchObject({ status: "idle" });
+  });
+
+  it("renders the update-required sheet over the stage", () => {
+    renderToStaticMarkup(<BloomPreview screen="update-required" />);
+
+    expect(harness.updateRequiredProps).toMatchObject({ open: true });
+    expect(harness.shellProps?.["live"]).toMatchObject({ error: "app_version_unsupported" });
   });
 });

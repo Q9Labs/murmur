@@ -50,6 +50,7 @@ import {
   closeWorkerSession,
   collectDeviceIntegrity,
   createWorkerSession,
+  hasSourceTranscript,
   requestCapturePermission,
   requestMicrophonePermission,
 } from "./workerApi";
@@ -83,6 +84,7 @@ export function useLiveTranslation(
   const [session, setSession] = useState(() => createSession(params));
   const [spans, setSpans] = useState<TranslationSpan[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [sourceTranscriptEnabled, setSourceTranscriptEnabled] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportReceiptId, setReportReceiptId] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
@@ -135,6 +137,7 @@ export function useLiveTranslation(
 
   useEffect(() => {
     playbackEnabledRef.current = params.playback_enabled;
+    clientRef.current?.setPlaybackEnabled(params.playback_enabled);
     if (!params.playback_enabled) {
       observeBackgroundOperation(
         MurmurAudioModule.clearPlayback("playback_disabled"),
@@ -507,6 +510,7 @@ export function useLiveTranslation(
       analytics_enabled: params.analytics_enabled,
       app_install_id: appInstallId,
       device_integrity: deviceIntegrity,
+      playback_enabled: params.playback_enabled,
       source_language: params.source_language,
       target_language: params.target_language,
     });
@@ -524,6 +528,7 @@ export function useLiveTranslation(
       return;
     }
     recordListenTiming("worker_session_ready");
+    setSourceTranscriptEnabled(hasSourceTranscript(response));
 
     setSession((current) => {
       const next = {
@@ -546,6 +551,7 @@ export function useLiveTranslation(
       url: response.realtime_ws_url,
     });
     clientRef.current = client;
+    client.setPlaybackEnabled(playbackEnabledRef.current);
     connectDeadlineRef.current = scheduleRealtimeConnectionDeadline(() => {
       if (sessionRef.current.state !== "connecting_realtime") {
         return;
@@ -1084,6 +1090,7 @@ export function useLiveTranslation(
     report_receipt_id: reportReceiptId,
     reportSpan,
     session,
+    source_transcript_enabled: sourceTranscriptEnabled,
     spans,
     start,
     status: session.state,

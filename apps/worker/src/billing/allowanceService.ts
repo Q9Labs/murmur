@@ -3,7 +3,7 @@
 import type { Env } from "../env";
 import { currentProAllowancePeriod, freeAllowancePeriod } from "./allowancePeriods";
 import { firstProGrantMs } from "./allowanceUpgrade";
-import { proAllowanceMs } from "./catalog";
+import { freeAllowanceMs, proAllowanceMs } from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
 import { claimFreeAllowance } from "./freeAllowanceClaims";
 import type { LedgerCommandResult } from "./contracts";
@@ -29,6 +29,7 @@ export async function currentCustomerPlan(
 export async function ensureCurrentAllowance(params: {
   customerId: string;
   env: Env;
+  freeAllowanceMinutes?: number;
   freeClaimHash?: string | null;
   nowMs: number;
   principalProvider: "anonymous" | "email";
@@ -53,6 +54,9 @@ export async function ensureCurrentAllowance(params: {
     return callCustomerLedger(params.env.CUSTOMER_LEDGER, params.customerId, {
       action: "bootstrap_guest",
       customerId: params.customerId,
+      freeAllowanceMs: params.freeAllowanceMinutes === undefined
+        ? freeAllowanceMs
+        : params.freeAllowanceMinutes * 60_000,
       grantFreeAllowance,
       nowMs: params.nowMs,
       periodExpiresAtMs: period.expiresAtMs,

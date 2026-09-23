@@ -15,7 +15,6 @@ import {
   corsHeaders,
   json,
 } from "./http/response";
-import { defaultRateLimits } from "./limits";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
 import { getSentryOptions } from "./observability/sentry";
@@ -25,6 +24,7 @@ import {
 } from "./rateLimitDurableObject";
 import { createReport, deleteReport, listReports } from "./routes/report";
 import { getCustomer } from "./routes/customer";
+import { getConfig } from "./routes/config";
 import { reconcileBilling } from "./routes/reconcileBilling";
 import { receiveRevenueCatWebhook } from "./routes/revenueCatWebhook";
 import { createSession } from "./routes/session";
@@ -70,6 +70,10 @@ const handler = {
 
     if (url.pathname === "/v3/customer" && request.method === "GET") {
       return getCustomer(request, env, context);
+    }
+
+    if (url.pathname === "/v3/config" && request.method === "GET") {
+      return getConfig(request, env, context);
     }
 
     if (url.pathname === "/v3/billing/reconcile" && request.method === "POST") {
@@ -163,7 +167,6 @@ const handler = {
     const abandonedSessionSweep = closeAbandonedUsageSessions(
       env.BILLING_DB,
       nowMs,
-      defaultRateLimits.maxSessionSeconds * 1_000,
     ).then((closed) => {
       if (closed > 0) {
         logWorkerEvent({

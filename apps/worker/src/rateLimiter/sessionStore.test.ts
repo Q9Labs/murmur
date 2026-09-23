@@ -103,6 +103,33 @@ describe("rate limiter session stores", () => {
     expect(store.sessionsById.get("session_expired")?.closed_at_ms).toBe(expiresAtMs);
   });
 
+  it("uses the cap saved with each session when flags change", () => {
+    const store = createStore();
+    createSessionRecordWithStores({
+      app_session_id: "short_session",
+      hashed_install_id: "short_install",
+      max_session_seconds: 240,
+      now_ms: 1_000,
+    }, store);
+    expect(reserveRealtimeSessionWithStores({
+      app_session_id: "short_session",
+      config: defaultRateLimits,
+      now_ms: 2_000,
+    }, store.sessionsById)).toEqual({
+      expires_at_ms: 241_000,
+      hashed_install_id: "short_install",
+      ok: true,
+    });
+    expect(canAcceptReportWithStores(
+      "short_session", 241_001, new Map(), store.sessionsById,
+    )).toEqual({ code: "session_expired", ok: false });
+    expect(canCreateSessionWithStores({
+      config: defaultRateLimits,
+      hashed_install_id: "short_install",
+      now_ms: 241_000,
+    }, store)).toEqual({ ok: true });
+  });
+
   it("rate-limits reports and prunes expired state", () => {
     const reports = new Map<string, number[]>();
     for (let index = 0; index < 10; index += 1) {

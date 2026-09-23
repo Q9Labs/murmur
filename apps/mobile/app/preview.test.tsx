@@ -20,6 +20,11 @@ describe("preview route", () => {
     expect(normalizePreviewScreen("source-picker")).toBe("source-picker");
     expect(normalizePreviewScreen("translation")).toBe("translation");
     expect(normalizePreviewScreen("translation-muted")).toBe("translation-muted");
+    expect(normalizePreviewScreen("translation-only")).toBe("translation-only");
+    expect(normalizePreviewScreen("out-of-minutes")).toBe("out-of-minutes");
+    expect(normalizePreviewScreen("out-of-minutes-signed-in")).toBe("out-of-minutes-signed-in");
+    expect(normalizePreviewScreen("low-balance")).toBe("low-balance");
+    expect(normalizePreviewScreen("update-required")).toBe("update-required");
     expect(normalizePreviewScreen(["welcome"])).toBe("welcome");
     expect(normalizePreviewScreen("unknown")).toBe("welcome");
     expect(normalizePreviewScreen(undefined)).toBe("welcome");

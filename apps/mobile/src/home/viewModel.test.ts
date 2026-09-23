@@ -42,6 +42,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     report_receipt_id: null,
     reportSpan: async () => undefined,
     session: createSession({ source_language: "en", target_language: "ar" }),
+    source_transcript_enabled: true,
     spans: [],
     start: async () => undefined,
     status: "idle",

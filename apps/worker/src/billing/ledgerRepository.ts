@@ -124,6 +124,7 @@ export class LedgerRepository {
   }
 
   private async grantFreeAllowance(command: BootstrapGuestCommand): Promise<void> {
+    const grantMs = command.freeAllowanceMs ?? freeAllowanceMs;
     const idempotencyKey = `${command.customerId}:${command.periodKey}`;
     const ledgerEntryId = `ledger:${idempotencyKey}`;
     const grantId = `grant:${idempotencyKey}`;
@@ -149,7 +150,7 @@ export class LedgerRepository {
           command.periodKey,
           command.periodStartsAtMs,
           command.periodExpiresAtMs,
-          freeAllowanceMs,
+          grantMs,
           command.nowMs,
         ),
       this.database
@@ -163,7 +164,7 @@ export class LedgerRepository {
         .bind(
           ledgerEntryId,
           command.customerId,
-          freeAllowanceMs,
+          grantMs,
           `free:${idempotencyKey}`,
           grantId,
           JSON.stringify({ allowance_kind: "free", period_key: command.periodKey }),
@@ -181,8 +182,8 @@ export class LedgerRepository {
           grantId,
           command.customerId,
           command.periodKey,
-          freeAllowanceMs,
-          freeAllowanceMs,
+          grantMs,
+          grantMs,
           command.periodStartsAtMs,
           command.periodExpiresAtMs,
           ledgerEntryId,
@@ -384,6 +385,7 @@ export class LedgerRepository {
   async openUsageSession(params: {
     customerId: string;
     generation: number;
+    maxSessionSeconds?: number;
     nowMs: number;
     usageSessionId: string;
   }): Promise<{ balance: LedgerBalance; generation: number; usageSessionId: string }> {
@@ -423,8 +425,8 @@ export class LedgerRepository {
       .prepare(
         `INSERT INTO usage_sessions
           (usage_session_id, customer_id, generation, state, forwarded_ms, settled_ms,
-           next_settlement_sequence, started_at_ms, ended_at_ms, updated_at_ms)
-         VALUES (?, ?, ?, 'open', 0, 0, 1, ?, NULL, ?)`,
+           next_settlement_sequence, started_at_ms, ended_at_ms, updated_at_ms, max_session_seconds)
+         VALUES (?, ?, ?, 'open', 0, 0, 1, ?, NULL, ?, ?)`,
       )
       .bind(
         params.usageSessionId,
@@ -432,6 +434,7 @@ export class LedgerRepository {
         params.generation,
         params.nowMs,
         params.nowMs,
+        params.maxSessionSeconds ?? 300,
       )
       .run();
     requireChanges([result], [1]);

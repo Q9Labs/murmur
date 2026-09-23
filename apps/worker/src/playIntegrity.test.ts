@@ -42,6 +42,44 @@ describe("verifyPlayIntegrityIfRequired", () => {
     });
   });
 
+  it("verifies available Android tokens without making optional integrity fail closed", async () => {
+    const params = {
+      device_integrity: {
+        available: true,
+        nonce: "encoded_nonce",
+        platform: "android",
+        provider: "play_integrity",
+        token: "integrity_token_long_enough",
+      },
+      env: {
+        GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN: "access_token",
+        GOOGLE_PLAY_PACKAGE_NAME: "com.q9labsai.murmur",
+      },
+      hashed_install_id: "install_hash",
+      now_ms: 2_000_000_000_000,
+      required: false,
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ tokenPayloadExternal: {
+      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      deviceIntegrity: { deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"] },
+      requestDetails: {
+        nonce: "encoded_nonce",
+        requestPackageName: "com.q9labsai.murmur",
+        timestampMillis: String(params.now_ms),
+      },
+    } }));
+    await expect(verifyPlayIntegrityIfRequired(params)).resolves.toMatchObject({
+      ok: true,
+      request_hash_verified: true,
+    });
+    await expect(verifyPlayIntegrityIfRequired({ ...params, env: {} })).resolves.toEqual({
+      ok: true,
+      app_verdict: null,
+      device_verdicts: [],
+      request_hash_verified: false,
+    });
+  });
+
   it("requires an available provider token when enforcement is on", async () => {
     await expect(
       verifyPlayIntegrityIfRequired({

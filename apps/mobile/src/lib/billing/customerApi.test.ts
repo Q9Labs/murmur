@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+const configRequest = vi.hoisted(() => vi.fn<() => Promise<Response>>());
+
+vi.mock("../providers/murmurBillingApi", () => ({ requestMurmurAppConfig: configRequest }));
+
+import { fetchMurmurAppConfig } from "./customerApi";
 import { decodeCustomer } from "./customerResponse";
 
 describe("decodeCustomer", () => {
@@ -65,5 +70,26 @@ describe("decodeCustomer", () => {
 
     expect(decodeCustomer({ ...payload, revenuecat_customer_id: "" })).toBeNull();
     expect(decodeCustomer({ ...payload, revenuecat_customer_id: "x".repeat(256) })).toBeNull();
+  });
+});
+
+describe("fetchMurmurAppConfig", () => {
+  afterEach(() => {
+    configRequest.mockReset();
+  });
+
+  it("fails loudly when the config route is unavailable", async () => {
+    configRequest.mockResolvedValue(new Response(null, { status: 503 }));
+
+    await expect(fetchMurmurAppConfig()).rejects.toThrow("Murmur config request failed (503).");
+  });
+
+  it("decodes a successful config response", async () => {
+    configRequest.mockResolvedValue(Response.json({ low_balance_threshold_minutes: 10 }));
+
+    await expect(fetchMurmurAppConfig()).resolves.toEqual({
+      lowBalanceThresholdMinutes: 10,
+      paywallOfferingId: null,
+    });
   });
 });

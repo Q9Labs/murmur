@@ -4,6 +4,7 @@ import {
   formatLiveError,
   formatReportError,
   isAllowanceExhaustedError,
+  isUpdateRequiredError,
 } from "./errorCopy";
 import { getLatestProviderRoute } from "./providerRoute";
 import {
@@ -30,7 +31,7 @@ describe("home status helpers", () => {
   });
 
   it("maps session state and errors into compact UI status labels", () => {
-    expect(getStatusText("live", null)).toBe("Health OK");
+    expect(getStatusText("live", null)).toBe("Listening");
     expect(getStatusText("recovering", null)).toBe("Recovering");
     expect(getStatusText("idle", "realtime_transport_error")).toBe("Network degraded");
     expect(getStatusText("idle", "worker_session_network_error")).toBe("Service unavailable");
@@ -66,6 +67,12 @@ describe("home status helpers", () => {
     expect(formatLiveError("device_playback_capture_revoked")).toContain("stopped");
     expect(formatLiveError("device_playback_capture_stopped")).toContain("ended");
     expect(isAllowanceExhaustedError("realtime_allowance_exhausted")).toBe(true);
+    expect(formatLiveError("client_upgrade_required")).toContain("Update to keep translating");
+    expect(formatLiveError("worker_session_http_426")).toContain("Update to keep translating");
+    expect(isUpdateRequiredError("app_version_unsupported")).toBe(true);
+    expect(isUpdateRequiredError("client_upgrade_required")).toBe(true);
+    expect(isUpdateRequiredError("worker_session_http_426")).toBe(true);
+    expect(isUpdateRequiredError("worker_session_http_503")).toBe(false);
     expect(formatLiveError("unknown_code")).toContain("unknown_code");
 
     expect(formatReportError("report_rate_limited")).toContain("Too many reports");

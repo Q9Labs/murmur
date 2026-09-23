@@ -3,8 +3,9 @@ import * as SecureStore from "expo-secure-store";
 import { createAuthClient } from "better-auth/react";
 import { anonymousClient, emailOTPClient } from "better-auth/client/plugins";
 
+import { getAppRelease } from "../appRelease";
 import { getWorkerBaseUrl } from "../config";
-import { getOrCreateFreeAllowanceId } from "../installIdentity";
+import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "../installIdentity";
 
 const freeAllowanceIdHeader = "x-murmur-free-allowance-id";
 let guestSessionCreation: Promise<void> | null = null;
@@ -14,6 +15,10 @@ const murmurAuthClient = createAuthClient({
   fetchOptions: {
     onRequest: async (context) => {
       context.headers.set(freeAllowanceIdHeader, await getOrCreateFreeAllowanceId());
+      context.headers.set("x-murmur-install-id", await getOrCreateInstallId());
+      const release = getAppRelease();
+      context.headers.set("x-murmur-app-platform", release.app_platform);
+      context.headers.set("x-murmur-app-version", release.app_version);
       return context;
     },
   },

@@ -13,6 +13,8 @@ import {
 } from "../billing/freeAllowanceClaims";
 import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
+import { hashInstallId } from "../privacy";
+import { defaultServerConfig, getServerConfig } from "../serverConfig";
 
 const localDevelopmentSecret = "murmur-local-development-secret-change-before-deploy";
 const guestEmailDomain = "guest.murmur.invalid";
@@ -147,9 +149,19 @@ async function bootstrapFreeAllowance(
   const freeClaimHash = request
     ? await freeAllowanceClaimHashFromRequest(request, env)
     : null;
+  const installId = request?.headers.get("x-murmur-install-id");
+  const config = installId && installId.length >= 8
+    ? await getServerConfig(env, {
+      appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+      distinctId: `anonymous_install_${await hashInstallId(installId, env.SESSION_HASH_SALT ?? "local-development-salt")}`,
+      plan: "free",
+      platform: request?.headers.get("x-murmur-app-platform") ?? null,
+    })
+    : defaultServerConfig(env);
   const ledger = await ensureCurrentAllowance({
     customerId,
     env,
+    freeAllowanceMinutes: config.free_allowance_minutes,
     freeClaimHash,
     nowMs,
     principalProvider,

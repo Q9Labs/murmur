@@ -9,6 +9,7 @@ import MurmurAudioModule, {
   type DeviceIntegrityPayload,
 } from "../../../modules/murmur-audio";
 import type { AcquisitionContext } from "@murmur/protocol/acquisition";
+import { getAppRelease } from "../appRelease";
 import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
 
@@ -46,10 +47,14 @@ export async function createWorkerSession(body: {
   analytics_enabled: boolean;
   app_install_id: string;
   device_integrity: DeviceIntegrityPayload;
+  playback_enabled?: boolean;
   source_language: SourceLanguageCode;
   target_language: LanguageCode;
 }): Promise<CreateSessionResponse | { error: string }> {
-  return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, body);
+  return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, {
+    ...body,
+    ...getAppRelease(),
+  });
 }
 
 export async function closeWorkerSession(
@@ -84,6 +89,14 @@ export async function closeWorkerSession(
   }
 }
 
+export function hasSourceTranscript(response: object): boolean {
+  const features: unknown = Reflect.get(response, "features");
+  if (typeof features !== "object" || features === null) {
+    return true;
+  }
+  return Reflect.get(features, "source_transcript") !== false;
+}
+
 function isExpectedNetworkFailure(failure: unknown): boolean {
   if (failure instanceof TypeError) {
     return true;
@@ -112,16 +125,16 @@ export async function collectDeviceIntegrity(params: {
     params.targetLanguage,
     params.appInstallId.slice(-12),
   ].join("_");
-  const payload = (await MurmurAudioModule.requestPlayIntegrityToken(nonce).catch((error) => ({
+  const payload: Record<string, unknown> = await MurmurAudioModule.requestPlayIntegrityToken(nonce).catch((error) => ({
     available: false,
     platform: Platform.OS,
     reason: error instanceof Error ? error.message : "device_integrity_failed",
-  }))) as DeviceIntegrityPayload;
+  }));
   return {
     available: Boolean(payload.available && payload.token),
     key_id: typeof payload.key_id === "string" ? payload.key_id : undefined,
     kind: typeof payload.kind === "string" ? payload.kind : undefined,
-    nonce,
+    nonce: typeof payload.nonce === "string" ? payload.nonce : nonce,
     platform: Platform.OS,
     provider: Platform.OS === "ios" ? "app_attest" : "play_integrity",
     reason: typeof payload.reason === "string" ? payload.reason : undefined,

@@ -5,12 +5,14 @@ import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protoco
 import * as Sentry from "@sentry/cloudflare";
 
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
+import { currentCustomerPlan } from "../billing/allowanceService";
 import {
   createRealtimeUsageMeter,
   type RealtimeUsageMeter,
 } from "../billing/realtimeUsageMeter";
 import { findOpenUsageSession } from "../billing/usageSessionStore";
 import { type Env, getRealtimeApiKey, isBillingEnforced } from "../env";
+import { getServerConfig, type ServerConfig } from "../serverConfig";
 import {
   closeSocket,
   send,
@@ -22,6 +24,7 @@ import {
   createSessionUpdate,
   openTranslationSocket,
   parseTranslationOutput,
+  type OpenAITranslationOutput,
 } from "../providers/openaiRealtime";
 import {
   closeSessionDurable,
@@ -107,6 +110,27 @@ export async function proxyRealtimeSession(
     namespace: env.CUSTOMER_LEDGER,
     usageSessionId: appSessionId,
   });
+  let config: ServerConfig;
+  try {
+    config = await getServerConfig(env, {
+      appVersion: url.searchParams.get("app_version"),
+      distinctId: `anonymous_install_${validated.safetyIdentifier}`,
+      plan: validated.customerId
+        ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
+        : "free",
+      platform: url.searchParams.get("app_platform"),
+    });
+  } catch (failure) {
+    await closeMeteredRealtimeSession(appSessionId, "failed", usageMeter, env).catch(
+      (cleanupFailure: unknown) => {
+        Sentry.captureException(cleanupFailure, {
+          tags: { app_session_id: appSessionId, operation: "close_failed_realtime_config" },
+        });
+      },
+    );
+    throw failure;
+  }
+  const playback = { enabled: url.searchParams.get("playback_enabled") !== "false" };
 
   const telemetry: RealtimeTelemetry = {
     analyticsEnabled: validated.analyticsEnabled,
@@ -270,7 +294,7 @@ export async function proxyRealtimeSession(
   try {
     upstream = await openTranslationSocket({
       apiKey: validated.apiKey,
-      model: env.OPENAI_REALTIME_MODEL,
+      model: config.realtime_model,
       safetyIdentifier: validated.safetyIdentifier,
       signal: providerAbort.signal,
     });
@@ -353,14 +377,22 @@ export async function proxyRealtimeSession(
     usageMeter,
     resetSilenceDeadline,
     () => sessionFinished,
+    (enabled) => { playback.enabled = enabled; },
   );
-  bindProviderEvents(client, upstream, telemetry, terminate);
+  bindProviderEvents(
+    client,
+    upstream,
+    telemetry,
+    terminate,
+    () => playback.enabled && config.output_audio_enabled,
+    config.source_transcript,
+  );
   try {
-    upstream.send(createSessionUpdate(validated.targetLanguage));
+    upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
     send(client, {
       kind: "session_opened",
       provider_metadata: {
-        model: env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-translate",
+        model: config.realtime_model,
         provider: "openai",
       },
     });
@@ -514,6 +546,7 @@ function bindClientEvents(
   usageMeter: RealtimeUsageMeter,
   resetSilenceDeadline: () => void,
   isSessionFinished: () => boolean,
+  setPlaybackEnabled: (enabled: boolean) => void,
 ): void {
   const forwardAudio = (audio: ArrayBuffer): void => {
     if (hasMeaningfulPcm16Audio(audio)) {
@@ -606,6 +639,8 @@ function bindClientEvents(
         retryable: false,
         socketCode: 1000,
       });
+    } else if (command?.kind === "set_playback") {
+      setPlaybackEnabled(command.enabled);
     }
   });
 }
@@ -615,44 +650,23 @@ function bindProviderEvents(
   upstream: WorkerWebSocket,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
+  isPlaybackEnabled: () => boolean,
+  sourceTranscript: boolean,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
     try {
       const output = parseTranslationOutput(event.data);
       if (output.kind === "audio") {
-        if (client.readyState === WebSocket.OPEN) {
+        if (isPlaybackEnabled() && client.readyState === WebSocket.OPEN) {
           client.send(output.pcm16);
         }
         return;
       }
       if (output.kind === "event") {
-        captureFirstProviderSignal(output.event, telemetry);
-        if (output.event.kind === "session_error") {
-          telemetry.stats.failureCode = normalizeFailureCode(output.event.code);
+        if (output.event.kind === "source_delta" && !sourceTranscript) {
+          return;
         }
-        send(client, output.event);
-        if (output.event.kind === "session_closed") {
-          telemetry.stats.closeReason = output.providerCloseReason
-            ? normalizeFailureCode(output.providerCloseReason)
-            : "provider_session_closed";
-          terminate({
-            errorCode: null,
-            failureCode: null,
-            outcome: "completed",
-            reason: "provider_session_closed",
-            retryable: false,
-            socketCode: 1000,
-          });
-        } else if (output.event.kind === "session_error") {
-          terminate({
-            errorCode: null,
-            failureCode: telemetry.stats.failureCode,
-            outcome: "failed",
-            reason: "provider_session_error",
-            retryable: output.event.retryable,
-            socketCode: 1011,
-          });
-        }
+        forwardProviderEvent(output, client, telemetry, terminate);
       }
     } catch (failure) {
       Sentry.captureException(failure, {
@@ -696,6 +710,41 @@ function bindProviderEvents(
       socketCode: 1011,
     });
   });
+}
+
+function forwardProviderEvent(
+  output: Extract<OpenAITranslationOutput, { kind: "event" }>,
+  client: WorkerWebSocket,
+  telemetry: RealtimeTelemetry,
+  terminate: (termination: RealtimeTermination) => void,
+): void {
+  captureFirstProviderSignal(output.event, telemetry);
+  if (output.event.kind === "session_error") {
+    telemetry.stats.failureCode = normalizeFailureCode(output.event.code);
+  }
+  send(client, output.event);
+  if (output.event.kind === "session_closed") {
+    telemetry.stats.closeReason = output.providerCloseReason
+      ? normalizeFailureCode(output.providerCloseReason)
+      : "provider_session_closed";
+    terminate({
+      errorCode: null,
+      failureCode: null,
+      outcome: "completed",
+      reason: "provider_session_closed",
+      retryable: false,
+      socketCode: 1000,
+    });
+  } else if (output.event.kind === "session_error") {
+    terminate({
+      errorCode: null,
+      failureCode: telemetry.stats.failureCode,
+      outcome: "failed",
+      reason: "provider_session_error",
+      retryable: output.event.retryable,
+      socketCode: 1011,
+    });
+  }
 }
 
 type RealtimeTermination = {
@@ -839,8 +888,17 @@ export function parseClientCommand(value: unknown): RealtimeClientCommand | null
     return null;
   }
   try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return parsed.kind === "close_session" ? { kind: "close_session" } : null;
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== "object" || parsed === null || !("kind" in parsed)) {
+      return null;
+    }
+    if (parsed.kind === "close_session") {
+      return { kind: "close_session" };
+    }
+    if (parsed.kind === "set_playback" && "enabled" in parsed && typeof parsed.enabled === "boolean") {
+      return { kind: "set_playback", enabled: parsed.enabled };
+    }
+    return null;
   } catch {
     return null;
   }

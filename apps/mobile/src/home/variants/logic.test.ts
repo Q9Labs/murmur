@@ -11,6 +11,7 @@ import {
   isUiVariant,
   latestCommittedLatencyMs,
   normalizedMicLevel,
+  primaryStartLabel,
   shouldHideSpan,
   shouldKeepAutoScroll,
   timelineTranslationText,
@@ -138,5 +139,16 @@ describe("shouldKeepAutoScroll", () => {
   it("keeps auto-scroll near the bottom and releases it when scrolled away", () => {
     expect(shouldKeepAutoScroll(scrollEvent(390))).toBe(true);
     expect(shouldKeepAutoScroll(scrollEvent(100))).toBe(false);
+  });
+});
+
+describe("primaryStartLabel", () => {
+  it("routes the primary action to the fix the listener needs", () => {
+    expect(primaryStartLabel(null, true)).toBe("Listen");
+    expect(primaryStartLabel("microphone_permission_denied", true)).toBe("Listen");
+    expect(primaryStartLabel("realtime_transport_error", true)).toBe("Try again");
+    expect(primaryStartLabel("allowance_exhausted", false)).toBe("Get more time");
+    expect(primaryStartLabel("realtime_allowance_exhausted", true)).toBe("Try again");
+    expect(primaryStartLabel("app_version_unsupported", true)).toBe("Update Murmur");
   });
 });

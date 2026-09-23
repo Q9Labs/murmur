@@ -5,13 +5,18 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
-import type { MurmurBillingContext } from "../lib/billing/context";
+import { freeAllowanceMinutes } from "../lib/billing/allowance";
+import { type MurmurBillingContext, MurmurBillingFixtureProvider } from "../lib/billing/context";
+import type { MurmurCustomer } from "../lib/billing/customerResponse";
+import type { UiPreviewScreen } from "../lib/config";
 import type { LiveTranslationController } from "../lib/live-translation/types";
 import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/audioDiagnostics";
 import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
 import { AccountBillingModal } from "./accountBillingModal";
 import { LanguagePickerController } from "./languagePicker";
+import { OutOfMinutesSheet, type PlanListState } from "./outOfMinutesSheet";
 import { SettingsModal } from "./settingsModals";
+import { UpdateRequiredSheet } from "./updateRequiredSheet";
 import { buildHomeViewModel } from "./viewModel";
 import { BloomOnboarding } from "./variants/bloom/onboarding";
 import { BloomShell } from "./variants/bloom";
@@ -24,26 +29,31 @@ const previewSourceCaption =
 const previewTranslation =
   "Hello, the city feels different when you understand every voice. Now I can follow the conversation live in English.";
 
+const previewCustomer: MurmurCustomer = {
+  allowanceMs: freeAllowanceMinutes * 60_000,
+  availableMs: freeAllowanceMinutes * 60_000,
+  creditMs: 0,
+  customerId: "preview-customer",
+  earliestExpiryAtMs: null,
+  fulfillmentEnabled: true,
+  isRegistered: false,
+  negativeMs: 0,
+  plan: "free",
+  purchasesEnabled: true,
+  revenueCatCustomerId: "preview:preview-customer",
+};
+
 const previewBilling: MurmurBillingContext = {
   busy: false,
-  customer: {
-    allowanceMs: 10 * 60_000,
-    availableMs: 10 * 60_000,
-    creditMs: 0,
-    customerId: "preview-customer",
-    earliestExpiryAtMs: null,
-    fulfillmentEnabled: true,
-    isRegistered: false,
-    negativeMs: 0,
-    plan: "free",
-    purchasesEnabled: true,
-    revenueCatCustomerId: "preview:preview-customer",
-  },
+  config: { lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
+  customer: previewCustomer,
   deleteAccount: async () => undefined,
   error: null,
+  loadPlans: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
   openPaywall: async () => undefined,
+  purchasePlan: async () => undefined,
   purchasesAvailable: true,
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
@@ -94,6 +104,7 @@ const previewLive: LiveTranslationController = {
     state: "live",
     target_language: previewTargetLanguage,
   } satisfies TranslationSession,
+  source_transcript_enabled: true,
   spans: [
     {
       committed_translated_caption: previewTranslation,
@@ -119,38 +130,86 @@ const previewSettingsLive: LiveTranslationController = {
   status: "idle",
 };
 
+const previewTranslationOnlyLive: LiveTranslationController = {
+  ...previewLive,
+  source_transcript_enabled: false,
+  spans: previewLive.spans.map((span) => ({ ...span, source_caption: "" })),
+};
+
+// US ladder from the pricing proposal, for screenshots only; the app always shows store prices.
+const previewPlans: PlanListState = {
+  plans: [
+    { id: "$rc_monthly", kind: "pro", price: "$9.99 / month", title: "Murmur Pro · 2 hours a month" },
+    { id: "$rc_annual", kind: "pro", price: "$99.99 / year", title: "Pro Annual · 2 months free" },
+    { id: "trip_pass", kind: "top_up", price: "$7.99", title: "Trip Pass · 60 minutes" },
+    { id: "pack_300", kind: "top_up", price: "$29.99", title: "300-minute pack" },
+  ],
+  status: "ready",
+};
+
+function billingFor(customer: Partial<MurmurCustomer>): MurmurBillingContext {
+  return { ...previewBilling, customer: { ...previewCustomer, ...customer } };
+}
+
+const idleTranslationOnlyLive: LiveTranslationController = {
+  ...previewTranslationOnlyLive,
+  status: "idle",
+};
+
+const exhaustedLive: LiveTranslationController = {
+  ...idleTranslationOnlyLive,
+  error: "allowance_exhausted",
+};
+
 function noop(): void {}
 
-export type PreviewScreen =
-  | "billing"
-  | "languages"
-  | "picker"
-  | "privacy"
-  | "settings"
-  | "source-picker"
-  | "translation"
-  | "translation-muted"
-  | "welcome";
+export type PreviewScreen = UiPreviewScreen;
+
+const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
+  billing: () => <AccountBillingModal billing={previewBilling} onClose={noop} open />,
+  languages: () => <OnboardingPreview step="languages" />,
+  "low-balance": () => (
+    <TranslationPreview
+      billing={billingFor({ availableMs: 12 * 60_000, isRegistered: true, plan: "pro" })}
+      live={idleTranslationOnlyLive}
+    />
+  ),
+  "out-of-minutes": () => <OutOfMinutesPreview registered={false} />,
+  "out-of-minutes-signed-in": () => <OutOfMinutesPreview registered />,
+  picker: () => <PickerPreview mode="target" />,
+  privacy: () => <OnboardingPreview step="privacy" />,
+  settings: () => <SettingsPreview />,
+  "source-picker": () => <PickerPreview mode="source" />,
+  translation: () => <TranslationPreview />,
+  "translation-muted": () => <TranslationPreview audioPlaybackEnabled={false} />,
+  "translation-only": () => <TranslationPreview live={previewTranslationOnlyLive} />,
+  "update-required": () => (
+    <>
+      <TranslationPreview live={{ ...idleTranslationOnlyLive, error: "app_version_unsupported" }} />
+      <UpdateRequiredSheet onClose={noop} open />
+    </>
+  ),
+  welcome: () => <WelcomePreview />,
+};
 
 export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
-  if (screen === "billing") {
-    return <AccountBillingModal billing={previewBilling} onClose={noop} open />;
-  }
-  if (screen === "picker" || screen === "source-picker") {
-    return <PickerPreview mode={screen === "source-picker" ? "source" : "target"} />;
-  }
-  if (screen === "settings") {
-    return <SettingsPreview />;
-  }
-  if (screen === "privacy" || screen === "languages") {
-    return <OnboardingPreview step={screen} />;
-  }
-  return screen === "translation-muted" ? (
-    <TranslationPreview audioPlaybackEnabled={false} />
-  ) : screen === "translation" ? (
-    <TranslationPreview />
-  ) : (
-    <WelcomePreview />
+  return previewRenderers[screen]();
+}
+
+function OutOfMinutesPreview({ registered }: { registered: boolean }): ReactNode {
+  const billing = billingFor({ availableMs: 0, isRegistered: registered });
+  return (
+    <>
+      <TranslationPreview billing={billing} live={exhaustedLive} />
+      <OutOfMinutesSheet
+        billing={billing}
+        onClose={noop}
+        onRetryPlans={noop}
+        open
+        plans={previewPlans}
+        reason="exhausted"
+      />
+    </>
   );
 }
 
@@ -235,20 +294,26 @@ function WelcomePreview(): ReactNode {
   return <BloomOnboarding {...props} />;
 }
 
-function TranslationPreview(
-  { audioPlaybackEnabled = true }: { audioPlaybackEnabled?: boolean } = {},
-): ReactNode {
+function TranslationPreview({
+  audioPlaybackEnabled = true,
+  billing = previewBilling,
+  live = previewLive,
+}: {
+  audioPlaybackEnabled?: boolean;
+  billing?: MurmurBillingContext;
+  live?: LiveTranslationController;
+} = {}): ReactNode {
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
   const viewModel = useMemo(
     () =>
       buildHomeViewModel({
-        live: previewLive,
+        live,
         sourceLanguageCode: previewSourceLanguage,
         targetLanguageCode: previewTargetLanguage,
       }),
-    [],
+    [live],
   );
   const props: VariantShellProps = {
     audioPlaybackAvailable: true,
@@ -257,10 +322,10 @@ function TranslationPreview(
     autoScrollRef,
     captureSource: "microphone",
     devicePlaybackSupported: true,
-    live: previewLive,
+    live,
     onAudioPlaybackEnabledChange: noop,
     onCaptureSourceChange: noop,
-    onOpenAccountBilling: noop,
+    onOpenLowBalance: noop,
     onOpenPicker: noop,
     onOpenSettings: noop,
     onPrimaryAction: noop,
@@ -270,5 +335,9 @@ function TranslationPreview(
     viewModel,
   };
 
-  return <BloomShell {...props} />;
+  return (
+    <MurmurBillingFixtureProvider billing={billing}>
+      <BloomShell {...props} />
+    </MurmurBillingFixtureProvider>
+  );
 }

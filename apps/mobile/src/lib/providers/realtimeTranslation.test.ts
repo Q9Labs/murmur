@@ -44,6 +44,15 @@ class MockWebSocket {
   }
 }
 
+function emitSessionOpened(socket: MockWebSocket | undefined): void {
+  socket?.onmessage?.({
+    data: JSON.stringify({
+      kind: "session_opened",
+      provider_metadata: { model: "test", provider: "openai" },
+    }),
+  });
+}
+
 function connectClientWithAudio(
   options: Parameters<typeof createRealtimeTranslationClient>[0],
 ) {
@@ -101,6 +110,43 @@ describe("RealtimeTranslationClient", () => {
       code: 1000,
       reason: "client_finish",
     });
+  });
+
+  it("sends the latest playback preference after the worker is ready", async () => {
+    const client = createRealtimeTranslationClient({
+      onEvent: vi.fn(),
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.connect();
+    client.setPlaybackEnabled(false);
+    client.setPlaybackEnabled(true);
+    const socket = MockWebSocket.instances[0];
+    expect(socket?.sent).toEqual([]);
+    emitSessionOpened(socket);
+    await vi.waitFor(() => expect(socket?.sent).toEqual([
+      JSON.stringify({ kind: "set_playback", enabled: true }),
+    ]));
+    client.setPlaybackEnabled(false);
+    expect(socket?.sent).toEqual([
+      JSON.stringify({ kind: "set_playback", enabled: true }),
+      JSON.stringify({ kind: "set_playback", enabled: false }),
+    ]);
+  });
+
+  it("sends a preference changed before the socket opens once the worker is ready", async () => {
+    const client = createRealtimeTranslationClient({
+      onEvent: vi.fn(),
+      url: "wss://worker.test/v2/realtime",
+    });
+    client.setPlaybackEnabled(false);
+    client.connect();
+    const socket = MockWebSocket.instances[0];
+    socket?.onopen?.();
+    expect(socket?.sent).toEqual([]);
+    emitSessionOpened(socket);
+    await vi.waitFor(() => expect(socket?.sent).toEqual([
+      JSON.stringify({ kind: "set_playback", enabled: false }),
+    ]));
   });
 
   it("fails closed when audio acknowledgements stop", async () => {

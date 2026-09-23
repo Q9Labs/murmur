@@ -1,6 +1,8 @@
 const exactLiveErrorCopy: Readonly<Record<string, string>> = {
   allowance_exhausted:
     "You’re out of translation time. Get more time or restore an existing purchase.",
+  app_version_unsupported: "This version of Murmur is out of date. Update to keep translating.",
+  client_upgrade_required: "This version of Murmur is out of date. Update to keep translating.",
   device_playback_capture_revoked:
     "Phone audio capture stopped. Tap Listen to approve a new session.",
   device_playback_capture_stopped:
@@ -50,6 +52,9 @@ export function formatLiveError(error: string): string {
   if (error === "realtime_provider_authentication_failed") {
     return "Murmur’s translation provider needs attention. Please contact support.";
   }
+  if (error === "worker_session_http_426") {
+    return exactLiveErrorCopy.client_upgrade_required;
+  }
   if (error === "worker_session_network_error" || error.startsWith("worker_session_http_")) {
     return "Could not reach Murmur translation service. Check your connection and try again.";
   }
@@ -64,6 +69,12 @@ export function formatLiveError(error: string): string {
 
 export function isAllowanceExhaustedError(error: string | null): boolean {
   return error === "allowance_exhausted" || error === "realtime_allowance_exhausted";
+}
+
+export function isUpdateRequiredError(error: string | null): boolean {
+  return error === "app_version_unsupported" ||
+    error === "client_upgrade_required" ||
+    error === "worker_session_http_426";
 }
 
 export function formatReportError(error: string): string {

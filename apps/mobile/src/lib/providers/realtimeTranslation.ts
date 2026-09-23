@@ -1,4 +1,4 @@
-import type { RealtimeServerEvent } from "@murmur/protocol/transport/types";
+import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protocol/transport/types";
 
 import MurmurAudioModule from "../../../modules/murmur-audio";
 import {
@@ -24,6 +24,7 @@ export type RealtimeTranslationClient = {
   finish: () => void;
   getDiagnostics: () => RealtimeTransportDiagnostics;
   sendAudio: (data: Uint8Array) => void;
+  setPlaybackEnabled: (enabled: boolean) => void;
 };
 
 const transportAckTimeoutMs = 15_000;
@@ -42,6 +43,8 @@ export function createRealtimeTranslationClient(options: {
   let receiveQueue = Promise.resolve();
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
   let inputBufferedBytes = 0;
+  let pendingPlaybackEnabled: boolean | null = null;
+  let sessionReady = false;
   const diagnostics = createEmptyRealtimeTransportDiagnostics();
 
   function clearAckTimer(): void {
@@ -111,6 +114,17 @@ export function createRealtimeTranslationClient(options: {
     scheduleAckDeadline();
   }
 
+  function sendPlaybackPreference(): void {
+    if (!sessionReady || pendingPlaybackEnabled === null || socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    const command: RealtimeClientCommand = {
+      kind: "set_playback",
+      enabled: pendingPlaybackEnabled,
+    };
+    socket.send(JSON.stringify(command));
+  }
+
   function recordServerEvent(event: RealtimeServerEvent): void {
     const nowMs = Date.now();
     if (event.kind === "input_audio_ack") {
@@ -167,6 +181,7 @@ export function createRealtimeTranslationClient(options: {
       if (socket) {
         return;
       }
+      sessionReady = false;
       acceptingMessages = true;
       acknowledgedInputChunks = 0;
       sentInputChunks = 0;
@@ -192,6 +207,10 @@ export function createRealtimeTranslationClient(options: {
             options.shouldPlayAudio,
             () => options.onEvent({ kind: "playback_error" }),
             (serverEvent) => {
+              if (serverEvent.kind === "session_opened") {
+                sessionReady = true;
+                sendPlaybackPreference();
+              }
               recordServerEvent(serverEvent);
               options.onEvent(serverEvent);
             },
@@ -266,6 +285,10 @@ export function createRealtimeTranslationClient(options: {
         diagnostics.input_buffered_bytes = inputBufferedBytes;
         sendBufferedAudio(false);
       }
+    },
+    setPlaybackEnabled(enabled: boolean): void {
+      pendingPlaybackEnabled = enabled;
+      sendPlaybackPreference();
     },
   };
 }

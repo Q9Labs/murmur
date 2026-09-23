@@ -53,7 +53,7 @@ export function getHealthText(status: string, error: string | null): string {
 
 const directStatusText: Record<string, string> = {
   ended: "Ended",
-  live: "Health OK",
+  live: "Listening",
   network_degraded: "Network degraded",
   requesting_audio_permission: "Audio access",
   recovering: "Recovering",

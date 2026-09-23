@@ -17,6 +17,7 @@ export type SessionRecord = {
   closed_at_ms: number | null;
   created_at_ms: number;
   hashed_install_id: string;
+  max_session_seconds?: number;
   realtime_connected_at_ms: number | null;
 };
 
@@ -49,6 +50,7 @@ const memoryStore = { sessionStartsByInstall, sessionsById };
 export function createSessionRecord(params: {
   app_session_id: string;
   hashed_install_id: string;
+  max_session_seconds?: number;
   now_ms: number;
 }): SessionRecord {
   return createSessionRecordWithStores(params, memoryStore);

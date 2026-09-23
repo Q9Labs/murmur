@@ -156,6 +156,35 @@ function createBloomStyles(theme: MurmurTheme) {
       fontSize: 17,
       fontWeight: "800",
     },
+    lowBalanceAction: {
+      color: theme.primary,
+      fontSize: 14,
+      fontWeight: "800",
+      textDecorationLine: "underline",
+    },
+    lowBalanceDot: {
+      backgroundColor: theme.gold,
+      borderRadius: 999,
+      height: 8,
+      width: 8,
+    },
+    lowBalancePill: {
+      alignItems: "center",
+      alignSelf: "center",
+      backgroundColor: theme.chromeButton,
+      borderColor: theme.hairline,
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: 8,
+      minHeight: 40,
+      paddingHorizontal: 16,
+    },
+    lowBalanceText: {
+      color: theme.muted,
+      fontSize: 14,
+      fontWeight: "700",
+    },
     modeTab: {
       color: theme.muted,
       fontSize: 15,
@@ -234,10 +263,31 @@ function createBloomStyles(theme: MurmurTheme) {
       fontWeight: "700",
       textAlign: "center",
     },
-    sourceText: {
+    stageDot: {
+      backgroundColor: theme.teal,
+      borderRadius: 999,
+      height: 7,
+      width: 7,
+    },
+    stageHeader: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 30,
+      paddingTop: 28,
+    },
+    stageLabel: {
       color: theme.muted,
-      fontSize: 15,
-      lineHeight: 23,
+      flexShrink: 1,
+      fontSize: 14,
+      fontWeight: "700",
+      letterSpacing: 0.4,
+    },
+    sourceText: {
+      color: theme.secondaryText,
+      fontSize: 18,
+      fontWeight: "500",
+      lineHeight: 28,
     },
     swapText: {
       color: theme.teal,
@@ -250,6 +300,10 @@ function createBloomStyles(theme: MurmurTheme) {
       paddingBottom: 32,
       paddingHorizontal: 30,
       paddingTop: 52,
+    },
+    timelineContentTranslationOnly: {
+      gap: 28,
+      paddingTop: 20,
     },
     timelineTranslation: {
       color: theme.primary,

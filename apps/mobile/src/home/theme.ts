@@ -14,6 +14,7 @@ export type MurmurTheme = {
   onPrimary: string;
   primary: string;
   scrim: string;
+  secondaryText: string;
   selected: string;
   selectedBorder: string;
   surface: string;
@@ -35,6 +36,7 @@ export const lightMurmurTheme: MurmurTheme = {
   onPrimary: "#FAF3E7",
   primary: "#3A2E3F",
   scrim: "rgba(35, 27, 38, 0.34)",
+  secondaryText: "#5E5463",
   selected: "rgba(47, 185, 165, 0.08)",
   selectedBorder: "rgba(47, 185, 165, 0.24)",
   surface: "#FFFDF9",
@@ -56,6 +58,7 @@ export const darkMurmurTheme: MurmurTheme = {
   onPrimary: "#24171F",
   primary: "#FFF6EC",
   scrim: "rgba(3, 2, 4, 0.72)",
+  secondaryText: "#D2C6D4",
   selected: "rgba(77, 216, 191, 0.16)",
   selectedBorder: "rgba(77, 216, 191, 0.38)",
   surface: "#211B24",

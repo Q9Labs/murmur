@@ -5,6 +5,11 @@ const permissionHarness = vi.hoisted(() => ({
   platform: { OS: "android" },
   requestDevicePlaybackPermission: vi.fn(async () => true),
   requestMicrophonePermission: vi.fn(async () => true),
+  requestPlayIntegrityToken: vi.fn(async () => ({
+    available: true,
+    nonce: "encoded_nonce",
+    token: "integrity_token_long_enough",
+  })),
   requestPermission: vi.fn(async () => "granted"),
 }));
 
@@ -21,15 +26,21 @@ vi.mock("../../../modules/murmur-audio", () => ({
   default: {
     requestDevicePlaybackPermission: permissionHarness.requestDevicePlaybackPermission,
     requestMicrophonePermission: permissionHarness.requestMicrophonePermission,
+    requestPlayIntegrityToken: permissionHarness.requestPlayIntegrityToken,
   },
 }));
 
 vi.mock("../auth/client", () => import("../__tests__/workerClientMocks"));
 vi.mock("../config", () => import("../__tests__/workerClientMocks"));
+vi.mock("../appRelease", () => ({
+  getAppRelease: () => ({ app_platform: "android", app_version: "1.2.3" }),
+}));
 
 import {
   closeWorkerSession,
+  collectDeviceIntegrity,
   createWorkerSession,
+  hasSourceTranscript,
   requestCapturePermission,
   workerSessionCloseTimeoutMs,
   workerSessionRequestTimeoutMs,
@@ -39,6 +50,7 @@ const request = {
   analytics_enabled: false,
   app_install_id: "install_1",
   device_integrity: { available: false, platform: "android" },
+  playback_enabled: true,
   source_language: "en" as const,
   target_language: "ar" as const,
 };
@@ -51,6 +63,27 @@ beforeEach(() => {
   );
   permissionHarness.requestDevicePlaybackPermission.mockReset().mockResolvedValue(true);
   permissionHarness.requestMicrophonePermission.mockReset().mockResolvedValue(true);
+  permissionHarness.requestPlayIntegrityToken.mockReset().mockResolvedValue({
+    available: true,
+    nonce: "encoded_nonce",
+    token: "integrity_token_long_enough",
+  });
+});
+
+describe("device integrity", () => {
+  it("sends the encoded nonce returned by the Android provider", async () => {
+    const integrity = await collectDeviceIntegrity({
+      appInstallId: "install_1234567890",
+      sourceLanguage: "en",
+      targetLanguage: "ar",
+    });
+    expect(permissionHarness.requestPlayIntegrityToken).toHaveBeenCalledOnce();
+    expect(integrity).toMatchObject({
+      available: true,
+      nonce: "encoded_nonce",
+      provider: "play_integrity",
+    });
+  });
 });
 
 afterEach(() => {
@@ -94,12 +127,12 @@ describe("capture permission routing", () => {
 });
 
 describe("createWorkerSession", () => {
-  it("aborts a session request that does not settle before the connection deadline", async () => {
+  async function expectDeadline(fetchResponse: () => Promise<Response>): Promise<void> {
     vi.useFakeTimers();
     let requestSignal: AbortSignal | undefined;
     vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
       requestSignal = init?.signal ?? undefined;
-      return new Promise<Response>(() => undefined);
+      return fetchResponse();
     }));
 
     const pending = createWorkerSession(request);
@@ -107,21 +140,14 @@ describe("createWorkerSession", () => {
 
     await expect(pending).resolves.toEqual({ error: "worker_session_network_error" });
     expect(requestSignal?.aborted).toBe(true);
+  }
+
+  it("aborts a session request that does not settle before the connection deadline", async () => {
+    await expectDeadline(() => new Promise<Response>(() => undefined));
   });
 
   it("keeps the deadline active while reading a stalled response body", async () => {
-    vi.useFakeTimers();
-    let requestSignal: AbortSignal | undefined;
-    vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
-      requestSignal = init?.signal ?? undefined;
-      return Promise.resolve(new Response(new ReadableStream({ start: () => undefined })));
-    }));
-
-    const pending = createWorkerSession(request);
-    await vi.advanceTimersByTimeAsync(workerSessionRequestTimeoutMs);
-
-    await expect(pending).resolves.toEqual({ error: "worker_session_network_error" });
-    expect(requestSignal?.aborted).toBe(true);
+    await expectDeadline(async () => new Response(new ReadableStream({ start: () => undefined })));
   });
 
   it("returns a successful response before the deadline", async () => {
@@ -137,7 +163,44 @@ describe("createWorkerSession", () => {
       vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 })),
     );
 
-    await expect(createWorkerSession(request)).resolves.toEqual(payload);
+    await expect(createWorkerSession({ ...request, playback_enabled: false })).resolves.toEqual(payload);
+    const fetchCall = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(fetchCall?.[1]?.body))).toMatchObject({ playback_enabled: false });
+  });
+
+  it("sends the playback preference and app release the worker gates on", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ error: "app_version_unsupported" }, { status: 426 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(createWorkerSession(request)).resolves.toEqual({ error: "app_version_unsupported" });
+    const body: unknown = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      app_platform: "android",
+      app_version: "1.2.3",
+      playback_enabled: true,
+    });
+  });
+});
+
+describe("hasSourceTranscript", () => {
+  const session = {
+    app_session_id: "session_1",
+    features: { source_transcript: false },
+    limits: { expires_at_ms: 20_000, max_session_seconds: 300 },
+    realtime_ws_url: "wss://worker.example.test/realtime",
+    session_epoch: 1,
+  };
+
+  it("follows the worker's source transcript flag", () => {
+    expect(hasSourceTranscript(session)).toBe(false);
+    expect(hasSourceTranscript({ ...session, features: { source_transcript: true } })).toBe(true);
+  });
+
+  it("keeps the source transcript for workers that predate the flag", () => {
+    const { features: _features, ...olderWorkerSession } = session;
+    expect(hasSourceTranscript(olderWorkerSession)).toBe(true);
   });
 });
 

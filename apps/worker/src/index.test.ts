@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@bradford-tech/supabase-integrity-attest", () => ({
   AssertionError: class AssertionError extends Error {},
@@ -8,6 +8,20 @@ vi.mock("@bradford-tech/supabase-integrity-attest", () => ({
 }));
 
 import worker from "./index";
+
+afterEach(() => vi.unstubAllGlobals());
+
+function configuredSessionRequest(appVersion?: string): Request {
+  return new Request("https://worker.example/v2/session", {
+    body: JSON.stringify({
+      app_install_id: `install_${crypto.randomUUID()}`,
+      ...(appVersion ? { app_platform: "android", app_version: appVersion } : {}),
+      source_language: "en",
+      target_language: "ar",
+    }),
+    method: "POST",
+  });
+}
 
 describe("worker routes", () => {
   it("answers preflight requests with CORS headers", async () => {
@@ -215,6 +229,9 @@ describe("worker routes", () => {
     );
 
     expect(createResponse.status).toBe(200);
+    await expect(createResponse.clone().json()).resolves.toMatchObject({
+      features: { source_transcript: false },
+    });
     const session = await createResponse.json() as {
       app_session_id: string;
       limits: { expires_at_ms: number; max_session_seconds: number };
@@ -227,6 +244,7 @@ describe("worker routes", () => {
       `app_session_id=${encodeURIComponent(session.app_session_id)}`,
     );
     expect(session.realtime_ws_url).toContain("target_language=ar");
+    expect(session.realtime_ws_url).toContain("playback_enabled=true");
     expect(session.realtime_ws_url).toMatch(/^wss:/);
     expect(session.session_epoch).toBe(1);
 
@@ -239,6 +257,72 @@ describe("worker routes", () => {
     );
     expect(closeResponse.status).toBe(200);
     await expect(closeResponse.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("returns the source-transcript capability selected by the server flag", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { source_transcript: true },
+    }))));
+    const response = await worker.fetch(
+      configuredSessionRequest(),
+      { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      features: { source_transcript: true },
+    });
+  });
+
+  it("refuses disabled sessions with the configured message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { sessions_enabled: true, sessions_disabled_message: true },
+      featureFlagPayloads: {
+        sessions_disabled_message: '"Paused for maintenance"',
+        sessions_enabled: "false",
+      },
+    }))));
+    const response = await worker.fetch(
+      configuredSessionRequest(),
+      { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "sessions_disabled",
+      message: "Paused for maintenance",
+    });
+  });
+
+  it("refuses a reported app version below the configured platform minimum", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { min_app_version_android: true },
+      featureFlagPayloads: { min_app_version_android: '"1.2.10"' },
+    }))));
+    const response = await worker.fetch(
+      configuredSessionRequest("1.2.9"),
+      { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
+    );
+    expect(response.status).toBe(426);
+    await expect(response.json()).resolves.toEqual({
+      error: "app_version_unsupported",
+      minimum_version: "1.2.10",
+    });
+  });
+
+  it("passes a disabled initial playback preference into the realtime URL", async () => {
+    const response = await worker.fetch(
+      new Request("https://worker.example/v2/session", {
+        body: JSON.stringify({
+          app_install_id: `install_${crypto.randomUUID()}`,
+          playback_enabled: false,
+          source_language: "en",
+          target_language: "ar",
+        }),
+        method: "POST",
+      }),
+      { OPENAI_API_KEY: "test_key", SESSION_HASH_SALT: "test_salt" },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("playback_enabled=false");
   });
 
   it("rejects required integrity when the device proof is absent", async () => {

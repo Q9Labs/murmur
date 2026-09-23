@@ -145,7 +145,7 @@ export function canAcceptReportWithStores(
   }
   if (
     session &&
-    nowMs - session.created_at_ms > defaultRateLimits.maxSessionSeconds * 1000
+    nowMs - session.created_at_ms > (session.max_session_seconds ?? defaultRateLimits.maxSessionSeconds) * 1000
   ) {
     return { ok: false, code: "session_expired" };
   }
@@ -210,9 +210,7 @@ export function pruneState(state: DurableLimitState, nowMs: number): void {
   for (const [sessionId, session] of Object.entries(state.sessions_by_id)) {
     const closedLongAgo =
       session.closed_at_ms !== null && nowMs - session.closed_at_ms > 24 * 60 * 60 * 1000;
-    const expiredLongAgo =
-      session.closed_at_ms === null &&
-      nowMs - session.created_at_ms > defaultRateLimits.maxSessionSeconds * 1000 * 2;
+    const expiredLongAgo = isUnclosedSessionLongExpired(session, nowMs);
     if (closedLongAgo || expiredLongAgo) {
       delete state.sessions_by_id[sessionId];
     }
@@ -238,6 +236,12 @@ export function pruneState(state: DurableLimitState, nowMs: number): void {
 
   pruneTelemetryState(state, nowMs);
   pruneReportInboxState(state, nowMs);
+}
+
+function isUnclosedSessionLongExpired(session: SessionRecord, nowMs: number): boolean {
+  return session.closed_at_ms === null &&
+    nowMs - session.created_at_ms >
+      (session.max_session_seconds ?? defaultRateLimits.maxSessionSeconds) * 1000 * 2;
 }
 
 function pruneTelemetryState(state: DurableLimitState, nowMs: number): void {

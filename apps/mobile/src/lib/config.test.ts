@@ -101,6 +101,9 @@ describe("UI preview config", () => {
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "translation-muted");
     expect(getUiPreviewScreen()).toBe("translation-muted");
 
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "out-of-minutes");
+    expect(getUiPreviewScreen()).toBe("out-of-minutes");
+
     vi.stubEnv("EXPO_PUBLIC_MURMUR_UI_PREVIEW", "welcome");
     expect(getUiPreviewScreen()).toBe("welcome");
 
