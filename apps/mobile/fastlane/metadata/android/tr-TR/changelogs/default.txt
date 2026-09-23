@@ -1,1 +1,1 @@
-Murmur arka plana geçtiğinde, bağlantı koptuğunda veya iki dakika boyunca konuşma algılanmadığında çeviri artık güvenli biçimde durur. Oturumlar için beş dakikalık güvenlik sınırı eklendi. Desteklenen cihazlarda telefon sesi çevirisi ve kayan altyazılar eklendi.
+Yeni Pro, Pro Max, Trip Pass ve Event Pass planları. Arka planda dinleme. iOS’ta Apple veya Android’de Google ile giriş yapın. Yeni tasarım, uygulama artık 11 dilde.

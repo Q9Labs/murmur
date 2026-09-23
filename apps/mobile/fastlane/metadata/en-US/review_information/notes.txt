@@ -1,4 +1,4 @@
-Murmur is a one-way live translator. It creates a durable guest account automatically, so no demo credentials or sign-in are required. The guest account receives 5 free translation minutes each calendar month. Optional Murmur Pro subscriptions and non-expiring credit packs use Apple in-app purchase.
+Murmur is a one-way live translator. It creates a durable guest account automatically, so no demo credentials or sign-in are required. The guest account receives 7 free translation minutes each month. Optional Pro and Pro Max subscriptions and Trip Pass (60 minutes) or Event Pass (300 minutes) packs use Apple in-app purchase. Pack minutes expire 3 months after purchase.
 
 Test path:
 1. Open Murmur.

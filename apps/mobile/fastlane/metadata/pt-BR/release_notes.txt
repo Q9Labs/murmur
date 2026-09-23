@@ -1,1 +1,1 @@
-A tradução agora é interrompida com segurança se o Murmur sair do primeiro plano, perder a conexão ou não detectar fala por dois minutos. As sessões têm um limite de segurança de cinco minutos. Também melhora assinaturas, recuperação da conta e confiabilidade da tradução ao vivo.
+Novos planos Pro, Pro Max, Trip Pass e Event Pass. Ouça em segundo plano, entre com Apple ou Google e aproveite o novo design. O app agora está em 11 idiomas.

@@ -1,1 +1,1 @@
-La traduction s’arrête désormais sans risque si Murmur passe en arrière-plan, perd la connexion ou n’entend aucune parole pendant deux minutes. Chaque session a une limite de sécurité de cinq minutes. Comprend la traduction de l’audio du téléphone et les sous-titres flottants sur les appareils compatibles.
+Nouvelles formules Pro, Pro Max, Trip Pass et Event Pass. L’écoute continue en arrière-plan. Connexion avec Apple sur iOS ou Google sur Android. Nouvelle interface et app en 11 langues.

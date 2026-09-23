@@ -6,9 +6,11 @@ Kaynak ve hedef dili seçin, ardından Listen düğmesine dokunun. Murmur konuş
 
 Murmur; İngilizce, Arapça, İspanyolca, Fransızca, Almanca, İtalyanca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, Korece, Rusça, Hintçe ve Felemenkçeyi destekler. Arapça metin sağdan sola görüntülenir.
 
-Her ay 5 dakika ücretsiz
+Her ay 7 dakika ücretsiz, kayıt gerekmez
 
-Murmur otomatik olarak kalıcı bir misafir hesabı oluşturur; kayıt olmadan her ay 5 dakika çeviri kullanabilirsiniz. Murmur Pro aylık ve yıllık planlar sunar; süresi dolmayan kredi paketleri ihtiyaç duyduğunuzda ek süre sağlar. Hesap kurtarma için e-posta bağlayabilir, mağaza satın alımlarını geri yükleyebilir ve hesabınızı uygulamadan silebilirsiniz.
+Murmur otomatik olarak bir misafir hesabı oluşturur ve kayıt olmadan her ay 7 dakika ücretsiz çeviri sunar. Bu bölgede Pro ayda 90, Pro Max 400 dakika içerir; ikisinin de aylık ve yıllık planı vardır. Ücretli oturumlar 60 dakikaya kadar sürebilir. Trip Pass (30 dakika) veya Event Pass (300 dakika) ile süre ekleyin; paket dakikaları satın aldıktan 3 ay sonra sona erer. Hesabınızı kaydetmek ve satın alımları geri yüklemek için Apple veya Google ile giriş yapın. Hesabınızı uygulamadan silebilirsiniz.
+
+Murmur arka plandayken veya ekran kilitliyken dinlemeye devam eder. Yenilenen uygulama arayüzü 11 dilde kullanılabilir.
 
 Murmur, varsayılan olarak bulutta transkript geçmişi tutmaz. Mikrofon sesi yalnızca canlı oturum sırasında aktarılır; istediğiniz zaman durdurabilir veya iptal edebilirsiniz.
 
@@ -23,6 +25,6 @@ Takibi kolay canlı çeviri
 
 Murmur için yalnızca internet bağlantısı ve mikrofon gerekir.
 
-Murmur, konuşmayı canlı tanımak ve çevirmek, ayrıca çeviriyi sesli sunmak için yapay zekâ kullanır. Çeviriler gecikebilir, eksik veya hatalı olabilir. Acil durumlarda ya da tıbbi, hukuki, finansal, göçmenlikle ilgili veya başka önemli kararlarda nitelikli bir insan tercüman olmadan yalnızca Murmur'a güvenmeyin.
+Murmur canlı konuşmayı tanımak, çevirmek ve çeviriyi sesli sunmak için üçüncü taraf bir yapay zekâ hizmeti kullanır. Sonuçlar gecikebilir, eksik veya hatalı olabilir. Acil durumlarda ya da tıbbi, hukuki, finansal, göçmenlikle ilgili ve diğer önemli kararlarda yalnızca Murmur’a güvenmeyin; nitelikli bir insan çevirmenden destek alın.
 
 Kullanım Koşulları: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

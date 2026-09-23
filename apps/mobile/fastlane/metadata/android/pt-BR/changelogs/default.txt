@@ -1,1 +1,1 @@
-A tradução agora é interrompida com segurança se o Murmur sair do primeiro plano, perder a conexão ou não detectar fala por dois minutos. As sessões têm um limite de segurança de cinco minutos. Inclui tradução do áudio do celular e legendas flutuantes em dispositivos compatíveis.
+Novos planos Pro, Pro Max, Trip Pass e Event Pass. Ouça em segundo plano. Entre com Apple no iOS ou Google no Android. Novo design e app em 11 idiomas.

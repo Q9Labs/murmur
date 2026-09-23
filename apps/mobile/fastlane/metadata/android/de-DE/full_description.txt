@@ -6,9 +6,11 @@ Wählen Sie Ausgangs- und Zielsprache und tippen Sie auf Listen. Murmur zeigt di
 
 Murmur unterstützt Englisch, Arabisch, Spanisch, Französisch, Deutsch, Italienisch, brasilianisches Portugiesisch, Japanisch, vereinfachtes Chinesisch, Koreanisch, Russisch, Hindi und Niederländisch. Arabisch wird von rechts nach links dargestellt.
 
-Jeden Monat 5 Minuten kostenlos
+Jeden Monat 7 Minuten kostenlos
 
-Murmur erstellt automatisch ein dauerhaftes Gastkonto. Damit erhalten Sie jeden Monat 5 Übersetzungsminuten, ganz ohne Anmeldung. Murmur Pro bietet Monats- und Jahrespläne; nicht verfallende Guthabenpakete schaffen bei Bedarf zusätzliche Zeit. Sie können eine E-Mail zur Kontowiederherstellung verknüpfen, Store-Käufe wiederherstellen und Ihr Konto in der App löschen.
+Murmur erstellt automatisch ein Gastkonto mit 7 kostenlosen Übersetzungsminuten pro Monat – ganz ohne Anmeldung. Pro umfasst 120 Minuten im Monat, Pro Max 400; beide gibt es als Monats- und Jahresplan. Bezahlte Sitzungen dauern bis zu 60 Minuten. Mit Trip Pass (60 Minuten) oder Event Pass (300 Minuten) fügen Sie Zeit hinzu; Paketminuten verfallen 3 Monate nach dem Kauf. Melden Sie sich mit Google an, um Ihr Konto zu sichern und Käufe wiederherzustellen. Sie können Ihr Konto in der App löschen.
+
+Murmur hört weiter zu, wenn die App im Hintergrund läuft oder der Bildschirm gesperrt ist. Die überarbeitete App-Oberfläche ist in 11 Sprachen verfügbar.
 
 Murmur speichert standardmäßig keinen Transkriptverlauf in der Cloud. Mikrofon-Audio wird nur während einer Live-Sitzung übertragen; Sie können sie jederzeit beenden oder abbrechen.
 
@@ -23,10 +25,8 @@ Live-Übersetzung, der Sie gut folgen können
 
 Murmur benötigt nur eine Internetverbindung und ein Mikrofon.
 
-Murmur nutzt KI, um Sprache live zu erkennen und zu übersetzen sowie die Übersetzung vorzulesen. Übersetzungen können verzögert, unvollständig oder ungenau sein. Verlassen Sie sich bei Notfällen oder wichtigen medizinischen, rechtlichen, finanziellen, migrationsbezogenen oder anderen folgenreichen Entscheidungen nicht ohne qualifizierte menschliche Dolmetschung allein auf Murmur.
+Murmur nutzt für Spracherkennung, Übersetzung und Sprachausgabe einen KI-Dienst eines Drittanbieters. Ergebnisse können verzögert, unvollständig oder ungenau sein. Verlassen Sie sich bei Notfällen sowie medizinischen, rechtlichen, finanziellen, migrationsbezogenen oder anderen wichtigen Entscheidungen nicht allein auf Murmur; nutzen Sie qualifizierte menschliche Dolmetschende.
 
 Wählen Sie Microphone für Sprache in der Nähe oder Device Audio auf unterstützten Android-Smartphones, um geeignete Medien zu übersetzen, die in einer anderen App abgespielt werden. Wenn Sie die Anzeige über anderen Apps erlauben, erscheinen die Untertitel auf Wunsch in einer verschiebbaren Blase. Manche Apps und geschützte Medien verhindern die Audioaufnahme.
 
 Murmur benötigt eine Internetverbindung. Android verlangt in beiden Aufnahmemodi die Audioaufzeichnungsberechtigung und für jede Device Audio-Sitzung die Freigabe der Bildschirmübertragung. Im Modus Device Audio zeichnet Murmur das Mikrofon nicht auf.
-
-Murmur nutzt KI, um Sprache live zu erkennen und zu übersetzen sowie die Übersetzung vorzulesen. KI-Ergebnisse können unvollständig oder ungenau sein. Verwenden Sie Murmur bei Notfällen oder folgenreichen medizinischen, rechtlichen, finanziellen, migrationsbezogenen oder anderen Entscheidungen nicht als einzige Quelle.

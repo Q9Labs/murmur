@@ -1,1 +1,1 @@
-La traducción se detiene de forma segura si Murmur pasa a segundo plano, pierde la conexión o no detecta voz durante dos minutos. Las sesiones tienen ahora un límite de seguridad de cinco minutos. También mejoran las suscripciones, la recuperación de cuentas y la fiabilidad de la traducción en vivo.
+Nuevos planes Pro, Pro Max, Trip Pass y Event Pass. La traducción sigue en segundo plano. Inicia sesión con Apple o Google. Nuevo diseño y app en 11 idiomas.

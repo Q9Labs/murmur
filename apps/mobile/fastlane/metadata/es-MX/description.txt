@@ -6,9 +6,11 @@ Elige el idioma de origen y el de destino, y toca Listen. Murmur muestra los sub
 
 Murmur admite inglés, árabe, español, francés, alemán, italiano, portugués de Brasil, japonés, chino simplificado, coreano, ruso, hindi y neerlandés. También muestra el árabe de derecha a izquierda.
 
-Empieza gratis, sin registrarte
+7 minutos gratis cada mes, sin registro
 
-Murmur crea automáticamente una cuenta de invitado permanente con 5 minutos de traducción al mes, sin registro. Murmur Pro ofrece planes mensuales y anuales; los paquetes de créditos que no caducan añaden tiempo cuando lo necesites. Puedes vincular un correo para recuperar la cuenta, restaurar compras de la tienda y eliminar tu cuenta desde la app.
+Murmur crea automáticamente una cuenta de invitado con 7 minutos de traducción gratis al mes, sin necesidad de registrarte. Pro incluye 120 minutos al mes y Pro Max, 400; ambos tienen planes mensuales y anuales. Las sesiones de pago pueden durar hasta 60 minutos. Añade tiempo con Trip Pass (60 minutos) o Event Pass (300 minutos); los minutos de los pases vencen 3 meses después de comprarlos. Inicia sesión con Apple o Google para guardar tu cuenta y restaurar compras. También puedes eliminar tu cuenta desde la app.
+
+Sigue escuchando aunque Murmur quede en segundo plano o bloquees la pantalla. La interfaz rediseñada está disponible en 11 idiomas.
 
 Murmur no guarda el historial de transcripciones en la nube de forma predeterminada. El audio del micrófono solo se transmite durante una sesión en vivo; puedes detenerla o cancelarla cuando quieras.
 
@@ -23,6 +25,6 @@ Diseñado para una traducción en vivo fácil de seguir
 
 Murmur solo necesita conexión a internet y acceso al micrófono.
 
-Murmur usa IA para reconocer el habla, traducir en vivo y reproducir la traducción en voz. Las traducciones pueden demorarse, ser incompletas o inexactas. No confíes en Murmur para emergencias ni para tomar decisiones médicas, legales, financieras, migratorias u otras de alto riesgo sin un intérprete humano calificado.
+Murmur usa un servicio de IA de terceros para reconocer el habla en vivo, traducirla y reproducir la traducción en voz. Los resultados pueden tardar, estar incompletos o ser imprecisos. No dependas solo de Murmur en emergencias ni para decisiones médicas, legales, financieras, migratorias u otras de alto impacto; consulta a un intérprete humano cualificado.
 
 Términos de uso: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

@@ -6,9 +6,11 @@ Pilih bahasa sumber dan bahasa tujuan, lalu ketuk Listen. Murmur menampilkan tak
 
 Bahasa Indonesia belum didukung sebagai bahasa sumber atau tujuan. Murmur saat ini menerjemahkan antara bahasa Inggris, Arab, Spanyol, Prancis, Jerman, Italia, Portugis Brasil, Jepang, Mandarin Sederhana, Korea, Rusia, Hindi, dan Belanda. Teks Arab juga ditampilkan dari kanan ke kiri.
 
-Mulai gratis, tanpa mendaftar
+7 menit gratis setiap bulan, tanpa daftar
 
-Murmur otomatis membuat akun tamu permanen yang memberi 5 menit terjemahan setiap bulan tanpa perlu mendaftar. Murmur Pro menawarkan paket bulanan dan tahunan; paket kredit yang tidak kedaluwarsa menambah waktu saat Anda membutuhkannya. Anda dapat menautkan email untuk pemulihan akun, memulihkan pembelian di toko, dan menghapus akun dari aplikasi.
+Murmur otomatis membuat akun tamu dan memberi 7 menit terjemahan gratis setiap bulan tanpa perlu mendaftar. Di wilayah ini, Pro mencakup 90 menit per bulan dan Pro Max 400; keduanya tersedia dalam paket bulanan dan tahunan. Sesi berbayar dapat berlangsung hingga 60 menit. Tambahkan waktu dengan Trip Pass (30 menit) atau Event Pass (300 menit); menit paket kedaluwarsa 3 bulan setelah pembelian. Masuk dengan Google untuk menyimpan akun dan memulihkan pembelian. Akun dapat dihapus melalui aplikasi.
+
+Murmur tetap mendengarkan saat berjalan di latar belakang atau layar terkunci. Antarmuka aplikasi yang diperbarui tersedia dalam 11 bahasa.
 
 Secara default, Murmur tidak menyimpan riwayat transkrip di cloud. Audio mikrofon hanya dialirkan selama sesi langsung; Anda dapat menghentikan atau membatalkannya kapan saja.
 
@@ -23,10 +25,8 @@ Terjemahan langsung yang mudah diikuti
 
 Murmur hanya memerlukan koneksi internet dan mikrofon.
 
-Murmur menggunakan AI untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam bentuk suara. Hasil terjemahan dapat terlambat, tidak lengkap, atau tidak akurat. Jangan hanya mengandalkan Murmur untuk keadaan darurat atau keputusan medis, hukum, keuangan, imigrasi, maupun keputusan penting lainnya tanpa bantuan juru bahasa manusia yang berkualifikasi.
+Murmur menggunakan layanan AI pihak ketiga untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam suara. Hasilnya dapat terlambat, tidak lengkap, atau tidak akurat. Jangan hanya mengandalkan Murmur untuk keadaan darurat atau keputusan medis, hukum, keuangan, imigrasi, maupun keputusan penting lainnya; gunakan juru bahasa manusia yang berkualifikasi.
 
 Pilih Microphone untuk ucapan di sekitar atau Device Audio pada ponsel Android yang didukung untuk menerjemahkan audio yang memenuhi syarat dari aplikasi lain. Jika Anda mengizinkan tampilan di atas aplikasi lain, takarir dapat muncul dalam gelembung yang bisa digeser. Beberapa aplikasi dan media yang dilindungi memblokir pengambilan audio.
 
 Murmur memerlukan internet. Android meminta izin perekaman audio untuk kedua mode dan persetujuan berbagi layar pada setiap sesi Device Audio; Murmur tidak merekam mikrofon dalam mode ini.
-
-Murmur menggunakan AI untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam bentuk suara. Hasil AI dapat tidak lengkap atau tidak akurat. Jangan gunakan Murmur sebagai satu-satunya sumber untuk keadaan darurat atau keputusan penting.
