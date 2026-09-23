@@ -8,7 +8,7 @@ Murmur supports English, Arabic, Spanish, French, German, Italian, Brazilian Por
 
 START FREE, KEEP YOUR TIME
 
-Murmur creates a durable guest account with 10 translation minutes each month, so no sign-up is needed. Murmur Pro includes 3 hours each month, with monthly and annual plans. Non-expiring credit packs add time when you need it. You can link an email for recovery, restore Google Play purchases, and delete your account in the app.
+Murmur creates a durable guest account with 5 translation minutes each month, so no sign-up is needed. Murmur Pro offers monthly and annual plans; non-expiring credit packs add time when you need it. You can link an email for recovery, restore Google Play purchases, and delete your account in the app.
 
 Murmur does not save cloud transcript history by default. Microphone audio streams only during a live session, and you can stop or cancel at any time.
 
@@ -25,4 +25,4 @@ Choose Microphone for nearby speech or Device Audio on supported Android phones 
 
 Murmur needs an internet connection. Android requires audio-recording access for both capture modes and screen-sharing approval for each Device Audio session; Murmur does not record the microphone in Device Audio mode.
 
-Murmur uses OpenAI Realtime for speech recognition, translation, and translated speech. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.
+Murmur uses AI for live speech recognition, translation, and translated speech. AI output can be incomplete or inaccurate. Do not use Murmur as the only source for emergencies, medical, legal, financial, immigration, or other high-stakes decisions.
