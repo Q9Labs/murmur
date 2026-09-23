@@ -9,13 +9,17 @@ import {
 
 function createState() {
   let saved: unknown;
+  let alarmAt: number | null = null;
   return {
     blockConcurrencyWhile: vi.fn(async (callback: () => Promise<Response>) => callback()),
+    get alarmAt() { return alarmAt; },
     storage: {
       get: vi.fn(async () => saved),
       put: vi.fn(async (_key: string, value: unknown) => {
         saved = structuredClone(value);
       }),
+      setAlarm: vi.fn(async (timestamp: number) => { alarmAt = timestamp; }),
+      deleteAlarm: vi.fn(async () => { alarmAt = null; }),
     },
   };
 }
@@ -88,6 +92,28 @@ describe("RateLimitDurableObject", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "invalid_json" });
+  });
+
+  it("prunes telemetry identifiers on an alarm after their one-hour window", async () => {
+    const nowMs = 2_000_000_000_000;
+    const state = createState();
+    const durableObject = new RateLimitDurableObject(state as unknown as DurableObjectState);
+    vi.spyOn(Date, "now").mockReturnValue(nowMs);
+
+    await call(durableObject, {
+      action: "can_accept_telemetry",
+      hashed_client_id: "hashed-address",
+      now_ms: nowMs,
+    });
+
+    expect(state.alarmAt).toBe(nowMs + 60 * 60 * 1000 + 1);
+    vi.spyOn(Date, "now").mockReturnValue(nowMs + 60 * 60 * 1000 + 1);
+    await durableObject.alarm();
+
+    expect(await state.storage.get()).toMatchObject({ telemetry_timestamps_by_client: {} });
+    expect(state.alarmAt).toBeNull();
+    expect(state.storage.deleteAlarm).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
   });
 
   it("dispatches every persisted limiter action", async () => {

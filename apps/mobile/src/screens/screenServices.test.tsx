@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({
   claimPhoneAudioGift: vi.fn(async () => undefined),
   deleteConversation: vi.fn(async () => undefined),
   getConversation: vi.fn(async () => null),
-  listConversations: vi.fn(async () => []),
+  listConversationSummaries: vi.fn(async () => []),
   setInsightsConsent: vi.fn(async () => undefined),
   shareConversation: vi.fn(async () => undefined),
   submitRating: vi.fn(async () => undefined),
@@ -28,7 +28,7 @@ vi.mock("../lib/insightsConsent", () => ({
 vi.mock("../lib/conversationHistory", () => ({
   deleteConversation: api.deleteConversation,
   getConversation: api.getConversation,
-  listConversations: api.listConversations,
+  listConversationSummaries: api.listConversationSummaries,
   shareConversation: api.shareConversation,
 }));
 vi.mock("../lib/ratings/ratings", () => ({ submitRating: api.submitRating }));
@@ -94,7 +94,7 @@ describe("screen services", () => {
     expect(api.submitRating).toHaveBeenNthCalledWith(2, { answer: "travel", stars: 3 });
   });
 
-  it("shares and deletes conversations for the Pro customer only", async () => {
+  it("keeps sharing Pro-only but permits local deletion without history entitlement", async () => {
     const pro = renderServices(fixtureBilling({
       features: { history: true, maxSessionSeconds: 3_600, phoneAudio: true },
       plan: "pro",
@@ -102,11 +102,13 @@ describe("screen services", () => {
     await pro.shareConversation("conversation-1");
     await pro.deleteConversation("conversation-1");
     expect(api.shareConversation).toHaveBeenCalledWith("customer-1", "conversation-1");
-    expect(api.deleteConversation).toHaveBeenCalledWith("customer-1", "conversation-1");
-    expect(api.listConversations).toHaveBeenCalledWith("customer-1");
+    expect(api.deleteConversation).toHaveBeenCalledWith("conversation-1");
+    expect(api.listConversationSummaries).toHaveBeenCalledOnce();
 
     const free = renderServices(fixtureBilling());
     await expect(free.shareConversation("conversation-1")).rejects.toThrow("part of Pro");
+    await free.deleteConversation("conversation-1");
+    expect(api.deleteConversation).toHaveBeenLastCalledWith("conversation-1");
   });
 
   it("saves the insights choice", async () => {

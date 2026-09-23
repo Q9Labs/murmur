@@ -61,5 +61,11 @@ describe("conversation screen", () => {
     expect(renderToStaticMarkup(<ConversationScreen id="gone" />)).toContain("no longer on this phone");
     state.services = fixtureServices({ conversations: [fixtureConversation] });
     expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Conversation history");
+
+    state.services = fixtureServices({
+      conversations: [{ ...fixtureConversation, canView: false, text: "" }],
+      features: pro,
+    });
+    expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Conversation history");
   });
 });

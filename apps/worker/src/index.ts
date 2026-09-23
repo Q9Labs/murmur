@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/cloudflare";
 
 import { createMurmurAuth } from "./auth/auth";
+import { deleteExpiredAuthSessions } from "./auth/deleteExpiredSessions";
 import { CustomerLedgerDurableObject } from "./billing/customerLedgerDurableObject";
 import { deleteExpiredFreeAllowanceClaims } from "./billing/freeAllowanceClaims";
 import { reconcileDailyRevenueCatBatch } from "./billing/revenueCatReconciliation";
@@ -233,6 +234,21 @@ const handler = {
         });
         throw failure;
       });
+    const expiredAuthSessions = deleteExpiredAuthSessions(env.BILLING_DB, nowMs)
+      .then((deletedSessions) => {
+        if (deletedSessions > 0) {
+          logWorkerEvent({
+            deleted_sessions: deletedSessions,
+            event: "expired_auth_sessions_deleted",
+          });
+        }
+      })
+      .catch((failure: unknown) => {
+        Sentry.captureException(failure, {
+          tags: { operation: "expired_auth_session_cleanup" },
+        });
+        throw failure;
+      });
     context.waitUntil(
       Promise.all([
         reconciliation,
@@ -240,6 +256,7 @@ const handler = {
         abandonedSessionSweep,
         sessionInsightRetention,
         ratingSurveyRetention,
+        expiredAuthSessions,
       ])
         .then(() => undefined),
     );

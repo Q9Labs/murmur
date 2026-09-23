@@ -4,6 +4,7 @@ import { conversationDetails, conversationLanguages, conversationStarted } from 
 import { en, uiText } from "../__tests__/uiText";
 
 const record = {
+  canView: true,
   durationMs: 12 * 60_000,
   id: "conversation-1",
   sourceLanguage: "ar" as const,

@@ -26,7 +26,7 @@ const validEvents: MobileTelemetryEvent[] = [
   {
     app_version: "1.2.0",
     build_number: "web",
-    enabled: false,
+    enabled: true,
     event: "mobile_analytics_preference_changed",
     platform: "web",
   },
@@ -97,7 +97,6 @@ const validEvents: MobileTelemetryEvent[] = [
   { event: "offer_shown", offering_id: "personal_offer" },
   { event: "offer_redeemed", offering_id: "personal_offer" },
   { event: "account_saved", method: "apple" },
-  { event: "rating_submitted", stars: 5, answer: "travel" },
   { event: "store_review_prompted", platform: "ios" },
 ];
 
@@ -112,9 +111,6 @@ describe("mobile telemetry parsing", () => {
     }
     for (const method of ["apple", "google", "email"]) {
       expect(parseMobileTelemetryEvent({ event: "account_saved", method })).not.toBeNull();
-    }
-    for (const stars of [1, 2, 3, 4, 5]) {
-      expect(parseMobileTelemetryEvent({ event: "rating_submitted", stars, answer: "other" })).not.toBeNull();
     }
     expect(parseMobileTelemetryEvent({ event: "store_review_prompted", platform: "android" })).not.toBeNull();
     expect(parseMobileTelemetryEvent({
@@ -187,13 +183,25 @@ describe("mobile telemetry parsing", () => {
     { event: "offer_shown", offering_id: "" },
     { event: "offer_redeemed", offering_id: "x".repeat(65) },
     { event: "account_saved", method: "password" },
-    { event: "rating_submitted", stars: 0, answer: "travel" },
-    { event: "rating_submitted", stars: 5, answer: "private note" },
     { event: "store_review_prompted", platform: "web" },
     { ...validEvents.find((event) => event.event === "mobile_session_completed"), backgrounded: "true" },
     { ...validEvents.find((event) => event.event === "mobile_session_completed"), capture_source: "screen" },
   ])("rejects malformed insight telemetry fields", (event) => {
     expect(parseMobileTelemetryEvent(event)).toBeNull();
+  });
+
+  it("rejects an analytics-preference event that turns analytics off", () => {
+    expect(parseMobileTelemetryEvent({
+      app_version: "1.2.0",
+      build_number: "10",
+      enabled: false,
+      event: "mobile_analytics_preference_changed",
+      platform: "ios",
+    })).toBeNull();
+  });
+
+  it("rejects survey submissions from the relayed analytics protocol", () => {
+    expect(parseMobileTelemetryEvent({ event: "rating_submitted", stars: 5, answer: "travel" })).toBeNull();
   });
 
   it.each([

@@ -5,7 +5,6 @@ import {
   type SourceLanguageCode,
 } from "./languages";
 import type { ReportTranslationCategory } from "./transport/types";
-import { isInsightSetting } from "./insights";
 
 export type TelemetryPlatform = "android" | "ios" | "web" | "unknown";
 
@@ -32,7 +31,6 @@ export type MobileTelemetryEvent =
   | { event: "plan_tab_viewed"; tab: "monthly" | "yearly" | "credit_packs" }
   | { event: "offer_shown" | "offer_redeemed"; offering_id: string }
   | { event: "account_saved"; method: "apple" | "google" | "email" }
-  | { event: "rating_submitted"; stars: 1 | 2 | 3 | 4 | 5; answer: string }
   | { event: "store_review_prompted"; platform: "ios" | "android" }
   | {
       app_version: string;
@@ -58,7 +56,7 @@ export type MobileTelemetryEvent =
   | {
       app_version: string;
       build_number: string;
-      enabled: boolean;
+      enabled: true;
       event: "mobile_analytics_preference_changed";
       platform: TelemetryPlatform;
     }
@@ -203,10 +201,6 @@ const telemetryEventParsers = new Map<string, TelemetryEventParser>([
   ["account_saved", (value) =>
     value.method === "apple" || value.method === "google" || value.method === "email"
       ? { event: "account_saved", method: value.method } : null],
-  ["rating_submitted", (value) =>
-    (value.stars === 1 || value.stars === 2 || value.stars === 3 || value.stars === 4 || value.stars === 5) &&
-    isInsightSetting(value.answer)
-      ? { event: "rating_submitted", stars: value.stars, answer: value.answer } : null],
   ["store_review_prompted", (value) =>
     value.platform === "ios" || value.platform === "android"
       ? { event: "store_review_prompted", platform: value.platform } : null],
@@ -305,14 +299,14 @@ function parseAnalyticsPreferenceEvent(
   if (
     !hasAppIdentity(value) ||
     !isTelemetryPlatform(value.platform) ||
-    typeof value.enabled !== "boolean"
+    value.enabled !== true
   ) {
     return null;
   }
   return {
     app_version: value.app_version,
     build_number: value.build_number,
-    enabled: value.enabled,
+    enabled: true,
     event: "mobile_analytics_preference_changed",
     platform: value.platform,
   };

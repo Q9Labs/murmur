@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { router } from "../__tests__/navigation";
-import { recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
+import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 import { fixtureConversation, fixtureServices } from "../__tests__/servicesFixture";
 import type { ScreenServices } from "../screenServices";
 
@@ -13,7 +13,14 @@ vi.mock("posthog-react-native", () => ({
   PostHogMaskView: (props: { children: ReactNode }) => <section data-replay-mask="">{props.children}</section>,
 }));
 vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
-vi.mock("../proGate", () => ({ ProGate: (props: { title: string }) => <p>gate {props.title}</p> }));
+vi.mock("../proGate", () => ({
+  ProGate: (props: { children?: ReactNode; title: string }) => (
+    <section data-pro-gate="">
+      <p>gate {props.title}</p>
+      {props.children}
+    </section>
+  ),
+}));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
@@ -31,6 +38,20 @@ describe("history screen", () => {
   it("gates free listeners", () => {
     state.services = fixtureServices({ conversations: [fixtureConversation] });
     expect(renderToStaticMarkup(<HistoryScreen />)).toContain("gate Conversation history");
+  });
+
+  it("keeps old local entries deletable without exposing their translation after Pro expires", async () => {
+    state.services = fixtureServices({
+      conversations: [{ ...fixtureConversation, canView: false, text: "" }],
+    });
+    const markup = renderToStaticMarkup(<HistoryScreen />);
+
+    expect(markup).toContain("gate Conversation history");
+    expect(markup).not.toContain("Welcome to the conference");
+    expect(findControl("Delete")).toBeDefined();
+    findControl("Delete")?.onPress?.();
+    recorded.alerts[0]?.buttons.find((button) => button.style === "destructive")?.onPress?.();
+    await vi.waitFor(() => expect(state.services?.deleteConversation).toHaveBeenCalledWith("conversation-1"));
   });
 
   it("lists conversations newest first and opens one", () => {

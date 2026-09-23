@@ -6,6 +6,9 @@ const review = vi.hoisted(() => ({
   requestReview: vi.fn(async () => undefined),
 }));
 const capture = vi.hoisted(() => vi.fn());
+const authenticatedHeaders = vi.hoisted(() => vi.fn(async () => new Headers({
+  cookie: "murmur.session=signed-in-cookie",
+})));
 
 vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
 vi.mock("expo-store-review", () => review);
@@ -17,7 +20,7 @@ vi.mock("../localStorage", () => ({
 }));
 vi.mock("../telemetry", () => ({ captureMobileTelemetry: capture }));
 vi.mock("../config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
-vi.mock("../auth/client", () => ({ authenticatedWorkerHeaders: vi.fn(async () => ({})) }));
+vi.mock("../auth/client", () => ({ authenticatedWorkerHeaders: authenticatedHeaders }));
 vi.mock("../installIdentity", () => ({ getOrCreateInstallId: vi.fn(async () => "install_12345678") }));
 
 import { claimRatingSlot, recordCompletedSession, submitRating } from "./ratings";
@@ -26,6 +29,7 @@ beforeEach(() => {
   storage.clear();
   review.requestReview.mockClear();
   capture.mockClear();
+  authenticatedHeaders.mockClear();
   vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 202 })));
 });
 
@@ -56,6 +60,23 @@ describe("ratings integration", () => {
     expect(await recordCompletedSession(completion)).toMatchObject({ ratingEligible: true, successfulSessionCount: 3 });
     expect(review.requestReview).toHaveBeenCalledOnce();
     expect(capture).toHaveBeenCalledWith({ event: "store_review_prompted", platform: "android" });
+    expect(capture).not.toHaveBeenCalledWith(expect.objectContaining({ event: "rating_submitted" }));
+  });
+
+  it("sends survey answers only to Murmur and includes Better Auth headers", async () => {
+    await submitRating({ answer: "other", otherText: "Parent evening", stars: 5 });
+
+    const requests = vi.mocked(fetch).mock.calls;
+    expect(requests).toHaveLength(1);
+    expect(String(requests[0]?.[0])).toBe("https://murmur.test/v3/ratings");
+    expect(new Headers(requests[0]?.[1]?.headers).get("cookie")).toBe("murmur.session=signed-in-cookie");
+    expect(JSON.parse(String(requests[0]?.[1]?.body))).toEqual({
+      app_install_id: "install_12345678",
+      answer: "other",
+      other_text: "Parent evening",
+      stars: 5,
+    });
+    expect(capture).not.toHaveBeenCalledWith(expect.objectContaining({ event: "rating_submitted" }));
   });
 
   it("schedules the rating by the sessions where it was eligible, not every successful one", async () => {
