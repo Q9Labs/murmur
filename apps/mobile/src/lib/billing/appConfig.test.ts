@@ -15,6 +15,9 @@ describe("app-facing server config", () => {
     expect(decodeAppConfig({ enabled_languages: ["en", "ar", "klingon"] })?.enabledLanguages)
       .toEqual(["en", "ar"]);
     expect(decodeAppConfig({ enabled_languages: ["klingon"] })?.enabledLanguages).toBeNull();
+    expect(decodeAppConfig({ enabled_languages: [] })?.enabledLanguages).toEqual([]);
+    expect(decodeAppConfig({ enabled_languages: "en" })?.enabledLanguages).toBeNull();
+    expect(decodeAppConfig({})?.enabledLanguages).toBeNull();
   });
 
   it("falls back to defaults for unset or malformed keys", () => {

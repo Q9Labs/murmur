@@ -31,12 +31,17 @@ export function decodeAppConfig(payload: unknown): MurmurAppConfig | null {
   };
 }
 
+// An explicit [] disables every language. A non-array, or a non-empty list with no known
+// language codes, is treated as invalid and falls back to all languages.
 function decodeEnabledLanguages(value: unknown): LanguageCode[] | null {
   if (!Array.isArray(value)) {
     return null;
   }
   const languages = value.filter(isLanguageCode);
-  return languages.length > 0 ? languages : null;
+  if (value.length > 0 && languages.length === 0) {
+    return null;
+  }
+  return languages;
 }
 
 function isThresholdMinutes(value: unknown): value is number {
