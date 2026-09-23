@@ -29,8 +29,8 @@ describe("plan picker", () => {
     ]);
     expect(markup).toContain("$99.99");
     expect(markup).toContain("/ year");
-    expect(markup).toContain("$8.33 a month, 2 months free");
-    expect(findControl("Murmur Pro Annual, $99.99 / year, Save 17% against monthly")?.accessibilityRole)
+    expect(markup).toContain("$8.33 a month, 1 month free");
+    expect(findControl("Murmur Pro Annual, $99.99 / year, Save 16% against monthly")?.accessibilityRole)
       .toBe("summary");
 
     findControl("Add your email, then buy this plan")?.onPress?.();

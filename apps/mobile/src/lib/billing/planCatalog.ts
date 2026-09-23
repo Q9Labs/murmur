@@ -46,16 +46,20 @@ export function yearlySaving(yearly: MurmurPlan, plans: MurmurPlan[]): YearlySav
   if (yearly.term !== "yearly" || !monthly || monthly.priceAmount <= 0) {
     return null;
   }
-  const twelveMonths = monthly.priceAmount * 12;
-  const percent = Math.round((1 - yearly.priceAmount / twelveMonths) * 100);
-  if (percent <= 0) {
+  const monthsSaved = 12 - yearly.priceAmount / monthly.priceAmount;
+  const monthsFree = Math.floor(monthsSaved + roundingTolerance);
+  if (monthsFree < 1) {
     return null;
   }
   return {
-    monthsFree: Math.round(12 - yearly.priceAmount / monthly.priceAmount),
-    percent,
+    monthsFree,
+    percent: Math.floor((monthsSaved / 12) * 100 + roundingTolerance),
   };
 }
+
+// Store prices are decimals, so exact ratios such as 99.90 / 9.99 can land a hair under
+// a whole number. The tolerance only absorbs that float error; savings still round down.
+const roundingTolerance = 1e-9;
 
 export function planBenefits(plan: MurmurPlan, plans: MurmurPlan[]): string[] {
   const lines = plan.description.trim() ? [plan.description.trim()] : [];

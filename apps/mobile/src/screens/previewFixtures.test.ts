@@ -13,7 +13,7 @@ import {
 describe("preview fixtures", () => {
   it("carry the proposed US ladder across all three tabs", async () => {
     expect(planTabs(previewPlans).map((tab) => tab.term)).toEqual(["monthly", "yearly", "pack"]);
-    expect(yearlySaving(previewYearlyPlan, previewPlans)).toEqual({ monthsFree: 2, percent: 17 });
+    expect(yearlySaving(previewYearlyPlan, previewPlans)).toEqual({ monthsFree: 1, percent: 16 });
     await expect(previewBilling.loadPlans()).resolves.toBe(previewPlans);
   });
 

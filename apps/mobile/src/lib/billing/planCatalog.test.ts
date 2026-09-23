@@ -64,8 +64,17 @@ describe("plan catalog", () => {
     expect(defaultPlanTerm([])).toBeNull();
   });
 
-  it("computes the yearly saving from store prices", () => {
-    expect(yearlySaving(yearly, [monthly, yearly])).toEqual({ monthsFree: 2, percent: 17 });
+  it("never claims a saving of less than one whole month", () => {
+    expect(yearlySaving({ ...yearly, priceAmount: 115 }, [monthly, yearly])).toBeNull();
+    expect(planBenefits({ ...yearly, priceAmount: 115, pricePerMonth: null }, [monthly, yearly])).toEqual([
+      "2 hours of live translation a month",
+    ]);
+    expect(planAccessibilityLabel({ ...yearly, priceAmount: 115 }, [monthly, yearly])).toBe("yearly, $99.99 / year");
+  });
+
+  it("computes the yearly saving from store prices, rounding down", () => {
+    expect(yearlySaving(yearly, [monthly, yearly])).toEqual({ monthsFree: 1, percent: 16 });
+    expect(yearlySaving({ ...yearly, priceAmount: 99.9 }, [monthly, yearly])).toEqual({ monthsFree: 2, percent: 16 });
     expect(yearlySaving(yearly, [yearly])).toBeNull();
     expect(yearlySaving({ ...yearly, priceAmount: 130 }, [monthly, yearly])).toBeNull();
     expect(yearlySaving(monthly, [monthly, yearly])).toBeNull();
@@ -75,11 +84,11 @@ describe("plan catalog", () => {
     expect(planBenefits(monthly, [monthly])).toEqual(["2 hours of live translation a month"]);
     expect(planBenefits(yearly, [monthly, yearly])).toEqual([
       "2 hours of live translation a month",
-      "$8.33 a month, 2 months free",
+      "$8.33 a month, 1 month free",
     ]);
     expect(planBenefits({ ...yearly, pricePerMonth: null }, [monthly, yearly])).toEqual([
       "2 hours of live translation a month",
-      "2 months free",
+      "1 month free",
     ]);
     expect(planBenefits({ ...yearly, pricePerMonth: null }, [yearly])).toEqual([
       "2 hours of live translation a month",
@@ -93,7 +102,7 @@ describe("plan catalog", () => {
     expect(planPurchaseLabel(yearly)).toBe("Subscribe for $99.99 / year");
     expect(planPurchaseLabel(pack)).toBe("Buy for $7.99");
     expect(planAccessibilityLabel(yearly, [monthly, yearly])).toBe(
-      "yearly, $99.99 / year, Save 17% against monthly",
+      "yearly, $99.99 / year, Save 16% against monthly",
     );
     expect(planAccessibilityLabel(pack, [pack])).toBe("trip, $7.99");
   });
