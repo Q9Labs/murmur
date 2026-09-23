@@ -37,7 +37,7 @@ export class RevenueCatEventRepository {
         .prepare(
           `SELECT customer_id
            FROM customers
-           WHERE customer_id = ?`,
+           WHERE customer_id = ? AND state = 'active'`,
         )
         .bind(candidateId)
         .first<CustomerRow>();

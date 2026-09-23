@@ -44,6 +44,8 @@ export const previewBilling: MurmurBillingContext = {
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
+  signInWithApple: async () => undefined,
+  signInWithGoogle: async () => undefined,
   switchAccount: async () => undefined,
   syncing: false,
   verifySignInCode: async () => undefined,

@@ -36,6 +36,8 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
     refresh: vi.fn(async () => undefined),
     restorePurchases: vi.fn(async () => undefined),
     sendSignInCode: vi.fn(async () => undefined),
+    signInWithApple: vi.fn(async () => undefined),
+    signInWithGoogle: vi.fn(async () => undefined),
     switchAccount: vi.fn(async () => undefined),
     syncing: false,
     verifySignInCode: vi.fn(async () => undefined),

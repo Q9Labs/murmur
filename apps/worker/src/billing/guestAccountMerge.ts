@@ -8,7 +8,7 @@ type GrantRow = {
   original_ms: number;
   remaining_ms: number;
 };
-type PaidValueRow = { paid_grant_count: number };
+type PaidGrantRow = { grant_id: string; remaining_ms: number };
 
 export async function mergeGuestCustomer(params: {
   database: D1Database | undefined;
@@ -33,7 +33,7 @@ export async function mergeGuestCustomer(params: {
     }
     return;
   }
-  const [sourceCustomer, destinationCustomer, paidValue] = await Promise.all([
+  const [sourceCustomer, destinationCustomer, paidGrants, giftTable] = await Promise.all([
     database
       .prepare("SELECT state FROM customers WHERE customer_id = ?")
       .bind(params.sourceCustomerId)
@@ -44,18 +44,18 @@ export async function mergeGuestCustomer(params: {
       .first<CustomerRow>(),
     database
       .prepare(
-        `SELECT COUNT(*) AS paid_grant_count
+        `SELECT grant_id, remaining_ms
          FROM balance_grants
          WHERE customer_id = ? AND grant_kind != 'free' AND remaining_ms != 0`,
       )
       .bind(params.sourceCustomerId)
-      .first<PaidValueRow>(),
+      .all<PaidGrantRow>(),
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'phone_audio_gifts'")
+      .first<{ name: string }>(),
   ]);
   if (sourceCustomer?.state !== "active" || destinationCustomer?.state !== "active") {
     throw new Error("account merge requires two active customers");
-  }
-  if ((paidValue?.paid_grant_count ?? 0) > 0) {
-    throw new Error("guest account with paid value requires audited support merge");
   }
 
   const periodPrefix = currentFreePeriodPrefix(params.nowMs);
@@ -148,7 +148,66 @@ export async function mergeGuestCustomer(params: {
       ),
     );
   }
+  for (const grant of paidGrants.results) {
+    const key = `${mergeId}:paid:${grant.grant_id}`;
+    statements.push(
+      mergeLedgerEntry({
+        amountMs: -grant.remaining_ms,
+        customerId: params.sourceCustomerId,
+        database,
+        grantId: grant.grant_id,
+        idempotencyKey: `${key}:source`,
+        ledgerEntryId: `ledger:${key}:source`,
+        nowMs: params.nowMs,
+        sourceCustomerId: params.sourceCustomerId,
+      }),
+      mergeLedgerEntry({
+        amountMs: grant.remaining_ms,
+        customerId: params.destinationCustomerId,
+        database,
+        grantId: grant.grant_id,
+        idempotencyKey: `${key}:destination`,
+        ledgerEntryId: `ledger:${key}:destination`,
+        nowMs: params.nowMs,
+        sourceCustomerId: params.sourceCustomerId,
+      }),
+      updateProjection(database, params.sourceCustomerId, `ledger:${key}:source`, params.nowMs),
+      updateProjection(database, params.destinationCustomerId, `ledger:${key}:destination`, params.nowMs),
+    );
+  }
+  if (giftTable) {
+    statements.push(
+      database
+        .prepare(
+          `INSERT INTO phone_audio_gifts (customer_id, claimed_at_ms, remaining_ms)
+           SELECT ?, claimed_at_ms, remaining_ms
+           FROM phone_audio_gifts WHERE customer_id = ?
+           ON CONFLICT(customer_id) DO UPDATE SET
+             claimed_at_ms = MIN(phone_audio_gifts.claimed_at_ms, excluded.claimed_at_ms),
+             remaining_ms = MIN(phone_audio_gifts.remaining_ms, excluded.remaining_ms)`,
+        )
+        .bind(params.destinationCustomerId, params.sourceCustomerId),
+      database
+        .prepare(
+          "UPDATE phone_audio_gift_sessions SET customer_id = ? WHERE customer_id = ?",
+        )
+        .bind(params.destinationCustomerId, params.sourceCustomerId),
+    );
+  }
   statements.push(
+    database
+      .prepare(
+        `UPDATE balance_grants
+         SET customer_id = ?, updated_at_ms = ?
+         WHERE customer_id = ? AND grant_kind != 'free'`,
+      )
+      .bind(params.destinationCustomerId, params.nowMs, params.sourceCustomerId),
+    database
+      .prepare("UPDATE subscriptions SET customer_id = ? WHERE customer_id = ?")
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+    database
+      .prepare("UPDATE store_transactions SET customer_id = ? WHERE customer_id = ?")
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
     database
       .prepare(
         `INSERT INTO personal_offers (customer_id, started_at_ms, expires_at_ms, redeemed)
