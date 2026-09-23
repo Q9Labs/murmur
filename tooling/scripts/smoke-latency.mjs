@@ -236,6 +236,16 @@ function collectResult(socket) {
     socket.addEventListener("error", () => {
       rejectResult(new Error("realtime_socket_error"));
     });
+    // The worker ends a client-requested close with a clean 1000 close, not a session_closed event.
+    socket.addEventListener("close", (event) => {
+      messageQueue = messageQueue.then(() => {
+        if (event.code === 1000) {
+          resolveResult(state);
+        } else {
+          rejectResult(new Error(`realtime_socket_closed_${event.code}`));
+        }
+      });
+    });
 
     function rejectResult(error) {
       if (settled) {
