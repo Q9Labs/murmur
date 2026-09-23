@@ -16,6 +16,8 @@ vi.mock("./outOfMinutesSheet", () => ({ OutOfMinutesSheetController: () => null 
 vi.mock("./updateRequiredSheet", () => ({ UpdateRequiredSheet: () => null }));
 vi.mock("./styles", () => ({
   styles: {
+    ltrText: {},
+    autoText: {},
     reportButton: {},
     reportButtonText: {},
     reportRow: {},
@@ -63,7 +65,13 @@ describe("production translation reporting", () => {
   it("shows report actions only for committed spans", () => {
     const live = createLive();
     const markup = renderToStaticMarkup(
-      <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+      <TranslationReportModal
+        live={live}
+        onClose={vi.fn()}
+        open
+        sourceLanguageDirection="ltr"
+        targetLanguageRtl={false}
+      />,
     );
 
     expect(markup).toContain("Report translation");
@@ -92,7 +100,13 @@ describe("production translation reporting", () => {
 
     expect(
       renderToStaticMarkup(
-        <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+        <TranslationReportModal
+          live={live}
+          onClose={vi.fn()}
+          open
+          sourceLanguageDirection="ltr"
+          targetLanguageRtl={false}
+        />,
       ),
     ).toContain("No committed translations yet.");
   });

@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import type { VariantShellProps } from "./types";
 
 export function SettingsChrome({
@@ -54,19 +55,22 @@ export function TextLanguageRow({
   swapStyle: StyleProp<TextStyle>;
   textStyle: StyleProp<TextStyle>;
 }): ReactNode {
+  const { direction, t } = useUiLocale();
   return (
     <View style={containerStyle}>
       <Pressable
-        accessibilityLabel="Change spoken language"
+        accessibilityLabel={t("accessibility.changeSpokenLanguage")}
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
         onPress={() => onOpenPicker("source")}
         style={({ pressed }) => [pressed && pressedStyle]}
       >
-        <Text numberOfLines={1} style={textStyle}>{viewModel.sourceLanguageDisplayName}</Text>
+        <Text numberOfLines={1} style={[textStyle, uiTextDirectionStyle(direction)]}>
+          {viewModel.sourceLanguageDisplayName}
+        </Text>
       </Pressable>
       <Pressable
-        accessibilityLabel="Reverse translation languages"
+        accessibilityLabel={t("accessibility.reverseTranslationLanguages")}
         accessibilityRole="button"
         disabled={!viewModel.canSwapLanguages}
         onPress={onSwapLanguages}
@@ -75,13 +79,15 @@ export function TextLanguageRow({
         <Text style={swapStyle}>{swapGlyph}</Text>
       </Pressable>
       <Pressable
-        accessibilityLabel="Change translation language"
+        accessibilityLabel={t("accessibility.changeTranslationLanguage")}
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
         onPress={() => onOpenPicker("target")}
         style={({ pressed }) => [pressed && pressedStyle]}
       >
-        <Text numberOfLines={1} style={textStyle}>{viewModel.targetLanguage.display_name}</Text>
+        <Text numberOfLines={1} style={[textStyle, uiTextDirectionStyle(direction)]}>
+          {viewModel.targetLanguage.display_name}
+        </Text>
       </Pressable>
     </View>
   );
@@ -106,6 +112,7 @@ export function PrimaryAction({
   style: StyleProp<ViewStyle>;
   textStyle: StyleProp<TextStyle>;
 }): ReactNode {
+  const { direction } = useUiLocale();
   const disabled = !isLive && !canStart;
 
   return (
@@ -115,7 +122,7 @@ export function PrimaryAction({
       onPress={onPrimaryAction}
       style={({ pressed }) => [style, (pressed || disabled) && pressedStyle]}
     >
-      <Text style={textStyle}>{isLive ? stopLabel : startLabel}</Text>
+      <Text style={[textStyle, uiTextDirectionStyle(direction)]}>{isLive ? stopLabel : startLabel}</Text>
     </Pressable>
   );
 }

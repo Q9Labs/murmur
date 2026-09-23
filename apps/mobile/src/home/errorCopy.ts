@@ -1,3 +1,7 @@
+import { createTranslator, type Translate } from "../i18n/runtime";
+
+const fallbackTranslate = createTranslator("en");
+
 const exactLiveErrorCopy: Readonly<Record<string, string>> = {
   allowance_exhausted:
     "You’re out of translation time. Get more time or restore an existing purchase.",
@@ -29,16 +33,16 @@ const exactLiveErrorCopy: Readonly<Record<string, string>> = {
     "Translation stopped after two minutes without speech. Tap Listen to start again.",
 };
 
-export function formatLiveError(error: string): string {
+export function formatLiveError(error: string, translate: Translate = fallbackTranslate): string {
   const exactCopy = exactLiveErrorCopy[error];
   if (exactCopy) {
     return exactCopy;
   }
   if (error.startsWith("provider_unconfigured")) {
-    return "Live translation is not connected yet. Please try again after setup is complete.";
+    return translate("error.providerUnconfigured");
   }
   if (error.startsWith("provider_unavailable")) {
-    return "Live translation provider is unavailable. Please try again.";
+    return translate("error.providerUnavailable");
   }
   if (error === "allowance_exhausted" || error === "realtime_allowance_exhausted") {
     return "You’re out of translation time. Get more time or restore an existing purchase.";
@@ -56,15 +60,15 @@ export function formatLiveError(error: string): string {
     return exactLiveErrorCopy.client_upgrade_required;
   }
   if (error === "worker_session_network_error" || error.startsWith("worker_session_http_")) {
-    return "Could not reach Murmur translation service. Check your connection and try again.";
+    return translate("error.workerUnavailable");
   }
   if (error === "realtime_transport_error") {
-    return `Translation connection was interrupted. Please try again. (${error})`;
+    return translate("error.transport", { error });
   }
   if (error.startsWith("realtime_")) {
     return "Live translation is unavailable right now. Please try again.";
   }
-  return `Live translation is unavailable. Please try again. (${error})`;
+  return translate("error.unavailable", { error });
 }
 
 export function isAllowanceExhaustedError(error: string | null): boolean {
@@ -77,9 +81,9 @@ export function isUpdateRequiredError(error: string | null): boolean {
     error === "worker_session_http_426";
 }
 
-export function formatReportError(error: string): string {
+export function formatReportError(error: string, translate: Translate = fallbackTranslate): string {
   if (error === "report_rate_limited") {
-    return "Too many reports were sent from this session. Please try again later.";
+    return translate("error.reportRateLimited");
   }
-  return "Could not send the report. Please try again.";
+  return translate("error.reportFailed");
 }

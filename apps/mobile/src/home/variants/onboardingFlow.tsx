@@ -10,6 +10,8 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
+import type { MessageKey } from "../../i18n/catalogs";
 import { captureMobileFailure } from "../../lib/observability/sentry";
 import type { VariantOnboardingProps } from "./types";
 
@@ -67,12 +69,14 @@ export function OnboardingFlow(props: FlowProps): ReactNode {
 
 // The artwork fills the space above the words, so there is no empty band under the header.
 function WelcomeStep({ artwork, onContinue, text, theme }: FlowProps): ReactNode {
+  const { direction } = useUiLocale();
+  const textDirection = uiTextDirectionStyle(direction);
   return (
     <>
       <View style={theme.hero}>{artwork}</View>
       <View style={theme.welcomeBody}>
-        <Text accessibilityRole="header" style={theme.title}>{text.welcomeTitle}</Text>
-        <Text style={theme.copy}>{text.welcomeCopy}</Text>
+        <Text accessibilityRole="header" style={[theme.title, textDirection]}>{text.welcomeTitle}</Text>
+        <Text style={[theme.copy, textDirection]}>{text.welcomeCopy}</Text>
       </View>
       <View style={theme.footer}>
         <FlowButton disabled={false} label={text.continueLabel} onPress={onContinue} theme={theme} />
@@ -83,10 +87,10 @@ function WelcomeStep({ artwork, onContinue, text, theme }: FlowProps): ReactNode
 
 const privacyPolicyUrl = "https://murmur.q9labs.ai/privacy";
 
-const privacyPoints: ReadonlyArray<{ icon: ComponentType<{ color?: string; size?: number }>; text: string }> = [
-  { icon: AudioLines, text: "What you listen to is sent to a third-party AI service and translated live." },
-  { icon: ShieldCheck, text: "Murmur doesn't keep your audio or translations on its servers." },
-  { icon: ChartNoAxesColumn, text: "Anonymous analytics help us improve Murmur. You can turn them off in Settings." },
+const privacyPoints: ReadonlyArray<{ icon: ComponentType<{ color?: string; size?: number }>; text: MessageKey }> = [
+  { icon: AudioLines, text: "onboarding.privacySentToAi" },
+  { icon: ShieldCheck, text: "onboarding.privacyNotKept" },
+  { icon: ChartNoAxesColumn, text: "onboarding.privacyAnalytics" },
 ];
 
 function PrivacyStep({
@@ -96,10 +100,12 @@ function PrivacyStep({
   text,
   theme,
 }: FlowProps): ReactNode {
+  const { direction, t } = useUiLocale();
+  const textDirection = uiTextDirectionStyle(direction);
   return (
     <>
       <View style={theme.body}>
-        <Text accessibilityRole="header" style={theme.title}>{text.privacyTitle}</Text>
+        <Text accessibilityRole="header" style={[theme.title, textDirection]}>{text.privacyTitle}</Text>
         {privacyPoints.map((point) => {
           const Icon = point.icon;
           return (
@@ -107,7 +113,7 @@ function PrivacyStep({
               <View accessibilityElementsHidden importantForAccessibility="no" style={theme.pointIcon}>
                 <Icon color={theme.iconColor} size={20} />
               </View>
-              <Text style={theme.pointText}>{point.text}</Text>
+              <Text style={[theme.pointText, textDirection]}>{t(point.text)}</Text>
             </View>
           );
         })}
@@ -122,7 +128,7 @@ function PrivacyStep({
           }}
           style={({ pressed }) => [pressed && theme.pressed]}
         >
-          <Text style={theme.link}>Privacy policy</Text>
+          <Text style={[theme.link, textDirection]}>{t("onboarding.privacyPolicy")}</Text>
         </Pressable>
       </View>
       <View style={theme.footer}>
@@ -148,6 +154,7 @@ function ConsentRow({
   onToggle: () => void;
   theme: OnboardingTheme;
 }): ReactNode {
+  const { direction, t } = useUiLocale();
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -158,8 +165,8 @@ function ConsentRow({
       <View style={[theme.checkbox, checked && theme.checkboxChecked]}>
         <Text style={theme.checkboxMark}>{checked ? "✓" : ""}</Text>
       </View>
-      <Text style={[theme.pointText, consentFlex]}>
-        I agree to send audio to a third-party AI service for translation.
+      <Text style={[theme.pointText, uiTextDirectionStyle(direction), consentFlex]}>
+        {t("onboarding.consent")}
       </Text>
     </Pressable>
   );
@@ -177,10 +184,13 @@ function LanguagesStep({
   text,
   theme,
 }: FlowProps): ReactNode {
+  const { direction, t } = useUiLocale();
   return (
     <>
       <View style={theme.body}>
-        <Text accessibilityRole="header" style={theme.title}>{text.languagesTitle}</Text>
+        <Text accessibilityRole="header" style={[theme.title, uiTextDirectionStyle(direction)]}>
+          {text.languagesTitle}
+        </Text>
         <SetupRow
           label={text.sourceLabel}
           onPress={() => onOpenPicker("source")}
@@ -195,12 +205,12 @@ function LanguagesStep({
         />
         {devicePlaybackSupported ? (
           <SetupRow
-            label="Listen from"
+            label={t("onboarding.listenFrom")}
             onPress={() => onCaptureSourceChange(
               captureSource === "microphone" ? "device_playback" : "microphone"
             )}
             theme={theme}
-            value={captureSource === "microphone" ? "Microphone" : "Phone audio"}
+            value={captureSource === "microphone" ? t("capture.microphone") : t("capture.phoneAudio")}
           />
         ) : null}
       </View>

@@ -2,25 +2,26 @@ import type { ReactNode } from "react";
 import { ScrollView, StatusBar, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { formatUiNumber, uiContentDirectionStyle, useUiLocale } from "../../../i18n/runtime";
 import { OnboardingFlow, type OnboardingTheme, type OnboardingText } from "../onboardingFlow";
 import type { VariantOnboardingProps } from "../types";
 import { BrandMark, BreathingBlob } from "./index";
 import { useBloomStyles } from "./styles";
 
-const bloomText: OnboardingText = {
-  agreeLabel: "Agree and continue",
-  continueLabel: "Continue",
-  languagesTitle: "Which way are we translating?",
-  listenLabel: "Listen",
-  privacyTitle: "How translation works",
-  sourceLabel: "I will speak",
-  targetLabel: "Translate into",
-  welcomeCopy: "Choose a direction, listen, and read clear captions in real time.",
-  welcomeTitle: "Talk with anyone, in any language.",
-};
-
 export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
   const { colors, styles } = useBloomStyles();
+  const { locale, t } = useUiLocale();
+  const bloomText: OnboardingText = {
+    agreeLabel: t("onboarding.agreeAndContinue"),
+    continueLabel: t("onboarding.continue"),
+    languagesTitle: t("onboarding.languagesTitle"),
+    listenLabel: t("onboarding.listen"),
+    privacyTitle: t("onboarding.privacyTitle"),
+    sourceLabel: t("onboarding.sourceLabel"),
+    targetLabel: t("onboarding.targetLabel"),
+    welcomeCopy: t("onboarding.welcomeCopy"),
+    welcomeTitle: t("onboarding.welcomeTitle"),
+  };
   const bloomTheme: OnboardingTheme = {
     body: styles.onboardingBody,
     buttonStyle: styles.listenPill,
@@ -46,7 +47,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={[styles.screen, uiContentDirectionStyle(locale)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <View style={styles.chrome}>
         <BrandMark />
@@ -68,12 +69,16 @@ const onboardingScroll = { flexGrow: 1 } as const;
 
 function OnboardingProgress({ step }: { step: VariantOnboardingProps["step"] }): ReactNode {
   const { styles } = useBloomStyles();
+  const { locale, t } = useUiLocale();
   const stepIndex = step === "welcome" ? 0 : step === "privacy" ? 1 : 2;
 
   return (
     <View
       accessible
-      accessibilityLabel={`Setup step ${stepIndex + 1} of 3`}
+      accessibilityLabel={t("accessibility.setupStep", {
+        current: formatUiNumber(stepIndex + 1, locale),
+        total: formatUiNumber(3, locale),
+      })}
       accessibilityRole="text"
       style={styles.progressRow}
     >

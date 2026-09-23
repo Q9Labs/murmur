@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 import type { ImageStyle, TextStyle, ViewStyle } from "react-native";
 
 type AppStyles = {
+  autoText: TextStyle;
   appChrome: ViewStyle;
   bottomDock: ViewStyle;
   brandMini: ViewStyle;
@@ -129,6 +130,7 @@ type AppStyles = {
   spanRow: ViewStyle;
   spanSource: TextStyle;
   spanTranslation: TextStyle;
+  ltrText: TextStyle;
   speechIndicator: ViewStyle;
   status: TextStyle;
   statusCluster: ViewStyle;
@@ -160,6 +162,10 @@ type AppStyles = {
 };
 
 export const styles = StyleSheet.create<AppStyles>({
+  autoText: {
+    textAlign: "auto",
+    writingDirection: "auto",
+  },
   appChrome: {
     alignItems: "center",
     flexDirection: "row",
@@ -803,6 +809,10 @@ export const styles = StyleSheet.create<AppStyles>({
   rtlText: {
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  ltrText: {
+    textAlign: "left",
+    writingDirection: "ltr",
   },
   screen: {
     backgroundColor: "#F4FFF9",
