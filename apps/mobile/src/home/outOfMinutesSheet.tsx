@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
 import { freeAllowanceMinutes, isPaidCustomer } from "../lib/billing/allowance";
@@ -19,6 +19,7 @@ export function OutOfMinutesSheet(props: {
   open: boolean;
 }): ReactNode {
   const styles = useMurmurTheme().dark ? darkStyles : lightStyles;
+  useCloseWhenBalanceRecovers(props.open, props.customer?.availableMs ?? 0, props.onClose);
   return (
     <ModalSheet onClose={props.onClose} open={props.open} title="Out of minutes">
       <Image
@@ -38,6 +39,28 @@ export function OutOfMinutesSheet(props: {
       </Pressable>
     </ModalSheet>
   );
+}
+
+export function balanceRecovered(availableWhenOpenedMs: number, availableMs: number): boolean {
+  return availableMs > availableWhenOpenedMs;
+}
+
+function useCloseWhenBalanceRecovers(open: boolean, availableMs: number, onClose: () => void): void {
+  const latestAvailableMs = useRef(availableMs);
+  const availableWhenOpenedMs = useRef(availableMs);
+  latestAvailableMs.current = availableMs;
+
+  useEffect(() => {
+    if (open) {
+      availableWhenOpenedMs.current = latestAvailableMs.current;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && balanceRecovered(availableWhenOpenedMs.current, availableMs)) {
+      onClose();
+    }
+  }, [availableMs, onClose, open]);
 }
 
 export function outOfMinutesMessage(customer: MurmurCustomer | null): string {
