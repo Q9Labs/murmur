@@ -27,6 +27,7 @@ describe("realtime usage meter", () => {
     await expect(meter.settle()).resolves.toEqual({
       availableMs: Number.POSITIVE_INFINITY,
       exhausted: false,
+      giftExhausted: false,
     });
     await meter.close("closed");
     expect(meter.checkAudio(48)).toBe("allowance_exhausted");
@@ -97,12 +98,37 @@ describe("realtime usage meter", () => {
     expect(meter.checkAudio(240_000)).toBe("accepted");
     meter.recordAudio(240_000);
     expect(meter.checkAudio(48)).toBe("settlement_required");
-    await expect(meter.settle()).resolves.toEqual({ availableMs: 55_000, exhausted: false });
+    await expect(meter.settle()).resolves.toEqual({ availableMs: 55_000, exhausted: false, giftExhausted: false });
     expect(vi.mocked(callCustomerLedger).mock.calls[0]?.[2]).toEqual(expect.objectContaining({
       action: "settle_usage",
       amountMs: 5_000,
     }));
     expect(meter.checkAudio(48)).toBe("accepted");
+  });
+
+  it("charges normal minutes and the Phone audio gift from the same accepted frames", async () => {
+    vi.mocked(callCustomerLedger).mockResolvedValue(successfulLedgerResult(55_000));
+    const settleGift = vi.fn(async (amountMs: number) => 1_000 - amountMs);
+    const meter = createRealtimeUsageMeter({
+      availableMs: 60_000,
+      customerId: "customer-1",
+      gift: { remainingMs: 1_000, settle: settleGift },
+      namespace: undefined,
+      usageSessionId: "phone-audio-session",
+    });
+    expect(meter.checkAudio(48_000)).toBe("accepted");
+    meter.recordAudio(48_000);
+    expect(meter.checkAudio(48)).toBe("phone_audio_gift_exhausted");
+    await expect(meter.settle()).resolves.toEqual({
+      availableMs: 55_000,
+      exhausted: false,
+      giftExhausted: true,
+    });
+    expect(settleGift).toHaveBeenCalledWith(1_000);
+    expect(vi.mocked(callCustomerLedger).mock.calls[0]?.[2]).toEqual(expect.objectContaining({
+      action: "settle_usage",
+      amountMs: 1_000,
+    }));
   });
 });
 

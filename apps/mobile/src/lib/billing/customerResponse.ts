@@ -5,9 +5,12 @@ export type MurmurCustomer = {
   customerId: string;
   earliestExpiryAtMs: number | null;
   fulfillmentEnabled: boolean;
+  features?: { phoneAudio: boolean; history: boolean; maxSessionSeconds: number };
+  gifts?: { phoneAudio: { claimable: boolean; remainingMs: number } };
+  entitlements?: { pro: boolean; proMax: boolean };
   isRegistered: boolean;
   negativeMs: number;
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "pro_max";
   purchasesEnabled: boolean;
   revenueCatCustomerId: string;
 };
@@ -29,7 +32,11 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
   const customerId = Reflect.get(payload, "customer_id");
   const balance = decodeBalance(Reflect.get(payload, "balance"));
   const metadata = decodeMetadata(payload);
-  if (!isValidCustomerId(customerId) || balance === null || metadata === null) {
+  const features = decodeFeatures(Reflect.get(payload, "features"));
+  const gifts = decodeGifts(Reflect.get(payload, "gifts"));
+  const entitlements = decodeEntitlements(Reflect.get(payload, "entitlements"));
+  if (!isValidCustomerId(customerId) || balance === null || metadata === null ||
+    features === null || gifts === null || entitlements === null) {
     return null;
   }
 
@@ -37,11 +44,48 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
     ...balance,
     customerId,
     fulfillmentEnabled: metadata.fulfillmentEnabled,
+    ...(features ? { features } : {}),
+    ...(gifts ? { gifts } : {}),
+    ...(entitlements ? { entitlements } : {}),
     isRegistered: metadata.isRegistered,
     plan: metadata.plan,
     purchasesEnabled: metadata.purchasesEnabled,
     revenueCatCustomerId: metadata.revenueCatCustomerId ?? customerId,
   };
+}
+
+function decodeFeatures(value: unknown): MurmurCustomer["features"] | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const phoneAudio = Reflect.get(value, "phone_audio");
+  const history = Reflect.get(value, "history");
+  const maxSessionSeconds = Reflect.get(value, "max_session_seconds");
+  return typeof phoneAudio === "boolean" && typeof history === "boolean" &&
+    typeof maxSessionSeconds === "number" && Number.isInteger(maxSessionSeconds) && maxSessionSeconds > 0
+    ? { phoneAudio, history, maxSessionSeconds }
+    : null;
+}
+
+// fallow-ignore-next-line complexity
+function decodeGifts(value: unknown): MurmurCustomer["gifts"] | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const phoneAudio = Reflect.get(value, "phone_audio");
+  if (typeof phoneAudio !== "object" || phoneAudio === null) return null;
+  const claimable = Reflect.get(phoneAudio, "claimable");
+  const remainingMs = Reflect.get(phoneAudio, "remaining_ms");
+  return typeof claimable === "boolean" && typeof remainingMs === "number" &&
+    Number.isInteger(remainingMs) && remainingMs >= 0
+    ? { phoneAudio: { claimable, remainingMs } }
+    : null;
+}
+
+function decodeEntitlements(value: unknown): MurmurCustomer["entitlements"] | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const pro = Reflect.get(value, "pro");
+  const proMax = Reflect.get(value, "pro_max");
+  return typeof pro === "boolean" && typeof proMax === "boolean" ? { pro, proMax } : null;
 }
 
 function decodeBalance(value: unknown): CustomerBalance | null {
@@ -98,7 +142,7 @@ function optionalBoolean(value: unknown, fallback: boolean): boolean | null {
 }
 
 function customerPlan(value: unknown): MurmurCustomer["plan"] | null {
-  return value === "free" || value === "pro" ? value : null;
+  return value === "free" || value === "pro" || value === "pro_max" ? value : null;
 }
 
 function optionalCustomerId(value: unknown): string | null | undefined {

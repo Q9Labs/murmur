@@ -8,7 +8,7 @@ export const defaultLowBalanceThresholdMinutes = 15;
 const millisecondsPerMinute = 60_000;
 
 export function isPaidCustomer(customer: MurmurCustomer): boolean {
-  return customer.plan === "pro" || customer.creditMs > 0;
+  return customer.plan !== "free" || customer.creditMs > 0;
 }
 
 export function remainingMinutes(customer: MurmurCustomer): number {

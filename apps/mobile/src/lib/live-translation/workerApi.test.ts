@@ -47,6 +47,7 @@ import {
 } from "./workerApi";
 
 const request = {
+  capture_source: "microphone" as const,
   analytics_enabled: false,
   app_install_id: "install_1",
   device_integrity: { available: false, platform: "android" },

@@ -16,7 +16,7 @@ type ActiveSubscriptionRow = {
 
 type UsedFreeRow = { used_free_ms: number };
 
-export type CustomerPlan = "free" | "pro";
+export type CustomerPlan = "free" | "pro" | "pro_max";
 
 export async function currentCustomerPlan(
   database: D1Database | undefined,

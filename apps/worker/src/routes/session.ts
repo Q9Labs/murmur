@@ -9,6 +9,7 @@ import { currentCustomerPlan, ensureCurrentAllowance, type CustomerPlan } from "
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
 import { queuePersonalOfferStart } from "../billing/personalOffer";
+import { getPhoneAudioGift, openPhoneAudioGiftSession } from "../billing/phoneAudioGift";
 import {
   type Env,
   getReadiness,
@@ -28,7 +29,7 @@ import {
   isRateLimiterUnavailable,
 } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
-import { getServerConfig, isBelowMinimumVersion, type ServerConfig } from "../serverConfig";
+import { getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
 
 export async function createSession(
   request: Request,
@@ -50,12 +51,17 @@ export async function createSession(
     return authorized.response;
   }
   const config = authorized.config;
+  const maxSessionSeconds = sessionLimitSeconds(config, authorized.plan);
+  const phoneAudio = await authorizePhoneAudio(request, env, parsed.value.captureSource, authorized.plan);
+  if (!phoneAudio.ok) {
+    return phoneAudio.response;
+  }
 
   const appSessionId = crypto.randomUUID();
   const limitResult = await createSessionIfAllowedDurable({
     app_session_id: appSessionId,
     hashed_install_id: authorized.hashedInstallId,
-    max_session_seconds: config.max_session_seconds,
+    max_session_seconds: maxSessionSeconds,
     namespace: env.RATE_LIMITER,
     now_ms: nowMs,
   });
@@ -72,6 +78,7 @@ export async function createSession(
     nowMs,
     config,
     authorized.plan,
+    maxSessionSeconds,
     context,
   );
   if (!billingUsage.ok) {
@@ -83,6 +90,21 @@ export async function createSession(
     return billingUsage.response;
   }
   const sessionDurationMs = billingUsage.sessionDurationMs;
+  if (phoneAudio.giftCustomerId && env.BILLING_DB) {
+    try {
+      await openPhoneAudioGiftSession(env.BILLING_DB, phoneAudio.giftCustomerId, appSessionId);
+    } catch (failure) {
+      await callCustomerLedger(env.CUSTOMER_LEDGER, phoneAudio.giftCustomerId, {
+        action: "close_usage_session",
+        customerId: phoneAudio.giftCustomerId,
+        nowMs: Date.now(),
+        outcome: "failed",
+        usageSessionId: appSessionId,
+      });
+      await closeSessionDurable({ app_session_id: appSessionId, namespace: env.RATE_LIMITER, now_ms: Date.now() });
+      throw failure;
+    }
+  }
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
     event: "session_created",
@@ -91,6 +113,7 @@ export async function createSession(
     device_integrity_platform: parsed.value.deviceIntegrity.platform,
     device_integrity_provider: parsed.value.deviceIntegrity.provider,
     device_integrity_verified: authorized.requestHashVerified,
+    capture_source: parsed.value.captureSource,
     hashed_install_id: authorized.hashedInstallId,
     source_language: parsed.value.sourceLanguage,
     target_language: parsed.value.targetLanguage,
@@ -113,6 +136,7 @@ export async function createSession(
         device_integrity_platform: parsed.value.deviceIntegrity.platform,
         device_integrity_provider: parsed.value.deviceIntegrity.provider,
         device_integrity_verified: authorized.requestHashVerified,
+        capture_source: parsed.value.captureSource,
         event: "worker_session_created",
         source_language: parsed.value.sourceLanguage,
         target_language: parsed.value.targetLanguage,
@@ -196,6 +220,29 @@ function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | n
   return platform === "android" ? config.min_app_version_android : null;
 }
 
+async function authorizePhoneAudio(
+  request: Request,
+  env: Env,
+  captureSource: ParsedCreateSessionRequest["captureSource"],
+  plan: CustomerPlan,
+): Promise<{ ok: true; giftCustomerId: string | null } | { ok: false; response: Response }> {
+  if (captureSource !== "phone_audio" || plan !== "free") {
+    return { ok: true, giftCustomerId: null };
+  }
+  const session = await getMurmurSession(request, env);
+  if (!session) {
+    return { ok: false, response: json({ error: "authentication_required" }, 401) };
+  }
+  if (!env.BILLING_DB) {
+    return { ok: false, response: json({ error: "billing_unavailable" }, 503) };
+  }
+  const gift = await getPhoneAudioGift(env.BILLING_DB, session.user.id);
+  if (gift.remaining_ms <= 0) {
+    return { ok: false, response: json({ error: "feature_requires_pro" }, 403) };
+  }
+  return { ok: true, giftCustomerId: session.user.id };
+}
+
 export async function prepareBillingUsage(
   request: Request,
   env: Env,
@@ -203,12 +250,13 @@ export async function prepareBillingUsage(
   nowMs: number,
   config: ServerConfig,
   plan: CustomerPlan,
+  maxSessionSeconds: number,
   context?: TelemetryExecutionContext,
 ): Promise<
   | { ok: true; sessionDurationMs: number }
   | { ok: false; response: Response }
 > {
-  const defaultDurationMs = config.max_session_seconds * 1_000;
+  const defaultDurationMs = maxSessionSeconds * 1_000;
   if (!isBillingEnforced(env)) {
     return { ok: true, sessionDurationMs: defaultDurationMs };
   }
@@ -235,7 +283,7 @@ export async function prepareBillingUsage(
     action: "open_usage_session",
     customerId: customerSession.user.id,
     nowMs,
-    maxSessionSeconds: config.max_session_seconds,
+    maxSessionSeconds,
     usageSessionId,
   });
   if (!usage.result.ok || !("balance" in usage.result)) {
@@ -275,6 +323,7 @@ type ParsedCreateSessionRequest = {
   appInstallId: string;
   appPlatform: "android" | "ios" | null;
   appVersion: string | null;
+  captureSource: "microphone" | "phone_audio";
   deviceIntegrity: ReturnType<typeof parseDeviceIntegrity>;
   playbackEnabled: boolean;
   sourceLanguage: SourceLanguageCode;
@@ -293,6 +342,9 @@ function parseCreateSessionRequest(
   if (body.playback_enabled !== undefined && typeof body.playback_enabled !== "boolean") {
     return { ok: false, response: json({ error: "invalid_playback_enabled" }, 400) };
   }
+  if (body.capture_source !== undefined && body.capture_source !== "microphone" && body.capture_source !== "phone_audio") {
+    return { ok: false, response: json({ error: "invalid_capture_source" }, 400) };
+  }
   const languagePair = parseLanguagePair(body.source_language, body.target_language);
   if ("error" in languagePair) {
     return { ok: false, response: json({ error: languagePair.error }, 400) };
@@ -304,6 +356,7 @@ function parseCreateSessionRequest(
       acquisition: normalizeAcquisitionContext(body.acquisition),
       analyticsEnabled: body.analytics_enabled === true,
       appInstallId: body.app_install_id,
+      captureSource: body.capture_source === "phone_audio" ? "phone_audio" : "microphone",
       deviceIntegrity,
       appPlatform: parseAppPlatform(body.app_platform, deviceIntegrity.platform),
       appVersion: typeof body.app_version === "string" ? body.app_version : null,
