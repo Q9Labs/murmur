@@ -24,6 +24,7 @@ describe("GET /v3/config", () => {
       min_app_version_android: null,
       min_app_version_ios: null,
       paywall_offering_id: null,
+      personal_offer: null,
       sessions_disabled_message: "Sessions are temporarily unavailable. Please try again later.",
       sessions_enabled: true,
     });

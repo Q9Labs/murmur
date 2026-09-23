@@ -151,6 +151,17 @@ export async function mergeGuestCustomer(params: {
   statements.push(
     database
       .prepare(
+        `INSERT INTO personal_offers (customer_id, started_at_ms, expires_at_ms, redeemed)
+         SELECT ?, started_at_ms, expires_at_ms, redeemed
+         FROM personal_offers WHERE customer_id = ?
+         ON CONFLICT(customer_id) DO UPDATE SET
+           started_at_ms = MIN(personal_offers.started_at_ms, excluded.started_at_ms),
+           expires_at_ms = MIN(personal_offers.expires_at_ms, excluded.expires_at_ms),
+           redeemed = MAX(personal_offers.redeemed, excluded.redeemed)`,
+      )
+      .bind(params.destinationCustomerId, params.sourceCustomerId),
+    database
+      .prepare(
         `UPDATE usage_sessions
          SET state = 'failed', ended_at_ms = ?, updated_at_ms = ?
          WHERE customer_id = ? AND state = 'open'`,

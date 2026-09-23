@@ -14,8 +14,8 @@ describe("billing catalog", () => {
   });
 
   it("maps every Apple and Google identifier to one product", () => {
-    expect(new Set(billingProducts.map((product) => product.appleProductId)).size).toBe(5);
-    expect(new Set(billingProducts.map((product) => product.googleProductId)).size).toBe(5);
+    expect(new Set(billingProducts.map((product) => product.appleProductId)).size).toBe(billingProducts.length);
+    expect(new Set(billingProducts.map((product) => product.googleProductId)).size).toBe(billingProducts.length);
 
     for (const product of billingProducts) {
       expect(findBillingProduct("apple", product.appleProductId)?.code).toBe(product.code);
@@ -30,6 +30,9 @@ describe("billing catalog", () => {
 
   it("keeps at least ten percent contribution at conservative full use", () => {
     for (const product of billingProducts) {
+      if (product.basePriceUsdCents === null) {
+        continue;
+      }
       const billedMinutes = product.grantMs / 60_000 *
         (product.code === "pro_annual" ? 12 : 1);
       const contributionUsdCents = product.basePriceUsdCents * 0.69 - billedMinutes * 3.4;
@@ -42,7 +45,7 @@ describe("billing catalog", () => {
     const annual = billingProducts.find((product) => product.code === "pro_annual");
     expect(monthly).toBeDefined();
     expect(annual).toBeDefined();
-    if (!monthly || !annual) {
+    if (!monthly || !annual || monthly.basePriceUsdCents === null || annual.basePriceUsdCents === null) {
       return;
     }
     const discount = 1 - annual.basePriceUsdCents / (monthly.basePriceUsdCents * 12);

@@ -5,9 +5,10 @@ import {
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
 import { getMurmurSession } from "../auth/auth";
-import { currentCustomerPlan, ensureCurrentAllowance } from "../billing/allowanceService";
+import { currentCustomerPlan, ensureCurrentAllowance, type CustomerPlan } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
 import { freeAllowanceClaimHashFromRequest } from "../billing/freeAllowanceClaims";
+import { queuePersonalOfferStart } from "../billing/personalOffer";
 import {
   type Env,
   getReadiness,
@@ -69,8 +70,9 @@ export async function createSession(
     env,
     appSessionId,
     nowMs,
-    config.free_allowance_minutes,
-    config.max_session_seconds,
+    config,
+    authorized.plan,
+    context,
   );
   if (!billingUsage.ok) {
     await closeSessionDurable({
@@ -144,7 +146,7 @@ async function prepareConfiguredSession(
   env: Env,
   nowMs: number,
 ): Promise<
-  | { config: ServerConfig; hashedInstallId: string; ok: true; requestHashVerified: boolean }
+  | { config: ServerConfig; hashedInstallId: string; ok: true; plan: CustomerPlan; requestHashVerified: boolean }
   | { ok: false; response: Response }
 > {
   const customerSession = await getMurmurSession(request, env);
@@ -184,7 +186,7 @@ async function prepareConfiguredSession(
     hashedInstallId,
     config.device_integrity_required,
   );
-  return authorized.ok ? { ...authorized, config } : authorized;
+  return authorized.ok ? { ...authorized, config, plan } : authorized;
 }
 
 function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | null): string | null {
@@ -194,18 +196,19 @@ function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | n
   return platform === "android" ? config.min_app_version_android : null;
 }
 
-async function prepareBillingUsage(
+export async function prepareBillingUsage(
   request: Request,
   env: Env,
   usageSessionId: string,
   nowMs: number,
-  freeAllowanceMinutes: number,
-  maxSessionSeconds: number,
+  config: ServerConfig,
+  plan: CustomerPlan,
+  context?: TelemetryExecutionContext,
 ): Promise<
   | { ok: true; sessionDurationMs: number }
   | { ok: false; response: Response }
 > {
-  const defaultDurationMs = maxSessionSeconds * 1_000;
+  const defaultDurationMs = config.max_session_seconds * 1_000;
   if (!isBillingEnforced(env)) {
     return { ok: true, sessionDurationMs: defaultDurationMs };
   }
@@ -217,7 +220,7 @@ async function prepareBillingUsage(
   const bootstrap = await ensureCurrentAllowance({
     customerId: customerSession.user.id,
     env,
-    freeAllowanceMinutes,
+    freeAllowanceMinutes: config.free_allowance_minutes,
     freeClaimHash,
     nowMs,
     principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",
@@ -232,7 +235,7 @@ async function prepareBillingUsage(
     action: "open_usage_session",
     customerId: customerSession.user.id,
     nowMs,
-    maxSessionSeconds,
+    maxSessionSeconds: config.max_session_seconds,
     usageSessionId,
   });
   if (!usage.result.ok || !("balance" in usage.result)) {
@@ -245,6 +248,15 @@ async function prepareBillingUsage(
     };
   }
   if (usage.result.balance.availableMs < 1_000) {
+    if (plan === "free") {
+      queuePersonalOfferStart({
+        config,
+        context,
+        customerId: customerSession.user.id,
+        database: env.BILLING_DB,
+        nowMs,
+      });
+    }
     await callCustomerLedger(env.CUSTOMER_LEDGER, customerSession.user.id, {
       action: "close_usage_session",
       customerId: customerSession.user.id,

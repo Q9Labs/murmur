@@ -4,6 +4,7 @@ import type { Env } from "../env";
 import { ensureCurrentAllowance } from "./allowanceService";
 import { findBillingProduct, type BillingProduct } from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
+import { redeemPersonalOffer } from "./personalOffer";
 import {
   type RevenueCatPurchase,
   type RevenueCatSubscription,
@@ -211,6 +212,7 @@ async function prepareSubscriptionCursor(context: EventContext): Promise<Prepare
       product: context.product,
       status: "purchased",
     });
+    await redeemOfferPurchase(context);
   }
   await context.repository.markEvent(
     context.eventRowId,
@@ -296,6 +298,7 @@ async function applyPurchase(context: EventContext): Promise<void> {
     product: context.product,
     status: "purchased",
   });
+  await redeemOfferPurchase(context);
   await context.repository.upsertSubscription({
     customerId: context.customerId,
     event: context.event,
@@ -316,6 +319,17 @@ async function applyPurchase(context: EventContext): Promise<void> {
   if (!allowance.result.ok) {
     throw new Error(`pro allowance failed: ${allowance.result.code}`);
   }
+}
+
+async function redeemOfferPurchase(context: EventContext): Promise<void> {
+  if (context.product.personalOffer !== true) {
+    return;
+  }
+  const database = context.env.BILLING_DB;
+  if (!database) {
+    throw new Error("billing database is unavailable for personal offer redemption");
+  }
+  await redeemPersonalOffer(database, context.customerId, context.product.appleProductId);
 }
 
 async function applyCancellation(context: EventContext): Promise<void> {

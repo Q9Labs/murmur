@@ -37,6 +37,14 @@ pnpm --filter @murmur/worker exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_PRI
 
 Optional variables are documented in `apps/worker/.dev.vars.example`. Keep production-only values in the Cloudflare secret store. Secret updates create a new Worker version; keep the previous credential active until an OpenAI Realtime live translation succeeds.
 
+Apply pending billing migrations before any direct Worker deployment:
+
+```bash
+pnpm --filter @murmur/worker exec wrangler d1 migrations apply BILLING_DB --env development --remote
+```
+
+Use the matching environment (`development`, `sandbox`, or `production`) for the target database. `tooling/scripts/deploy-worker-release.mjs` applies pending D1 migrations automatically before its Worker deploy step; a migration failure stops the release before new code is published.
+
 Deploy the isolated development Worker with:
 
 ```bash
