@@ -32,7 +32,7 @@ database_id = "e1a58a8e-95a8-4cdd-8938-af018a50060d"
 migrations_dir = "migrations"
 
 [vars]
-APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_APP_ID = "5K9635LZ6F.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
 BILLING_ENFORCEMENT_ENABLED = "false"
 BILLING_FULFILLMENT_ENABLED = "false"
@@ -71,7 +71,7 @@ database_id = "e1a58a8e-95a8-4cdd-8938-af018a50060d"
 migrations_dir = "migrations"
 
 [env.development.vars]
-APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_APP_ID = "5K9635LZ6F.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "development"
 BETTER_AUTH_URL = "https://murmur-worker-dev.msbilal.workers.dev/api/auth"
 BILLING_ENFORCEMENT_ENABLED = "true"
@@ -117,7 +117,7 @@ database_id = "893dbd59-ac2a-473f-bf8f-0091b375e517"
 migrations_dir = "migrations"
 
 [env.production.vars]
-APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_APP_ID = "5K9635LZ6F.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
 BILLING_ENFORCEMENT_ENABLED = "true"
 BILLING_FULFILLMENT_ENABLED = "true"
@@ -163,7 +163,7 @@ database_id = "b841dec2-93b6-4dea-94ee-8efabb5575d8"
 migrations_dir = "migrations"
 
 [env.sandbox.vars]
-APPLE_APP_ATTEST_APP_ID = "TEAMID.com.q9labsai.murmur"
+APPLE_APP_ATTEST_APP_ID = "5K9635LZ6F.com.q9labsai.murmur"
 APPLE_APP_ATTEST_ENVIRONMENT = "production"
 BETTER_AUTH_URL = "https://murmur-worker-sandbox.msbilal.workers.dev/api/auth"
 BILLING_ENFORCEMENT_ENABLED = "true"
