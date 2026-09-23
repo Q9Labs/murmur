@@ -1,0 +1,32 @@
+Comprenez les paroles au moment où elles sont prononcées.
+
+Murmur transforme la parole en sous-titres traduits en direct pour suivre une visite, une conférence, un cours, une démonstration ou un office dans une autre langue.
+
+Choisissez la langue source et la langue cible, puis touchez Listen. Murmur affiche la traduction au fil de la reconnaissance vocale et peut la diffuser à voix haute si une sortie audio est disponible.
+
+Murmur prend en charge l’anglais, l’arabe, l’espagnol, le français, l’allemand, l’italien, le portugais brésilien, le japonais, le chinois simplifié, le coréen, le russe, l’hindi et le néerlandais. L’arabe s’affiche aussi de droite à gauche.
+
+Commencez gratuitement, sans inscription
+
+Murmur crée automatiquement un compte invité permanent qui comprend 5 minutes de traduction par mois, sans inscription. Murmur Pro propose des formules mensuelles et annuelles ; les crédits sans date d’expiration ajoutent du temps en cas de besoin. Vous pouvez associer une adresse e-mail pour récupérer votre compte, restaurer vos achats sur la boutique et supprimer votre compte dans l’app.
+
+Par défaut, Murmur ne conserve pas d’historique des transcriptions dans le cloud. Le son du micro n’est transmis que pendant une session en direct ; vous pouvez l’arrêter ou l’annuler à tout moment.
+
+Une traduction en direct facile à suivre
+
+• Sous-titres traduits en direct
+• Sous-titres pour les échanges brefs comme pour la parole continue
+• Traductions affichées dans l’ordre où la parole est reconnue
+• Lecture audio facultative de la traduction
+• Choix de la langue source et de la langue cible
+• Signalement des problèmes de traduction dans l’app
+
+Murmur a seulement besoin d’une connexion Internet et d’un micro.
+
+Murmur utilise l’IA pour reconnaître la parole, la traduire en direct et restituer la traduction à l’oral. Les traductions peuvent être retardées, incomplètes ou inexactes. En cas d’urgence ou pour toute décision médicale, juridique, financière, liée à l’immigration ou à un autre enjeu important, ne vous fiez pas uniquement à Murmur sans l’aide d’un interprète humain qualifié.
+
+Choisissez Microphone pour les voix à proximité ou Device Audio sur les téléphones Android compatibles pour traduire le son pris en charge diffusé dans une autre app. Si vous autorisez l’affichage par-dessus les autres apps, les sous-titres peuvent apparaître dans une bulle déplaçable. Certaines apps et certains contenus protégés bloquent la capture audio.
+
+Murmur nécessite une connexion Internet. Android demande l’autorisation d’enregistrer l’audio pour les deux modes et l’autorisation de partager l’écran à chaque session Device Audio ; Murmur n’enregistre pas le micro dans ce mode.
+
+Murmur utilise l’IA pour reconnaître la parole, la traduire en direct et restituer la traduction à l’oral. Les résultats de l’IA peuvent être incomplets ou inexacts. N’utilisez pas Murmur comme seule source en cas d’urgence ou pour des décisions médicales, juridiques, financières, liées à l’immigration ou à d’autres enjeux importants.

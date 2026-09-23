@@ -1,0 +1,1 @@
+La traducción se detiene de forma segura si Murmur pasa a segundo plano, pierde la conexión o no detecta voz durante dos minutos. Las sesiones tienen ahora un límite de seguridad de cinco minutos. Incluye traducción del audio del teléfono y subtítulos flotantes en dispositivos compatibles.

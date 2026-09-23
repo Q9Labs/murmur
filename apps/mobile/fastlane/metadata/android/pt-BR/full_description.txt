@@ -1,0 +1,34 @@
+Entenda o que está sendo dito na hora.
+
+O Murmur transforma a fala em legendas traduzidas ao vivo para você acompanhar um passeio, uma palestra, uma aula, uma demonstração ou uma celebração em outro idioma.
+
+Escolha o idioma de origem e o de destino e toque em Listen. As legendas traduzidas aparecem conforme a fala é reconhecida, e o app pode reproduzir a tradução em voz quando houver saída de áudio disponível.
+
+O Murmur oferece suporte a inglês, árabe, espanhol, francês, alemão, italiano, português do Brasil, japonês, chinês simplificado, coreano, russo, hindi e neerlandês. O árabe também é exibido da direita para a esquerda.
+
+Comece grátis, sem cadastro
+
+O Murmur cria automaticamente uma conta de convidado permanente, com 5 minutos de tradução por mês e sem necessidade de cadastro. O Murmur Pro oferece planos mensais e anuais; pacotes de créditos sem validade adicionam tempo quando você precisar. Você pode vincular um e-mail para recuperar a conta, restaurar compras na loja e excluir sua conta no app.
+
+Por padrão, o Murmur não guarda histórico de transcrições na nuvem. O áudio do microfone é transmitido somente durante uma sessão ao vivo; você pode parar ou cancelar quando quiser.
+
+Tradução ao vivo fácil de acompanhar
+
+• Legendas traduzidas ao vivo
+• Legendas para conversas curtas e fala contínua
+• Traduções exibidas na ordem em que a fala é reconhecida
+• Reprodução opcional da tradução em voz
+• Controles dos idiomas de origem e destino
+• Relato de problemas de tradução pelo app
+
+O Murmur precisa apenas de conexão com a internet e acesso ao microfone.
+
+O Murmur usa IA para reconhecer a fala ao vivo, traduzir e reproduzir a tradução em voz. As traduções podem atrasar, ficar incompletas ou imprecisas. Não dependa apenas do Murmur em emergências nem para decisões médicas, jurídicas, financeiras, de imigração ou outras de alto impacto sem um intérprete humano qualificado.
+
+Termos de Uso: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Escolha Microphone para traduzir vozes próximas ou Device Audio em celulares Android compatíveis para traduzir áudio permitido que esteja tocando em outro app. Se você permitir a exibição sobre outros apps, as legendas podem aparecer em uma bolha flutuante que pode ser arrastada. Alguns apps e conteúdos protegidos bloqueiam a captura de áudio.
+
+O Murmur requer conexão com a internet. O Android pede permissão de gravação de áudio nos dois modos e autorização para compartilhar a tela em cada sessão Device Audio; nesse modo, o Murmur não grava o microfone.
+
+O Murmur usa IA para reconhecer a fala ao vivo, traduzir e reproduzir a tradução em voz. Os resultados de IA podem ser incompletos ou imprecisos. Não use o Murmur como única fonte em emergências nem para decisões médicas, jurídicas, financeiras, de imigração ou outras de alto impacto.

@@ -1,0 +1,28 @@
+Konuşulanları anında anlayın.
+
+Murmur, konuşmayı canlı çevrilen altyazılara dönüştürür; böylece başka bir dildeki turu, konferansı, dersi, sınıfı, sunumu veya vaazı takip edebilirsiniz.
+
+Kaynak ve hedef dili seçin, ardından Listen düğmesine dokunun. Murmur konuşmayı algıladıkça çevrilmiş altyazıları gösterir; ses çıkışı varsa çeviriyi sesli de oynatabilir.
+
+Murmur; İngilizce, Arapça, İspanyolca, Fransızca, Almanca, İtalyanca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, Korece, Rusça, Hintçe ve Felemenkçeyi destekler. Arapça metin sağdan sola görüntülenir.
+
+Her ay 5 dakika ücretsiz
+
+Murmur otomatik olarak kalıcı bir misafir hesabı oluşturur; kayıt olmadan her ay 5 dakika çeviri kullanabilirsiniz. Murmur Pro aylık ve yıllık planlar sunar; süresi dolmayan kredi paketleri ihtiyaç duyduğunuzda ek süre sağlar. Hesap kurtarma için e-posta bağlayabilir, mağaza satın alımlarını geri yükleyebilir ve hesabınızı uygulamadan silebilirsiniz.
+
+Murmur, varsayılan olarak bulutta transkript geçmişi tutmaz. Mikrofon sesi yalnızca canlı oturum sırasında aktarılır; istediğiniz zaman durdurabilir veya iptal edebilirsiniz.
+
+Takibi kolay canlı çeviri
+
+• Canlı çevrilen altyazılar
+• Kısa konuşmalar ve kesintisiz konuşma için canlı altyazı
+• Konuşma algılandıkça sıralı çeviriler
+• İsteğe bağlı sesli çeviri
+• Kaynak ve hedef dil kontrolleri
+• Çeviri sorunlarını uygulama içinden bildirme
+
+Murmur için yalnızca internet bağlantısı ve mikrofon gerekir.
+
+Murmur, konuşmayı canlı tanımak ve çevirmek, ayrıca çeviriyi sesli sunmak için yapay zekâ kullanır. Çeviriler gecikebilir, eksik veya hatalı olabilir. Acil durumlarda ya da tıbbi, hukuki, finansal, göçmenlikle ilgili veya başka önemli kararlarda nitelikli bir insan tercüman olmadan yalnızca Murmur'a güvenmeyin.
+
+Kullanım Koşulları: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

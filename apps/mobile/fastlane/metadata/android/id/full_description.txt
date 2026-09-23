@@ -1,0 +1,32 @@
+Pahami ucapan saat berlangsung.
+
+Murmur mengubah ucapan menjadi takarir terjemahan langsung, agar Anda dapat mengikuti tur, konferensi, kuliah, kelas, demo, atau khotbah dalam bahasa lain.
+
+Pilih bahasa sumber dan bahasa tujuan, lalu ketuk Listen. Murmur menampilkan takarir terjemahan seiring ucapan dikenali dan dapat memutar terjemahan dengan suara jika keluaran audio tersedia.
+
+Bahasa Indonesia belum didukung sebagai bahasa sumber atau tujuan. Murmur saat ini menerjemahkan antara bahasa Inggris, Arab, Spanyol, Prancis, Jerman, Italia, Portugis Brasil, Jepang, Mandarin Sederhana, Korea, Rusia, Hindi, dan Belanda. Teks Arab juga ditampilkan dari kanan ke kiri.
+
+Mulai gratis, tanpa mendaftar
+
+Murmur otomatis membuat akun tamu permanen yang memberi 5 menit terjemahan setiap bulan tanpa perlu mendaftar. Murmur Pro menawarkan paket bulanan dan tahunan; paket kredit yang tidak kedaluwarsa menambah waktu saat Anda membutuhkannya. Anda dapat menautkan email untuk pemulihan akun, memulihkan pembelian di toko, dan menghapus akun dari aplikasi.
+
+Secara default, Murmur tidak menyimpan riwayat transkrip di cloud. Audio mikrofon hanya dialirkan selama sesi langsung; Anda dapat menghentikan atau membatalkannya kapan saja.
+
+Terjemahan langsung yang mudah diikuti
+
+• Takarir terjemahan langsung
+• Takarir untuk percakapan singkat dan ucapan berkelanjutan
+• Terjemahan tampil berurutan saat ucapan dikenali
+• Suara terjemahan opsional
+• Pilihan bahasa sumber dan tujuan
+• Laporkan masalah terjemahan di aplikasi
+
+Murmur hanya memerlukan koneksi internet dan mikrofon.
+
+Murmur menggunakan AI untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam bentuk suara. Hasil terjemahan dapat terlambat, tidak lengkap, atau tidak akurat. Jangan hanya mengandalkan Murmur untuk keadaan darurat atau keputusan medis, hukum, keuangan, imigrasi, maupun keputusan penting lainnya tanpa bantuan juru bahasa manusia yang berkualifikasi.
+
+Pilih Microphone untuk ucapan di sekitar atau Device Audio pada ponsel Android yang didukung untuk menerjemahkan audio yang memenuhi syarat dari aplikasi lain. Jika Anda mengizinkan tampilan di atas aplikasi lain, takarir dapat muncul dalam gelembung yang bisa digeser. Beberapa aplikasi dan media yang dilindungi memblokir pengambilan audio.
+
+Murmur memerlukan internet. Android meminta izin perekaman audio untuk kedua mode dan persetujuan berbagi layar pada setiap sesi Device Audio; Murmur tidak merekam mikrofon dalam mode ini.
+
+Murmur menggunakan AI untuk mengenali ucapan secara langsung, menerjemahkan, dan memutar terjemahan dalam bentuk suara. Hasil AI dapat tidak lengkap atau tidak akurat. Jangan gunakan Murmur sebagai satu-satunya sumber untuk keadaan darurat atau keputusan penting.

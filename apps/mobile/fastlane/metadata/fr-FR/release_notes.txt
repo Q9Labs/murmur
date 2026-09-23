@@ -1,0 +1,1 @@
+La traduction s’arrête désormais sans risque si Murmur passe en arrière-plan, perd la connexion ou n’entend aucune parole pendant deux minutes. Chaque session a une limite de sécurité de cinq minutes. Amélioration des abonnements, de la récupération du compte et de la fiabilité de la traduction en direct.

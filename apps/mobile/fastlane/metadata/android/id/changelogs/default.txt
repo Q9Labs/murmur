@@ -1,0 +1,1 @@
+Terjemahan kini berhenti dengan aman jika Murmur masuk ke latar belakang, kehilangan koneksi, atau tidak mendengar ucapan selama dua menit. Sesi kini memiliki batas keamanan lima menit. Termasuk terjemahan audio ponsel dan takarir mengambang pada perangkat yang didukung.

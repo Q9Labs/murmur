@@ -1,0 +1,1 @@
+Die Übersetzung wird jetzt sicher beendet, wenn Murmur in den Hintergrund wechselt, die Verbindung verliert oder zwei Minuten lang keine Sprache hört. Sitzungen sind nun auf fünf Minuten begrenzt. Mit Telefon-Audioübersetzung und schwebenden Untertiteln auf unterstützten Geräten.

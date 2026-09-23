@@ -1,0 +1,32 @@
+Entiende lo que se dice, al momento.
+
+Murmur convierte el habla en subtítulos traducidos en vivo para que sigas un recorrido, una conferencia, una clase, una demostración o una ceremonia en otro idioma.
+
+Elige el idioma de origen y el de destino, y toca Listen. Murmur muestra los subtítulos traducidos a medida que reconoce la voz y puede reproducir la traducción cuando hay salida de audio disponible.
+
+Murmur admite inglés, árabe, español, francés, alemán, italiano, portugués de Brasil, japonés, chino simplificado, coreano, ruso, hindi y neerlandés. También muestra el árabe de derecha a izquierda.
+
+Empieza gratis, sin registrarte
+
+Murmur crea automáticamente una cuenta de invitado permanente con 5 minutos de traducción al mes, sin registro. Murmur Pro ofrece planes mensuales y anuales; los paquetes de créditos que no caducan añaden tiempo cuando lo necesites. Puedes vincular un correo para recuperar la cuenta, restaurar compras de la tienda y eliminar tu cuenta desde la app.
+
+Murmur no guarda el historial de transcripciones en la nube de forma predeterminada. El audio del micrófono solo se transmite durante una sesión en vivo; puedes detenerla o cancelarla cuando quieras.
+
+Diseñado para una traducción en vivo fácil de seguir
+
+• Subtítulos traducidos en vivo
+• Subtítulos para conversaciones breves y habla continua
+• Traducciones en orden a medida que se reconoce el habla
+• Voz traducida opcional
+• Controles de idioma de origen y destino
+• Reporta problemas de traducción desde la app
+
+Murmur solo necesita conexión a internet y acceso al micrófono.
+
+Murmur usa IA para reconocer el habla, traducir en vivo y reproducir la traducción en voz. Las traducciones pueden demorarse, ser incompletas o inexactas. No confíes en Murmur para emergencias ni para tomar decisiones médicas, legales, financieras, migratorias u otras de alto riesgo sin un intérprete humano calificado.
+
+Elige Microphone para traducir voces cercanas o Device Audio en teléfonos Android compatibles para traducir audio apto que se reproduce en otra app. Si permites que aparezca sobre otras apps, los subtítulos pueden mostrarse en una burbuja flotante que puedes mover. Algunas apps y contenidos protegidos bloquean la captura de audio.
+
+Murmur requiere internet. Android solicita permiso de grabación de audio para ambos modos y autorización para compartir pantalla en cada sesión de Device Audio; en este modo no graba el micrófono.
+
+Murmur usa IA para reconocer el habla, traducir en vivo y reproducir la traducción en voz. Los resultados de IA pueden ser incompletos o inexactos. No uses Murmur como única fuente para emergencias ni para decisiones médicas, legales, financieras, migratorias u otras de alto riesgo.
