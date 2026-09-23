@@ -10,7 +10,7 @@ fi
 temp_parent=${RUNNER_TEMP:-/private/tmp}
 temp_dir=$(mktemp -d "$temp_parent/murmur-ios-signing.XXXXXX")
 keychain_path="$temp_dir/release.keychain-db"
-installed_profile="$HOME/Library/MobileDevice/Provisioning Profiles/f287c919-1cc0-45a9-b5d8-7aa80ee4160e.mobileprovision"
+installed_profile="$HOME/Library/MobileDevice/Provisioning Profiles/$(jq -er '.apple.profile_uuid' "$repo_root/release/manifest.json").mobileprovision"
 profile_was_present=false
 original_keychains=()
 
