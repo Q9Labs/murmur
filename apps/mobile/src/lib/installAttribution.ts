@@ -9,14 +9,16 @@ import { deliverInstallAttribution } from "./providers/insightsWorker";
 
 const attributionRecordedKey = "murmur_install_attribution_recorded_v1";
 
-export async function captureInstallAttribution(): Promise<void> {
+export async function captureInstallAttribution(isAnalyticsEnabled: () => boolean): Promise<void> {
   if (Platform.OS !== "android" && Platform.OS !== "ios") return;
+  if (!isAnalyticsEnabled()) return;
   if ((await getLocalValue(attributionRecordedKey)) === "true") return;
   try {
     const appInstallId = await getOrCreateInstallId();
     const attribution = Platform.OS === "android"
       ? { platform: "android" as const, referrer: await Application.getInstallReferrerAsync() }
       : { platform: "ios" as const, token: await MurmurAudioModule.getAdServicesAttributionToken() };
+    if (!isAnalyticsEnabled()) return;
     await deliverInstallAttribution({ app_install_id: appInstallId, ...attribution });
     await setLocalValue(attributionRecordedKey, "true");
   } catch (failure) {

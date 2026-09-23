@@ -72,7 +72,7 @@ describe("mobile telemetry privacy preference", () => {
     expect(JSON.stringify(body)).not.toMatch(/audio|caption|conversation|transcript/);
   });
 
-  it("records the opt-out once and suppresses later product events", async () => {
+  it("sends no event when turning analytics off and suppresses later product events", async () => {
     await updateAnonymousAnalyticsEnabled(false);
     captureMobileTelemetry({
       event: "mobile_listen_tapped",
@@ -83,17 +83,16 @@ describe("mobile telemetry privacy preference", () => {
     });
     await Promise.resolve();
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(dependencies.setAnonymousAnalyticsEnabled).toHaveBeenCalledWith(false);
-    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).toContain(
-      '"event":"mobile_analytics_preference_changed"',
-    );
   });
 
-  it("keeps analytics off without reporting a duplicate product error when delivery fails", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("network unavailable"));
+  it("does not relay an event whose install id resolves after opt-out", async () => {
+    let resolveInstallId = (_installId: string): void => undefined;
+    dependencies.getOrCreateInstallId.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveInstallId = resolve;
+    }));
 
-    await expect(updateAnonymousAnalyticsEnabled(false)).resolves.toBeUndefined();
     captureMobileTelemetry({
       event: "mobile_listen_tapped",
       network_type: "wifi",
@@ -101,9 +100,11 @@ describe("mobile telemetry privacy preference", () => {
       source_language: "en",
       target_language: "ar",
     });
+    await updateAnonymousAnalyticsEnabled(false);
+    resolveInstallId("install-id-123456");
+    await Promise.resolve();
     await Promise.resolve();
 
-    expect(dependencies.setAnonymousAnalyticsEnabled).toHaveBeenCalledWith(false);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

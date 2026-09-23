@@ -23,7 +23,7 @@ export async function initializeAnonymousAnalytics(): Promise<boolean> {
   anonymousAnalyticsEnabled = await getAnonymousAnalyticsEnabled();
   if (anonymousAnalyticsEnabled) {
     captureMobileTelemetry(createAppLifecycleEvent("mobile_app_opened"));
-    void captureInstallAttribution();
+    void captureInstallAttribution(() => anonymousAnalyticsEnabled);
   }
   return anonymousAnalyticsEnabled;
 }
@@ -42,7 +42,6 @@ export async function updateAnonymousAnalyticsEnabled(enabled: boolean): Promise
   anonymousAnalyticsEnabled = false;
   await setReplayAnalyticsEnabled(false);
   await setAnonymousAnalyticsEnabled(false);
-  await deliverMobileTelemetryBestEffort(createAnalyticsPreferenceEvent(false));
 }
 
 export async function resetAnonymousAnalyticsPreference(): Promise<void> {
@@ -78,6 +77,7 @@ export function captureBillingTelemetry(
 
 async function deliverMobileTelemetry(payload: MobileTelemetryEvent): Promise<void> {
   const appInstallId = await getOrCreateInstallId();
+  if (!anonymousAnalyticsEnabled) return;
   await deliverMobileTelemetryRequest({ app_install_id: appInstallId, payload });
 }
 
@@ -95,7 +95,7 @@ function createAppLifecycleEvent(
   };
 }
 
-function createAnalyticsPreferenceEvent(enabled: boolean): MobileTelemetryEvent {
+function createAnalyticsPreferenceEvent(enabled: true): MobileTelemetryEvent {
   return {
     ...getAppIdentity(),
     enabled,
