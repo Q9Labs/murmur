@@ -3,7 +3,7 @@
     "name": "Murmur",
     "owner": "q9labs",
     "slug": "murmur",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "updates": {
       "url": "https://u.expo.dev/7fc2e2d0-1f74-404f-b8e0-7d80a84681c6",
       "checkAutomatically": "ON_LOAD",
@@ -31,7 +31,7 @@
     },
     "ios": {
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "supportsTablet": false,
       "splash": {
         "backgroundColor": "#F8F4ED",
@@ -191,7 +191,7 @@
       ],
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.q9labsai.murmur",
       "package": "com.q9labsai.murmur",
-      "versionCode": 13
+      "versionCode": 14
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
