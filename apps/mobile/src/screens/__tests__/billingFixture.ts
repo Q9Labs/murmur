@@ -22,10 +22,13 @@ export function fixtureBilling(overrides: Partial<MurmurCustomer> = {}): MurmurB
   return {
     busy: false,
     config: { enabledLanguages: null, lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
+    configLoaded: true,
     customer: { ...fixtureCustomer, ...overrides },
     deleteAccount: vi.fn(async () => undefined),
     error: null,
+    initialized: true,
     loadPlans: vi.fn(async () => []),
+    loadPlansSilently: vi.fn(async () => []),
     manageSubscription: vi.fn(async () => undefined),
     notice: null,
     purchasePlan: vi.fn(async () => undefined),

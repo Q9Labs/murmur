@@ -14,11 +14,14 @@ import { loadPlansWithTelemetry } from "./planLoading";
 export type MurmurBillingContext = {
   busy: boolean;
   config: MurmurAppConfig;
+  configLoaded: boolean;
   customer: MurmurCustomer | null;
   deleteAccount: () => Promise<void>;
   error: string | null;
   manageSubscription: () => Promise<void>;
+  initialized: boolean;
   loadPlans: () => Promise<MurmurPlan[]>;
+  loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
   purchasePlan: (planId: string) => Promise<void>;
   purchasesAvailable: boolean;
@@ -33,10 +36,13 @@ export type MurmurBillingContext = {
 const unavailableBillingContext: MurmurBillingContext = {
   busy: false,
   config: defaultAppConfig,
+  configLoaded: true,
   customer: null,
   deleteAccount: async () => undefined,
   error: null,
+  initialized: true,
   loadPlans: async () => [],
+  loadPlansSilently: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
   purchasePlan: async () => undefined,
@@ -52,7 +58,13 @@ const unavailableBillingContext: MurmurBillingContext = {
 const BillingContext = createContext<MurmurBillingContext>(unavailableBillingContext);
 
 export function MurmurBillingProvider({ children }: { children: ReactNode }): ReactNode {
-  const [busy, setBusy] = useState(true);
+  // A count, not a flag: overlapping operations must not clear each other's busy state.
+  const [busyCount, setBusyCount] = useState(1);
+  const busy = busyCount > 0;
+  const beginBusy = useCallback(() => setBusyCount((count) => count + 1), []);
+  const endBusy = useCallback(() => setBusyCount((count) => count - 1), []);
+  const [initialized, setInitialized] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [config, setConfig] = useState(defaultAppConfig);
   const [customer, setCustomer] = useState<MurmurCustomer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,14 +84,14 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   }, []);
 
   const refresh = useCallback(async (): Promise<void> => {
-    setBusy(true);
+    beginBusy();
     try {
       await loadCustomer();
       setError(null);
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   }, [loadCustomer]);
 
@@ -92,7 +104,12 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
           setConfig(nextConfig);
         }
       })
-      .catch(reportAppConfigFailure);
+      .catch(reportAppConfigFailure)
+      .finally(() => {
+        if (active) {
+          setConfigLoaded(true);
+        }
+      });
     return () => {
       active = false;
     };
@@ -121,7 +138,8 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         }
       } finally {
         if (active) {
-          setBusy(false);
+          setInitialized(true);
+          endBusy();
         }
       }
     })();
@@ -174,7 +192,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   }, []);
 
   const runStoreAction = useCallback(async (action: () => Promise<void>): Promise<void> => {
-    setBusy(true);
+    beginBusy();
     setNotice(null);
     try {
       await action();
@@ -182,7 +200,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
-      setBusy(false);
+      endBusy();
     }
   }, []);
   const completeStorePurchase = useCallback(async () => {
@@ -202,13 +220,18 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     () => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry),
     [serverOfferingId],
   );
+  const loadPlansSilently = useCallback(async () => {
+    const { loadMurmurPlans } = await import("./revenueCat");
+    return loadMurmurPlans(serverOfferingId);
+  }, [serverOfferingId]);
 
   const value = useMemo<MurmurBillingContext>(() => ({
     busy,
     config,
+    configLoaded,
     customer,
     deleteAccount: async () => {
-      setBusy(true);
+      beginBusy();
       try {
         const { deleteMurmurAccount } = await import("../auth/client");
         await deleteMurmurAccount();
@@ -221,11 +244,13 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         setError(errorMessage(failure));
         throw failure;
       } finally {
-        setBusy(false);
+        endBusy();
       }
     },
     error,
+    initialized,
     loadPlans,
+    loadPlansSilently,
     manageSubscription: () => runStoreAction(async () => {
       const { presentMurmurCustomerCenter } = await import("./revenueCat");
       await presentMurmurCustomerCenter();
@@ -276,17 +301,17 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       });
     }),
     sendSignInCode: async (email) => {
-      setBusy(true);
+      beginBusy();
       captureBillingTelemetry("mobile_registration_started");
       try {
         const { sendEmailSignInCode } = await import("../auth/client");
         await sendEmailSignInCode(email);
       } finally {
-        setBusy(false);
+        endBusy();
       }
     },
     switchAccount: async () => {
-      setBusy(true);
+      beginBusy();
       try {
         const { switchMurmurAccount } = await import("../auth/client");
         await switchMurmurAccount();
@@ -298,12 +323,12 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         setError(errorMessage(failure));
         throw failure;
       } finally {
-        setBusy(false);
+        endBusy();
       }
     },
     syncing,
     verifySignInCode: async (email, otp) => {
-      setBusy(true);
+      beginBusy();
       try {
         const { verifyEmailSignInCode } = await import("../auth/client");
         await verifyEmailSignInCode(email, otp);
@@ -316,17 +341,22 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         captureBillingTelemetry("mobile_registration_completed");
         setError(null);
       } finally {
-        setBusy(false);
+        endBusy();
       }
     },
   }), [
+    beginBusy,
     busy,
     completeStorePurchase,
     config,
+    configLoaded,
     customer,
+    endBusy,
     error,
+    initialized,
     loadCustomer,
     loadPlans,
+    loadPlansSilently,
     notice,
     purchasesAvailable,
     reconcileWithBackoff,

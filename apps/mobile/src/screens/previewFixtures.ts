@@ -70,10 +70,13 @@ export const previewPlans: MurmurPlan[] = [
 export const previewBilling: MurmurBillingContext = {
   busy: false,
   config: { enabledLanguages: null, lowBalanceThresholdMinutes: 15, paywallOfferingId: null },
+  configLoaded: true,
   customer: previewCustomer,
   deleteAccount: async () => undefined,
   error: null,
+  initialized: true,
   loadPlans: async () => previewPlans,
+  loadPlansSilently: async () => previewPlans,
   manageSubscription: async () => undefined,
   notice: null,
   purchasePlan: async () => undefined,
