@@ -19,6 +19,7 @@
     "@sentry/react-native": "~7.2.0",
     "better-auth": "1.7.2",
     "expo": "~54.0.37",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.14",
     "expo-file-system": "~19.0.24",
     "expo-linking": "~8.0.12",
