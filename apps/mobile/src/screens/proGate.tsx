@@ -7,7 +7,7 @@ import { PrimaryAction, ScreenScaffold } from "./screenScaffold";
 import { useScreenStyles } from "./styles";
 
 // What a free listener sees in place of a Pro feature: what it does, and the way to get it.
-export function ProGate(props: { body: string; title: string }): ReactNode {
+export function ProGate(props: { body: string; children?: ReactNode; title: string }): ReactNode {
   const router = useRouter();
   const { styles } = useScreenStyles();
   const { t } = useUiLocale();
@@ -22,6 +22,7 @@ export function ProGate(props: { body: string; title: string }): ReactNode {
       title={props.title}
     >
       <Text style={styles.body}>{props.body}</Text>
+      {props.children}
     </ScreenScaffold>
   );
 }

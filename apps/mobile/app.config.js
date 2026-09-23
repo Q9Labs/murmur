@@ -1,4 +1,5 @@
 const app = require("./app.json").expo;
+const withHistoryBackupExclusion = require("./plugins/withHistoryBackupExclusion");
 
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const iosUrlScheme = iosClientId?.endsWith(".apps.googleusercontent.com")
@@ -16,5 +17,6 @@ module.exports = ({ config }) => ({
     ...app.plugins,
     "expo-apple-authentication",
     ["@react-native-google-signin/google-signin", { iosUrlScheme }],
+    withHistoryBackupExclusion,
   ],
 });

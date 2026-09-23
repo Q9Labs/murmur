@@ -1,14 +1,14 @@
 import { useRouter } from "expo-router";
 import { useState, type ReactNode } from "react";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { PostHogMaskView } from "posthog-react-native";
 
-import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
+import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import { PrimaryAction, ScreenScaffold, SecondaryAction, StatusLine } from "../screenScaffold";
 import { type ConversationRecord, useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
 import { conversationDetails, conversationStarted, conversationTextDirection } from "./conversationFormat";
-import { HistoryGate } from "./historyScreen";
+import { confirmDelete, HistoryGate } from "./historyScreen";
 
 type Feedback = { error: string | null; notice: string | null };
 
@@ -17,7 +17,7 @@ export function ConversationScreen({ id }: { id: string | undefined }): ReactNod
   const { styles } = useScreenStyles();
   const { t } = useUiLocale();
   const record = services.conversations.find((candidate) => candidate.id === id);
-  if (!services.features.history) {
+  if (!services.features.history || (record && !record.canView)) {
     return <HistoryGate />;
   }
   if (!record) {
@@ -83,11 +83,4 @@ function ConversationDetail({ record }: { record: ConversationRecord }): ReactNo
       <StatusLine error={feedback.error} notice={feedback.notice} />
     </ScreenScaffold>
   );
-}
-
-function confirmDelete(remove: () => void, t: Translate): void {
-  Alert.alert(t("history.deleteTitle"), t("history.deleteBody"), [
-    { style: "cancel", text: t("history.keep") },
-    { onPress: remove, style: "destructive", text: t("history.delete") },
-  ]);
 }

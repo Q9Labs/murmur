@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 
 import { useMurmurBilling } from "../lib/billing/context";
-import type { ConversationHistoryEntry } from "../lib/conversationHistory";
+import type { ConversationHistoryEntry, ConversationHistorySummary } from "../lib/conversationHistory";
 import { captureMobileFailure } from "../lib/observability/sentry";
 import type { UsageSetting } from "./rating/usageChoices";
 
@@ -11,6 +11,7 @@ import type { UsageSetting } from "./rating/usageChoices";
 // Native modules load lazily so screens and previews render without them.
 
 export type ConversationRecord = {
+  canView: boolean;
   durationMs: number;
   id: string;
   sourceLanguage: SourceLanguageCode;
@@ -65,11 +66,11 @@ export function ScreenServicesProvider({ children }: { children: ReactNode }): R
   const history = customer?.features.history ?? false;
   const phoneAudio = customer?.features.phoneAudio ?? false;
   const phoneAudioGift = customer?.gifts?.phoneAudio ?? noGift;
-  const historyCustomerId = history && customer ? customer.customerId : null;
+  const historyCustomerId = customer?.customerId ?? null;
 
   const reloadConversations = useCallback(async () => {
-    setConversations(historyCustomerId ? await loadConversations(historyCustomerId) : []);
-  }, [historyCustomerId]);
+    setConversations(await loadConversations(historyCustomerId, history));
+  }, [history, historyCustomerId]);
 
   useEffect(() => {
     reloadConversations().catch((failure: unknown) => {
@@ -88,7 +89,7 @@ export function ScreenServicesProvider({ children }: { children: ReactNode }): R
 
   const services = useMemo<ScreenServices>(() => {
     const requireHistoryCustomer = (): string => {
-      if (!historyCustomerId) {
+      if (!history || !historyCustomerId) {
         throw new Error("Conversation history is part of Pro.");
       }
       return historyCustomerId;
@@ -107,7 +108,7 @@ export function ScreenServicesProvider({ children }: { children: ReactNode }): R
       conversations,
       deleteConversation: async (id) => {
         const { deleteConversation } = await import("../lib/conversationHistory");
-        await deleteConversation(requireHistoryCustomer(), id);
+        await deleteConversation(id);
         await reloadConversations();
       },
       features: { history, phoneAudio },
@@ -149,21 +150,31 @@ export function ScreenServicesProvider({ children }: { children: ReactNode }): R
   return <ScreenServicesContext.Provider value={services}>{children}</ScreenServicesContext.Provider>;
 }
 
-async function loadConversations(customerId: string): Promise<ConversationRecord[]> {
-  const { getConversation, listConversations } = await import("../lib/conversationHistory");
-  const summaries = await listConversations(customerId);
-  const entries = await Promise.all(summaries.map((summary) => getConversation(customerId, summary.id)));
-  return entries.flatMap((entry) => (entry ? [toConversationRecord(entry)] : []));
+async function loadConversations(
+  customerId: string | null,
+  canViewHistory: boolean,
+): Promise<ConversationRecord[]> {
+  const { getConversation, listConversationSummaries } = await import("../lib/conversationHistory");
+  const summaries = await listConversationSummaries();
+  return Promise.all(summaries.map(async (summary) => {
+    const canView = canViewHistory && customerId === summary.customer_id;
+    const entry = canView ? await getConversation(summary.customer_id, summary.id) : null;
+    return toConversationRecord(summary, entry);
+  }));
 }
 
-function toConversationRecord(entry: ConversationHistoryEntry): ConversationRecord {
+function toConversationRecord(
+  summary: ConversationHistorySummary,
+  entry: ConversationHistoryEntry | null,
+): ConversationRecord {
   return {
-    durationMs: entry.duration_ms,
-    id: entry.id,
-    sourceLanguage: entry.source_language,
-    startedAtMs: entry.started_at_ms,
-    targetLanguage: entry.target_language,
-    text: entry.translation_text,
+    canView: entry !== null,
+    durationMs: summary.duration_ms,
+    id: summary.id,
+    sourceLanguage: summary.source_language,
+    startedAtMs: summary.started_at_ms,
+    targetLanguage: summary.target_language,
+    text: entry?.translation_text ?? "",
   };
 }
 
