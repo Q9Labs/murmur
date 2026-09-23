@@ -20,7 +20,6 @@ describe("GET /v3/config", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       enabled_languages: null,
-      launch_offer_ends_at: null,
       low_balance_threshold_minutes: 15,
       min_app_version_android: null,
       min_app_version_ios: null,

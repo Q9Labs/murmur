@@ -35,7 +35,6 @@ export function defaultServerConfig(env: Env): ServerConfig {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
     free_allowance_minutes: freeAllowanceMs / 60_000,
-    launch_offer_ends_at: null,
     low_balance_threshold_minutes: 15,
     max_session_seconds: defaultRateLimits.maxSessionSeconds,
     min_app_version_android: null,
@@ -131,10 +130,6 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
     const candidate = value(name);
     return typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
   };
-  const launchOfferEnd = optionalString("launch_offer_ends_at");
-  const validLaunchOfferEnd = launchOfferEnd && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(launchOfferEnd) &&
-    Number.isFinite(Date.parse(launchOfferEnd)) &&
-    new Date(launchOfferEnd).toISOString().slice(0, 19) === launchOfferEnd.slice(0, 19);
   const languages = value("enabled_languages");
   return {
     device_integrity_required: boolean("device_integrity_required", defaults.device_integrity_required),
@@ -142,7 +137,6 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
       ? languages
       : defaults.enabled_languages,
     free_allowance_minutes: number("free_allowance_minutes", defaults.free_allowance_minutes),
-    launch_offer_ends_at: validLaunchOfferEnd ? launchOfferEnd : null,
     low_balance_threshold_minutes: number("low_balance_threshold_minutes", defaults.low_balance_threshold_minutes),
     max_session_seconds: number("max_session_seconds", defaults.max_session_seconds),
     min_app_version_android: optionalString("min_app_version_android"),
@@ -169,9 +163,6 @@ export function appConfig(
     : null;
   return {
     enabled_languages: config.enabled_languages,
-    launch_offer_ends_at: config.launch_offer_ends_at && Date.parse(config.launch_offer_ends_at) > nowMs
-      ? config.launch_offer_ends_at
-      : null,
     low_balance_threshold_minutes: config.low_balance_threshold_minutes,
     min_app_version_android: config.min_app_version_android,
     min_app_version_ios: config.min_app_version_ios,

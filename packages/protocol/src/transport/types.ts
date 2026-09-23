@@ -3,7 +3,6 @@ import type { AcquisitionContext } from "../acquisition";
 
 export type AppConfigResponse = {
   enabled_languages: LanguageCode[] | null;
-  launch_offer_ends_at: string | null;
   low_balance_threshold_minutes: number;
   min_app_version_android: string | null;
   min_app_version_ios: string | null;

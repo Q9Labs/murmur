@@ -62,16 +62,14 @@ describe("server configuration", () => {
     expect(config.output_audio_enabled).toBe(true);
   });
 
-  it("parses offer flags and hides invalid or elapsed launch deadlines", async () => {
+  it("parses personal-offer flags", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       featureFlags: {
-        launch_offer_ends_at: true,
         personal_offer_enabled: true,
         personal_offer_hours: true,
         personal_offer_offering_id: true,
       },
       featureFlagPayloads: {
-        launch_offer_ends_at: '"2030-01-01T00:00:00Z"',
         personal_offer_enabled: "true",
         personal_offer_hours: "24",
         personal_offer_offering_id: '"short_offer"',
@@ -84,16 +82,11 @@ describe("server configuration", () => {
       platform: "ios",
     });
     expect(config).toMatchObject({
-      launch_offer_ends_at: "2030-01-01T00:00:00Z",
       personal_offer_enabled: true,
       personal_offer_hours: 24,
       personal_offer_offering_id: "short_offer",
     });
-    expect(appConfig(config, null, Date.parse("2030-01-01T00:00:00Z")).launch_offer_ends_at).toBeNull();
-    expect(appConfig(config, null, Date.parse("2029-12-31T23:59:59Z")).launch_offer_ends_at)
-      .toBe("2030-01-01T00:00:00Z");
     expect(defaultServerConfig({})).toMatchObject({
-      launch_offer_ends_at: null,
       personal_offer_enabled: false,
       personal_offer_hours: 48,
       personal_offer_offering_id: "personal_offer",
@@ -113,16 +106,14 @@ describe("server configuration", () => {
     });
   });
 
-  it("falls back for malformed offer payloads and accepts an explicit disabled flag", async () => {
+  it("falls back for malformed personal-offer payloads and accepts an explicit disabled flag", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       featureFlags: {
-        launch_offer_ends_at: true,
         personal_offer_enabled: true,
         personal_offer_hours: true,
         personal_offer_offering_id: true,
       },
       featureFlagPayloads: {
-        launch_offer_ends_at: '"2030-02-30T00:00:00Z"',
         personal_offer_enabled: "false",
         personal_offer_hours: "0",
         personal_offer_offering_id: '"  "',
@@ -135,7 +126,6 @@ describe("server configuration", () => {
       platform: "ios",
     });
     expect(config).toMatchObject({
-      launch_offer_ends_at: null,
       personal_offer_enabled: false,
       personal_offer_hours: 48,
       personal_offer_offering_id: "personal_offer",
