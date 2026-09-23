@@ -79,29 +79,6 @@ function createSheetStyles(theme: MurmurTheme) {
       minHeight: 52,
       paddingHorizontal: 16,
     },
-    settingsAction: {
-      alignItems: "center",
-      borderBottomColor: theme.hairline,
-      borderBottomWidth: 1,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      minHeight: 62,
-      paddingHorizontal: 4,
-    },
-    settingsActionText: {
-      color: theme.primary,
-      fontSize: 16,
-      fontWeight: "700",
-    },
-    settingsList: {
-      marginTop: 2,
-    },
-    settingsMessage: {
-      color: theme.muted,
-      fontSize: 13,
-      fontWeight: "600",
-      marginTop: 16,
-    },
     sheet: {
       backgroundColor: theme.surface,
       borderColor: theme.hairline,

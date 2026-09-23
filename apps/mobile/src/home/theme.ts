@@ -5,6 +5,7 @@ export type MurmurTheme = {
   background: string;
   chromeButton: string;
   coral: string;
+  danger: string;
   dark: boolean;
   gold: string;
   hairline: string;
@@ -27,6 +28,7 @@ export const lightMurmurTheme: MurmurTheme = {
   background: "#FAF3E7",
   chromeButton: "rgba(255, 253, 249, 0.76)",
   coral: "#F0655A",
+  danger: "#B33A3A",
   dark: false,
   gold: "#F7B92B",
   hairline: "rgba(58, 46, 63, 0.12)",
@@ -49,6 +51,7 @@ export const darkMurmurTheme: MurmurTheme = {
   background: "#171319",
   chromeButton: "rgba(42, 34, 46, 0.88)",
   coral: "#FF746A",
+  danger: "#FF8A80",
   dark: true,
   gold: "#F8C552",
   hairline: "rgba(250, 243, 231, 0.15)",

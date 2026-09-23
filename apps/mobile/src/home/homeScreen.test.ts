@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
+vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("../lib/billing/context", () => ({ useMurmurBilling: () => ({ customer: null }) }));
+vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
 vi.mock("expo-network", () => ({
   addNetworkStateListener: () => ({ remove: vi.fn() }),
   getNetworkStateAsync: vi.fn(async () => ({ type: "wifi" })),
