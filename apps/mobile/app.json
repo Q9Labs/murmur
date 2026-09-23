@@ -158,6 +158,7 @@
       "bundleIdentifier": "com.q9labsai.murmur"
     },
     "android": {
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#F8F4ED",
         "foregroundImage": "./assets/images/adaptive-icon.png"

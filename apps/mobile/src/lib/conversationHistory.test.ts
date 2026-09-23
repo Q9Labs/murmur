@@ -74,11 +74,12 @@ describe("local conversation history", () => {
 
   it("deletes one entry or all local conversation data", async () => {
     saveConversation(first);
-    await deleteConversation("customer-1", first.id);
+    await deleteConversation(first.id);
     await expect(getConversation("customer-1", first.id)).resolves.toBeNull();
     saveConversation(first);
     deleteAllConversations();
     await expect(listConversations("customer-1")).resolves.toEqual([]);
+    expect(storage.directories.has("/documents/conversation-history")).toBe(true);
   });
 
   it("rejects path-like ids", async () => {
@@ -86,12 +87,12 @@ describe("local conversation history", () => {
     await expect(getConversation("customer-1", "../escape")).resolves.toBeNull();
   });
 
-  it("does not expose another local account's translations", async () => {
+  it("keeps another local account's translation hidden but permits local deletion", async () => {
     saveConversation(first);
     await expect(listConversations("customer-2")).resolves.toEqual([]);
     await expect(getConversation("customer-2", first.id)).resolves.toBeNull();
     await expect(shareConversation("customer-2", first.id)).rejects.toThrow("conversation_not_found");
-    await deleteConversation("customer-2", first.id);
-    await expect(getConversation("customer-1", first.id)).resolves.toEqual(first);
+    await deleteConversation(first.id);
+    await expect(getConversation("customer-1", first.id)).resolves.toBeNull();
   });
 });

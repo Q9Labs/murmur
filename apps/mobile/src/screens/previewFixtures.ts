@@ -201,6 +201,7 @@ const hourMs = 3_600_000;
 
 export const previewConversations: ConversationRecord[] = [
   {
+    canView: true,
     durationMs: 42 * 60_000,
     id: "preview-conference",
     sourceLanguage: "ar",
@@ -211,6 +212,7 @@ export const previewConversations: ConversationRecord[] = [
       + "spent twenty years building water systems in the desert.",
   },
   {
+    canView: true,
     durationMs: 8 * 60_000,
     id: "preview-pharmacy",
     sourceLanguage: "es",
@@ -219,6 +221,7 @@ export const previewConversations: ConversationRecord[] = [
     text: "Take one tablet in the morning and one at night, always with food. If you feel dizzy, stop and call us.",
   },
   {
+    canView: true,
     durationMs: 3 * hourMs / 60,
     id: "preview-taxi",
     sourceLanguage: "auto",

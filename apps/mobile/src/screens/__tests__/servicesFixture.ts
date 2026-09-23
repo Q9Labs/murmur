@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import type { ConversationRecord, ScreenServices } from "../screenServices";
 
 export const fixtureConversation: ConversationRecord = {
+  canView: true,
   durationMs: 12 * 60_000,
   id: "conversation-1",
   sourceLanguage: "ar",

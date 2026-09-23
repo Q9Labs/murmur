@@ -26,13 +26,19 @@ export async function deliverRatingSurvey(body: {
   other_text?: string;
   stars: 1 | 2 | 3 | 4 | 5;
 }): Promise<void> {
-  await postInsights("/v3/ratings", body, "rating_survey");
+  const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
+  await postInsights("/v3/ratings", body, "rating_survey", headers);
 }
 
-async function postInsights(path: string, body: object, operation: string): Promise<void> {
+async function postInsights(
+  path: string,
+  body: object,
+  operation: string,
+  headers: HeadersInit = { "Content-Type": "application/json" },
+): Promise<void> {
   const response = await fetch(`${getWorkerBaseUrl()}${path}`, {
     body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
+    headers,
     method: "POST",
   });
   if (!response.ok) throw new Error(`${operation}_http_${response.status}`);

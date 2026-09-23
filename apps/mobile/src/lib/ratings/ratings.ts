@@ -127,7 +127,6 @@ export function submitRating(params: {
       other_text: params.otherText,
       stars: params.stars,
     });
-    captureMobileTelemetry({ event: "rating_submitted", stars: params.stars, answer: params.answer });
   });
 }
 

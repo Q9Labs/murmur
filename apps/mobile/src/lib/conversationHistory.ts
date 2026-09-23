@@ -29,11 +29,15 @@ export function saveConversation(entry: ConversationHistoryEntry): void {
 }
 
 export async function listConversations(customerId: string): Promise<ConversationHistorySummary[]> {
+  return (await listConversationSummaries()).filter((entry) => entry.customer_id === customerId);
+}
+
+export async function listConversationSummaries(): Promise<ConversationHistorySummary[]> {
   if (Platform.OS === "web" || !historyDirectory.exists) return [];
   const entries = await Promise.all(historyDirectory.list()
     .filter((item): item is File => item instanceof File && item.uri.endsWith(".json"))
     .map((file) => readConversation(file)));
-  return entries.filter((entry): entry is ConversationHistoryEntry => entry !== null && entry.customer_id === customerId)
+  return entries.filter((entry): entry is ConversationHistoryEntry => entry !== null)
     .sort((left, right) => right.started_at_ms - left.started_at_ms)
     .map(({ translation_text, ...entry }) => ({ ...entry, preview: translation_text.slice(0, 160) }));
 }
@@ -45,14 +49,15 @@ export async function getConversation(customerId: string, id: string): Promise<C
   return entry?.customer_id === customerId ? entry : null;
 }
 
-export async function deleteConversation(customerId: string, id: string): Promise<void> {
-  if (!await getConversation(customerId, id)) return;
+export async function deleteConversation(id: string): Promise<void> {
+  if (Platform.OS === "web" || !validId.test(id)) return;
   const file = new File(historyDirectory, `${id}.json`);
   if (file.exists) file.delete();
 }
 
 export function deleteAllConversations(): void {
-  if (Platform.OS !== "web" && historyDirectory.exists) historyDirectory.delete();
+  if (Platform.OS === "web" || !historyDirectory.exists) return;
+  for (const entry of historyDirectory.list()) entry.delete();
 }
 
 function conversationShareText(entry: ConversationHistoryEntry): string {

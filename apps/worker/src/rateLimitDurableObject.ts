@@ -25,6 +25,7 @@ export type {
 } from "./rateLimiter/types";
 
 const stateKey = "rate_limit_state_v1";
+const telemetryRetentionMs = 60 * 60 * 1000;
 const rateLimiterInvalidResponseCode = "rate_limiter_invalid_response";
 const rateLimiterUnavailableCode = "rate_limiter_unavailable";
 
@@ -35,6 +36,12 @@ export type RateLimiterNamespace = {
 
 export class RateLimitDurableObject {
   constructor(private readonly state: DurableObjectState) {}
+
+  async alarm(): Promise<void> {
+    await this.state.blockConcurrencyWhile(async () => {
+      await this.saveState(await this.loadState());
+    });
+  }
 
   async fetch(request: Request): Promise<Response> {
     const body = (await request.json().catch(() => null)) as DurableLimitRequest | null;
@@ -98,7 +105,24 @@ export class RateLimitDurableObject {
   private async saveState(state: DurableLimitState): Promise<void> {
     pruneState(state, Date.now());
     await this.state.storage.put(stateKey, state);
+    const nextCleanupAt = nextTelemetryCleanupAt(state);
+    if (nextCleanupAt === null) {
+      await this.state.storage.deleteAlarm();
+      return;
+    }
+    await this.state.storage.setAlarm(nextCleanupAt);
   }
+}
+
+function nextTelemetryCleanupAt(state: DurableLimitState): number | null {
+  let nextCleanupAt: number | null = null;
+  for (const timestamps of Object.values(state.telemetry_timestamps_by_client)) {
+    for (const timestamp of timestamps) {
+      const cleanupAt = timestamp + telemetryRetentionMs + 1;
+      if (nextCleanupAt === null || cleanupAt < nextCleanupAt) nextCleanupAt = cleanupAt;
+    }
+  }
+  return nextCleanupAt;
 }
 
 function createSessionRecord(
