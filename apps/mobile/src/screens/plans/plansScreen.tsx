@@ -24,7 +24,7 @@ export function planTermFromParam(value: string | string[] | undefined): PlanTer
 export function PlansScreen(props: { initialTerm?: PlanTerm; offer?: ReactNode }): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
-  const { plans, refresh } = usePlanList(true, billing.loadPlans);
+  const { plans, refresh } = usePlanList(billing.initialized, billing.loadPlans);
 
   return (
     <ScreenScaffold title="Plans">
