@@ -8,7 +8,13 @@ describe("app-facing server config", () => {
       enabled_languages: null,
       low_balance_threshold_minutes: 20,
       paywall_offering_id: "launch",
-    })).toEqual({ lowBalanceThresholdMinutes: 20, paywallOfferingId: "launch" });
+    })).toEqual({ enabledLanguages: null, lowBalanceThresholdMinutes: 20, paywallOfferingId: "launch" });
+  });
+
+  it("keeps only known languages from enabled_languages", () => {
+    expect(decodeAppConfig({ enabled_languages: ["en", "ar", "klingon"] })?.enabledLanguages)
+      .toEqual(["en", "ar"]);
+    expect(decodeAppConfig({ enabled_languages: ["klingon"] })?.enabledLanguages).toBeNull();
   });
 
   it("falls back to defaults for unset or malformed keys", () => {

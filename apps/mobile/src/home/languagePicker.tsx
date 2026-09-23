@@ -8,6 +8,7 @@ import {
   type LanguageCode,
   type SourceLanguageCode,
 } from "@murmur/protocol/languages";
+import { useMurmurBilling } from "../lib/billing/context";
 import { ModalSheet } from "./modalSheet";
 import { useSheetStyles } from "./sheetStyles";
 import type { PickerMode } from "./types";
@@ -29,8 +30,10 @@ export function LanguagePickerController({
   sourceLanguageCode,
   targetLanguageCode,
 }: LanguagePickerControllerProps): ReactNode {
+  const { enabledLanguages } = useMurmurBilling().config;
   return (
     <LanguagePickerModal
+      enabledLanguages={enabledLanguages}
       disabledLanguage={getDisabledLanguage({ mode, sourceLanguageCode, targetLanguageCode })}
       mode={mode}
       onClose={onClose}
@@ -58,14 +61,23 @@ function getDisabledLanguage(params: {
   return params.sourceLanguageCode === autoSourceLanguageCode ? undefined : params.sourceLanguageCode;
 }
 
+function isLanguageOffered(
+  code: LanguageCode,
+  enabledLanguages: readonly LanguageCode[] | null,
+): boolean {
+  return enabledLanguages === null || enabledLanguages.includes(code);
+}
+
 function LanguagePickerModal({
   disabledLanguage,
+  enabledLanguages,
   mode,
   onClose,
   onSelect,
   selected,
 }: {
   disabledLanguage?: LanguageCode;
+  enabledLanguages: readonly LanguageCode[] | null;
   mode: PickerMode;
   onClose: () => void;
   onSelect: (language: SourceLanguageCode) => void;
@@ -75,6 +87,9 @@ function LanguagePickerModal({
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredLanguages = languageRegistry.filter((language) => {
+    if (!isLanguageOffered(language.app_code, enabledLanguages)) {
+      return false;
+    }
     const haystack = `${language.display_name} ${language.native_name}`.toLowerCase();
     return haystack.includes(normalizedQuery);
   });
