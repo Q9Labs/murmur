@@ -88,6 +88,11 @@ MURMUR_UPDATES_CHANNEL=$(jq -er '.build.production.channel' eas.json)
 export MURMUR_UPDATES_CHANNEL
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
+# Tests, R8 and Kotlin compilation exhaust the template's metaspace cap on CI runners.
+cat >> android/gradle.properties <<'PROPERTIES'
+org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8
+kotlin.daemon.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
+PROPERTIES
 echo "Building the signed Murmur Android bundle."
 ./android/gradlew --no-daemon --project-dir android --gradle-user-home "$gradle_user_home" \
   --init-script "$temp_dir/release-output.init.gradle" \
