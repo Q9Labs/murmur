@@ -4,9 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fixtureBilling } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
+import { fixtureServices } from "../__tests__/servicesFixture";
+import type { ScreenServices } from "../screenServices";
 import type { SettingsControls } from "./settingsControls";
 
 const controlsRef = vi.hoisted(() => ({ current: null as SettingsControls | null }));
+const servicesRef = vi.hoisted(() => ({ current: null as ScreenServices | null }));
 const linking = vi.hoisted(() => ({ openURL: vi.fn(async () => true) }));
 
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
@@ -15,6 +18,7 @@ vi.mock("expo-linking", () => linking);
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => fixtureBilling() }));
 vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("./settingsControls", () => ({ useSettingsControls: () => controlsRef.current }));
+vi.mock("../screenServices", () => ({ useScreenServices: () => servicesRef.current }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 
@@ -28,7 +32,7 @@ function controls(overrides: Partial<SettingsControls> = {}): SettingsControls {
     locked: false,
     message: null,
     openReport: vi.fn(),
-    reportLabel: "Report a translation",
+    reportLabel: "settings.reportTranslation",
     resetIdentity: vi.fn(),
     share: vi.fn(),
     ...overrides,
@@ -38,6 +42,7 @@ function controls(overrides: Partial<SettingsControls> = {}): SettingsControls {
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
+  servicesRef.current = fixtureServices();
 });
 
 describe("settings screen", () => {
@@ -50,13 +55,25 @@ describe("settings screen", () => {
     expect(router.push).toHaveBeenCalledWith("/account");
     recorded.switches[0]?.onValueChange?.(false);
     expect(controlsRef.current.changeAnalytics).toHaveBeenCalledWith(false);
-    findControl("Report a translation")?.onPress?.();
+    findControl("Report translation")?.onPress?.();
     expect(controlsRef.current.openReport).toHaveBeenCalledOnce();
     expect(router.back).toHaveBeenCalledOnce();
     findControl("Privacy policy")?.onPress?.();
     expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
     findControl("Delete local data")?.onPress?.();
     expect(controlsRef.current.deleteLocalData).toHaveBeenCalledOnce();
+  });
+
+  it("opens conversation history and changes the insights choice", () => {
+    controlsRef.current = controls();
+    renderToStaticMarkup(<SettingsScreen />);
+
+    findControl("Conversation history")?.onPress?.();
+    expect(router.push).toHaveBeenCalledWith("/history");
+    const insights = recorded.switches.find((candidate) => candidate.accessibilityLabel === "Help improve Murmur");
+    expect(insights?.value).toBe(false);
+    insights?.onValueChange?.(true);
+    expect(servicesRef.current?.setInsightsConsent).toHaveBeenCalledWith(true);
   });
 
   it("locks session-sensitive rows during a live session", () => {

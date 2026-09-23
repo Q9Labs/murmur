@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
+
 // The home screen owns the live session, analytics preference and local data, so it
 // publishes the controls the Settings route needs through this typed bridge.
 export type SettingsControls = {
@@ -10,7 +12,7 @@ export type SettingsControls = {
   locked: boolean;
   message: string | null;
   openReport: () => void;
-  reportLabel: string;
+  reportLabel: MessageKey;
   resetIdentity: () => void;
   share: () => void;
 };

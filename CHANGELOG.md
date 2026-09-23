@@ -9,9 +9,11 @@ All notable changes to Murmur are documented here.
 - Android Device Audio mode for translating eligible media playback from other apps, with one-session screen-sharing consent and draggable floating translated captions.
 - An isolated Cloudflare development Worker target for testing live translation without touching production.
 - Full Start and Stop timing spans, plus visible preparation progress while the app checks access and starts translation.
+- The app interface in English plus Arabic, Hindi, Spanish, French, Urdu, Brazilian Portuguese, German, Indonesian, Turkish and Japanese, with an in-app language switcher that follows the system language by default, locale-formatted numbers, and right-to-left layout for Arabic and Urdu.
 
 ### Changed
 
+- Kept transcript direction tied to each speech language while the surrounding Bloom shell follows the selected UI locale.
 - Made live-audio consent, diagnostics, store copy, and privacy terms explicit about microphone and supported Android playback capture. Existing installs will see the updated consent once.
 - Disabled translated speech during Device Audio sessions and excluded Murmur's own playback from capture to prevent feedback.
 - Anchored floating captions to the newest lines so the overlay advances immediately instead of hiding the live tail behind older text.

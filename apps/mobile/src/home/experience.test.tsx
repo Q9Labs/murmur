@@ -7,15 +7,17 @@ import reactNativeTestHarness from "./reactNativeTestHarness";
 import { TranslationReportModal } from "./experience";
 
 vi.mock("react-native", () => reactNativeTestHarness);
+vi.mock("posthog-react-native", () => ({ PostHogMaskView: ({ children }: { children: ReactNode }) => children }));
 
 vi.mock("./diagnosticsModal", () => ({ DiagnosticsModal: () => null }));
 vi.mock("./languagePicker", () => ({ LanguagePickerController: () => null }));
 vi.mock("./modalSheet", () => import("./__tests__/modalSheetMock"));
 vi.mock("./outOfMinutesSheet", () => ({ OutOfMinutesSheetController: () => null }));
-vi.mock("./settingsModals", () => ({ SettingsModal: () => null }));
 vi.mock("./updateRequiredSheet", () => ({ UpdateRequiredSheet: () => null }));
 vi.mock("./styles", () => ({
   styles: {
+    ltrText: {},
+    autoText: {},
     reportButton: {},
     reportButtonText: {},
     reportRow: {},
@@ -28,6 +30,7 @@ vi.mock("./styles", () => ({
   },
 }));
 vi.mock("./variants/bloom", () => ({ BloomShell: () => null }));
+vi.mock("./variants/bloom/backgroundListening", () => ({ useAppInBackground: () => false }));
 
 function createLive(): LiveTranslationController {
   const reportSpan = vi.fn(async () => undefined);
@@ -62,7 +65,13 @@ describe("production translation reporting", () => {
   it("shows report actions only for committed spans", () => {
     const live = createLive();
     const markup = renderToStaticMarkup(
-      <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+      <TranslationReportModal
+        live={live}
+        onClose={vi.fn()}
+        open
+        sourceLanguageDirection="ltr"
+        targetLanguageRtl={false}
+      />,
     );
 
     expect(markup).toContain("Report translation");
@@ -91,7 +100,13 @@ describe("production translation reporting", () => {
 
     expect(
       renderToStaticMarkup(
-        <TranslationReportModal live={live} onClose={vi.fn()} open targetLanguageRtl={false} />,
+        <TranslationReportModal
+          live={live}
+          onClose={vi.fn()}
+          open
+          sourceLanguageDirection="ltr"
+          targetLanguageRtl={false}
+        />,
       ),
     ).toContain("No committed translations yet.");
   });

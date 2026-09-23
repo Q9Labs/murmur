@@ -6,10 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioPlaybackCaptureConfiguration
@@ -42,22 +40,12 @@ class MurmurForegroundService : Service() {
   private var captureThread: Thread? = null
   @Volatile private var captureActive = false
   private var stopNotified = false
-  private var screenOffRegistered = false
   private lateinit var overlayController: MurmurOverlayController
 
   private val projectionCallback = object : MediaProjection.Callback() {
     override fun onStop() {
       stopCaptureInternal("device_playback_capture_revoked")
       stopSelf()
-    }
-  }
-
-  private val screenOffReceiver = object : BroadcastReceiver() {
-    override fun onReceive(context: Context?, intent: Intent?) {
-      if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-        stopCaptureInternal("system_stop")
-        stopSelf()
-      }
     }
   }
 
@@ -92,12 +80,6 @@ class MurmurForegroundService : Service() {
       reportStartupFailure(error)
     }
     return START_NOT_STICKY
-  }
-
-  override fun onTaskRemoved(rootIntent: Intent?) {
-    stopCaptureInternal("task_removed")
-    stopSelf()
-    super.onTaskRemoved(rootIntent)
   }
 
   override fun onDestroy() {
@@ -207,7 +189,6 @@ class MurmurForegroundService : Service() {
       }
       captureActive = true
       stopNotified = false
-      registerScreenOffReceiver()
       overlayController.show()
       captureThread = Thread({ captureLoop(record) }, "murmur-device-playback-capture").also { it.start() }
       MurmurCaptureBridge.notifyCaptureStarted(source)
@@ -261,7 +242,6 @@ class MurmurForegroundService : Service() {
   private fun stopCaptureInternal(reason: String) {
     captureActive = false
     overlayController.hide()
-    unregisterScreenOffReceiver()
     try {
       recorder?.stop()
     } catch (_: IllegalStateException) {
@@ -288,27 +268,6 @@ class MurmurForegroundService : Service() {
     }
   }
 
-  private fun registerScreenOffReceiver() {
-    if (screenOffRegistered) return
-    val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-    } else {
-      @Suppress("DEPRECATION")
-      registerReceiver(screenOffReceiver, filter)
-    }
-    screenOffRegistered = true
-  }
-
-  private fun unregisterScreenOffReceiver() {
-    if (!screenOffRegistered) return
-    try {
-      unregisterReceiver(screenOffReceiver)
-    } catch (_: IllegalArgumentException) {
-    }
-    screenOffRegistered = false
-  }
-
   private fun ensureNotificationChannel() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return
@@ -316,10 +275,10 @@ class MurmurForegroundService : Service() {
     val manager = getSystemService(NotificationManager::class.java)
     val channel = NotificationChannel(
       MURMUR_CAPTURE_CHANNEL_ID,
-      "Live translation",
+      getString(R.string.murmur_capture_channel_name),
       NotificationManager.IMPORTANCE_LOW
     )
-    channel.description = "Keeps Murmur listening during live translation."
+    channel.description = getString(R.string.murmur_capture_channel_description)
     manager.createNotificationChannel(channel)
   }
 
@@ -341,14 +300,14 @@ class MurmurForegroundService : Service() {
     )
     return builder
       .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-      .setContentTitle(if (isDevicePlayback) "Murmur is capturing phone audio" else "Murmur is listening")
-      .setContentText(if (isDevicePlayback) "Device Audio translation is active" else "Live microphone translation is active")
+      .setContentTitle(getString(if (isDevicePlayback) R.string.murmur_capture_phone_audio_title else R.string.murmur_capture_microphone_title))
+      .setContentText(getString(if (isDevicePlayback) R.string.murmur_capture_phone_audio_text else R.string.murmur_capture_microphone_text))
       .setOngoing(true)
       .setCategory(Notification.CATEGORY_SERVICE)
       .addAction(
         Notification.Action.Builder(
           android.R.drawable.ic_menu_close_clear_cancel,
-          "Stop",
+          getString(R.string.murmur_capture_stop),
           stopPendingIntent
         ).build()
       )

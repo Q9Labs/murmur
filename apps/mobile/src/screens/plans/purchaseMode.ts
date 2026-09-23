@@ -1,18 +1,17 @@
 import type { MurmurBillingContext } from "../../lib/billing/context";
-import type { MurmurPlan } from "../../lib/billing/planCatalog";
 import type { PlanPurchaseMode } from "./planPicker";
 
-export function purchaseMode(
-  billing: MurmurBillingContext,
-  onSignUp: (plan: MurmurPlan) => void,
-): PlanPurchaseMode {
+// Guests can buy without an email; a guest who just bought is asked to save the purchase.
+export function purchaseMode(billing: MurmurBillingContext, onGuestPurchased: () => void): PlanPurchaseMode {
   const customer = billing.customer;
-  if (!customer?.isRegistered) {
-    return { kind: "sign_up", onSignUp };
-  }
   return {
-    kind: "buy",
-    onBuy: (plan) => void billing.purchasePlan(plan.id),
-    storeReady: customer.purchasesEnabled && billing.purchasesAvailable && !billing.busy,
+    onBuy: (plan) => {
+      void billing.purchasePlan(plan.id).then((purchased) => {
+        if (purchased && customer?.isRegistered !== true) {
+          onGuestPurchased();
+        }
+      });
+    },
+    storeReady: customer?.purchasesEnabled === true && billing.purchasesAvailable && !billing.busy,
   };
 }

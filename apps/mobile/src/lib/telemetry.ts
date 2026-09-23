@@ -12,8 +12,10 @@ import {
   setAnonymousAnalyticsEnabled,
 } from "./anonymousAnalytics";
 import { getOrCreateInstallId } from "./installIdentity";
+import { captureInstallAttribution } from "./installAttribution";
 import { getMurmurEnvironment } from "./config";
 import { deliverMobileTelemetryRequest } from "./providers/mobileTelemetry";
+import { setReplayAnalyticsEnabled } from "./replay";
 
 let anonymousAnalyticsEnabled = false;
 
@@ -21,6 +23,7 @@ export async function initializeAnonymousAnalytics(): Promise<boolean> {
   anonymousAnalyticsEnabled = await getAnonymousAnalyticsEnabled();
   if (anonymousAnalyticsEnabled) {
     captureMobileTelemetry(createAppLifecycleEvent("mobile_app_opened"));
+    void captureInstallAttribution();
   }
   return anonymousAnalyticsEnabled;
 }
@@ -32,10 +35,12 @@ export async function updateAnonymousAnalyticsEnabled(enabled: boolean): Promise
   if (enabled) {
     await setAnonymousAnalyticsEnabled(true);
     anonymousAnalyticsEnabled = true;
+    await setReplayAnalyticsEnabled(true);
     await deliverMobileTelemetryBestEffort(createAnalyticsPreferenceEvent(true));
     return;
   }
   anonymousAnalyticsEnabled = false;
+  await setReplayAnalyticsEnabled(false);
   await setAnonymousAnalyticsEnabled(false);
   await deliverMobileTelemetryBestEffort(createAnalyticsPreferenceEvent(false));
 }
@@ -43,6 +48,7 @@ export async function updateAnonymousAnalyticsEnabled(enabled: boolean): Promise
 export async function resetAnonymousAnalyticsPreference(): Promise<void> {
   await deleteAnonymousAnalyticsPreference();
   anonymousAnalyticsEnabled = true;
+  await setReplayAnalyticsEnabled(true);
 }
 
 export function captureMobileTelemetry(payload: MobileTelemetryEvent): void {

@@ -86,6 +86,31 @@ function createPlanStyles(theme: MurmurTheme) {
     ctaTextDisabled: {
       color: theme.muted,
     },
+    offer: {
+      alignItems: "center",
+      backgroundColor: theme.selected,
+      borderColor: theme.selectedBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      columnGap: 12,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      rowGap: 4,
+    },
+    offerCountdown: {
+      color: theme.secondaryText,
+      fontSize: 16,
+      fontVariant: ["tabular-nums"],
+      fontWeight: "700",
+    },
+    offerTitle: {
+      color: theme.primary,
+      fontSize: 17,
+      fontWeight: "800",
+    },
     picker: {
       gap: 14,
     },

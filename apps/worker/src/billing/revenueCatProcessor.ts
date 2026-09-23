@@ -2,7 +2,7 @@
 
 import type { Env } from "../env";
 import { ensureCurrentAllowance } from "./allowanceService";
-import { findBillingProduct, type BillingProduct } from "./catalog";
+import { creditPackValidityMs, type BillingProduct } from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
 import { redeemPersonalOffer } from "./personalOffer";
 import {
@@ -13,6 +13,7 @@ import {
 } from "./revenueCatApi";
 import {
   isIgnoredRevenueCatEventType,
+  revenueCatBillingProduct,
   revenueCatCustomerIds,
   type RevenueCatEvent,
 } from "./revenueCatEvent";
@@ -115,7 +116,7 @@ async function verifyEventProduct(
   if (!params.event.provider || !params.event.productId) {
     return result({ code: "unsupported_store_event", status: "failed" });
   }
-  const product = findBillingProduct(params.event.provider, params.event.productId);
+  const product = revenueCatBillingProduct(params.event);
   if (!product) {
     return result({ code: "unknown_product", status: "failed" });
   }
@@ -305,7 +306,8 @@ async function applyPurchase(context: EventContext): Promise<void> {
     state: subscriptionState(subscription),
     subscription,
   });
-  if (!context.customerIsActive) {
+  if (!context.customerIsActive || !subscription.givesAccess ||
+    subscription.paidThroughMs === null || subscription.paidThroughMs <= context.nowMs) {
     return;
   }
   const allowance = await ensureCurrentAllowance({
@@ -329,7 +331,12 @@ async function redeemOfferPurchase(context: EventContext): Promise<void> {
   if (!database) {
     throw new Error("billing database is unavailable for personal offer redemption");
   }
-  await redeemPersonalOffer(database, context.customerId, context.product.appleProductId);
+  await redeemPersonalOffer(
+    database,
+    context.customerId,
+    context.event.productId ?? context.product.appleProductId,
+    context.product.googleOfferId,
+  );
 }
 
 async function applyCancellation(context: EventContext): Promise<void> {
@@ -455,11 +462,11 @@ async function synchronizeCreditPack(params: {
       action: "grant_value",
       amountMs: params.product.grantMs,
       customerId: params.customerId,
-      expiresAtMs: null,
+      expiresAtMs: purchase.purchasedAtMs + creditPackValidityMs,
       grantKey: `store:${params.event.provider}:${params.event.environment}:${params.event.transactionId}`,
       grantKind: "credit_pack",
       nowMs: params.nowMs,
-      startsAtMs: params.event.purchasedAtMs ?? params.nowMs,
+      startsAtMs: purchase.purchasedAtMs,
       storeEventRowId: params.eventRowId,
       storeTransactionRowId: transactionRowId,
     });

@@ -5,13 +5,24 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { useMurmurTheme } from "../src/home/theme";
+import { UiLocaleProvider } from "../src/i18n/provider";
 import { MurmurBillingProvider } from "../src/lib/billing/context";
 import { initializeSentry } from "../src/lib/observability/sentry";
+import { ReplayProvider } from "../src/lib/replayProvider";
+import { ScreenServicesProvider } from "../src/screens/screenServices";
 import { SettingsControlsProvider } from "../src/screens/settings/settingsControls";
 
 initializeSentry();
 
 function RootLayout(): ReactNode {
+  return (
+    <UiLocaleProvider>
+      <ThemedStack />
+    </UiLocaleProvider>
+  );
+}
+
+function ThemedStack(): ReactNode {
   const colors = useMurmurTheme();
 
   useEffect(() => {
@@ -19,16 +30,20 @@ function RootLayout(): ReactNode {
   }, [colors.background]);
 
   return (
+    <ReplayProvider>
     <MurmurBillingProvider>
-      <SettingsControlsProvider>
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.background },
-            headerShown: false,
-          }}
-        />
-      </SettingsControlsProvider>
+      <ScreenServicesProvider>
+        <SettingsControlsProvider>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: colors.background },
+              headerShown: false,
+            }}
+          />
+        </SettingsControlsProvider>
+      </ScreenServicesProvider>
     </MurmurBillingProvider>
+    </ReplayProvider>
   );
 }
 

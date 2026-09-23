@@ -234,7 +234,9 @@ export class LedgerRepository {
            ), 0) AS allowance_ms,
            COALESCE(SUM(
              CASE
-               WHEN grant_kind = 'credit_pack' AND remaining_ms > 0 THEN remaining_ms
+               WHEN grant_kind = 'credit_pack' AND remaining_ms > 0
+                 AND (expires_at_ms IS NULL OR expires_at_ms > ?)
+               THEN remaining_ms
                ELSE 0
              END
            ), 0) AS credit_ms,
@@ -253,7 +255,7 @@ export class LedgerRepository {
          WHERE customer_id = ?
            AND (grant_kind != 'free' OR billing_state.has_pro = 0)`,
       )
-      .bind(customerId, nowMs, nowMs, nowMs, nowMs, customerId)
+      .bind(customerId, nowMs, nowMs, nowMs, nowMs, nowMs, customerId)
       .first<BalanceRow>();
 
     return balanceFromRow(row ?? emptyBalanceRow);

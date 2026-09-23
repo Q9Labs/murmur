@@ -4,11 +4,31 @@
     "owner": "q9labs",
     "slug": "murmur",
     "version": "1.2.3",
+    "updates": {
+      "url": "https://u.expo.dev/7fc2e2d0-1f74-404f-b8e0-7d80a84681c6",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "murmur",
     "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
+    "locales": {
+      "ar": "./locales/ar.json",
+      "hi": "./locales/hi.json",
+      "es": "./locales/es.json",
+      "fr": "./locales/fr.json",
+      "ur": "./locales/ur.json",
+      "pt-BR": "./locales/pt-BR.json",
+      "de": "./locales/de.json",
+      "id": "./locales/id.json",
+      "tr": "./locales/tr.json",
+      "ja": "./locales/ja.json"
+    },
     "ios": {
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
       "buildNumber": "17",
@@ -163,7 +183,8 @@
         }
       ],
       "./plugins/withAndroidReleaseSigning",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "splash": {
       "backgroundColor": "#F8F4ED",

@@ -5,6 +5,7 @@
   "exports": {
     "./acquisition": "./src/acquisition.ts",
     "./billing/catalog": "./src/billing/catalog.ts",
+    "./insights": "./src/insights.ts",
     "./languages": "./src/languages.ts",
     "./session": "./src/session.ts",
     "./telemetry": "./src/telemetry.ts",

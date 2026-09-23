@@ -5,6 +5,7 @@ import type { AcquisitionContext } from "@murmur/protocol/acquisition";
 
 import type { DebugLogEntry, LatencyReport, LatencySample } from "../latency";
 import type { RealtimeTransportDiagnostics } from "../providers/realtimeTranslation";
+import type { SessionRatingDecision } from "../ratings/ratings";
 import type { AudioCaptureDiagnostics } from "./audioDiagnostics";
 import type { SessionPreparationStatus } from "./sessionPreparation";
 import type { AudioCaptureSource } from "../../../modules/murmur-audio";
@@ -13,6 +14,7 @@ export type LiveTranslationParams = {
   acquisition?: AcquisitionContext;
   analytics_enabled: boolean;
   capture_source: AudioCaptureSource;
+  history_customer_id: string | null;
   network_type: string;
   playback_enabled: boolean;
   source_language: SourceLanguageCode;
@@ -55,6 +57,7 @@ export type LiveTranslationDiagnosticsSnapshot = {
 };
 
 export type LiveTranslationState = {
+  rating_decision: SessionRatingDecision | null;
   debug_log: DebugLogEntry[];
   diagnostics_snapshot: LiveTranslationDiagnosticsSnapshot;
   error: string | null;
@@ -72,6 +75,7 @@ export type LiveTranslationState = {
 
 export type LiveTranslationController = LiveTranslationState & {
   cancel: () => Promise<void>;
+  clearRatingDecision: () => void;
   getDiagnosticsSnapshot: () => LiveTranslationDiagnosticsSnapshot;
   invalidatePreparation: () => void;
   prepare: () => Promise<void>;

@@ -1,13 +1,14 @@
 import { Share } from "react-native";
 
+import type { Translate } from "../i18n/runtime";
+
 const referralUrl =
   "https://murmur.q9labs.ai/?utm_source=murmur-app&utm_medium=referral&utm_campaign=organic-share";
 
-export async function shareMurmur(): Promise<void> {
+export async function shareMurmur(t: Translate): Promise<void> {
   await Share.share({
-    message:
-      `Follow tours and talks in another language with live translated captions. ${referralUrl}`,
-    title: "Murmur: Live Voice Translator",
+    message: t("share.message", { url: referralUrl }),
+    title: t("share.title"),
     url: referralUrl,
   });
 }

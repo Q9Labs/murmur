@@ -2,7 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
     "tooling/scripts/build-store-screenshots.mjs",
-    "apps/worker/legacy-ios-proxy/index.ts"
+    "apps/worker/legacy-ios-proxy/index.ts",
+    "apps/worker/src/billing/allowanceService.test.mjs",
+    "apps/worker/src/billing/creditPackExpiry.test.mjs",
+    "apps/worker/src/insights/deleteCustomerData.test.mjs",
+    "apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs",
+    "apps/worker/src/routes/customer.test.mjs"
   ],
   "ignorePatterns": [
     "apps/mobile/assets/**",
@@ -17,6 +22,10 @@
     "@react-navigation/native",
     "@sentry/cli",
     "babel-preset-expo",
+    "@posthog/react-native-plugin",
+    "expo-device",
+    "expo-localization",
+    "expo-updates",
     "expo-web-browser",
     "react-native-web"
   ],

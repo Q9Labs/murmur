@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from "react";
 import type { MobileBillingTelemetryEventName } from "@murmur/protocol/telemetry";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { failureCopy, LocalizedError } from "../../i18n/localizedError";
+import { useUiLocale } from "../../i18n/runtime";
 import { defaultAppConfig, type MurmurAppConfig } from "./appConfig";
 import type { MurmurCustomer } from "./customerResponse";
 import {
@@ -23,11 +26,14 @@ export type MurmurBillingContext = {
   loadPlans: () => Promise<MurmurPlan[]>;
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
-  purchasePlan: (planId: string) => Promise<void>;
+  // Resolves true only when the store completed a purchase, so the UI can offer to save it.
+  purchasePlan: (planId: string) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<void>;
   restorePurchases: () => Promise<void>;
   sendSignInCode: (email: string) => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   switchAccount: () => Promise<void>;
   syncing: boolean;
   verifySignInCode: (email: string, otp: string) => Promise<void>;
@@ -45,11 +51,13 @@ const unavailableBillingContext: MurmurBillingContext = {
   loadPlansSilently: async () => [],
   manageSubscription: async () => undefined,
   notice: null,
-  purchasePlan: async () => undefined,
+  purchasePlan: async () => false,
   purchasesAvailable: false,
   refresh: async () => undefined,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
+  signInWithApple: async () => undefined,
+  signInWithGoogle: async () => undefined,
   switchAccount: async () => undefined,
   syncing: false,
   verifySignInCode: async () => undefined,
@@ -67,11 +75,14 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   const [configLoaded, setConfigLoaded] = useState(false);
   const [config, setConfig] = useState(defaultAppConfig);
   const [customer, setCustomer] = useState<MurmurCustomer | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<{ failure: unknown } | null>(null);
+  const [notice, setNotice] = useState<MessageKey | null>(null);
   const [purchasesAvailable, setPurchasesAvailable] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const reconciliationSnapshot = useRef<ReconciliationSnapshot | null>(null);
+  const { locale, t } = useUiLocale();
+  const errorText = error ? failureCopy(error.failure, { locale, t }, "billing.unavailable") : null;
+  const noticeText = notice ? t(notice) : null;
 
   const loadCustomer = useCallback(async (): Promise<MurmurCustomer> => {
     const { fetchMurmurCustomer } = await import("./customerApi");
@@ -86,10 +97,12 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
   const refresh = useCallback(async (): Promise<void> => {
     beginBusy();
     try {
-      await loadCustomer();
+      const { fetchMurmurAppConfig } = await import("./customerApi");
+      const [nextConfig] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
+      setConfig(nextConfig);
       setError(null);
     } catch (failure) {
-      setError(errorMessage(failure));
+      setError({ failure });
     } finally {
       endBusy();
     }
@@ -120,7 +133,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     void (async () => {
       try {
         const nextCustomer = await loadCustomer();
-        if (active && nextCustomer.isRegistered && nextCustomer.fulfillmentEnabled) {
+        if (active && nextCustomer.fulfillmentEnabled) {
           const { reconcileMurmurCustomer } = await import("./customerApi");
           reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
           captureBillingTelemetry("mobile_reconciliation_succeeded", { resultCategory: "login" });
@@ -134,7 +147,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       } catch (failure) {
         if (active) {
           captureBillingTelemetry("mobile_reconciliation_failed", { resultCategory: "login" });
-          setError(errorMessage(failure));
+          setError({ failure });
         }
       } finally {
         if (active) {
@@ -198,7 +211,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await action();
       setError(null);
     } catch (failure) {
-      setError(errorMessage(failure));
+      setError({ failure });
     } finally {
       endBusy();
     }
@@ -211,8 +224,8 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     const converged = await reconcileWithBackoff("purchase");
     await loadCustomer();
     setNotice(converged
-      ? "Purchase verified. Your balance is up to date."
-      : "The store finished, but your balance is still syncing. Tap Refresh balance shortly.");
+      ? "billing.purchaseVerified"
+      : "billing.purchaseSyncing");
   }, [loadCustomer, reconcileWithBackoff]);
 
   const serverOfferingId = config.paywallOfferingId;
@@ -224,6 +237,18 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     const { loadMurmurPlans } = await import("./revenueCat");
     return loadMurmurPlans(serverOfferingId);
   }, [serverOfferingId]);
+
+  const completeSignIn = useCallback(async (method: AccountSaveMethod): Promise<void> => {
+    const nextCustomer = await loadCustomer();
+    if (nextCustomer.fulfillmentEnabled) {
+      const { reconcileMurmurCustomer } = await import("./customerApi");
+      reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
+      await loadCustomer();
+    }
+    captureBillingTelemetry("mobile_registration_completed");
+    captureAccountSaved(method);
+    setError(null);
+  }, [loadCustomer]);
 
   const value = useMemo<MurmurBillingContext>(() => ({
     busy,
@@ -239,15 +264,15 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         setCustomer(null);
         setPurchasesAvailable(false);
         setError(null);
-        setNotice("Murmur account deleted. Store subscriptions must still be cancelled in the store.");
+        setNotice("billing.accountDeleted");
       } catch (failure) {
-        setError(errorMessage(failure));
+        setError({ failure });
         throw failure;
       } finally {
         endBusy();
       }
     },
-    error,
+    error: errorText,
     initialized,
     loadPlans,
     loadPlansSilently,
@@ -256,32 +281,37 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await presentMurmurCustomerCenter();
       await loadCustomer();
     }),
-    notice,
-    purchasePlan: (planId) => runStoreAction(async () => {
-      assertPaywallAvailable(customer);
-      const { purchaseMurmurPlan } = await import("./revenueCat");
-      captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
-      const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
-        (failure: unknown) => {
-          capturePaywallFailure("store_error");
-          throw failure;
-        },
-      );
-      if (outcome === "cancelled") {
-        capturePaywallCancellation();
-        setNotice("No purchase was made.");
-        return;
-      }
-      await completeStorePurchase();
-    }),
+    notice: noticeText,
+    purchasePlan: async (planId) => {
+      let purchased = false;
+      await runStoreAction(async () => {
+        assertPaywallAvailable(customer);
+        const { purchaseMurmurPlan } = await import("./revenueCat");
+        captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
+        const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
+          (failure: unknown) => {
+            capturePaywallFailure("store_error");
+            throw failure;
+          },
+        );
+        if (outcome === "cancelled") {
+          capturePaywallCancellation();
+          setNotice("billing.noPurchase");
+          return;
+        }
+        await completeStorePurchase();
+        if (config.personalOffer) {
+          captureOfferRedeemed(config.personalOffer.offeringId);
+        }
+        purchased = true;
+      });
+      return purchased;
+    },
     purchasesAvailable,
     refresh,
     restorePurchases: () => runStoreAction(async () => {
-      if (!customer?.isRegistered) {
-        throw new Error("Add and verify an email before restoring purchases.");
-      }
-      if (!customer.fulfillmentEnabled) {
-        throw new Error("Purchase restoration is temporarily unavailable.");
+      if (!customer?.fulfillmentEnabled) {
+        throw new LocalizedError("billing.restoreUnavailable");
       }
       const { restoreMurmurPurchases } = await import("./revenueCat");
       captureBillingTelemetry("mobile_restore_started");
@@ -294,8 +324,8 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       const converged = await reconcileWithBackoff("restore");
       await loadCustomer();
       setNotice(converged
-        ? "Eligible purchases restored and your balance is up to date."
-        : "No eligible purchases were found yet. If you just bought one, tap Refresh balance shortly.");
+        ? "billing.restored"
+        : "billing.nothingRestored");
       captureBillingTelemetry("mobile_restore_succeeded", {
         resultCategory: converged ? "converged" : "empty",
       });
@@ -310,6 +340,28 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         endBusy();
       }
     },
+    signInWithApple: async () => {
+      beginBusy();
+      try {
+        const { signInWithApple } = await import("../auth/client");
+        if (await signInWithApple()) {
+          await completeSignIn("apple");
+        }
+      } finally {
+        endBusy();
+      }
+    },
+    signInWithGoogle: async () => {
+      beginBusy();
+      try {
+        const { signInWithGoogle } = await import("../auth/client");
+        if (await signInWithGoogle()) {
+          await completeSignIn("google");
+        }
+      } finally {
+        endBusy();
+      }
+    },
     switchAccount: async () => {
       beginBusy();
       try {
@@ -318,9 +370,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         reconciliationSnapshot.current = null;
         await loadCustomer();
         setError(null);
-        setNotice("Switched to a fresh Murmur guest account. Sign in to recover another balance.");
+        setNotice("billing.switchedAccount");
       } catch (failure) {
-        setError(errorMessage(failure));
+        setError({ failure });
         throw failure;
       } finally {
         endBusy();
@@ -332,14 +384,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       try {
         const { verifyEmailSignInCode } = await import("../auth/client");
         await verifyEmailSignInCode(email, otp);
-        const nextCustomer = await loadCustomer();
-        if (nextCustomer.fulfillmentEnabled) {
-          const { reconcileMurmurCustomer } = await import("./customerApi");
-          reconciliationSnapshot.current = await reconcileMurmurCustomer("login");
-          await loadCustomer();
-        }
-        captureBillingTelemetry("mobile_registration_completed");
-        setError(null);
+        await completeSignIn("email");
       } finally {
         endBusy();
       }
@@ -348,16 +393,17 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     beginBusy,
     busy,
     completeStorePurchase,
+    completeSignIn,
     config,
     configLoaded,
     customer,
     endBusy,
-    error,
+    errorText,
     initialized,
     loadCustomer,
     loadPlans,
     loadPlansSilently,
-    notice,
+    noticeText,
     purchasesAvailable,
     reconcileWithBackoff,
     refresh,
@@ -384,14 +430,14 @@ function delay(milliseconds: number): Promise<void> {
 }
 
 function assertPaywallAvailable(customer: MurmurCustomer | null): asserts customer is MurmurCustomer {
-  if (!customer?.isRegistered) {
-    throw new Error("Add and verify an email before making a purchase.");
+  if (!customer) {
+    throw new LocalizedError("billing.accountLoading");
   }
   if (!customer.purchasesEnabled) {
-    throw new Error("New purchases are temporarily unavailable.");
+    throw new LocalizedError("billing.purchasesUnavailable");
   }
   if (!customer.fulfillmentEnabled) {
-    throw new Error("Purchase verification is temporarily unavailable.");
+    throw new LocalizedError("billing.verificationUnavailable");
   }
 }
 
@@ -416,8 +462,15 @@ function reportAppConfigFailure(failure: unknown): void {
   });
 }
 
-function errorMessage(failure: unknown): string {
-  return failure instanceof Error ? failure.message : "Murmur billing is temporarily unavailable.";
+type AccountSaveMethod = "apple" | "google" | "email";
+
+function captureAccountSaved(method: AccountSaveMethod): void {
+  void import("../telemetry").then((telemetry) => telemetry.captureMobileTelemetry({ event: "account_saved", method }));
+}
+
+function captureOfferRedeemed(offeringId: string): void {
+  void import("../telemetry").then((telemetry) =>
+    telemetry.captureMobileTelemetry({ event: "offer_redeemed", offering_id: offeringId }));
 }
 
 function captureBillingTelemetry(

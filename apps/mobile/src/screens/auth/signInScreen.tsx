@@ -1,12 +1,16 @@
 import { useRouter } from "expo-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { View } from "react-native";
 
+import { type UiText, useUiLocale } from "../../i18n/runtime";
 import { type MurmurBillingContext, useMurmurBilling } from "../../lib/billing/context";
 import { type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
 import { type PlanListState, usePlanList } from "../plans/planList";
-import { ScreenScaffold } from "../screenScaffold";
+import { ScreenScaffold, StatusLine } from "../screenScaffold";
 import { type AuthDoneAction, EmailSignInView, emailSignInTitle, useEmailSignIn } from "./emailSignIn";
 import type { EmailSignInState } from "./emailSignInState";
+import { SocialSignInButtons } from "./socialButtons";
+import { useAuthStyles } from "./styles";
 
 export function findCheckoutPlan(plans: PlanListState, planId: string | undefined): MurmurPlan | null {
   if (planId === undefined || plans.status !== "ready") {
@@ -35,18 +39,20 @@ export function checkoutDoneAction(params: {
   leave: () => void;
   plan: MurmurPlan | null;
   planId: string | undefined;
-  purchasePlan: (planId: string) => Promise<void>;
+  purchasePlan: (planId: string) => Promise<boolean>;
+  ui: UiText;
 }): AuthDoneAction {
+  const { t } = params.ui;
   const { planId } = params;
   if (planId === undefined) {
-    return { label: "Done", onPress: params.leave };
+    return { label: t("auth.done"), onPress: params.leave };
   }
   if (params.availability === "unavailable") {
-    return { label: "Back to plans", onPress: params.leave };
+    return { label: t("auth.backToPlans"), onPress: params.leave };
   }
   return {
     disabled: params.availability === "busy",
-    label: params.plan ? planPurchaseLabel(params.plan) : "Continue to checkout",
+    label: params.plan ? planPurchaseLabel(params.plan, params.ui) : t("auth.continueToCheckout"),
     onPress: () => {
       void params.purchasePlan(planId);
       params.leave();
@@ -57,12 +63,16 @@ export function checkoutDoneAction(params: {
 export function SignInScreen(props: { initialState?: EmailSignInState; planId?: string }): ReactNode {
   const router = useRouter();
   const billing = useMurmurBilling();
+  const ui = useUiLocale();
   const { handlers, state } = useEmailSignIn(billing, props.initialState);
   const { plans } = usePlanList(
     props.planId !== undefined && billing.initialized,
     billing.loadPlansSilently,
   );
+  const { styles } = useAuthStyles();
   const [heldPlan, setHeldPlan] = useState<MurmurPlan | null>(null);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const socialStarted = useRef(false);
   const foundPlan = findCheckoutPlan(plans, props.planId);
   if (foundPlan && !heldPlan) {
     setHeldPlan(foundPlan);
@@ -73,10 +83,33 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
     plan: heldPlan ?? foundPlan,
     planId: props.planId,
     purchasePlan: billing.purchasePlan,
+    ui,
   });
 
+  const socialSignedIn = billing.customer?.isRegistered === true && state.step === "email";
+
+  // A social sign-in has no code step, so the checkout or exit runs once the account is saved.
+  useEffect(() => {
+    if (socialSignedIn && socialStarted.current) {
+      socialStarted.current = false;
+      doneAction.onPress();
+    }
+  }, [doneAction, socialSignedIn]);
+
   return (
-    <ScreenScaffold title={emailSignInTitle(state)}>
+    <ScreenScaffold title={emailSignInTitle(state, ui.t)}>
+      {state.step === "email" ? (
+        <View style={styles.flow}>
+          <SocialSignInButtons
+            disabled={billing.busy}
+            onError={setSocialError}
+            onStart={() => {
+              socialStarted.current = true;
+            }}
+          />
+          <StatusLine error={socialError} notice={null} />
+        </View>
+      ) : null}
       <EmailSignInView billingBusy={billing.busy} doneAction={doneAction} handlers={handlers} state={state} />
     </ScreenScaffold>
   );

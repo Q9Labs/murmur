@@ -1,10 +1,14 @@
+import type { MessageKey } from "../../i18n/catalogs/en";
+import { LocalizedError } from "../../i18n/localizedError";
+
+// Errors stay as failures and notices as catalog keys, so they render in the current UI language.
 export type EmailSignInState =
-  | { email: string; error: string | null; pending: boolean; step: "email" }
+  | { email: string; error: Error | null; pending: boolean; step: "email" }
   | {
       code: string;
       email: string;
-      error: string | null;
-      notice: string | null;
+      error: Error | null;
+      notice: MessageKey | null;
       pending: "resend" | "verify" | null;
       step: "code";
     }
@@ -39,10 +43,10 @@ export function isCompleteCode(value: string): boolean {
 
 export type CodeStepState = Extract<EmailSignInState, { step: "code" }>;
 
-export function codeStep(email: string, notice: string | null = null): CodeStepState {
+export function codeStep(email: string, notice: MessageKey | null = null): CodeStepState {
   return { code: "", email, error: null, notice, pending: null, step: "code" };
 }
 
-export function failureMessage(failure: unknown, fallback: string): string {
-  return failure instanceof Error && failure.message ? failure.message : fallback;
+export function signInFailure(failure: unknown, fallback: MessageKey): Error {
+  return failure instanceof Error && failure.message ? failure : new LocalizedError(fallback);
 }

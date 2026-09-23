@@ -5,6 +5,9 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ScrollView } from "react-native";
 
+import { UiLocaleOverride } from "../i18n/provider";
+import { useUiLocale } from "../i18n/runtime";
+import type { UiLocale } from "../i18n/types";
 import { type MurmurBillingContext, MurmurBillingFixtureProvider } from "../lib/billing/context";
 import type { UiPreviewScreen } from "../lib/config";
 import type { LiveTranslationController } from "../lib/live-translation/types";
@@ -12,6 +15,7 @@ import { createAudioCaptureDiagnosticsTracker } from "../lib/live-translation/au
 import { createEmptyRealtimeTransportDiagnostics } from "../lib/providers/realtimeTranslationDiagnostics";
 import { LanguagePickerController } from "./languagePicker";
 import { previewBilling, previewBillingFor } from "../screens/previewFixtures";
+import { RatingSheet } from "../screens/rating/ratingSheet";
 import { screenPreviews } from "../screens/screenPreviews";
 import { OutOfMinutesSheet } from "./outOfMinutesSheet";
 import { UpdateRequiredSheet } from "./updateRequiredSheet";
@@ -29,6 +33,7 @@ const previewTranslation =
 
 const previewLive: LiveTranslationController = {
   cancel: async () => undefined,
+  clearRatingDecision: noop,
   debug_log: [],
   diagnostics_snapshot: {
     capture: createAudioCaptureDiagnosticsTracker().snapshot(),
@@ -47,6 +52,7 @@ const previewLive: LiveTranslationController = {
   latency_samples: [],
   invalidatePreparation: noop,
   preparation_status: "ready",
+  rating_decision: null,
   prepare: async () => undefined,
   report_error: null,
   report_receipt_id: null,
@@ -124,7 +130,10 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   picker: () => <PickerPreview mode="target" />,
   privacy: () => <OnboardingPreview step="privacy" />,
   "source-picker": () => <PickerPreview mode="source" />,
+  rating: () => <RatingPreview />,
+  "rating-answered": () => <RatingPreview answered />,
   translation: () => <TranslationPreview />,
+  "translation-background": () => <TranslationPreview listeningInBackground />,
   "translation-muted": () => <TranslationPreview audioPlaybackEnabled={false} />,
   "translation-only": () => <TranslationPreview live={previewTranslationOnlyLive} />,
   "update-required": () => (
@@ -136,8 +145,9 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   welcome: () => <WelcomePreview />,
 };
 
-export function BloomPreview({ screen }: { screen: PreviewScreen }): ReactNode {
-  return previewRenderers[screen]();
+export function BloomPreview({ locale = null, screen }: { locale?: UiLocale | null; screen: PreviewScreen }): ReactNode {
+  const Screen = previewRenderers[screen];
+  return locale ? <UiLocaleOverride locale={locale}><Screen /></UiLocaleOverride> : <Screen />;
 }
 
 function OutOfMinutesPreview({ registered }: { registered: boolean }): ReactNode {
@@ -146,6 +156,20 @@ function OutOfMinutesPreview({ registered }: { registered: boolean }): ReactNode
     <>
       <TranslationPreview billing={billing} live={exhaustedLive} />
       <OutOfMinutesSheet customer={billing.customer} onClose={noop} onSeePlans={noop} open />
+    </>
+  );
+}
+
+function RatingPreview({ answered = false }: { answered?: boolean }): ReactNode {
+  return (
+    <>
+      <TranslationPreview live={idleTranslationOnlyLive} />
+      <RatingSheet
+        initialAnswer={answered ? { otherText: "Parent evening at school", stars: 5, use: "other" } : undefined}
+        onClose={noop}
+        onSubmit={noop}
+        open
+      />
     </>
   );
 }
@@ -213,23 +237,28 @@ function WelcomePreview(): ReactNode {
 function TranslationPreview({
   audioPlaybackEnabled = true,
   billing = previewBilling,
+  listeningInBackground = false,
   live = previewLive,
 }: {
   audioPlaybackEnabled?: boolean;
   billing?: MurmurBillingContext;
+  listeningInBackground?: boolean;
   live?: LiveTranslationController;
 } = {}): ReactNode {
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
+  const { locale, t } = useUiLocale();
   const viewModel = useMemo(
     () =>
       buildHomeViewModel({
         live,
         sourceLanguageCode: previewSourceLanguage,
         targetLanguageCode: previewTargetLanguage,
+        translate: t,
+        uiLocale: locale,
       }),
-    [live],
+    [live, locale, t],
   );
   const props: VariantShellProps = {
     audioPlaybackAvailable: true,
@@ -238,6 +267,7 @@ function TranslationPreview({
     autoScrollRef,
     captureSource: "microphone",
     devicePlaybackSupported: true,
+    listeningInBackground,
     live,
     onAudioPlaybackEnabledChange: noop,
     onCaptureSourceChange: noop,

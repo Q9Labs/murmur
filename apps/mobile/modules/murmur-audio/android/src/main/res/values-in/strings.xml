@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">Terjemahan langsung</string>
+  <string name="murmur_capture_channel_description">Membuat Murmur tetap mendengarkan selama terjemahan langsung.</string>
+  <string name="murmur_capture_microphone_title">Mendengarkan di latar belakang</string>
+  <string name="murmur_capture_microphone_text">Murmur sedang menerjemahkan yang didengarnya.</string>
+  <string name="murmur_capture_phone_audio_title">Menerjemahkan audio ponsel</string>
+  <string name="murmur_capture_phone_audio_text">Murmur sedang menerjemahkan audio yang diputar di ponsel ini.</string>
+  <string name="murmur_capture_stop">Berhenti</string>
+</resources>

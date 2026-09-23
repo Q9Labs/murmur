@@ -1,17 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { authErrorMessage } from "./authErrors";
+import { LocalizedError } from "../../i18n/localizedError";
+import { authError } from "./authErrors";
 
-describe("authErrorMessage", () => {
+function keyOf(error: Error): string | null {
+  return error instanceof LocalizedError ? error.messageKey : null;
+}
+
+describe("authError", () => {
   it("explains wrong, expired and overused codes in plain language", () => {
-    expect(authErrorMessage({ code: "INVALID_OTP", status: 400 }, "fallback")).toContain("doesn't match");
-    expect(authErrorMessage({ code: "OTP_EXPIRED", status: 400 }, "fallback")).toContain("expired");
-    expect(authErrorMessage({ code: "TOO_MANY_ATTEMPTS", status: 403 }, "fallback")).toContain("Too many tries");
+    expect(keyOf(authError({ code: "INVALID_OTP", status: 400 }, "auth.codeFailed"))).toBe("auth.codeMismatch");
+    expect(authError({ code: "OTP_EXPIRED", status: 400 }, "auth.codeFailed").message).toContain("expired");
+    expect(keyOf(authError({ code: "TOO_MANY_ATTEMPTS", status: 403 }, "auth.codeFailed"))).toBe("auth.tooManyTries");
   });
 
   it("covers rate limits, server messages and unknown failures", () => {
-    expect(authErrorMessage({ status: 429 }, "fallback")).toContain("Wait a minute");
-    expect(authErrorMessage({ message: "Server said no", status: 500 }, "fallback")).toBe("Server said no");
-    expect(authErrorMessage({ status: 500 }, "Could not send the code.")).toBe("Could not send the code.");
+    expect(authError({ status: 429 }, "auth.sendFailed").message).toContain("Wait a minute");
+    const server = authError({ message: "Server said no", status: 500 }, "auth.sendFailed");
+    expect(server.message).toBe("Server said no");
+    expect(keyOf(server)).toBeNull();
+    expect(keyOf(authError({ status: 500 }, "auth.sendFailed"))).toBe("auth.sendFailed");
   });
 });

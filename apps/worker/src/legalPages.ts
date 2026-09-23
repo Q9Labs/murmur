@@ -361,20 +361,20 @@ export const legalPages: Record<string, Page> = {
             <span class="icon-tile tone-teal">${icon("gift")}</span>
             <h3>Free</h3>
             <p class="price">$0</p>
-            <p>10 minutes every month.</p>
+            <p>7 minutes every month.</p>
           </article>
           <article class="price-card price-card-featured">
             <span class="bloom" aria-hidden="true"></span>
             <span class="icon-tile tone-yellow">${icon("sparkles")}</span>
             <h3>Murmur Pro</h3>
-            <p class="price">$12.99 <span>/ month</span></p>
-            <p>3 hours every month, or $124.99 yearly.</p>
+            <p class="price">$9.99 <span>/ month</span></p>
+            <p>2 hours every month, or $99.99 yearly.</p>
           </article>
           <article class="price-card">
             <span class="icon-tile tone-violet">${icon("coins")}</span>
             <h3>Credit packs</h3>
-            <p class="price">From $3.99</p>
-            <p>60, 180, or 540 minutes that never expire.</p>
+            <p class="price">From $7.99</p>
+            <p>Trip Pass and Event Pass minutes expire 90 days after purchase.</p>
           </article>
         </div>
         <p class="pricing-note">Purchases use Apple App Store or Google Play billing. Taxes and localized prices can vary by storefront.</p>

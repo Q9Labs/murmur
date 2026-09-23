@@ -9,7 +9,7 @@ vi.mock("expo-router", () => import("./__tests__/navigation").then((m) => m.expo
 vi.mock("react-native-safe-area-context", () => import("./__tests__/navigation").then((m) => m.safeAreaMock));
 vi.mock("lucide-react-native", () => import("./__tests__/navigation").then((m) => m.lucideMock));
 
-import { PrimaryAction, ScreenScaffold, StatusLine } from "./screenScaffold";
+import { PrimaryAction, QuietAction, ScreenScaffold, SecondaryAction, StatusLine } from "./screenScaffold";
 
 beforeEach(() => {
   resetRecorded();
@@ -52,5 +52,23 @@ describe("screen scaffold", () => {
     expect(markup).toContain("Purchase verified.");
     recorded.controls.find((control) => control.accessibilityRole === "button")?.onPress?.();
     expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  it("renders secondary and quiet actions", () => {
+    const yes = vi.fn();
+    const skip = vi.fn();
+    const markup = renderToStaticMarkup(
+      <>
+        <SecondaryAction disabled label="Yes" onPress={yes} />
+        <QuietAction label="Not now" onPress={skip} />
+      </>,
+    );
+
+    expect(markup).toContain("Yes");
+    expect(markup).toContain("Not now");
+    const [first, second] = recorded.controls;
+    expect(first?.accessibilityState?.disabled).toBe(true);
+    second?.onPress?.();
+    expect(skip).toHaveBeenCalledOnce();
   });
 });

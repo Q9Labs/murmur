@@ -2,7 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LocalizedError } from "../../i18n/localizedError";
 import type { MurmurBillingContext } from "../../lib/billing/context";
+import { en } from "../__tests__/uiText";
 import { fixtureBilling } from "../__tests__/billingFixture";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
@@ -48,9 +50,9 @@ beforeEach(() => {
 
 describe("email sign-in screens", () => {
   it("titles each step", () => {
-    expect(emailSignInTitle({ email: "", error: null, pending: false, step: "email" })).toBe("Sign in");
-    expect(emailSignInTitle(codeStep("a@b.co"))).toBe("Enter the code");
-    expect(emailSignInTitle({ email: "a@b.co", step: "done" })).toBe("You're signed in");
+    expect(emailSignInTitle({ email: "", error: null, pending: false, step: "email" }, en.t)).toBe("Sign in");
+    expect(emailSignInTitle(codeStep("a@b.co"), en.t)).toBe("Enter the code");
+    expect(emailSignInTitle({ email: "a@b.co", step: "done" }, en.t)).toBe("You're signed in");
   });
 
   it("asks for an email, then shows sending and invalid-email states", () => {
@@ -61,12 +63,12 @@ describe("email sign-in screens", () => {
     expect(renderView({ email: "maya@example.com", error: null, pending: true, step: "email" })).toContain("Sending…");
     expect(recorded.inputs[0]?.editable).toBe(false);
 
-    expect(renderView({ email: "maya@", error: "Enter a valid email address.", pending: false, step: "email" }))
+    expect(renderView({ email: "maya@", error: new LocalizedError("auth.invalidEmail"), pending: false, step: "email" }))
       .toContain("Enter a valid email address.");
   });
 
   it("asks for the code with resend and change-email links", () => {
-    const markup = renderView(codeStep("maya@example.com", "We sent a new code."));
+    const markup = renderView(codeStep("maya@example.com", "auth.codeResent"));
 
     expect(markup).toContain("maya@example.com");
     expect(markup).toContain("We sent a new code.");
@@ -77,7 +79,7 @@ describe("email sign-in screens", () => {
   it("shows signing-in, resending and wrong-code states", () => {
     expect(renderView({ ...codeStep("maya@example.com"), code: "123456", pending: "verify" })).toContain("Signing in…");
     expect(renderView({ ...codeStep("maya@example.com"), pending: "resend" })).toContain("Sending…");
-    expect(renderView({ ...codeStep("maya@example.com"), error: "That code did not match." }))
+    expect(renderView({ ...codeStep("maya@example.com"), error: new Error("That code did not match.") }))
       .toContain("That code did not match.");
   });
 

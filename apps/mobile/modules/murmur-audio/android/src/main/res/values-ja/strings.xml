@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">ライブ翻訳</string>
+  <string name="murmur_capture_channel_description">ライブ翻訳中も Murmur が聞き取りを続けます。</string>
+  <string name="murmur_capture_microphone_title">バックグラウンドで聞き取り中</string>
+  <string name="murmur_capture_microphone_text">Murmur が聞こえた音声を翻訳しています。</string>
+  <string name="murmur_capture_phone_audio_title">スマホの音声を翻訳中</string>
+  <string name="murmur_capture_phone_audio_text">Murmur がこのスマホで再生中の音声を翻訳しています。</string>
+  <string name="murmur_capture_stop">停止</string>
+</resources>

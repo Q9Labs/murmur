@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="murmur_capture_channel_name">Canlı çeviri</string>
+  <string name="murmur_capture_channel_description">Canlı çeviri sırasında Murmur’un dinlemeye devam etmesini sağlar.</string>
+  <string name="murmur_capture_microphone_title">Arka planda dinliyor</string>
+  <string name="murmur_capture_microphone_text">Murmur duyduklarını çeviriyor.</string>
+  <string name="murmur_capture_phone_audio_title">Telefon sesi çevriliyor</string>
+  <string name="murmur_capture_phone_audio_text">Murmur bu telefonda çalan sesi çeviriyor.</string>
+  <string name="murmur_capture_stop">Durdur</string>
+</resources>

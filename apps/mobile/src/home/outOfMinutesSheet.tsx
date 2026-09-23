@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
+import { formatUiNumber, type UiText, useUiLocale } from "../i18n/runtime";
 import { freeAllowanceMinutes, isPaidCustomer } from "../lib/billing/allowance";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import { outOfMinutesIllustration } from "./illustrations";
@@ -19,9 +20,10 @@ export function OutOfMinutesSheet(props: {
   open: boolean;
 }): ReactNode {
   const styles = useMurmurTheme().dark ? darkStyles : lightStyles;
+  const ui = useUiLocale();
   useCloseWhenBalanceRecovers(props.open, props.customer?.availableMs ?? 0, props.onClose);
   return (
-    <ModalSheet onClose={props.onClose} open={props.open} title="Out of minutes">
+    <ModalSheet onClose={props.onClose} open={props.open} title={ui.t("outOfMinutes.title")}>
       <Image
         accessibilityIgnoresInvertColors
         accessible={false}
@@ -29,13 +31,13 @@ export function OutOfMinutesSheet(props: {
         source={outOfMinutesIllustration}
         style={styles.illustration}
       />
-      <Text style={styles.body}>{outOfMinutesMessage(props.customer)}</Text>
+      <Text style={styles.body}>{outOfMinutesMessage(props.customer, ui)}</Text>
       <Pressable
         accessibilityRole="button"
         onPress={props.onSeePlans}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
-        <Text style={styles.buttonText}>See plans</Text>
+        <Text style={styles.buttonText}>{ui.t("outOfMinutes.seePlans")}</Text>
       </Pressable>
     </ModalSheet>
   );
@@ -63,11 +65,11 @@ function useCloseWhenBalanceRecovers(open: boolean, availableMs: number, onClose
   }, [availableMs, onClose, open]);
 }
 
-export function outOfMinutesMessage(customer: MurmurCustomer | null): string {
+export function outOfMinutesMessage(customer: MurmurCustomer | null, ui: UiText): string {
   if (customer && isPaidCustomer(customer)) {
-    return "You've used all your translation time.";
+    return ui.t("outOfMinutes.paid");
   }
-  return `You've used your ${freeAllowanceMinutes} free minutes for this month.`;
+  return ui.t("outOfMinutes.free", { minutes: formatUiNumber(freeAllowanceMinutes, ui.locale) });
 }
 
 function createOutOfMinutesStyles(theme: MurmurTheme) {

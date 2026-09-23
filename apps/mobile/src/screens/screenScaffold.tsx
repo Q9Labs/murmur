@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
 import { useScreenStyles } from "./styles";
 
 export function ScreenScaffold(props: {
@@ -13,18 +14,21 @@ export function ScreenScaffold(props: {
 }): ReactNode {
   const router = useRouter();
   const { colors, styles } = useScreenStyles();
+  const { direction, t } = useUiLocale();
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
+    <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="Back"
+          accessibilityLabel={t("common.back")}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         >
-          <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
+          <View style={uiMirrorStyle(direction)}>
+            <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
+          </View>
         </Pressable>
         <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>
       </View>
@@ -40,21 +44,50 @@ export function ScreenScaffold(props: {
   );
 }
 
-export function PrimaryAction(props: {
+export function PrimaryAction(props: ActionProps): ReactNode {
+  return <ActionButton {...props} tone="primary" />;
+}
+
+export function SecondaryAction(props: ActionProps): ReactNode {
+  return <ActionButton {...props} tone="secondary" />;
+}
+
+type ActionProps = {
   disabled?: boolean;
   label: string;
   onPress: () => void;
-}): ReactNode {
+};
+
+function ActionButton(props: ActionProps & { tone: "primary" | "secondary" }): ReactNode {
   const { styles } = useScreenStyles();
+  const primary = props.tone === "primary";
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: props.disabled === true }}
       disabled={props.disabled}
       onPress={props.onPress}
-      style={({ pressed }) => [styles.primaryButton, (pressed || props.disabled) && styles.pressed]}
+      style={({ pressed }) => [
+        primary ? styles.primaryButton : styles.secondaryButton,
+        (pressed || props.disabled) && styles.pressed,
+      ]}
     >
-      <Text style={styles.primaryButtonText}>{props.label}</Text>
+      <Text style={primary ? styles.primaryButtonText : styles.secondaryButtonText}>{props.label}</Text>
+    </Pressable>
+  );
+}
+
+// A low-emphasis text action, such as skipping an optional step.
+export function QuietAction(props: { label: string; onPress: () => void }): ReactNode {
+  const { styles } = useScreenStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={10}
+      onPress={props.onPress}
+      style={({ pressed }) => [styles.quietButton, pressed && styles.pressed]}
+    >
+      <Text style={styles.quietButtonText}>{props.label}</Text>
     </Pressable>
   );
 }

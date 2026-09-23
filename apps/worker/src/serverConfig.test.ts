@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { appConfig, defaultServerConfig, getServerConfig, isBelowMinimumVersion } from "./serverConfig";
+import { appConfig, defaultServerConfig, getServerConfig, isBelowMinimumVersion, sessionLimitSeconds } from "./serverConfig";
 import { posthogFlagsBody } from "./posthogFlagsFixture";
 
 afterEach(() => {
@@ -8,11 +8,17 @@ afterEach(() => {
 });
 
 describe("server configuration", () => {
-  it("defaults to no source transcript and a five-minute free grant", () => {
+  it("defaults to no source transcript and a seven-minute free grant", () => {
     const config = defaultServerConfig({});
     expect(config.source_transcript).toBe(false);
-    expect(config.free_allowance_minutes).toBe(5);
-    expect(config.max_session_seconds).toBe(300);
+    expect(config.insights_model).toBe("openai/gpt-6-luna");
+    expect(config.free_allowance_minutes).toBe(7);
+    expect(config.max_session_seconds_free).toBe(300);
+    expect(config.max_session_seconds_paid).toBe(3600);
+    expect(sessionLimitSeconds(config, "free")).toBe(300);
+    expect(sessionLimitSeconds(config, "pro")).toBe(3600);
+    expect(sessionLimitSeconds(config, "pro_max")).toBe(3600);
+    expect(sessionLimitSeconds({ ...config, max_session_seconds_paid: 5000 }, "pro")).toBe(3600);
   });
 
   it("evaluates typed flags with the worker telemetry identity", async () => {
@@ -20,12 +26,12 @@ describe("server configuration", () => {
       featureFlags: {
         free_allowance_minutes: true,
         source_transcript: true,
-        max_session_seconds: true,
+        max_session_seconds_free: true,
         sessions_enabled: true,
       },
       featureFlagPayloads: {
         free_allowance_minutes: "7",
-        max_session_seconds: "240",
+        max_session_seconds_free: "240",
         sessions_enabled: "false",
       },
     })));
@@ -37,7 +43,7 @@ describe("server configuration", () => {
       platform: "android",
     });
     expect(config.source_transcript).toBe(true);
-    expect(config.max_session_seconds).toBe(240);
+    expect(config.max_session_seconds_free).toBe(240);
     expect(config.free_allowance_minutes).toBe(7);
     expect(config.sessions_enabled).toBe(false);
     const request = fetchMock.mock.calls[0]?.[1];

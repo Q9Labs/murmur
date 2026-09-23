@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -5,9 +6,14 @@ const harness = vi.hoisted(() => ({
   onboardingProps: null as Record<string, unknown> | null,
   outOfMinutesProps: null as Record<string, unknown> | null,
   pickerProps: null as Record<string, unknown> | null,
+  ratingProps: null as Record<string, unknown> | null,
   screenPreview: null as string | null,
   shellProps: null as Record<string, unknown> | null,
   updateRequiredProps: null as Record<string, unknown> | null,
+}));
+
+vi.mock("../i18n/provider", () => ({
+  UiLocaleOverride: (props: { children: ReactNode }) => props.children,
 }));
 
 vi.mock("./languagePicker", () => ({
@@ -27,6 +33,13 @@ vi.mock("./outOfMinutesSheet", () => ({
 vi.mock("./updateRequiredSheet", () => ({
   UpdateRequiredSheet: (props: Record<string, unknown>) => {
     harness.updateRequiredProps = props;
+    return null;
+  },
+}));
+
+vi.mock("../screens/rating/ratingSheet", () => ({
+  RatingSheet: (props: Record<string, unknown>) => {
+    harness.ratingProps = props;
     return null;
   },
 }));
@@ -62,6 +75,20 @@ vi.mock("../screens/screenPreviews", () => ({
       "plans-packs",
       "plans-yearly",
       "settings",
+      "account-pack",
+      "account-pro-max",
+      "account-unsaved",
+      "history",
+      "history-detail",
+      "history-empty",
+      "history-gate",
+      "insights-consent",
+      "phone-audio-claimed",
+      "phone-audio-gate",
+      "phone-audio-gift",
+      "plans-offer",
+      "save-purchase",
+      "save-purchase-saved",
     ].map((screen) => [
       screen,
       () => {
@@ -86,6 +113,20 @@ describe("Bloom preview", () => {
     "plans-packs",
     "plans-yearly",
     "settings",
+    "account-pack",
+    "account-pro-max",
+    "account-unsaved",
+    "history",
+    "history-detail",
+    "history-empty",
+    "history-gate",
+    "insights-consent",
+    "phone-audio-claimed",
+    "phone-audio-gate",
+    "phone-audio-gift",
+    "plans-offer",
+    "save-purchase",
+    "save-purchase-saved",
   ] as const)("renders the %s screen preview", (screen) => {
     renderToStaticMarkup(<BloomPreview screen={screen} />);
 
@@ -212,5 +253,20 @@ describe("Bloom preview", () => {
 
     expect(harness.updateRequiredProps).toMatchObject({ open: true });
     expect(harness.shellProps?.["live"]).toMatchObject({ error: "app_version_unsupported" });
+  });
+
+  it("renders the rating sheet empty and answered", () => {
+    renderToStaticMarkup(<BloomPreview screen="rating" />);
+    expect(harness.ratingProps).toMatchObject({ initialAnswer: undefined, open: true });
+
+    renderToStaticMarkup(<BloomPreview screen="rating-answered" />);
+    expect(harness.ratingProps).toMatchObject({ initialAnswer: { stars: 5, use: "other" } });
+  });
+
+  it("renders a live session that keeps listening in the background", () => {
+    renderToStaticMarkup(<BloomPreview screen="translation-background" />);
+
+    expect(harness.shellProps).toMatchObject({ listeningInBackground: true });
+    expect(harness.shellProps?.["live"]).toMatchObject({ status: "live" });
   });
 });

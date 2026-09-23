@@ -29,15 +29,26 @@ export async function getConfig(request: Request, env: Env, context?: ExecutionC
   let personalOffer = null;
   if (config.personal_offer_enabled && env.BILLING_DB) {
     try {
+      const country = request.cf?.country;
+      const offeringId = personalOfferOfferingId(
+        typeof country === "string" ? country : undefined,
+        config.personal_offer_offering_id,
+      );
       personalOffer = await activePersonalOffer(
         env.BILLING_DB,
         session.user.id,
         nowMs,
-        config.personal_offer_offering_id,
+        offeringId,
       );
     } catch (failure) {
       Sentry.captureException(failure, { tags: { operation: "read_personal_offer" } });
     }
   }
   return json(appConfig(config, personalOffer, nowMs));
+}
+
+export function personalOfferOfferingId(country: string | undefined, configuredId: string): string {
+  return country === "IN" || country === "PK" || country === "ID" || country === "TR"
+    ? "lite_personal_offer"
+    : configuredId;
 }

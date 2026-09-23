@@ -1,6 +1,11 @@
 /// <reference types="@cloudflare/workers-types" />
 
 export type Env = {
+  APPLE_CLIENT_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
+  APPLE_APP_BUNDLE_IDENTIFIER?: string;
   APPLE_APP_ATTEST_APP_ID?: string;
   APPLE_APP_ATTEST_ENVIRONMENT?: string;
   BETTER_AUTH_SECRET?: string;
@@ -12,6 +17,10 @@ export type Env = {
   CUSTOMER_LEDGER?: DurableObjectNamespace;
   EMAIL_FROM?: string;
   GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN?: string;
+  GOOGLE_WEB_CLIENT_ID?: string;
+  GOOGLE_IOS_CLIENT_ID?: string;
+  GOOGLE_ANDROID_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_PLAY_INTEGRITY_REQUIRED_DEVICE_VERDICT?: string;
   GOOGLE_PLAY_PACKAGE_NAME?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
@@ -20,6 +29,7 @@ export type Env = {
   MURMUR_REQUIRE_DEVICE_INTEGRITY?: string;
   OPENAI_API_KEY?: string;
   OPENAI_REALTIME_MODEL?: string;
+  OPENROUTER_API_KEY?: string;
   POSTHOG_PROJECT_TOKEN?: string;
   RATE_LIMITER?: DurableObjectNamespace;
   RESEND_API_KEY?: string;

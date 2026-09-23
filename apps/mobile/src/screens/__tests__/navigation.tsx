@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 export const router = {
   back: vi.fn(),
   canGoBack: vi.fn(() => true),
+  dismissTo: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
+  setParams: vi.fn(),
 };
 
 export const expoRouterMock = {
@@ -21,4 +23,6 @@ export const lucideMock = {
   Check: () => null,
   ChevronLeft: () => null,
   ChevronRight: () => null,
+  Mail: () => null,
+  Star: () => null,
 };

@@ -1,6 +1,5 @@
-import Constants from "expo-constants";
 import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -19,22 +18,24 @@ import MurmurAudioModule, {
   type CaptureCapabilities,
 } from "../../modules/murmur-audio";
 import { getAcquisitionContextFromUrl } from "../lib/acquisition";
-import {
-  deleteEngagementState,
-  markReviewRequested,
-  recordSessionOutcome,
-} from "../lib/engagement";
+import { deleteEngagementState } from "../lib/engagement";
 import {
   acknowledgePrivacyDisclosure,
   deleteLocalMurmurData,
   hasAcknowledgedPrivacyDisclosure,
   resetInstallId,
 } from "../lib/installIdentity";
-import { requestMurmurReview } from "../lib/requestReview";
+import { claimRatingSlot, deleteRatingState, type SessionRatingDecision } from "../lib/ratings/ratings";
+import {
+  deletePhoneAudioGiftOffer,
+  hasOfferedPhoneAudioGift,
+  markPhoneAudioGiftOffered,
+} from "../lib/phoneAudioGiftOffer";
 import { shareMurmur } from "../lib/shareMurmur";
 import { captureMobileFailure } from "../lib/observability/sentry";
 import {
   captureOnboardingCompleted,
+  captureMobileTelemetry,
   initializeAnonymousAnalytics,
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
@@ -42,10 +43,15 @@ import {
 import { hasTimeAvailable } from "../lib/billing/allowance";
 import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
+import { nextPostSessionPrompt, type PostSessionPrompt } from "../screens/postSessionPrompt";
+import { RatingSheet } from "../screens/rating/ratingSheet";
+import { type ScreenServices, useScreenServices } from "../screens/screenServices";
 import {
   type SettingsControls,
   usePublishSettingsControls,
 } from "../screens/settings/settingsControls";
+import type { MessageKey } from "../i18n/catalogs/en";
+import { createTranslator, type Translate, useUiLocale } from "../i18n/runtime";
 import type { OnboardingStep, PickerMode } from "./components";
 import {
   deleteStoredAudioPlaybackEnabled,
@@ -59,10 +65,7 @@ import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 import { isAllowanceExhaustedError, isUpdateRequiredError } from "./errorCopy";
 
-const audioPlaybackSaveError = "Could not save the audio setting. Please try again.";
-const localDataDeletedMessage =
-  "Local Murmur data deleted. Privacy acknowledgement, install id, analytics preference, and rating eligibility were cleared.";
-const localDataDeleteError = "Could not delete local data. Please try again.";
+const englishTranslate = createTranslator("en");
 const defaultCaptureCapabilities: CaptureCapabilities = {
   device_playback_supported: false,
   floating_overlay_supported: false,
@@ -79,6 +82,7 @@ export function createAudioPlaybackPreferenceController(options: {
   onEnabledChange: (enabled: boolean) => void;
   onMessage: (message: string | null) => void;
   setStored: (enabled: boolean) => Promise<void>;
+  translate?: Translate;
 }): {
   deleteLocalData: (operation: () => Promise<void>, onDeleted: () => void) => Promise<void>;
   dispose: () => void;
@@ -146,7 +150,7 @@ export function createAudioPlaybackPreferenceController(options: {
       } catch {
         if (isCurrent(version) && currentEnabled === enabled) {
           applyEnabled(persistedEnabled);
-          options.onMessage(audioPlaybackSaveError);
+          options.onMessage(message("home.audioSaveError"));
         }
       }
     }).catch(() => undefined);
@@ -170,10 +174,10 @@ export function createAudioPlaybackPreferenceController(options: {
       }
       applyEnabled(true);
       onDeleted();
-      options.onMessage(localDataDeletedMessage);
+      options.onMessage(englishTranslate("home.localDataDeleted"));
     }).catch(() => {
       if (isCurrent(version)) {
-        options.onMessage(localDataDeleteError);
+        options.onMessage(message("home.localDataDeleteError"));
       }
     });
   }
@@ -188,6 +192,10 @@ export function createAudioPlaybackPreferenceController(options: {
     restoreVersion += 1;
   }
 
+  function message(key: MessageKey): string {
+    return options.translate?.(key) ?? englishTranslate(key);
+  }
+
   return {
     deleteLocalData,
     dispose,
@@ -198,6 +206,7 @@ export function createAudioPlaybackPreferenceController(options: {
 }
 
 export default function HomeScreen(): ReactNode {
+  const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
   const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -205,6 +214,9 @@ export default function HomeScreen(): ReactNode {
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const router = useRouter();
+  const services = useScreenServices();
+  const { capture } = useLocalSearchParams<{ capture?: string }>();
+  const [ratingOpen, setRatingOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [outOfMinutesOpen, setOutOfMinutesOpen] = useState(false);
   const [updateRequiredOpen, setUpdateRequiredOpen] = useState(false);
@@ -219,12 +231,15 @@ export default function HomeScreen(): ReactNode {
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
   const audioPreferenceControllerRef = useRef<AudioPlaybackPreferenceController | null>(null);
+  const translateRef = useRef(t);
+  translateRef.current = t;
   if (!audioPreferenceControllerRef.current) {
     audioPreferenceControllerRef.current = createAudioPlaybackPreferenceController({
       getStored: getStoredAudioPlaybackEnabled,
       onEnabledChange: setAudioPlaybackEnabled,
       onMessage: setSettingsMessage,
       setStored: setStoredAudioPlaybackEnabled,
+      translate: (key, values) => translateRef.current(key, values),
     });
   }
   const audioPreferenceController = audioPreferenceControllerRef.current;
@@ -248,6 +263,9 @@ export default function HomeScreen(): ReactNode {
     acquisition,
     analytics_enabled: anonymousAnalyticsEnabled === true,
     capture_source: captureSource,
+    history_customer_id: billing.customer && (billing.customer.features?.history ?? billing.customer.plan !== "free")
+      ? billing.customer.customerId
+      : null,
     network_type: networkType,
     playback_enabled: effectiveAudioPlaybackEnabled,
     source_language: sourceLanguageCode,
@@ -260,8 +278,10 @@ export default function HomeScreen(): ReactNode {
       live,
       sourceLanguageCode,
       targetLanguageCode,
+      translate: t,
+      uiLocale,
     }),
-    [captureSource, languagesReady, live, sourceLanguageCode, targetLanguageCode],
+    [captureSource, languagesReady, live, sourceLanguageCode, t, targetLanguageCode, uiLocale],
   );
   const autoScrollKey = useMemo(
     () => live.spans
@@ -318,6 +338,12 @@ export default function HomeScreen(): ReactNode {
       void live.prepare();
     }
   }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
+
+  useEffect(() => {
+    if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
+      captureMobileTelemetry({ event: "onboarding_step_viewed", step: onboardingStep });
+    }
+  }, [anonymousAnalyticsEnabled, onboardingStep]);
 
   useEffect(() => {
     let mounted = true;
@@ -423,6 +449,7 @@ export default function HomeScreen(): ReactNode {
   }, [autoScrollKey, live.tentative_source_caption]);
 
   async function acceptThirdPartyDataSharing(): Promise<void> {
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
     await acknowledgePrivacyDisclosure();
     setPrivacyAcknowledged(true);
     setPrivacyConsentChecked(false);
@@ -436,6 +463,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "languages" });
     captureOnboardingCompleted();
     await startLiveTranslation();
   }
@@ -445,10 +473,10 @@ export default function HomeScreen(): ReactNode {
     try {
       await updateAnonymousAnalyticsEnabled(enabled);
       setAnonymousAnalyticsEnabled(enabled);
-      setSettingsMessage(`Anonymous analytics ${enabled ? "enabled" : "disabled"}.`);
+      setSettingsMessage(t(enabled ? "settings.analyticsOn" : "settings.analyticsOff"));
     } catch (failure) {
       captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
-      setSettingsMessage("Could not save the analytics setting. Please try again.");
+      setSettingsMessage(t("settings.analyticsSaveError"));
     }
   }
 
@@ -457,7 +485,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     if (anonymousAnalyticsEnabled === null) {
-      setSettingsMessage("Murmur is still loading your privacy settings. Please try again.");
+      setSettingsMessage(t("settings.privacyLoading"));
       return;
     }
     await audioPreferenceController.waitForRestore();
@@ -466,6 +494,10 @@ export default function HomeScreen(): ReactNode {
 
   async function selectCaptureSource(source: AudioCaptureSource): Promise<void> {
     if (source === "device_playback" && !captureCapabilities.device_playback_supported) {
+      return;
+    }
+    if (source === "device_playback" && !services.features.phoneAudio) {
+      router.push("/phone-audio");
       return;
     }
     setCaptureSource(source);
@@ -485,10 +517,7 @@ export default function HomeScreen(): ReactNode {
 
   async function handlePrimaryAction(): Promise<void> {
     if (viewModel.isLive) {
-      const completion = await live.stop();
-      if (completion) {
-        await handleCompletedSessionEngagement(completion);
-      }
+      await live.stop();
       return;
     }
     if (isUpdateRequiredError(live.error)) {
@@ -510,6 +539,37 @@ export default function HomeScreen(): ReactNode {
     await startLiveTranslation();
   }
 
+  // Every completed session brings a new decision; each one gets at most one prompt.
+  const ratingDecision = live.rating_decision;
+  const handledRatingDecisionRef = useRef<SessionRatingDecision | null>(null);
+  const phoneAudioGiftOfferable =
+    services.phoneAudioGift.claimable && captureCapabilities.device_playback_supported;
+  useEffect(() => {
+    if (!ratingDecision || handledRatingDecisionRef.current === ratingDecision) {
+      return;
+    }
+    handledRatingDecisionRef.current = ratingDecision;
+    choosePostSessionPrompt({
+      decision: ratingDecision,
+      insightsConsent: services.insightsConsent,
+      phoneAudioGiftOfferable,
+    })
+      .then(showPostSessionPrompt)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "choose_post_session_prompt" });
+      });
+  }, [phoneAudioGiftOfferable, ratingDecision, services.insightsConsent]);
+
+  function showPostSessionPrompt(prompt: PostSessionPrompt | null): void {
+    if (prompt === "insights_consent") {
+      router.push("/insights-consent");
+    } else if (prompt === "phone_audio_gift") {
+      router.push("/phone-audio");
+    } else if (prompt === "rating") {
+      setRatingOpen(true);
+    }
+  }
+
   function swapLanguages(): void {
     if (sourceLanguageCode === autoSourceLanguageCode) {
       return;
@@ -527,7 +587,7 @@ export default function HomeScreen(): ReactNode {
     changeAnalytics: (enabled) => void changeAnonymousAnalyticsEnabled(enabled),
     deleteLocalData: () => {
       void audioPreferenceController.deleteLocalData(
-        () => deleteLocalData(live.cancel),
+        () => deleteLocalData(live.cancel, services, deleteLocale),
         () => {
           live.invalidatePreparation();
           setAnonymousAnalyticsEnabled(true);
@@ -537,7 +597,7 @@ export default function HomeScreen(): ReactNode {
         },
       );
     },
-    resetIdentity: () => void resetIdentity(live, setSettingsMessage),
+    resetIdentity: () => void resetIdentity(live, setSettingsMessage, t("home.identityReset")),
   };
   const settingsLocked = live.status === "live";
   const settingsControls = useMemo<SettingsControls>(() => ({
@@ -547,11 +607,20 @@ export default function HomeScreen(): ReactNode {
     locked: settingsLocked,
     message: settingsMessage,
     openReport: () => setDiagnosticsOpen(true),
-    reportLabel: __DEV__ ? "Session diagnostics" : "Report a translation",
+    reportLabel: __DEV__ ? "settings.sessionDiagnostics" : "settings.reportTranslation",
     resetIdentity: () => settingsActionsRef.current.resetIdentity(),
-    share: () => void shareMurmur(),
+    share: () => void shareMurmur(translateRef.current),
   }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
+
+  // The Phone audio screen returns here with ?capture=phone-audio once the listener can use it.
+  const phoneAudioAvailable = services.features.phoneAudio;
+  useEffect(() => {
+    if (capture === "phone-audio" && phoneAudioAvailable) {
+      setCaptureSource("device_playback");
+      router.setParams({ capture: undefined });
+    }
+  }, [capture, phoneAudioAvailable, router]);
 
   if (onboardingStep !== "done") {
     return (
@@ -559,7 +628,10 @@ export default function HomeScreen(): ReactNode {
         canStart={viewModel.canStart}
         captureSource={captureSource}
         devicePlaybackSupported={captureCapabilities.device_playback_supported}
-        onContinue={() => setOnboardingStep("privacy")}
+        onContinue={() => {
+          captureMobileTelemetry({ event: "onboarding_step_completed", step: "welcome" });
+          setOnboardingStep("privacy");
+        }}
         onCaptureSourceChange={(source) => void selectCaptureSource(source)}
         onOpenPicker={setPickerMode}
         onPickerClose={() => setPickerMode(null)}
@@ -574,51 +646,63 @@ export default function HomeScreen(): ReactNode {
         sourceLanguageDisplayName={viewModel.sourceLanguageDisplayName}
         step={onboardingStep}
         targetLanguageCode={targetLanguageCode}
-        targetLanguageDisplayName={viewModel.targetLanguage.display_name}
+        targetLanguageDisplayName={viewModel.targetLanguageDisplayName}
       />
     );
   }
 
   return (
-    <HomeExperience
-      audioPlaybackAvailable={captureSource === "microphone"}
-      audioPlaybackEnabled={effectiveAudioPlaybackEnabled}
-      audioState={audioState}
-      autoScrollRef={autoScrollRef}
-      diagnosticsOpen={diagnosticsOpen}
-      developerToolsEnabled={__DEV__}
-      captureSource={captureSource}
-      devicePlaybackSupported={captureCapabilities.device_playback_supported}
-      live={live}
-      networkType={networkType}
-      onCloseDiagnostics={() => setDiagnosticsOpen(false)}
-      onClosePicker={() => setPickerMode(null)}
-      onCloseOutOfMinutes={() => setOutOfMinutesOpen(false)}
-      onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
-      onCaptureSourceChange={(source) => void selectCaptureSource(source)}
-      onAudioPlaybackEnabledChange={(enabled) => {
-        void audioPreferenceController.setEnabled(enabled);
-      }}
-      onOpenLowBalance={() => router.push("/plans")}
-      onOpenPicker={setPickerMode}
-      onOpenSettings={() => router.push("/settings")}
-      onPrimaryAction={() => void handlePrimaryAction()}
-      onSeePlans={() => {
-        setOutOfMinutesOpen(false);
-        router.push("/plans");
-      }}
-      onSwapLanguages={swapLanguages}
-      outOfMinutesOpen={outOfMinutesOpen}
-      pickerMode={pickerMode}
-      setSourceLanguageCode={setSourceLanguageCode}
-      setTargetLanguageCode={setTargetLanguageCode}
-      sourceLanguageCode={sourceLanguageCode}
-      targetLanguageCode={targetLanguageCode}
-      timelineRef={timelineRef}
-      updateRequiredOpen={updateRequiredOpen}
-      userInteractedRef={userInteractedRef}
-      viewModel={viewModel}
-    />
+    <>
+      <HomeExperience
+        audioPlaybackAvailable={captureSource === "microphone"}
+        audioPlaybackEnabled={effectiveAudioPlaybackEnabled}
+        audioState={audioState}
+        autoScrollRef={autoScrollRef}
+        diagnosticsOpen={diagnosticsOpen}
+        developerToolsEnabled={__DEV__}
+        captureSource={captureSource}
+        devicePlaybackSupported={captureCapabilities.device_playback_supported}
+        live={live}
+        networkType={networkType}
+        onCloseDiagnostics={() => setDiagnosticsOpen(false)}
+        onClosePicker={() => setPickerMode(null)}
+        onCloseOutOfMinutes={() => setOutOfMinutesOpen(false)}
+        onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
+        onCaptureSourceChange={(source) => void selectCaptureSource(source)}
+        onAudioPlaybackEnabledChange={(enabled) => {
+          void audioPreferenceController.setEnabled(enabled);
+        }}
+        onOpenLowBalance={() => router.push("/plans")}
+        onOpenPicker={setPickerMode}
+        onOpenSettings={() => router.push("/settings")}
+        onPrimaryAction={() => void handlePrimaryAction()}
+        onSeePlans={() => {
+          setOutOfMinutesOpen(false);
+          router.push("/plans");
+        }}
+        onSwapLanguages={swapLanguages}
+        outOfMinutesOpen={outOfMinutesOpen}
+        pickerMode={pickerMode}
+        setSourceLanguageCode={setSourceLanguageCode}
+        setTargetLanguageCode={setTargetLanguageCode}
+        sourceLanguageCode={sourceLanguageCode}
+        targetLanguageCode={targetLanguageCode}
+        timelineRef={timelineRef}
+        updateRequiredOpen={updateRequiredOpen}
+        userInteractedRef={userInteractedRef}
+        viewModel={viewModel}
+      />
+      <RatingSheet
+        onClose={() => setRatingOpen(false)}
+        onSubmit={(answer) => {
+          setRatingOpen(false);
+          services.submitRating(answer).catch((failure: unknown) => {
+            captureMobileFailure(failure, { operation: "submit_rating" });
+          });
+        }}
+        open={ratingOpen}
+      />
+    </>
   );
 }
 
@@ -638,34 +722,49 @@ function newestAudioState(
 async function resetIdentity(
   live: Pick<ReturnType<typeof useLiveTranslation>, "invalidatePreparation" | "prepare">,
   setMessage: (message: string | null) => void,
+  successMessage: string,
 ): Promise<void> {
   await resetInstallId();
   live.invalidatePreparation();
   await live.prepare();
-  setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
+  setMessage(successMessage);
 }
 
-async function handleCompletedSessionEngagement(
-  outcome: Parameters<typeof recordSessionOutcome>[0]["outcome"],
-): Promise<void> {
-  const appVersion = Constants.expoConfig?.version ?? "unknown";
-  const engagement = await recordSessionOutcome({
-    app_version: appVersion,
-    outcome,
+async function choosePostSessionPrompt(params: {
+  decision: SessionRatingDecision;
+  insightsConsent: boolean | null;
+  phoneAudioGiftOfferable: boolean;
+}): Promise<PostSessionPrompt | null> {
+  const prompt = nextPostSessionPrompt({
+    askInsightsConsent: params.decision.askInsightsConsent && params.insightsConsent === null,
+    offerPhoneAudioGift: params.phoneAudioGiftOfferable && !await hasOfferedPhoneAudioGift(),
+    ratingEligible: params.decision.ratingEligible,
   });
-  if (!engagement.should_request_review) {
-    return;
+  if (prompt === "phone_audio_gift") {
+    await markPhoneAudioGiftOffered();
   }
-  if (await requestMurmurReview()) {
-    await markReviewRequested({ app_version: appVersion });
+  if (prompt !== "rating") {
+    return prompt;
   }
+  return await claimRatingSlot() ? "rating" : null;
 }
 
-async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
+async function deleteLocalData(
+  cancel: () => Promise<void>,
+  services: Pick<ScreenServices, "clearInsightsConsent" | "reloadConversations">,
+  deleteLocale: () => Promise<void>,
+): Promise<void> {
   await cancel();
+  const { deleteAllConversations } = await import("../lib/conversationHistory");
+  deleteAllConversations();
+  await services.reloadConversations();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await deleteRatingState();
+  await services.clearInsightsConsent();
+  await deletePhoneAudioGiftOffer();
   await resetAnonymousAnalyticsPreference();
+  await deleteLocale();
 }

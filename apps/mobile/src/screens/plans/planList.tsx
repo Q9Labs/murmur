@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
-import type { MurmurPlan, PlanTerm } from "../../lib/billing/planCatalog";
-import { PlanPicker, type PlanPurchaseMode } from "./planPicker";
+import { failureCopy } from "../../i18n/localizedError";
+import { useUiLocale } from "../../i18n/runtime";
+import type { MurmurPlan } from "../../lib/billing/planCatalog";
 import { usePlanStyles } from "./styles";
 
 export type PlanListState =
   | { status: "loading" }
   | { plans: MurmurPlan[]; status: "ready" }
-  | { message: string; status: "failed" };
+  | { failure: unknown; status: "failed" };
 
 export function usePlanList(
   open: boolean,
@@ -22,12 +23,7 @@ export function usePlanList(
     loadPlans()
       .then((nextPlans) => setPlans({ plans: nextPlans, status: "ready" }))
       .catch((failure: unknown) => {
-        setPlans({
-          message: failure instanceof Error
-            ? failure.message
-            : "Plans are not available from the store right now.",
-          status: "failed",
-        });
+        setPlans({ failure, status: "failed" });
       });
   }, [loadPlans]);
 
@@ -40,33 +36,27 @@ export function usePlanList(
   return { plans, refresh };
 }
 
-export function PlanList(props: {
-  initialTerm?: PlanTerm;
-  mode: PlanPurchaseMode;
-  onRetry: () => void;
-  plans: PlanListState;
-}): ReactNode {
+// Shown instead of the picker while plans load, fail, or come back empty.
+export function PlanListStatus(props: { onRetry: () => void; plans: PlanListState }): ReactNode {
   const { styles } = usePlanStyles();
+  const ui = useUiLocale();
   if (props.plans.status === "loading") {
-    return <Text accessibilityLiveRegion="polite" style={styles.status}>Loading plans…</Text>;
+    return <Text accessibilityLiveRegion="polite" style={styles.status}>{ui.t("plans.loading")}</Text>;
   }
   if (props.plans.status === "failed") {
     return (
       <View style={styles.picker}>
-        <Text style={styles.statusError}>{props.plans.message}</Text>
+        <Text style={styles.statusError}>{failureCopy(props.plans.failure, ui, "plans.unavailable")}</Text>
         <Pressable
-          accessibilityLabel="Try loading plans again"
+          accessibilityLabel={ui.t("plans.retryLabel")}
           accessibilityRole="button"
           onPress={props.onRetry}
           style={({ pressed }) => [styles.retry, pressed && styles.pressed]}
         >
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={styles.retryText}>{ui.t("common.tryAgain")}</Text>
         </Pressable>
       </View>
     );
   }
-  if (props.plans.plans.length === 0) {
-    return <Text style={styles.status}>No plans are available from the store right now.</Text>;
-  }
-  return <PlanPicker initialTerm={props.initialTerm} mode={props.mode} plans={props.plans.plans} />;
+  return <Text style={styles.status}>{ui.t("plans.empty")}</Text>;
 }

@@ -9,6 +9,7 @@ vi.mock("../billing/revenueCatReconciliation", () => ({
 }));
 vi.mock("../observability/posthog", () => ({ queuePostHogEvent: vi.fn() }));
 
+import { getMurmurSession } from "../auth/auth";
 import { reconcileRevenueCatCustomer } from "../billing/revenueCatReconciliation";
 import { queuePostHogEvent } from "../observability/posthog";
 import { hashInstallId } from "../privacy";
@@ -24,6 +25,42 @@ beforeEach(() => {
 });
 
 describe("billing reconciliation telemetry identity", () => {
+  it("accepts guest purchase reconciliation", async () => {
+    vi.mocked(getMurmurSession).mockResolvedValueOnce({
+      session: {
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60_000),
+        id: "session-1",
+        token: "guest-token",
+        updatedAt: new Date(),
+        userId: "guest-123",
+      },
+      user: {
+        createdAt: new Date(),
+        email: "",
+        emailVerified: false,
+        id: "guest-123",
+        isAnonymous: true,
+        name: "Guest",
+        updatedAt: new Date(),
+      },
+    });
+    vi.mocked(reconcileRevenueCatCustomer).mockResolvedValueOnce({
+      purchaseCount: 1,
+      subscriptionCount: 0,
+    });
+
+    const response = await reconcileBilling(
+      new Request("https://worker.example.test/v3/billing/reconcile", { method: "POST" }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileRevenueCatCustomer).toHaveBeenCalledWith(expect.objectContaining({
+      customerId: "guest-123",
+      trigger: "purchase",
+    }));
+  });
   it("hashes the customer ID on success", async () => {
     vi.mocked(reconcileRevenueCatCustomer).mockResolvedValueOnce({
       purchaseCount: 2,
