@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fixtureBilling, fixtureYearly } from "../__tests__/billingFixture";
+import { fixtureBilling } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 
 const plansBilling = vi.hoisted(() => ({ initialized: true }));
@@ -20,9 +20,9 @@ vi.mock("./planList", () => ({
 vi.mock("../../lib/billing/context", () => ({
   useMurmurBilling: () => ({ ...fixtureBilling(), initialized: plansBilling.initialized }),
 }));
-vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
-vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
+vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
+vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 
 import { planTermFromParam, PlansScreen } from "./plansScreen";
 
@@ -39,14 +39,13 @@ describe("plans screen", () => {
     expect(planTermFromParam(undefined)).toBeUndefined();
   });
 
-  it("sends signed-out listeners to sign in with the chosen plan", () => {
+  it("allows guest checkout from plans", () => {
     const markup = renderToStaticMarkup(<PlansScreen offer={<p>offer slot</p>} />);
 
     expect(markup).toContain("Plans");
     expect(markup).toContain("offer slot");
-    expect(planList.props?.mode.kind).toBe("sign_up");
-    planList.props?.mode.onSignUp?.(fixtureYearly);
-    expect(router.push).toHaveBeenCalledWith({ params: { plan: "$rc_annual" }, pathname: "/sign-in" });
+    expect(planList.props?.mode.kind).toBe("buy");
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("waits for billing to finish loading before loading plans on a cold deep link", () => {

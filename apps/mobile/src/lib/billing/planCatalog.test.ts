@@ -94,7 +94,7 @@ describe("plan catalog", () => {
     expect(planBenefits({ ...yearly, pricePerMonth: null }, [yearly])).toEqual([
       "2 hours of live translation a month",
     ]);
-    expect(planBenefits(pack, [pack])).toEqual(["60 minutes of live translation", "Never expires"]);
+    expect(planBenefits(pack, [pack])).toEqual(["60 minutes of live translation", "Valid 3 months from purchase"]);
   });
 
   it("labels prices and purchase buttons", () => {
@@ -111,51 +111,62 @@ describe("plan catalog", () => {
   it("builds US preview plans from catalog products, skipping offers and unpriced ones", () => {
     const product = {
       appleProductId: "apple.monthly",
-      basePriceUsdCents: 1_299,
+      basePriceUsdCents: 999,
       code: "pro_monthly",
       googleProductId: "google.monthly",
-      grantMs: 180 * 60_000,
+      grantMs: 120 * 60_000,
       kind: "subscription",
       revenueCatPackageId: "$rc_monthly",
     } as const;
     const plans = plansFromCatalog([
       product,
-      { ...product, basePriceUsdCents: 12_499, code: "pro_annual", revenueCatPackageId: "$rc_annual" },
-      { ...product, basePriceUsdCents: 399, code: "credits_60", grantMs: 60 * 60_000, kind: "credit_pack", revenueCatPackageId: "credits_60" },
+      { ...product, basePriceUsdCents: 9_999, code: "pro_annual", revenueCatPackageId: "$rc_annual" },
+      { ...product, basePriceUsdCents: 799, code: "credits_60", grantMs: 60 * 60_000, kind: "credit_pack", revenueCatPackageId: "trip_pass_60" },
+      { ...product, basePriceUsdCents: 2_999, code: "pro_max_monthly", grantMs: 400 * 60_000, revenueCatPackageId: "promax_monthly" },
       { ...product, personalOffer: true, revenueCatPackageId: "offer" },
-      { ...product, basePriceUsdCents: null, code: "pro_monthly_in", revenueCatPackageId: "monthly_in" },
+      { ...product, basePriceUsdCents: null, code: "pro_monthly_lite", revenueCatPackageId: "lite_monthly" },
     ]);
 
     expect(plans).toEqual([
       {
-        description: "3 hours of live translation a month",
+        description: "2 hours of live translation a month",
         id: "$rc_monthly",
         periodLabel: "month",
-        price: "$12.99",
-        priceAmount: 12.99,
+        price: "$9.99",
+        priceAmount: 9.99,
         pricePerMonth: null,
         term: "monthly",
         title: "Murmur Pro",
       },
       {
-        description: "3 hours of live translation a month",
+        description: "2 hours of live translation a month",
         id: "$rc_annual",
         periodLabel: "year",
-        price: "$124.99",
-        priceAmount: 124.99,
-        pricePerMonth: "$10.41",
+        price: "$99.99",
+        priceAmount: 99.99,
+        pricePerMonth: "$8.33",
         term: "yearly",
         title: "Murmur Pro Annual",
       },
       {
         description: "60 minutes of live translation",
-        id: "credits_60",
+        id: "trip_pass_60",
         periodLabel: null,
-        price: "$3.99",
-        priceAmount: 3.99,
+        price: "$7.99",
+        priceAmount: 7.99,
         pricePerMonth: null,
         term: "pack",
-        title: "60-minute pack",
+        title: "Trip Pass, 60 minutes",
+      },
+      {
+        description: "400 minutes of live translation a month",
+        id: "promax_monthly",
+        periodLabel: "month",
+        price: "$29.99",
+        priceAmount: 29.99,
+        pricePerMonth: null,
+        term: "monthly",
+        title: "Murmur Pro Max",
       },
     ]);
   });

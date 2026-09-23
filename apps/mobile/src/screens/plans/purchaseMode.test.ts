@@ -4,11 +4,17 @@ import { fixtureBilling, fixtureYearly } from "../__tests__/billingFixture";
 import { purchaseMode } from "./purchaseMode";
 
 describe("purchase mode", () => {
-  it("asks anonymous listeners to sign up before buying", () => {
+  it("lets anonymous listeners buy without signing up", () => {
     const onSignUp = vi.fn();
-    const mode = purchaseMode(fixtureBilling(), onSignUp);
+    const billing = fixtureBilling();
+    const mode = purchaseMode(billing, onSignUp);
 
-    expect(mode.kind).toBe("sign_up");
+    expect(mode.kind).toBe("buy");
+    if (mode.kind === "buy") {
+      mode.onBuy(fixtureYearly);
+    }
+    expect(billing.purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(onSignUp).not.toHaveBeenCalled();
   });
 
   it("buys straight away for signed-in listeners when the store is ready", () => {

@@ -11,6 +11,12 @@ import { areBillingPurchasesEnabled, isBillingFulfillmentEnabled, type Env } fro
 import { revenueCatCustomerId } from "../billing/revenueCatIdentity";
 import { json } from "../http/response";
 
+type CreditPackRow = {
+  expires_at_ms: number;
+  grant_id: string;
+  remaining_ms: number;
+};
+
 export async function getCustomer(
   request: Request,
   env: Env,
@@ -43,6 +49,16 @@ export async function getCustomer(
     return json({ error: ledger.result.ok ? "billing_unavailable" : ledger.result.code }, ledger.response.status);
   }
   const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
+  const creditPacks = env.BILLING_DB
+    ? (await env.BILLING_DB.prepare(
+      `SELECT grant_id, remaining_ms, expires_at_ms
+       FROM balance_grants
+       WHERE customer_id = ? AND grant_kind = 'credit_pack'
+         AND remaining_ms > 0 AND expires_at_ms > ?
+       ORDER BY expires_at_ms, grant_id`,
+    ).bind(session.user.id, nowMs).all<CreditPackRow>()).results
+    : [];
+  const paid = plan !== "free";
 
   return json({
     balance: {
@@ -53,6 +69,13 @@ export async function getCustomer(
       negative_ms: ledger.result.balance.negativeMs,
     },
     customer_id: session.user.id,
+    credit_packs: creditPacks,
+    entitlements: { pro: paid, pro_max: plan === "pro_max" },
+    features: {
+      history: paid,
+      max_session_seconds: paid ? 3_600 : 300,
+      phone_audio: paid,
+    },
     fulfillment_enabled: isBillingFulfillmentEnabled(env),
     is_registered: session.user.isAnonymous !== true,
     plan,

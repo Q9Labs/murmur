@@ -3,11 +3,14 @@ export type MurmurCustomer = {
   availableMs: number;
   creditMs: number;
   customerId: string;
+  creditPacks: { expiresAtMs: number; grantId: string; remainingMs: number }[];
   earliestExpiryAtMs: number | null;
+  entitlements: { pro: boolean; proMax: boolean };
+  features: { history: boolean; maxSessionSeconds: number; phoneAudio: boolean };
   fulfillmentEnabled: boolean;
   isRegistered: boolean;
   negativeMs: number;
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "pro_max";
   purchasesEnabled: boolean;
   revenueCatCustomerId: string;
 };
@@ -29,13 +32,24 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
   const customerId = Reflect.get(payload, "customer_id");
   const balance = decodeBalance(Reflect.get(payload, "balance"));
   const metadata = decodeMetadata(payload);
-  if (!isValidCustomerId(customerId) || balance === null || metadata === null) {
+  const entitlements = decodeEntitlements(Reflect.get(payload, "entitlements"));
+  const features = decodeFeatures(Reflect.get(payload, "features"));
+  const creditPacks = decodeCreditPacks(Reflect.get(payload, "credit_packs"));
+  if (!isValidCustomerId(customerId) || balance === null || metadata === null ||
+    entitlements === null || features === null || creditPacks === null) {
     return null;
   }
 
   return {
     ...balance,
     customerId,
+    creditPacks,
+    entitlements: entitlements ?? { pro: metadata.plan !== "free", proMax: metadata.plan === "pro_max" },
+    features: features ?? {
+      history: metadata.plan !== "free",
+      maxSessionSeconds: metadata.plan === "free" ? 300 : 3_600,
+      phoneAudio: metadata.plan !== "free",
+    },
     fulfillmentEnabled: metadata.fulfillmentEnabled,
     isRegistered: metadata.isRegistered,
     plan: metadata.plan,
@@ -98,7 +112,66 @@ function optionalBoolean(value: unknown, fallback: boolean): boolean | null {
 }
 
 function customerPlan(value: unknown): MurmurCustomer["plan"] | null {
-  return value === "free" || value === "pro" ? value : null;
+  return value === "free" || value === "pro" || value === "pro_max" ? value : null;
+}
+
+function decodeEntitlements(value: unknown): MurmurCustomer["entitlements"] | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const pro = requiredBoolean(Reflect.get(value, "pro"));
+  const proMax = requiredBoolean(Reflect.get(value, "pro_max"));
+  return pro === null || proMax === null ? null : { pro, proMax };
+}
+
+function decodeFeatures(value: unknown): MurmurCustomer["features"] | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const history = requiredBoolean(Reflect.get(value, "history"));
+  const phoneAudio = requiredBoolean(Reflect.get(value, "phone_audio"));
+  const maxSessionSeconds = nonnegativeInteger(value, "max_session_seconds");
+  return history === null || phoneAudio === null || maxSessionSeconds === null
+    ? null
+    : { history, maxSessionSeconds, phoneAudio };
+}
+
+function decodeCreditPacks(value: unknown): MurmurCustomer["creditPacks"] | null {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const packs: MurmurCustomer["creditPacks"] = [];
+  for (const item of value) {
+    const pack = decodeCreditPack(item);
+    if (!pack) {
+      return null;
+    }
+    packs.push(pack);
+  }
+  return packs;
+}
+
+function decodeCreditPack(item: unknown): MurmurCustomer["creditPacks"][number] | null {
+  if (typeof item !== "object" || item === null) {
+    return null;
+  }
+  const grantId = Reflect.get(item, "grant_id");
+  const remainingMs = nonnegativeInteger(item, "remaining_ms");
+  const expiresAtMs = nonnegativeInteger(item, "expires_at_ms");
+  if (typeof grantId !== "string" || grantId.length === 0 ||
+    remainingMs === null || expiresAtMs === null) {
+    return null;
+  }
+  return { grantId, remainingMs, expiresAtMs };
 }
 
 function optionalCustomerId(value: unknown): string | null | undefined {
