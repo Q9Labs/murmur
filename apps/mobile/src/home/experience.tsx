@@ -2,6 +2,7 @@ import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/language
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { ComponentType, MutableRefObject, ReactNode } from "react";
 import { Text, View } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 import type { ScrollView } from "react-native";
 
 import type { AudioCaptureSource, AudioStateEvent } from "../../modules/murmur-audio";
@@ -163,10 +164,12 @@ function ReportSpanRow({
 }): ReactNode {
   return (
     <View style={styles.spanRow}>
-      <Text style={styles.spanSource}>{span.source_caption}</Text>
+      <PostHogMaskView>
+        <Text style={styles.spanSource}>{span.source_caption}</Text>
       <Text style={[styles.spanTranslation, targetLanguageRtl && styles.rtlText]}>
         {span.committed_translated_caption ?? span.translated_caption}
       </Text>
+      </PostHogMaskView>
       <TranslationReportActions live={live} span={span} />
     </View>
   );

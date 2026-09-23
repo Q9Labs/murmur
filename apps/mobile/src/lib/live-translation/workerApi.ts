@@ -45,6 +45,7 @@ export async function requestCapturePermission(source: AudioCaptureSource): Prom
 export async function createWorkerSession(body: {
   acquisition?: AcquisitionContext;
   analytics_enabled: boolean;
+  insights_consent?: boolean;
   app_install_id: string;
   device_integrity: DeviceIntegrityPayload;
   playback_enabled?: boolean;
@@ -53,6 +54,7 @@ export async function createWorkerSession(body: {
 }): Promise<CreateSessionResponse | { error: string }> {
   return postWorkerJson<CreateSessionResponse>(`${getWorkerBaseUrl()}/v2/session`, {
     ...body,
+    insights_consent: body.insights_consent === true,
     ...getAppRelease(),
   });
 }

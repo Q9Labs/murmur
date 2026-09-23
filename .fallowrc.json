@@ -17,6 +17,9 @@
     "@react-navigation/native",
     "@sentry/cli",
     "babel-preset-expo",
+    "@posthog/react-native-plugin",
+    "expo-device",
+    "expo-localization",
     "expo-web-browser",
     "react-native-web"
   ],

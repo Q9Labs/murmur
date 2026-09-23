@@ -8,6 +8,7 @@ import {
 
 declare class MurmurAudioModule extends NativeModule<MurmurAudioModuleEvents> {
   requestMicrophonePermission(): Promise<boolean>;
+  getAdServicesAttributionToken(): Promise<string>;
   getCaptureCapabilities(): Promise<CaptureCapabilities>;
   requestDevicePlaybackPermission(): Promise<boolean>;
   requestOverlayPermission(): Promise<boolean>;

@@ -24,8 +24,10 @@ function controls(overrides: Partial<SettingsControls> = {}): SettingsControls {
   return {
     analyticsEnabled: true,
     changeAnalytics: vi.fn(),
+    changeInsightsConsent: vi.fn(),
     deleteLocalData: vi.fn(),
     locked: false,
+    insightsConsent: null,
     message: null,
     openReport: vi.fn(),
     reportLabel: "Report a translation",

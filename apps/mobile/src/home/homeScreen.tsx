@@ -1,4 +1,3 @@
-import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as Network from "expo-network";
@@ -19,22 +18,20 @@ import MurmurAudioModule, {
   type CaptureCapabilities,
 } from "../../modules/murmur-audio";
 import { getAcquisitionContextFromUrl } from "../lib/acquisition";
-import {
-  deleteEngagementState,
-  markReviewRequested,
-  recordSessionOutcome,
-} from "../lib/engagement";
+import { deleteEngagementState } from "../lib/engagement";
 import {
   acknowledgePrivacyDisclosure,
   deleteLocalMurmurData,
   hasAcknowledgedPrivacyDisclosure,
   resetInstallId,
 } from "../lib/installIdentity";
-import { requestMurmurReview } from "../lib/requestReview";
+import { deleteRatingState } from "../lib/ratings/ratings";
+import { deleteInsightsConsent, getInsightsConsent, setInsightsConsent } from "../lib/insightsConsent";
 import { shareMurmur } from "../lib/shareMurmur";
 import { captureMobileFailure } from "../lib/observability/sentry";
 import {
   captureOnboardingCompleted,
+  captureMobileTelemetry,
   initializeAnonymousAnalytics,
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
@@ -210,6 +207,7 @@ export default function HomeScreen(): ReactNode {
   const [updateRequiredOpen, setUpdateRequiredOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
+  const [insightsConsent, setInsightsConsentState] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
   const [captureSource, setCaptureSource] = useState<AudioCaptureSource>("microphone");
   const [captureCapabilities, setCaptureCapabilities] = useState(defaultCaptureCapabilities);
@@ -320,6 +318,12 @@ export default function HomeScreen(): ReactNode {
   }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
+    if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
+      captureMobileTelemetry({ event: "onboarding_step_viewed", step: onboardingStep });
+    }
+  }, [anonymousAnalyticsEnabled, onboardingStep]);
+
+  useEffect(() => {
     let mounted = true;
     void initializeAnonymousAnalytics()
       .then((enabled) => {
@@ -336,6 +340,12 @@ export default function HomeScreen(): ReactNode {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    void getInsightsConsent().then(setInsightsConsentState).catch((failure: unknown) => {
+      captureMobileFailure(failure, { operation: "read_insights_consent" });
+    });
   }, []);
 
   useEffect(() => {
@@ -423,6 +433,7 @@ export default function HomeScreen(): ReactNode {
   }, [autoScrollKey, live.tentative_source_caption]);
 
   async function acceptThirdPartyDataSharing(): Promise<void> {
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
     await acknowledgePrivacyDisclosure();
     setPrivacyAcknowledged(true);
     setPrivacyConsentChecked(false);
@@ -436,6 +447,7 @@ export default function HomeScreen(): ReactNode {
       return;
     }
     setOnboardingStep("done");
+    captureMobileTelemetry({ event: "onboarding_step_completed", step: "languages" });
     captureOnboardingCompleted();
     await startLiveTranslation();
   }
@@ -449,6 +461,18 @@ export default function HomeScreen(): ReactNode {
     } catch (failure) {
       captureMobileFailure(failure, { operation: "update_anonymous_analytics" });
       setSettingsMessage("Could not save the analytics setting. Please try again.");
+    }
+  }
+
+  async function changeInsightsConsent(enabled: boolean): Promise<void> {
+    setSettingsMessage(null);
+    try {
+      await setInsightsConsent(enabled);
+      setInsightsConsentState(enabled);
+      setSettingsMessage(`Session Insights ${enabled ? "enabled" : "disabled"}.`);
+    } catch (failure) {
+      captureMobileFailure(failure, { operation: "update_insights_consent" });
+      setSettingsMessage("Could not save the Session Insights choice. Please try again.");
     }
   }
 
@@ -485,10 +509,7 @@ export default function HomeScreen(): ReactNode {
 
   async function handlePrimaryAction(): Promise<void> {
     if (viewModel.isLive) {
-      const completion = await live.stop();
-      if (completion) {
-        await handleCompletedSessionEngagement(completion);
-      }
+      await live.stop();
       return;
     }
     if (isUpdateRequiredError(live.error)) {
@@ -520,17 +541,20 @@ export default function HomeScreen(): ReactNode {
 
   const settingsActionsRef = useRef({
     changeAnalytics: (_enabled: boolean): void => undefined,
+    changeInsightsConsent: (_enabled: boolean): void => undefined,
     deleteLocalData: (): void => undefined,
     resetIdentity: (): void => undefined,
   });
   settingsActionsRef.current = {
     changeAnalytics: (enabled) => void changeAnonymousAnalyticsEnabled(enabled),
+    changeInsightsConsent: (enabled) => void changeInsightsConsent(enabled),
     deleteLocalData: () => {
       void audioPreferenceController.deleteLocalData(
         () => deleteLocalData(live.cancel),
         () => {
           live.invalidatePreparation();
           setAnonymousAnalyticsEnabled(true);
+          setInsightsConsentState(null);
           setPrivacyAcknowledged(false);
           setPrivacyConsentChecked(false);
           setCaptureSource("microphone");
@@ -543,14 +567,16 @@ export default function HomeScreen(): ReactNode {
   const settingsControls = useMemo<SettingsControls>(() => ({
     analyticsEnabled: anonymousAnalyticsEnabled === true,
     changeAnalytics: (enabled) => settingsActionsRef.current.changeAnalytics(enabled),
+    changeInsightsConsent: (enabled) => settingsActionsRef.current.changeInsightsConsent(enabled),
     deleteLocalData: () => settingsActionsRef.current.deleteLocalData(),
     locked: settingsLocked,
+    insightsConsent,
     message: settingsMessage,
     openReport: () => setDiagnosticsOpen(true),
     reportLabel: __DEV__ ? "Session diagnostics" : "Report a translation",
     resetIdentity: () => settingsActionsRef.current.resetIdentity(),
     share: () => void shareMurmur(),
-  }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
+  }), [anonymousAnalyticsEnabled, insightsConsent, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
 
   if (onboardingStep !== "done") {
@@ -559,7 +585,10 @@ export default function HomeScreen(): ReactNode {
         canStart={viewModel.canStart}
         captureSource={captureSource}
         devicePlaybackSupported={captureCapabilities.device_playback_supported}
-        onContinue={() => setOnboardingStep("privacy")}
+        onContinue={() => {
+          captureMobileTelemetry({ event: "onboarding_step_completed", step: "welcome" });
+          setOnboardingStep("privacy");
+        }}
         onCaptureSourceChange={(source) => void selectCaptureSource(source)}
         onOpenPicker={setPickerMode}
         onPickerClose={() => setPickerMode(null)}
@@ -645,27 +674,13 @@ async function resetIdentity(
   setMessage("Local install identity reset. Your billing account and store purchases are unchanged.");
 }
 
-async function handleCompletedSessionEngagement(
-  outcome: Parameters<typeof recordSessionOutcome>[0]["outcome"],
-): Promise<void> {
-  const appVersion = Constants.expoConfig?.version ?? "unknown";
-  const engagement = await recordSessionOutcome({
-    app_version: appVersion,
-    outcome,
-  });
-  if (!engagement.should_request_review) {
-    return;
-  }
-  if (await requestMurmurReview()) {
-    await markReviewRequested({ app_version: appVersion });
-  }
-}
-
 async function deleteLocalData(cancel: () => Promise<void>): Promise<void> {
   await cancel();
   await deleteLocalMurmurData();
   await deleteStoredAudioPlaybackEnabled();
   await deleteStoredUiVariant();
   await deleteEngagementState();
+  await deleteRatingState();
+  await deleteInsightsConsent();
   await resetAnonymousAnalyticsPreference();
 }

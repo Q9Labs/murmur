@@ -12,6 +12,10 @@ export function getSentryDsn(): string | undefined {
   return process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined;
 }
 
+export function getPostHogProjectToken(): string | undefined {
+  return process.env.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() || undefined;
+}
+
 export type MurmurEnvironment = "development" | "preview" | "production" | "sandbox";
 
 export function getMurmurEnvironment(): MurmurEnvironment {

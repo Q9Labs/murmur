@@ -21,6 +21,7 @@ import MurmurAudioModule, {
   type AudioStateEvent,
 } from "../../../modules/murmur-audio";
 import { getOrCreateInstallId } from "../installIdentity";
+import { getInsightsConsent } from "../insightsConsent";
 import {
   type DebugLogEntry,
   type LatencySample,
@@ -36,6 +37,7 @@ import {
 import { reportTranslation } from "../providers/reportTranslation";
 import { captureMobileFailure } from "../observability/sentry";
 import { captureMobileTelemetry } from "../telemetry";
+import { recordCompletedSession, type SessionRatingDecision } from "../ratings/ratings";
 import {
   getGracefulSessionStopDelay,
   scheduleRealtimeConnectionDeadline,
@@ -82,6 +84,7 @@ export function useLiveTranslation(
   params: LiveTranslationParams,
 ): LiveTranslationController {
   const [session, setSession] = useState(() => createSession(params));
+  const [ratingDecision, setRatingDecision] = useState<SessionRatingDecision | null>(null);
   const [spans, setSpans] = useState<TranslationSpan[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sourceTranscriptEnabled, setSourceTranscriptEnabled] = useState(false);
@@ -97,6 +100,7 @@ export function useLiveTranslation(
   const activeRealtimeSessionTokenRef = useRef<string | null>(null);
   const captureStartedAtRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
+  const sessionBackgroundedRef = useRef(false);
   const errorRef = useRef<string | null>(null);
   const firstSourceReceivedRef = useRef(false);
   const firstTranslationReceivedRef = useRef(false);
@@ -196,6 +200,9 @@ export function useLiveTranslation(
 
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus): void => {
+      if (nextState !== "active" && sessionRef.current.state === "live") {
+        sessionBackgroundedRef.current = true;
+      }
       if (nextState === "active" || finishingRef.current || permissionFlowRef.current) {
         return;
       }
@@ -460,11 +467,13 @@ export function useLiveTranslation(
     });
     timingRef.current!.beginListen(listenTappedAtMs);
     const freshSession = createSession(params);
+    setRatingDecision(null);
     const realtimeSessionToken = freshSession.identity.connection_id;
     sessionRef.current = freshSession;
     setSession(freshSession);
     activeRealtimeSessionTokenRef.current = realtimeSessionToken;
     sessionStartedAtRef.current = listenTappedAtMs;
+    sessionBackgroundedRef.current = false;
     captureStartedAtRef.current = null;
     setLiveError(null);
     setReportError(null);
@@ -508,6 +517,7 @@ export function useLiveTranslation(
     const response = await createWorkerSession({
       acquisition: params.acquisition,
       analytics_enabled: params.analytics_enabled,
+      insights_consent: (await getInsightsConsent()) === true,
       app_install_id: appInstallId,
       device_integrity: deviceIntegrity,
       playback_enabled: params.playback_enabled,
@@ -909,6 +919,8 @@ export function useLiveTranslation(
     captureMobileTelemetry({
       app_session_id: sessionRef.current.identity.app_session_id,
       committed_translation: completion.committed_caption_count > 0,
+      backgrounded: sessionBackgroundedRef.current,
+      capture_source: params.capture_source,
       duration_ms: completion.duration_ms,
       error_code: completion.error,
       event: "mobile_session_completed",
@@ -922,6 +934,11 @@ export function useLiveTranslation(
       target_language: sessionRef.current.target_language,
       translated_char_count: diagnostics.runtime.translated_char_count,
     });
+    const decision = await recordCompletedSession(completion).catch((failure: unknown) => {
+      captureMobileFailure(failure, { operation: "record_completed_session_rating" });
+      return null;
+    });
+    setRatingDecision(decision);
     resolveCompletion(completion);
     return completion;
   }
@@ -1077,6 +1094,7 @@ export function useLiveTranslation(
 
   return {
     cancel,
+    clearRatingDecision: () => setRatingDecision(null),
     debug_log: debugLog,
     diagnostics_snapshot: diagnosticsSnapshot,
     error,
@@ -1085,6 +1103,7 @@ export function useLiveTranslation(
     latency_samples: latencySamples,
     invalidatePreparation,
     preparation_status: preparationStatus,
+    rating_decision: ratingDecision,
     prepare,
     report_error: reportError,
     report_receipt_id: reportReceiptId,
