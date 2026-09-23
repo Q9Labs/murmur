@@ -5,7 +5,8 @@ import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protoco
 import * as Sentry from "@sentry/cloudflare";
 
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
-import { currentCustomerPlan } from "../billing/allowanceService";
+import { currentCustomerPlan, type CustomerPlan } from "../billing/allowanceService";
+import { queuePersonalOfferStart } from "../billing/personalOffer";
 import {
   createRealtimeUsageMeter,
   type RealtimeUsageMeter,
@@ -111,13 +112,15 @@ export async function proxyRealtimeSession(
     usageSessionId: appSessionId,
   });
   let config: ServerConfig;
+  let customerPlan: CustomerPlan = "free";
   try {
+    customerPlan = validated.customerId
+      ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
+      : "free";
     config = await getServerConfig(env, {
       appVersion: url.searchParams.get("app_version"),
       distinctId: `anonymous_install_${validated.safetyIdentifier}`,
-      plan: validated.customerId
-        ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
-        : "free",
+      plan: customerPlan,
       platform: url.searchParams.get("app_platform"),
     });
   } catch (failure) {
@@ -162,6 +165,15 @@ export async function proxyRealtimeSession(
     }
     sessionFinished = true;
     telemetry.stats.closeReason ??= termination.reason;
+    if (termination.errorCode === "allowance_exhausted" && validated.customerId && customerPlan === "free") {
+      queuePersonalOfferStart({
+        config,
+        context,
+        customerId: validated.customerId,
+        database: env.BILLING_DB,
+        nowMs: Date.now(),
+      });
+    }
     providerAbort.abort();
     clearRealtimeTimers();
     if (termination.errorCode) {

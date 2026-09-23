@@ -7,8 +7,8 @@ describe("app-facing server config", () => {
     expect(decodeAppConfig({
       enabled_languages: null,
       low_balance_threshold_minutes: 20,
-      paywall_offering_id: "launch",
-    })).toEqual({ lowBalanceThresholdMinutes: 20, paywallOfferingId: "launch" });
+      paywall_offering_id: "base_pro",
+    })).toEqual({ lowBalanceThresholdMinutes: 20, paywallOfferingId: "base_pro" });
   });
 
   it("falls back to defaults for unset or malformed keys", () => {
