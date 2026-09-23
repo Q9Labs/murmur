@@ -92,7 +92,7 @@ export const reactNativePrimitives = {
     },
   },
   Image: () => null,
-  Platform: { OS: "ios" },
+  Platform: { OS: "ios" as "android" | "ios" },
   Pressable,
   ScrollView,
   StatusBar: () => null,

@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useMurmurTheme } from "../src/home/theme";
 import { MurmurBillingProvider } from "../src/lib/billing/context";
 import { initializeSentry } from "../src/lib/observability/sentry";
+import { ScreenServicesProvider } from "../src/screens/screenServices";
 import { SettingsControlsProvider } from "../src/screens/settings/settingsControls";
 
 initializeSentry();
@@ -20,14 +21,16 @@ function RootLayout(): ReactNode {
 
   return (
     <MurmurBillingProvider>
-      <SettingsControlsProvider>
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.background },
-            headerShown: false,
-          }}
-        />
-      </SettingsControlsProvider>
+      <ScreenServicesProvider>
+        <SettingsControlsProvider>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: colors.background },
+              headerShown: false,
+            }}
+          />
+        </SettingsControlsProvider>
+      </ScreenServicesProvider>
     </MurmurBillingProvider>
   );
 }

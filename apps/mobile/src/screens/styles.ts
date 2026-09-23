@@ -19,11 +19,53 @@ function createScreenStyles(theme: MurmurTheme) {
       justifyContent: "center",
       width: 42,
     },
+    body: {
+      color: theme.secondaryText,
+      fontSize: 17,
+      fontWeight: "500",
+      lineHeight: 25,
+    },
+    bodyStrong: {
+      color: theme.primary,
+      fontSize: 20,
+      fontWeight: "800",
+    },
+    choice: {
+      flex: 1,
+    },
+    choiceRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
     content: {
       gap: 24,
       paddingBottom: 40,
       paddingHorizontal: 20,
       paddingTop: 8,
+    },
+    conversationExcerpt: {
+      color: theme.primary,
+      fontSize: 17,
+      fontWeight: "700",
+      lineHeight: 24,
+    },
+    conversationMeta: {
+      color: theme.secondaryText,
+      fontSize: 15,
+      fontWeight: "600",
+      lineHeight: 21,
+    },
+    conversationRow: {
+      gap: 4,
+      minHeight: 58,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+    },
+    conversationText: {
+      color: theme.primary,
+      fontSize: 20,
+      fontWeight: "600",
+      lineHeight: 30,
     },
     danger: {
       color: theme.danger,
@@ -33,6 +75,19 @@ function createScreenStyles(theme: MurmurTheme) {
       paddingBottom: 12,
       paddingHorizontal: 20,
       paddingTop: 12,
+    },
+    illustration: {
+      alignSelf: "center",
+      height: 168,
+      width: 240,
+    },
+    giftCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.hairline,
+      borderRadius: 28,
+      borderWidth: 1,
+      gap: 16,
+      padding: 22,
     },
     group: {
       backgroundColor: theme.surface,
@@ -75,6 +130,18 @@ function createScreenStyles(theme: MurmurTheme) {
       fontSize: 17,
       fontWeight: "800",
     },
+    quietButton: {
+      alignItems: "center",
+      alignSelf: "center",
+      justifyContent: "center",
+      minHeight: 48,
+      paddingHorizontal: 20,
+    },
+    quietButtonText: {
+      color: theme.primary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
     row: {
       alignItems: "center",
       flexDirection: "row",
@@ -100,6 +167,21 @@ function createScreenStyles(theme: MurmurTheme) {
       color: theme.secondaryText,
       fontSize: 16,
       fontWeight: "600",
+    },
+    secondaryButton: {
+      alignItems: "center",
+      backgroundColor: theme.surface,
+      borderColor: theme.hairline,
+      borderRadius: 999,
+      borderWidth: 1,
+      justifyContent: "center",
+      minHeight: 56,
+      paddingHorizontal: 24,
+    },
+    secondaryButtonText: {
+      color: theme.primary,
+      fontSize: 17,
+      fontWeight: "800",
     },
     screen: {
       backgroundColor: theme.background,
