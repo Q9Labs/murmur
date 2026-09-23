@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
@@ -11,6 +12,9 @@ import { recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 const planLoads = vi.hoisted(() => [] as Array<{ load: () => Promise<unknown>; open: boolean }>);
 const signInBilling = vi.hoisted(() => ({ current: null as MurmurBillingContext | null }));
 
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: (props: { children: ReactNode }) => <section data-replay-mask="">{props.children}</section>,
+}));
 vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => fixtureServices() }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));

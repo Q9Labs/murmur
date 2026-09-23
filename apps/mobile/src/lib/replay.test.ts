@@ -33,6 +33,7 @@ describe("session replay", () => {
       enableSessionReplay: true,
       sessionReplayConfig: expect.objectContaining({
         maskAllTextInputs: true,
+        maskAllImages: true,
         captureLog: false,
         captureNetworkTelemetry: false,
       }),

@@ -8,6 +8,9 @@ import { en } from "../__tests__/uiText";
 import { fixtureBilling } from "../__tests__/billingFixture";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
 
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: (props: { children: ReactNode }) => <section data-replay-mask="">{props.children}</section>,
+}));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => ({ Check: () => null }));
 

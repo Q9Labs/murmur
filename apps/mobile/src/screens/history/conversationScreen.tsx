@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Alert, Text, View } from "react-native";
+import { PostHogMaskView } from "posthog-react-native";
 
 import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
 import { PrimaryAction, ScreenScaffold, SecondaryAction, StatusLine } from "../screenScaffold";
@@ -71,12 +72,14 @@ function ConversationDetail({ record }: { record: ConversationRecord }): ReactNo
       title={conversationStarted(record, ui)}
     >
       <Text style={styles.conversationMeta}>{conversationDetails(record, ui)}</Text>
-      <Text
-        selectable
-        style={[styles.conversationText, uiTextDirectionStyle(conversationTextDirection(record), ui.direction)]}
-      >
-        {record.text}
-      </Text>
+      <PostHogMaskView>
+        <Text
+          selectable
+          style={[styles.conversationText, uiTextDirectionStyle(conversationTextDirection(record), ui.direction)]}
+        >
+          {record.text}
+        </Text>
+      </PostHogMaskView>
       <StatusLine error={feedback.error} notice={feedback.notice} />
     </ScreenScaffold>
   );

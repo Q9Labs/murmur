@@ -15,7 +15,15 @@ const harness = vi.hoisted(() => ({
     disabled?: boolean;
     onPress?: () => void;
   }>,
+  maskedContentViews: 0,
   scheme: "dark" as "dark" | "light" | null,
+}));
+
+vi.mock("posthog-react-native", () => ({
+  PostHogMaskView: ({ children }: { children?: unknown }): unknown => {
+    harness.maskedContentViews += 1;
+    return children ?? null;
+  },
 }));
 
 vi.mock("react-native", () => {
@@ -23,7 +31,11 @@ vi.mock("react-native", () => {
     return styles;
   }
 
-  function Primitive({ children }: { children?: unknown }): unknown {
+  function Primitive({
+    accessibilityLabel,
+    children,
+  }: { accessibilityLabel?: string; children?: unknown }): unknown {
+    if (accessibilityLabel === "ph-no-capture") harness.maskedContentViews += 1;
     return children ?? null;
   }
 
@@ -209,6 +221,7 @@ function onboardingProps(step: VariantOnboardingProps["step"]): VariantOnboardin
 
 beforeEach(() => {
   harness.controls.length = 0;
+  harness.maskedContentViews = 0;
   harness.scheme = "dark";
 });
 
@@ -309,6 +322,14 @@ describe("translation-only timeline", () => {
 
     expect(markup).toContain("hello");
     expect(markup).toContain("tentative caption");
+  });
+
+  it("keeps speech captions visible while excluding the timeline from PostHog replay", () => {
+    const markup = renderTimeline(true);
+
+    expect(markup).toContain("hello");
+    expect(markup).toContain("مرحبا");
+    expect(harness.maskedContentViews).toBe(1);
   });
 
   it("invites the listener in the target language before anything is heard", () => {

@@ -1,13 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Env } from "../env";
+import type { InsightSessionContext } from "../insights/sessionInsights";
+
+type InsightCollector = ReturnType<typeof import("../insights/sessionInsights").createInsightCollector>;
+
 const providerMocks = vi.hoisted(() => ({
   openTranslationSocket: vi.fn(),
+}));
+
+const insightMocks = vi.hoisted(() => ({
+  createInsightCollector: vi.fn<() => InsightCollector>(),
+  loadInsightSession: vi.fn<(env: Env, appSessionId: string) => Promise<InsightSessionContext | null>>(),
 }));
 
 vi.mock("../providers/openaiRealtime", async (importOriginal) => ({
   ...await importOriginal<typeof import("../providers/openaiRealtime")>(),
   openTranslationSocket: providerMocks.openTranslationSocket,
 }));
+
+vi.mock("../insights/sessionInsights", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../insights/sessionInsights")>();
+  return {
+    ...actual,
+    createInsightCollector: insightMocks.createInsightCollector,
+    loadInsightSession: insightMocks.loadInsightSession,
+  };
+});
 
 const telemetryMocks = vi.hoisted(() => ({
   queuePostHogEvent: vi.fn<(params: { payload: { event: string } }) => void>(),
@@ -87,6 +106,8 @@ describe("app-facing realtime socket", () => {
   beforeEach(() => {
     providerMocks.openTranslationSocket.mockReset();
     telemetryMocks.queuePostHogEvent.mockReset();
+    insightMocks.createInsightCollector.mockReset();
+    insightMocks.loadInsightSession.mockReset().mockResolvedValue(null);
     vi.stubGlobal("WebSocket", { CONNECTING: 0, OPEN: 1 });
   });
 
@@ -121,6 +142,45 @@ describe("app-facing realtime socket", () => {
     expect(hasMeaningfulPcm16Audio(new Int16Array([0, 0, 0, 0]).buffer)).toBe(false);
     expect(hasMeaningfulPcm16Audio(new Int16Array([1, -1, 2, -2]).buffer)).toBe(false);
     expect(hasMeaningfulPcm16Audio(new Int16Array([2_000, -2_000]).buffer)).toBe(true);
+  });
+
+  it("does not create or feed an insight collector without session insight consent", async () => {
+    const { upstream } = await openTestRealtimeSession({ name: "insights_not_consented" });
+
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ delta: "private translated words", type: "session.output_transcript.delta" }),
+    }));
+
+    expect(insightMocks.createInsightCollector).not.toHaveBeenCalled();
+  });
+
+  it("collects translated deltas when the session insight context confirms consent", async () => {
+    const insightSession: InsightSessionContext = {
+      appSessionId: "consented-session",
+      createdAt: "2026-09-23T00:00:00.000Z",
+      customerId: null,
+      hashedInstallId: "install_hash",
+      sourceLanguage: "en",
+      targetLanguage: "ar",
+    };
+    const addDelta = vi.fn<(delta: string, nowMs?: number) => void>();
+    const collector: InsightCollector = {
+      add: addDelta,
+      finish: vi.fn(() => null),
+    };
+    insightMocks.loadInsightSession.mockImplementation(async (_env, appSessionId) => ({
+      ...insightSession,
+      appSessionId,
+    }));
+    insightMocks.createInsightCollector.mockReturnValue(collector);
+    const { upstream } = await openTestRealtimeSession({ name: "insights_consented" });
+
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ delta: "consented translated words", type: "session.output_transcript.delta" }),
+    }));
+
+    expect(insightMocks.createInsightCollector).toHaveBeenCalledOnce();
+    expect(addDelta).toHaveBeenCalledWith("consented translated words");
   });
 
   it("closes invalid, unconfigured, and unknown sessions", async () => {
