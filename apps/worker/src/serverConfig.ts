@@ -80,15 +80,7 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
     if (!response.ok) {
       throw new Error(`posthog_flags_http_${response.status}`);
     }
-    const data: unknown = await response.json();
-    if (typeof data !== "object" || data === null || !("featureFlags" in data)) {
-      throw new Error("posthog_flags_invalid_response");
-    }
-    const flags = data.featureFlags;
-    const payloads = "featureFlagPayloads" in data ? data.featureFlagPayloads : null;
-    if (typeof flags !== "object" || flags === null) {
-      throw new Error("posthog_flags_invalid_response");
-    }
+    const { flags, payloads } = readPostHogFlags(await response.json());
     const config = parseServerConfigFlags(defaults, flags, payloads);
     if (cache.size >= 256) {
       cache.clear();
@@ -209,4 +201,46 @@ function flagPayload(payloads: unknown, name: string): unknown {
   } catch {
     return rawPayload;
   }
+}
+
+// PostHog's /flags response: { flags: { [key]: { enabled, variant, metadata: { payload } } } }.
+function readPostHogFlags(data: unknown): { flags: object; payloads: object } {
+  if (typeof data !== "object" || data === null || !("flags" in data)) {
+    throw new Error("posthog_flags_invalid_response");
+  }
+  const { flags } = data;
+  if (typeof flags !== "object" || flags === null) {
+    throw new Error("posthog_flags_invalid_response");
+  }
+  const entries = Object.entries(flags);
+  return {
+    flags: Object.fromEntries(entries.map(([key, flag]) => [key, postHogFlagValue(flag)])),
+    payloads: Object.fromEntries(entries.flatMap(([key, flag]) => {
+      const payload = postHogFlagPayload(flag);
+      return payload === undefined ? [] : [[key, payload]];
+    })),
+  };
+}
+
+function postHogFlagValue(flag: unknown): string | boolean {
+  if (objectField(flag, "enabled") !== true) {
+    return false;
+  }
+  const variant = objectField(flag, "variant");
+  return typeof variant === "string" ? variant : true;
+}
+
+function postHogFlagPayload(flag: unknown): string | undefined {
+  const payload = objectField(objectField(flag, "metadata"), "payload");
+  if (payload === null || payload === undefined) {
+    return undefined;
+  }
+  return typeof payload === "string" ? payload : JSON.stringify(payload);
+}
+
+function objectField(value: unknown, name: string): unknown {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  return Object.entries(value).find(([key]) => key === name)?.[1];
 }
