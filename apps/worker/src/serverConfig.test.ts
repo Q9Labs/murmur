@@ -20,9 +20,13 @@ describe("server configuration", () => {
         free_allowance_minutes: true,
         source_transcript: true,
         max_session_seconds: true,
-        sessions_enabled: false,
+        sessions_enabled: true,
       },
-      featureFlagPayloads: { free_allowance_minutes: "7", max_session_seconds: "240" },
+      featureFlagPayloads: {
+        free_allowance_minutes: "7",
+        max_session_seconds: "240",
+        sessions_enabled: "false",
+      },
     })));
     vi.stubGlobal("fetch", fetchMock);
     const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
@@ -41,6 +45,21 @@ describe("server configuration", () => {
       person_properties: { app_platform: "android", app_version: "1.2.3", plan: "free" },
       token: "test-token",
     });
+  });
+
+  it("uses defaults for flags that don't match this user", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      featureFlags: { output_audio_enabled: false, sessions_enabled: false },
+      featureFlagPayloads: {},
+    }))));
+    const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: "1.2.3",
+      distinctId: "anonymous_install_unmatched",
+      plan: "free",
+      platform: "ios",
+    });
+    expect(config.sessions_enabled).toBe(true);
+    expect(config.output_audio_enabled).toBe(true);
   });
 
   it("compares dotted app versions numerically", () => {

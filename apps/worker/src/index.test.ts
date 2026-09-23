@@ -275,8 +275,11 @@ describe("worker routes", () => {
 
   it("refuses disabled sessions with the configured message", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      featureFlags: { sessions_enabled: false, sessions_disabled_message: true },
-      featureFlagPayloads: { sessions_disabled_message: '"Paused for maintenance"' },
+      featureFlags: { sessions_enabled: true, sessions_disabled_message: true },
+      featureFlagPayloads: {
+        sessions_disabled_message: '"Paused for maintenance"',
+        sessions_enabled: "false",
+      },
     }))));
     const response = await worker.fetch(
       configuredSessionRequest(),

@@ -85,20 +85,12 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
     }
     const value = (name: keyof ServerConfig): unknown => {
       const flag = Object.entries(flags).find(([key]) => key === name)?.[1];
-      if (flag === undefined) {
+      // PostHog reports a flag that doesn't match this user as false, which must mean
+      // "use the default"; an explicit false value comes from the payload instead.
+      if (flag === undefined || flag === false) {
         return undefined;
       }
-      const rawPayload = typeof payloads === "object" && payloads !== null
-        ? Object.entries(payloads).find(([key]) => key === name)?.[1]
-        : undefined;
-      if (typeof rawPayload === "string") {
-        try {
-          return JSON.parse(rawPayload);
-        } catch {
-          return rawPayload;
-        }
-      }
-      return rawPayload ?? flag;
+      return flagPayload(payloads, name) ?? flag;
     };
     const boolean = (name: keyof ServerConfig, fallback: boolean): boolean =>
       typeof value(name) === "boolean" ? value(name) === true : fallback;
@@ -181,4 +173,19 @@ export function isBelowMinimumVersion(version: string | null, minimum: string | 
     }
   }
   return false;
+}
+
+function flagPayload(payloads: unknown, name: string): unknown {
+  if (typeof payloads !== "object" || payloads === null) {
+    return undefined;
+  }
+  const rawPayload = Object.entries(payloads).find(([key]) => key === name)?.[1];
+  if (typeof rawPayload !== "string") {
+    return rawPayload;
+  }
+  try {
+    return JSON.parse(rawPayload);
+  } catch {
+    return rawPayload;
+  }
 }

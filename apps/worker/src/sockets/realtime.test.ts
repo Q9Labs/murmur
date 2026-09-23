@@ -438,7 +438,8 @@ describe("app-facing realtime socket", () => {
 
   it("suppresses translated audio when the server output-audio flag is off", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      featureFlags: { output_audio_enabled: false },
+      featureFlags: { output_audio_enabled: true },
+      featureFlagPayloads: { output_audio_enabled: "false" },
     }))));
     const { client, upstream } = await openTestRealtimeSession({
       env: { OPENAI_API_KEY: "test_key", POSTHOG_PROJECT_TOKEN: "test-token" },
