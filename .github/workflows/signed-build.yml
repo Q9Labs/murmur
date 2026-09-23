@@ -79,6 +79,8 @@ jobs:
     runs-on: macos-26
     environment: production-signing
     timeout-minutes: 75
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
