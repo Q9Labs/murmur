@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
+import { deleteExpiredAuthSessions } from "../auth/deleteExpiredSessions";
 import { deleteExpiredRatingSurveys } from "./deleteExpiredRatingSurveys";
 import { deleteExpiredSessionInsights } from "./deleteExpiredSessionInsights";
 
@@ -93,6 +94,33 @@ describe("expired session insight deletion", () => {
       expect(sqlite.prepare(
         "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'rating_surveys_created_at_idx'",
       ).all()).toEqual([{ name: "rating_surveys_created_at_idx" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("deletes expired Better Auth sessions and keeps sessions at or after the next millisecond", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec("CREATE TABLE schema_migrations (version INTEGER, name TEXT, applied_at_ms INTEGER)");
+      sqlite.exec('CREATE TABLE "session" ("id" TEXT PRIMARY KEY, "expiresAt" DATE NOT NULL)');
+      sqlite.exec(readFileSync(new URL("../../migrations/0016_auth_session_expiry_index.sql", import.meta.url), "utf8"));
+      const insertSession = sqlite.prepare('INSERT INTO "session" ("id", "expiresAt") VALUES (?, ?)');
+      insertSession.run("expired", "2026-09-23T11:59:59.999Z");
+      insertSession.run("at-cutoff", "2026-09-23T12:00:00.000Z");
+      insertSession.run("active", "2026-09-23T12:00:00.001Z");
+
+      const deleted = await deleteExpiredAuthSessions(
+        createD1Database(sqlite),
+        Date.parse("2026-09-23T12:00:00.000Z"),
+      );
+
+      expect(deleted).toBe(2);
+      expect(sqlite.prepare('SELECT "id" FROM "session"').all()).toEqual([{ id: "active" }]);
+      expect(sqlite.prepare('EXPLAIN QUERY PLAN SELECT "id" FROM "session" WHERE "expiresAt" <= ?')
+        .all("2026-09-23T12:00:00.000Z")
+        .map(({ detail }) => detail)
+        .join(" ")).toMatch(/USING INDEX session_expiresAt_idx/);
     } finally {
       sqlite.close();
     }
