@@ -10,7 +10,7 @@ import {
 function createBloomStyles(theme: MurmurTheme) {
   return StyleSheet.create({
     backgroundDot: {
-      backgroundColor: theme.teal,
+      backgroundColor: theme.selectedAccent,
       borderRadius: 999,
       height: 8,
       width: 8,
@@ -19,16 +19,14 @@ function createBloomStyles(theme: MurmurTheme) {
       alignItems: "center",
       alignSelf: "center",
       backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
       borderRadius: 999,
-      borderWidth: 1,
       flexDirection: "row",
       gap: 8,
       minHeight: 40,
       paddingHorizontal: 16,
     },
     backgroundText: {
-      color: theme.primary,
+      color: theme.onSelected,
       fontSize: 15,
       fontWeight: "800",
     },
@@ -74,7 +72,7 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     chromeButtonActive: {
       backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
+      borderColor: "transparent",
     },
     consentRow: {
       alignItems: "center",
@@ -120,7 +118,7 @@ function createBloomStyles(theme: MurmurTheme) {
       fontWeight: "700",
     },
     captureSourceTextActive: {
-      color: theme.primary,
+      color: theme.onSelected,
     },
     captureSourceWrap: {
       gap: 6,
@@ -249,10 +247,8 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     privacyPointIcon: {
       alignItems: "center",
-      backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
+      backgroundColor: theme.input,
       borderRadius: 999,
-      borderWidth: 1,
       height: 38,
       justifyContent: "center",
       width: 38,

@@ -138,18 +138,20 @@ function PlanCard(props: {
       ]}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{plan.title}</Text>
+        <Text style={[styles.cardTitle, props.selected && styles.cardTitleSelected]}>{plan.title}</Text>
         {props.selectable ? <SelectionMark selected={props.selected} styles={styles} /> : null}
       </View>
       <View style={styles.priceRow}>
-        <Text style={styles.price}>{price}</Text>
-        {suffix ? <Text style={styles.priceSuffix}>{suffix}</Text> : null}
+        <Text style={[styles.price, props.selected && styles.priceSelected]}>{price}</Text>
+        {suffix ? (
+          <Text style={[styles.priceSuffix, props.selected && styles.priceSuffixSelected]}>{suffix}</Text>
+        ) : null}
       </View>
       <View style={styles.benefits}>
         {planBenefits(plan, planOptions, ui).map((line) => (
           <View key={line} style={styles.benefit}>
-            <View style={styles.benefitDot} />
-            <Text style={styles.benefitText}>{line}</Text>
+            <View style={[styles.benefitDot, props.selected && styles.benefitDotSelected]} />
+            <Text style={[styles.benefitText, props.selected && styles.benefitTextSelected]}>{line}</Text>
           </View>
         ))}
       </View>
@@ -159,10 +161,9 @@ function PlanCard(props: {
 
 function SelectionMark(props: { selected: boolean; styles: PlanStyles }): ReactNode {
   const { colors } = usePlanStyles();
-  const checkColor = colors.dark ? colors.onPrimary : colors.primary;
   return (
     <View style={[props.styles.radio, props.selected && props.styles.radioSelected]}>
-      {props.selected ? <Check color={checkColor} size={15} strokeWidth={3} /> : null}
+      {props.selected ? <Check color={colors.selected} size={15} strokeWidth={3} /> : null}
     </View>
   );
 }

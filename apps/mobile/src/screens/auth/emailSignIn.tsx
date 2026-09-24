@@ -264,7 +264,7 @@ function SignedIn(props: { doneAction: AuthDoneAction; email: string; styles: Au
   return (
     <View style={styles.flow}>
       <View accessibilityElementsHidden importantForAccessibility="no" style={styles.doneBadge}>
-        <Check color={colors.teal} size={30} strokeWidth={2.5} />
+        <Check color={colors.selectedAccent} size={30} strokeWidth={2.5} />
       </View>
       <PostHogMaskView>
         <EmphasisText

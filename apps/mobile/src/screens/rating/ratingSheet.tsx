@@ -116,17 +116,14 @@ function createRatingStyles(theme: MurmurTheme) {
       color: theme.muted,
     },
     chip: {
-      backgroundColor: theme.surface,
-      borderColor: theme.hairline,
+      backgroundColor: theme.input,
       borderRadius: 999,
-      borderWidth: 1,
       justifyContent: "center",
       minHeight: 44,
       paddingHorizontal: 16,
     },
     chipSelected: {
       backgroundColor: theme.selected,
-      borderColor: theme.teal,
     },
     chipText: {
       color: theme.secondaryText,
@@ -134,7 +131,7 @@ function createRatingStyles(theme: MurmurTheme) {
       fontWeight: "700",
     },
     chipTextSelected: {
-      color: theme.primary,
+      color: theme.onSelected,
       fontWeight: "800",
     },
     choices: {

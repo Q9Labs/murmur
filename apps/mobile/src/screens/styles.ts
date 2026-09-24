@@ -177,10 +177,8 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     },
     pointIcon: {
       alignItems: "center",
-      backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
+      backgroundColor: theme.input,
       borderRadius: 999,
-      borderWidth: 1,
       height: 38,
       justifyContent: "center",
       width: 38,

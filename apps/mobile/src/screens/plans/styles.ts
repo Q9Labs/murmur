@@ -21,12 +21,18 @@ function createPlanStyles(theme: MurmurTheme) {
       marginTop: 8,
       width: 7,
     },
+    benefitDotSelected: {
+      backgroundColor: theme.selectedAccent,
+    },
     benefitText: {
       color: theme.secondaryText,
       flex: 1,
       fontSize: 15,
       fontWeight: "600",
       lineHeight: 22,
+    },
+    benefitTextSelected: {
+      color: theme.onSelectedSecondary,
     },
     benefits: {
       gap: 6,
@@ -39,10 +45,8 @@ function createPlanStyles(theme: MurmurTheme) {
       textAlign: "center",
     },
     card: {
-      backgroundColor: theme.surface,
-      borderColor: theme.hairline,
+      backgroundColor: theme.input,
       borderRadius: 28,
-      borderWidth: 1.5,
       gap: 14,
       padding: 22,
     },
@@ -53,13 +57,15 @@ function createPlanStyles(theme: MurmurTheme) {
     },
     cardSelected: {
       backgroundColor: theme.selected,
-      borderColor: theme.teal,
     },
     cardTitle: {
       color: theme.primary,
       flex: 1,
       fontSize: 17,
       fontWeight: "800",
+    },
+    cardTitleSelected: {
+      color: theme.onSelected,
     },
     cards: {
       gap: 10,
@@ -89,9 +95,7 @@ function createPlanStyles(theme: MurmurTheme) {
     offer: {
       alignItems: "center",
       backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
       borderRadius: 22,
-      borderWidth: 1,
       columnGap: 12,
       flexDirection: "row",
       flexWrap: "wrap",
@@ -101,13 +105,13 @@ function createPlanStyles(theme: MurmurTheme) {
       rowGap: 4,
     },
     offerCountdown: {
-      color: theme.secondaryText,
+      color: theme.onSelectedSecondary,
       fontSize: 16,
       fontVariant: ["tabular-nums"],
       fontWeight: "700",
     },
     offerTitle: {
-      color: theme.primary,
+      color: theme.onSelected,
       fontSize: 17,
       fontWeight: "800",
     },
@@ -120,6 +124,9 @@ function createPlanStyles(theme: MurmurTheme) {
       fontWeight: "900",
       letterSpacing: -0.5,
     },
+    priceSelected: {
+      color: theme.onSelected,
+    },
     priceRow: {
       alignItems: "baseline",
       flexDirection: "row",
@@ -130,6 +137,9 @@ function createPlanStyles(theme: MurmurTheme) {
       color: theme.secondaryText,
       fontSize: 16,
       fontWeight: "700",
+    },
+    priceSuffixSelected: {
+      color: theme.onSelectedSecondary,
     },
     pressed: {
       opacity: 0.6,
@@ -144,8 +154,8 @@ function createPlanStyles(theme: MurmurTheme) {
       width: 24,
     },
     radioSelected: {
-      backgroundColor: theme.teal,
-      borderColor: theme.teal,
+      backgroundColor: theme.selectedAccent,
+      borderColor: theme.selectedAccent,
     },
     retry: {
       alignItems: "center",
@@ -181,15 +191,11 @@ function createPlanStyles(theme: MurmurTheme) {
       paddingHorizontal: 10,
     },
     tabActive: {
-      backgroundColor: theme.surface,
-      borderColor: theme.selectedBorder,
-      borderWidth: 1,
+      backgroundColor: theme.selected,
     },
     tabBar: {
       backgroundColor: theme.input,
-      borderColor: theme.hairline,
       borderRadius: 999,
-      borderWidth: 1,
       flexDirection: "row",
       padding: 4,
     },
@@ -200,7 +206,7 @@ function createPlanStyles(theme: MurmurTheme) {
       textAlign: "center",
     },
     tabTextActive: {
-      color: theme.primary,
+      color: theme.onSelected,
       fontWeight: "800",
     },
   });
