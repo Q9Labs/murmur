@@ -12,23 +12,31 @@ export function ScreenScaffold(props: { children: ReactNode; footer?: ReactNode;
   );
 }
 
-export function PrimaryAction(props: { disabled?: boolean; label: string; onPress: () => void }): ReactNode {
+type ActionProps = { disabled?: boolean; label: string; onPress: () => void };
+
+// Each action renders its tone so tests can check which answer a screen emphasizes.
+function recordAction(tone: "primary" | "quiet" | "secondary", props: ActionProps): ReactNode {
   recorded.controls.push({
     accessibilityLabel: props.label,
     accessibilityRole: "button",
     disabled: props.disabled,
     onPress: props.onPress,
   });
-  return <button>{props.label}</button>;
+  return <button data-action={tone}>{props.label}</button>;
+}
+
+export function PrimaryAction(props: ActionProps): ReactNode {
+  return recordAction("primary", props);
+}
+
+export function SecondaryAction(props: ActionProps): ReactNode {
+  return recordAction("secondary", props);
+}
+
+export function QuietAction(props: ActionProps): ReactNode {
+  return recordAction("quiet", props);
 }
 
 export function StatusLine(props: { error: string | null; notice: string | null }): ReactNode {
   return <p>{props.notice}{props.error}</p>;
-}
-
-export const SecondaryAction = PrimaryAction;
-
-export function QuietAction(props: { label: string; onPress: () => void }): ReactNode {
-  recorded.controls.push({ accessibilityLabel: props.label, accessibilityRole: "button", onPress: props.onPress });
-  return <button>{props.label}</button>;
 }

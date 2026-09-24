@@ -1,13 +1,16 @@
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, StatusBar, Text, View } from "react-native";
+import { Image, type ImageSourcePropType, Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
 import { useScreenStyles } from "./styles";
 
+// With artwork, the screen opens on a large centred illustration and title instead of the
+// header title, for moments that ask the user something rather than list settings.
 export function ScreenScaffold(props: {
+  artwork?: ImageSourcePropType;
   children: ReactNode;
   footer?: ReactNode;
   title: string;
@@ -30,13 +33,25 @@ export function ScreenScaffold(props: {
             <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
           </View>
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>
+        {props.artwork ? null : <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>}
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {props.artwork ? (
+          <View style={styles.hero}>
+            <Image
+              accessibilityIgnoresInvertColors
+              accessible={false}
+              resizeMode="contain"
+              source={props.artwork}
+              style={styles.heroArtwork}
+            />
+            <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
+          </View>
+        ) : null}
         {props.children}
       </ScrollView>
       {props.footer ? <View style={styles.footer}>{props.footer}</View> : null}
@@ -77,15 +92,18 @@ function ActionButton(props: ActionProps & { tone: "primary" | "secondary" }): R
   );
 }
 
-// A low-emphasis text action, such as skipping an optional step.
-export function QuietAction(props: { label: string; onPress: () => void }): ReactNode {
+// A low-emphasis text action, such as skipping an optional step or declining an offer.
+// It keeps the full tap target of the other actions so declining is never harder than accepting.
+export function QuietAction(props: ActionProps): ReactNode {
   const { styles } = useScreenStyles();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: props.disabled === true }}
+      disabled={props.disabled}
       hitSlop={10}
       onPress={props.onPress}
-      style={({ pressed }) => [styles.quietButton, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.quietButton, (pressed || props.disabled) && styles.pressed]}
     >
       <Text style={styles.quietButtonText}>{props.label}</Text>
     </Pressable>

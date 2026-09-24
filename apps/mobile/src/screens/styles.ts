@@ -90,6 +90,33 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       height: 168,
       width: 240,
     },
+    // The first line under the hero reads as its subtitle, so it sits closer than the section gap.
+    hero: {
+      alignItems: "center",
+      gap: 4,
+      marginBottom: -12,
+    },
+    // Illustrations carry a wide transparent margin; the negative margin keeps the artwork
+    // large without that margin pushing the title away.
+    heroArtwork: {
+      aspectRatio: 240 / 168,
+      height: 280,
+      marginVertical: -24,
+    },
+    heroLead: {
+      color: theme.secondaryText,
+      fontSize: 17,
+      fontWeight: "500",
+      lineHeight: 25,
+      textAlign: "center",
+    },
+    heroTitle: {
+      color: theme.primary,
+      fontSize: 32,
+      fontWeight: "800",
+      letterSpacing: -0.4,
+      textAlign: "center",
+    },
     giftCard: {
       backgroundColor: theme.surface,
       borderColor: theme.hairline,
@@ -141,11 +168,37 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       fontSize: 17,
       fontWeight: "800",
     },
+    point: {
+      alignItems: "flex-start",
+      flexDirection: "row",
+      gap: 14,
+    },
+    pointIcon: {
+      alignItems: "center",
+      backgroundColor: theme.selected,
+      borderColor: theme.selectedBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 38,
+      justifyContent: "center",
+      width: 38,
+    },
+    pointText: {
+      ...text,
+      color: theme.secondaryText,
+      flex: 1,
+      fontSize: 16,
+      fontWeight: "500",
+      lineHeight: 23,
+      paddingTop: 7,
+    },
+    points: {
+      gap: 16,
+    },
     quietButton: {
       alignItems: "center",
-      alignSelf: "center",
       justifyContent: "center",
-      minHeight: 48,
+      minHeight: 56,
       paddingHorizontal: 20,
     },
     quietButtonText: {
