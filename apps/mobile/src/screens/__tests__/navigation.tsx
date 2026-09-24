@@ -24,5 +24,8 @@ export const lucideMock = {
   ChevronLeft: () => null,
   ChevronRight: () => null,
   Mail: () => null,
+  Settings: () => null,
+  ShieldCheck: () => null,
+  Sparkles: () => null,
   Star: () => null,
 };
