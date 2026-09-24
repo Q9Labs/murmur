@@ -123,6 +123,7 @@ function LanguagePickerModal({
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        style={styles.languageListScroll}
       >
         <AutoDetectOption onSelect={onSelect} selected={selected} visible={showAutoDetect} />
         {filteredLanguages.length === 0 && !showAutoDetect ? (

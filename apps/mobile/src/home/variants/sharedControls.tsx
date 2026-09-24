@@ -41,6 +41,7 @@ export function SettingsChrome({
 
 export function TextLanguageRow({
   containerStyle,
+  labelStyle,
   onOpenPicker,
   onSwapLanguages,
   pressedStyle,
@@ -50,6 +51,7 @@ export function TextLanguageRow({
   viewModel,
 }: Pick<VariantShellProps, "onOpenPicker" | "onSwapLanguages" | "viewModel"> & {
   containerStyle: StyleProp<ViewStyle>;
+  labelStyle: StyleProp<ViewStyle>;
   pressedStyle: StyleProp<ViewStyle>;
   swapGlyph: string;
   swapStyle: StyleProp<TextStyle>;
@@ -63,9 +65,9 @@ export function TextLanguageRow({
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
         onPress={() => onOpenPicker("source")}
-        style={({ pressed }) => [pressed && pressedStyle]}
+        style={({ pressed }) => [labelStyle, pressed && pressedStyle]}
       >
-        <Text numberOfLines={1} style={[textStyle, uiTextDirectionStyle(direction)]}>
+        <Text numberOfLines={2} style={[textStyle, uiTextDirectionStyle(direction)]}>
           {viewModel.sourceLanguageDisplayName}
         </Text>
       </Pressable>
@@ -83,9 +85,9 @@ export function TextLanguageRow({
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
         onPress={() => onOpenPicker("target")}
-        style={({ pressed }) => [pressed && pressedStyle]}
+        style={({ pressed }) => [labelStyle, pressed && pressedStyle]}
       >
-        <Text numberOfLines={1} style={[textStyle, uiTextDirectionStyle(direction)]}>
+        <Text numberOfLines={2} style={[textStyle, uiTextDirectionStyle(direction)]}>
           {viewModel.targetLanguageDisplayName}
         </Text>
       </Pressable>

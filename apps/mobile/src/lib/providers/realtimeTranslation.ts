@@ -41,6 +41,7 @@ export function createRealtimeTranslationClient(options: {
   let sentInputChunks = 0;
   let ackTimer: ReturnType<typeof setTimeout> | null = null;
   let receiveQueue = Promise.resolve();
+  let transportFailurePending = false;
   const inputBuffer = new Uint8Array(inputChunkTargetBytes);
   let inputBufferedBytes = 0;
   let pendingPlaybackEnabled: boolean | null = null;
@@ -56,13 +57,24 @@ export function createRealtimeTranslationClient(options: {
 
   function failTransport(): void {
     const activeSocket = socket;
+    if (!activeSocket || transportFailurePending) {
+      return;
+    }
+    const generation = socketGeneration;
     socket = null;
     acceptingMessages = false;
+    transportFailurePending = true;
     inputBufferedBytes = 0;
     diagnostics.input_buffered_bytes = 0;
     clearAckTimer();
     diagnostics.socket_transport_errors += 1;
-    options.onEvent({ kind: "transport_error" });
+    void receiveQueue.then(() => {
+      if (generation !== socketGeneration || !transportFailurePending) {
+        return;
+      }
+      transportFailurePending = false;
+      options.onEvent({ kind: "transport_error" });
+    });
     if (
       activeSocket?.readyState === WebSocket.OPEN ||
       activeSocket?.readyState === WebSocket.CONNECTING
@@ -185,6 +197,7 @@ export function createRealtimeTranslationClient(options: {
       acceptingMessages = true;
       acknowledgedInputChunks = 0;
       sentInputChunks = 0;
+      transportFailurePending = false;
       const generation = ++socketGeneration;
       const nextSocket = new WebSocket(options.url);
       nextSocket.binaryType = "arraybuffer";
@@ -197,7 +210,10 @@ export function createRealtimeTranslationClient(options: {
           return;
         }
         receiveQueue = receiveQueue.then(async () => {
-          if (!acceptingMessages || generation !== socketGeneration) {
+          if (
+            (!acceptingMessages && !transportFailurePending) ||
+            generation !== socketGeneration
+          ) {
             diagnostics.messages_skipped_client_closed += 1;
             return;
           }

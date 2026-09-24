@@ -85,6 +85,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         />
         <TextLanguageRow
           containerStyle={styles.languageRow}
+          labelStyle={styles.languageLabel}
           onOpenPicker={props.onOpenPicker}
           onSwapLanguages={props.onSwapLanguages}
           pressedStyle={styles.pressed}

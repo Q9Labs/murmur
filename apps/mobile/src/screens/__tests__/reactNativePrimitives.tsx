@@ -17,6 +17,21 @@ export type RecordedInput = {
   value?: string;
 };
 
+export type RecordedText = {
+  content: string | null;
+  numberOfLines?: number;
+};
+
+export type RecordedScrollView = {
+  keyboardDismissMode?: unknown;
+  keyboardShouldPersistTaps?: unknown;
+  style?: unknown;
+};
+
+export type RecordedKeyboardAvoidingView = {
+  behavior?: unknown;
+};
+
 export type RecordedSwitch = {
   accessibilityLabel?: string;
   disabled?: boolean;
@@ -33,17 +48,23 @@ export type RecordedAlert = {
 export const recorded = {
   alerts: [] as RecordedAlert[],
   controls: [] as RecordedControl[],
+  keyboardAvoidingViews: [] as RecordedKeyboardAvoidingView[],
   inputs: [] as RecordedInput[],
   roles: [] as string[],
+  scrollViews: [] as RecordedScrollView[],
   switches: [] as RecordedSwitch[],
+  texts: [] as RecordedText[],
 };
 
 export function resetRecorded(): void {
   recorded.alerts.length = 0;
   recorded.controls.length = 0;
+  recorded.keyboardAvoidingViews.length = 0;
   recorded.inputs.length = 0;
   recorded.roles.length = 0;
+  recorded.scrollViews.length = 0;
   recorded.switches.length = 0;
+  recorded.texts.length = 0;
 }
 
 export function findControl(label: string): RecordedControl | undefined {
@@ -60,7 +81,11 @@ function Pressable(props: RecordedControl & { children?: ReactNode; style?: unkn
   return createElement("button", null, props.children);
 }
 
-function Text({ children }: { children?: ReactNode }): ReactNode {
+function Text({ children, numberOfLines }: { children?: ReactNode; numberOfLines?: number }): ReactNode {
+  recorded.texts.push({
+    content: typeof children === "string" ? children : null,
+    numberOfLines,
+  });
   return createElement("span", null, children);
 }
 
@@ -81,9 +106,41 @@ function Switch(props: RecordedSwitch): ReactNode {
   return createElement("input", { checked: props.value, readOnly: true, type: "checkbox" });
 }
 
-function ScrollView({ children }: { children?: ReactNode }): ReactNode {
+function Modal({ children }: { children?: ReactNode }): ReactNode {
+  return children;
+}
+
+function KeyboardAvoidingView({
+  behavior,
+  children,
+}: {
+  behavior?: unknown;
+  children?: ReactNode;
+}): ReactNode {
+  recorded.keyboardAvoidingViews.push({ behavior });
+  return children;
+}
+
+function ScrollView({
+  children,
+  keyboardDismissMode,
+  keyboardShouldPersistTaps,
+  style,
+}: {
+  children?: ReactNode;
+  keyboardDismissMode?: unknown;
+  keyboardShouldPersistTaps?: unknown;
+  style?: unknown;
+}): ReactNode {
+  recorded.scrollViews.push({ keyboardDismissMode, keyboardShouldPersistTaps, style });
   return createElement("main", null, children);
 }
+
+const testPlatform = {
+  OS: "ios" as "android" | "ios",
+  select: <T,>(options: Partial<Record<"android" | "ios", T>>): T | undefined =>
+    options[testPlatform.OS],
+};
 
 export const reactNativePrimitives = {
   Alert: {
@@ -92,7 +149,9 @@ export const reactNativePrimitives = {
     },
   },
   Image: () => null,
-  Platform: { OS: "ios" as "android" | "ios" },
+  KeyboardAvoidingView,
+  Modal,
+  Platform: testPlatform,
   Pressable,
   ScrollView,
   StatusBar: () => null,
@@ -103,3 +162,7 @@ export const reactNativePrimitives = {
   useColorScheme: () => "light",
   View,
 };
+
+export function setTestPlatformOS(os: "android" | "ios"): void {
+  testPlatform.OS = os;
+}

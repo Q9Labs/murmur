@@ -70,10 +70,7 @@ export function SettingsScreen(): ReactNode {
         {controls ? (
           <LinkRow
             label={t(controls.reportLabel)}
-            onPress={() => {
-              controls.openReport();
-              router.back();
-            }}
+            onPress={controls.openReport}
           />
         ) : null}
         <LinkRow label={t("settings.support")} onPress={() => openLink(legalUrls.support)} />

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const backHandler = vi.hoisted(() => ({
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+}));
+
+vi.mock("react-native", () => ({ BackHandler: backHandler }));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
 vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ push: vi.fn() }) }));

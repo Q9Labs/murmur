@@ -60,6 +60,10 @@ import {
 import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
 import { getDevicePlaybackCaptureError } from "./captureLifecycle";
 import {
+  preserveFirstLiveError,
+  shouldIgnoreLateTransportEvent,
+} from "./errorState";
+import {
   createSessionPreparation,
   type SessionPreparation,
   type SessionPreparationStatus,
@@ -287,8 +291,11 @@ export function useLiveTranslation(
   }
 
   function setLiveError(nextError: string | null): void {
-    errorRef.current = nextError;
-    setError(nextError);
+    const resolvedError = nextError === null
+      ? null
+      : preserveFirstLiveError(errorRef.current, nextError);
+    errorRef.current = resolvedError;
+    setError(resolvedError);
   }
 
   function observeBackgroundOperation(promise: Promise<unknown>, operation: string): void {
@@ -605,9 +612,13 @@ export function useLiveTranslation(
     realtimeSessionToken: string,
     event: RealtimeTranslationClientEvent,
   ): void {
+    const state = sessionRef.current.state;
+    const isTransportTerminalEvent =
+      event.kind === "transport_error" || event.kind === "transport_closed";
     if (
       finishingRef.current ||
-      activeRealtimeSessionTokenRef.current !== realtimeSessionToken
+      activeRealtimeSessionTokenRef.current !== realtimeSessionToken ||
+      (isTransportTerminalEvent && shouldIgnoreLateTransportEvent(errorRef.current, state))
     ) {
       return;
     }

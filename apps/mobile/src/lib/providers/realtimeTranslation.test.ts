@@ -452,6 +452,37 @@ describe("RealtimeTranslationClient", () => {
     expect(client.getDiagnostics().messages_skipped_client_closed).toBe(0);
   });
 
+  it("drains a queued session error before reporting a socket error", async () => {
+    const onEvent = vi.fn();
+    const { client, releaseAudio, socket } = connectClientWithBlockedPlayback(onEvent);
+    socket?.onmessage?.({
+      data: JSON.stringify({
+        code: "session_silence_timeout",
+        kind: "session_error",
+        retryable: false,
+      }),
+    });
+
+    await vi.waitFor(() => {
+      expect(MurmurAudioModule.enqueuePcm16).toHaveBeenCalledTimes(1);
+    });
+    socket?.onerror?.();
+    releaseAudio();
+
+    await vi.waitFor(() => {
+      expect(onEvent.mock.calls.map(([event]) => event.kind)).toEqual([
+        "session_error",
+        "transport_error",
+      ]);
+    });
+    expect(onEvent).toHaveBeenNthCalledWith(1, {
+      code: "session_silence_timeout",
+      kind: "session_error",
+      retryable: false,
+    });
+    expect(client.getDiagnostics().messages_skipped_client_closed).toBe(0);
+  });
+
   it("ignores a delayed close event from a replaced socket", async () => {
     const onEvent = vi.fn();
     const client = createRealtimeTranslationClient({

@@ -50,7 +50,7 @@ export function ModalSheet({
           style={styles.sheetDismissArea}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.select({ android: "height", ios: "padding" })}
           pointerEvents="box-none"
           style={[styles.sheetKeyboard, uiContentDirectionStyle(direction)]}
         >

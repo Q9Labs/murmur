@@ -150,12 +150,22 @@ function createBloomStyles(theme: MurmurTheme) {
       alignSelf: "center",
       flexDirection: "row",
       gap: 14,
+      justifyContent: "center",
       minHeight: 28,
+      maxWidth: 320,
+      width: "100%",
+    },
+    languageLabel: {
+      alignItems: "center",
+      flex: 1,
+      minWidth: 0,
     },
     languageText: {
       color: theme.primary,
       fontSize: 15,
+      flexShrink: 1,
       fontWeight: "700",
+      textAlign: "center",
     },
     listenPill: {
       alignItems: "center",

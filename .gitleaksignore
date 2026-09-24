@@ -4,3 +4,7 @@
 aa783a737e3b8c5395b24ff29f4d83f15e42f200:release/manifest.json:generic-api-key:16
 3cef90e92b2bfa06d85bdbfcada78e3c8682623d:apps/mobile/src/lib/insightsConsent.ts:generic-api-key:4
 22c35601d408baa28860432911bbea72ecb5eec6:apps/mobile/src/lib/insightsConsent.ts:generic-api-key:4
+81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:apps/mobile/src/lib/insightsConsent.ts:generic-api-key:4
+81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:apps/mobile/src/lib/installIdentity.ts:generic-api-key:9
+81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:apps/worker/.dev.vars.example:private-key:13
+81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:tooling/scripts/validate-no-secrets.mjs:private-key:59
