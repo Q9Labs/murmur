@@ -77,7 +77,7 @@ function SourceOption({
       ]}
     >
       <View accessibilityElementsHidden style={styles.captureSourceIcon}>
-        <Icon color={active ? colors.primary : colors.muted} size={16} strokeWidth={2} />
+        <Icon color={active ? colors.onSelected : colors.muted} size={16} strokeWidth={2} />
       </View>
       <Text style={[styles.captureSourceText, active && styles.captureSourceTextActive]}>
         {label}

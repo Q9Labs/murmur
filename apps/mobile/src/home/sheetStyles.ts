@@ -38,6 +38,9 @@ function createSheetStyles(theme: MurmurTheme) {
       minWidth: 24,
       textAlign: "center",
     },
+    languageOptionCheckSelected: {
+      color: theme.selectedAccent,
+    },
     languageOptionCopy: {
       flex: 1,
     },
@@ -55,9 +58,15 @@ function createSheetStyles(theme: MurmurTheme) {
       fontWeight: "600",
       marginTop: 3,
     },
+    languageOptionNameSelected: {
+      color: theme.onSelected,
+    },
+    languageOptionNativeSelected: {
+      color: theme.onSelectedSecondary,
+    },
     languageOptionSelected: {
       backgroundColor: theme.selected,
-      borderBottomColor: theme.selectedBorder,
+      borderBottomColor: "transparent",
       borderRadius: 16,
     },
     modalScrim: {

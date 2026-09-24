@@ -121,6 +121,12 @@ function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNo
       accessible
       style={styles.hero}
     >
+      <View style={styles.heroMarks}>
+        <View style={[styles.heroMark, styles.heroMarkCoral]} />
+        <View style={[styles.heroMark, styles.heroMarkTeal]} />
+        <View style={[styles.heroMark, styles.heroMarkGold]} />
+        <View style={[styles.heroMark, styles.heroMarkViolet]} />
+      </View>
       <Text style={styles.balance}>{balance}</Text>
       <Text style={styles.detail}>{ui.t("account.balancePlan", { plan })}</Text>
       {validity.map((line) => <Text key={line} style={styles.validity}>{line}</Text>)}
@@ -177,13 +183,13 @@ function confirmAccountDeletion(deleteAccount: () => Promise<void>, t: Translate
 function createAccountStyles(theme: MurmurTheme) {
   return StyleSheet.create({
     balance: {
-      color: theme.primary,
+      color: theme.onSelected,
       fontSize: 56,
       fontWeight: "900",
       letterSpacing: -1,
     },
     detail: {
-      color: theme.secondaryText,
+      color: theme.onSelectedSecondary,
       fontSize: 17,
       fontWeight: "700",
     },
@@ -223,19 +229,42 @@ function createAccountStyles(theme: MurmurTheme) {
       fontWeight: "800",
     },
     validity: {
-      color: theme.secondaryText,
+      color: theme.onSelectedSecondary,
       fontSize: 15,
       fontWeight: "600",
       marginTop: 8,
     },
     hero: {
       backgroundColor: theme.selected,
-      borderColor: theme.selectedBorder,
       borderRadius: 28,
-      borderWidth: 1,
       gap: 2,
-      paddingHorizontal: 22,
-      paddingVertical: 26,
+      paddingHorizontal: 24,
+      paddingVertical: 24,
+    },
+    heroMark: {
+      borderRadius: 999,
+      height: 5,
+    },
+    heroMarkCoral: {
+      backgroundColor: theme.coral,
+      width: 12,
+    },
+    heroMarkGold: {
+      backgroundColor: theme.gold,
+      width: 20,
+    },
+    heroMarkTeal: {
+      backgroundColor: theme.teal,
+      width: 28,
+    },
+    heroMarkViolet: {
+      backgroundColor: theme.violet,
+      width: 12,
+    },
+    heroMarks: {
+      flexDirection: "row",
+      gap: 5,
+      marginBottom: 18,
     },
   });
 }

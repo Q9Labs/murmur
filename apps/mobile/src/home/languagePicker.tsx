@@ -148,12 +148,19 @@ function LanguagePickerModal({
                 ]}
               >
                 <View style={styles.languageOptionCopy}>
-                  <Text style={[styles.languageOptionName, uiTextDirectionStyle(direction)]}>
+                  <Text
+                    style={[
+                      styles.languageOptionName,
+                      isSelected && styles.languageOptionNameSelected,
+                      uiTextDirectionStyle(direction),
+                    ]}
+                  >
                     {language.display_name}
                   </Text>
                   <Text
                     style={[
                       styles.languageOptionNative,
+                      isSelected && styles.languageOptionNativeSelected,
                       uiTextDirectionStyle(direction),
                       { writingDirection: language.rtl ? "rtl" : "ltr" },
                     ]}
@@ -161,7 +168,10 @@ function LanguagePickerModal({
                     {language.native_name}
                   </Text>
                 </View>
-                <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
+                <Text
+                  accessibilityElementsHidden
+                  style={[styles.languageOptionCheck, isSelected && styles.languageOptionCheckSelected]}
+                >
                   {isSelected ? "✓" : ""}
                 </Text>
               </Pressable>
@@ -187,27 +197,43 @@ function AutoDetectOption({
   if (!visible) {
     return null;
   }
+  const isSelected = selected === autoSourceLanguageCode;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: selected === autoSourceLanguageCode }}
+      accessibilityState={{ selected: isSelected }}
       onPress={() => onSelect(autoSourceLanguageCode)}
       style={({ pressed }) => [
         styles.languageOption,
-        selected === autoSourceLanguageCode && styles.languageOptionSelected,
+        isSelected && styles.languageOptionSelected,
         pressed && styles.pressed,
       ]}
     >
       <View style={styles.languageOptionCopy}>
-        <Text style={[styles.languageOptionName, uiTextDirectionStyle(direction)]}>
+        <Text
+          style={[
+            styles.languageOptionName,
+            isSelected && styles.languageOptionNameSelected,
+            uiTextDirectionStyle(direction),
+          ]}
+        >
           {t("languagePicker.autoDetect")}
         </Text>
-        <Text style={[styles.languageOptionNative, uiTextDirectionStyle(direction)]}>
+        <Text
+          style={[
+            styles.languageOptionNative,
+            isSelected && styles.languageOptionNativeSelected,
+            uiTextDirectionStyle(direction),
+          ]}
+        >
           {t("languagePicker.liveMultilingualSource")}
         </Text>
       </View>
-      <Text accessibilityElementsHidden style={styles.languageOptionCheck}>
-        {selected === autoSourceLanguageCode ? "✓" : ""}
+      <Text
+        accessibilityElementsHidden
+        style={[styles.languageOptionCheck, isSelected && styles.languageOptionCheckSelected]}
+      >
+        {isSelected ? "✓" : ""}
       </Text>
     </Pressable>
   );

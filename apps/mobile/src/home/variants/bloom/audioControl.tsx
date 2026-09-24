@@ -45,7 +45,7 @@ function SpeakerIcon({ enabled }: { enabled: boolean }): ReactNode {
   const Icon = enabled ? Volume2 : VolumeX;
   return (
     <View accessibilityElementsHidden>
-      <Icon color={colors.primary} size={20} strokeWidth={2} />
+      <Icon color={enabled ? colors.onSelected : colors.primary} size={20} strokeWidth={2} />
     </View>
   );
 }

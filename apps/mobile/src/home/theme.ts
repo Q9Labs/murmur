@@ -13,11 +13,13 @@ export type MurmurTheme = {
   muted: string;
   onAction: string;
   onPrimary: string;
+  onSelected: string;
+  onSelectedSecondary: string;
   primary: string;
   scrim: string;
   secondaryText: string;
   selected: string;
-  selectedBorder: string;
+  selectedAccent: string;
   surface: string;
   teal: string;
   violet: string;
@@ -36,11 +38,13 @@ export const lightMurmurTheme: MurmurTheme = {
   muted: "#746A79",
   onAction: "#FAF3E7",
   onPrimary: "#FAF3E7",
+  onSelected: "#FAF3E7",
+  onSelectedSecondary: "#CFC4CC",
   primary: "#3A2E3F",
   scrim: "rgba(35, 27, 38, 0.34)",
   secondaryText: "#5E5463",
-  selected: "rgba(47, 185, 165, 0.08)",
-  selectedBorder: "rgba(47, 185, 165, 0.24)",
+  selected: "#3A2E3F",
+  selectedAccent: "#5FE0C6",
   surface: "#FFFDF9",
   teal: "#2FB9A5",
   violet: "#8662E6",
@@ -59,11 +63,13 @@ export const darkMurmurTheme: MurmurTheme = {
   muted: "#B9ACBC",
   onAction: "#24171F",
   onPrimary: "#24171F",
+  onSelected: "#211A24",
+  onSelectedSecondary: "#5E5463",
   primary: "#FFF6EC",
   scrim: "rgba(3, 2, 4, 0.72)",
   secondaryText: "#D2C6D4",
-  selected: "rgba(77, 216, 191, 0.16)",
-  selectedBorder: "rgba(77, 216, 191, 0.38)",
+  selected: "#F2E8DA",
+  selectedAccent: "#08706C",
   surface: "#211B24",
   teal: "#4DD8BF",
   violet: "#B093FF",

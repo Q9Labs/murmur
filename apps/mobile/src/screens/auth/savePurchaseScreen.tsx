@@ -23,7 +23,7 @@ export function SavePurchaseScreen(): ReactNode {
     return (
       <ScreenScaffold footer={<PrimaryAction label={t("auth.done")} onPress={leave} />} title={t("savePurchase.savedTitle")}>
         <View accessibilityElementsHidden importantForAccessibility="no" style={styles.doneBadge}>
-          <Check color={colors.teal} size={30} strokeWidth={2.5} />
+          <Check color={colors.selectedAccent} size={30} strokeWidth={2.5} />
         </View>
         <Text accessibilityLiveRegion="polite" style={[styles.body, styles.centered]}>
           {t("savePurchase.savedBody")}
