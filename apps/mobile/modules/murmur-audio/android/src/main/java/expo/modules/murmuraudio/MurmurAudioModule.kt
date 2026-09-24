@@ -37,7 +37,9 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 private const val MURMUR_SAMPLE_RATE = 24_000
-private const val MURMUR_FRAME_BYTES = 960
+private const val LEGACY_SCO_CAPTURE_SAMPLE_RATE = 8_000
+private const val LEGACY_SCO_PLAYBACK_SAMPLE_RATE = 16_000
+private const val LEGACY_SCO_CONNECT_TIMEOUT_MS = 5_000L
 private const val MURMUR_FRAME_DURATION_MS = 20
 private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 41_271
 private const val OVERLAY_PERMISSION_REQUEST_CODE = 41_272
@@ -49,6 +51,7 @@ private data class MicrophoneAudioRoute(
   val previousBluetoothScoOn: Boolean?,
   var legacySpeakerphoneRouteConfigured: Boolean = false,
   var legacyBluetoothScoRouteConfigured: Boolean = false,
+  var legacyBluetoothScoActive: Boolean = false,
   var communicationDeviceRouteConfigured: Boolean = false
 )
 
@@ -284,13 +287,19 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     var record: AudioRecord? = null
     try {
       configureMicrophoneAudioRoute()
+      val captureSampleRate = if (microphoneAudioRoute?.legacyBluetoothScoActive == true) {
+        LEGACY_SCO_CAPTURE_SAMPLE_RATE
+      } else {
+        MURMUR_SAMPLE_RATE
+      }
+      val captureFrameBytes = captureSampleRate * MURMUR_FRAME_DURATION_MS / 1_000 * 2
       val minBuffer = max(
         AudioRecord.getMinBufferSize(
-          MURMUR_SAMPLE_RATE,
+          captureSampleRate,
           AudioFormat.CHANNEL_IN_MONO,
           AudioFormat.ENCODING_PCM_16BIT
         ),
-        MURMUR_FRAME_BYTES * 8
+        captureFrameBytes * 8
       )
 
       val createdRecord = AudioRecord.Builder()
@@ -298,7 +307,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         .setAudioFormat(
           AudioFormat.Builder()
             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setSampleRate(MURMUR_SAMPLE_RATE)
+            .setSampleRate(captureSampleRate)
             .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
             .build()
         )
@@ -319,7 +328,10 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         throw IllegalStateException("AudioRecord failed to start")
       }
       captureActive = true
-      captureThread = Thread({ captureLoop(createdRecord) }, "murmur-audio-capture").also { it.start() }
+      captureThread = Thread(
+        { captureLoop(createdRecord, captureSampleRate) },
+        "murmur-audio-capture"
+      ).also { it.start() }
       emitState("capture_started")
     } catch (error: Throwable) {
       fun cleanup(action: () -> Unit) {
@@ -368,8 +380,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     val audioManager = context.getSystemService(AudioManager::class.java)
       ?: throw IllegalStateException("AudioManager is unavailable")
     val connectedOutputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-    val bluetoothScoConnected = connectedOutputs.any {
-      it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+    val bluetoothHeadsetConnected = connectedOutputs.any {
+      it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
     }
     val wiredOrUsbHeadsetConnected = connectedOutputs.any {
       isWiredOrUsbOutput(it.type)
@@ -409,10 +422,12 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       return
     }
 
-    if (bluetoothScoConnected) {
+    if (bluetoothHeadsetConnected) {
+      route.legacyBluetoothScoActive = true
       if (route.previousBluetoothScoOn != true) {
         route.legacyBluetoothScoRouteConfigured = true
         audioManager.startBluetoothSco()
+        awaitBluetoothScoConnection(audioManager)
       }
       return
     }
@@ -420,6 +435,21 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
     route.legacySpeakerphoneRouteConfigured = true
     audioManager.isSpeakerphoneOn = true
+  }
+
+  private fun awaitBluetoothScoConnection(audioManager: AudioManager) {
+    val deadlineMs = SystemClock.elapsedRealtime() + LEGACY_SCO_CONNECT_TIMEOUT_MS
+    while (!audioManager.isBluetoothScoOn) {
+      if (SystemClock.elapsedRealtime() >= deadlineMs) {
+        throw IllegalStateException("Bluetooth SCO did not connect before microphone capture")
+      }
+      try {
+        Thread.sleep(50)
+      } catch (error: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw IllegalStateException("Interrupted while waiting for Bluetooth SCO", error)
+      }
+    }
   }
 
   private fun communicationDevicePriority(type: Int): Int? = when (type) {
@@ -513,8 +543,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     lastPlaybackUnderrunCount = 0
   }
 
-  private fun captureLoop(record: AudioRecord) {
-    val frame = ByteArray(MURMUR_FRAME_BYTES)
+  private fun captureLoop(record: AudioRecord, captureSampleRate: Int) {
+    val captureFrameBytes = captureSampleRate * MURMUR_FRAME_DURATION_MS / 1_000 * 2
+    val frame = ByteArray(captureFrameBytes)
     while (captureActive) {
       var offset = 0
       while (offset < frame.size && captureActive) {
@@ -529,7 +560,12 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         }
       }
       if (offset == frame.size && captureActive) {
-        emitFrame(frame.copyOf())
+        val murmurFrame = if (captureSampleRate == MURMUR_SAMPLE_RATE) {
+          frame.copyOf()
+        } else {
+          resamplePcm16(frame, captureSampleRate, MURMUR_SAMPLE_RATE)
+        }
+        emitFrame(murmurFrame)
       }
     }
     if (recorder === record && !captureActive) {
@@ -621,13 +657,15 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
   private fun startPlaybackSync() {
     if (playbackActive) return
+    val sampleRate = playbackSampleRate()
+    val frameBytes = sampleRate * MURMUR_FRAME_DURATION_MS / 1_000 * 2
     val minBuffer = max(
       AudioTrack.getMinBufferSize(
-        MURMUR_SAMPLE_RATE,
+        sampleRate,
         AudioFormat.CHANNEL_OUT_MONO,
         AudioFormat.ENCODING_PCM_16BIT
       ),
-      MURMUR_FRAME_BYTES * 10
+      frameBytes * 10
     )
 
     audioTrack = AudioTrack.Builder()
@@ -644,7 +682,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       .setAudioFormat(
         AudioFormat.Builder()
           .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-          .setSampleRate(MURMUR_SAMPLE_RATE)
+          .setSampleRate(sampleRate)
           .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
           .build()
       )
@@ -663,9 +701,15 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     playbackChunksReceived.incrementAndGet()
     playbackBytesRequested.addAndGet(data.size.toLong())
     val track = audioTrack ?: throw IllegalStateException("AudioTrack is not available")
+    val sampleRate = playbackSampleRate()
+    val playbackData = if (sampleRate == MURMUR_SAMPLE_RATE) {
+      data
+    } else {
+      resamplePcm16(data, MURMUR_SAMPLE_RATE, sampleRate)
+    }
     var totalWritten = 0
-    while (totalWritten < data.size) {
-      val written = track.write(data, totalWritten, data.size - totalWritten)
+    while (totalWritten < playbackData.size) {
+      val written = track.write(playbackData, totalWritten, playbackData.size - totalWritten)
       if (written <= 0) {
         playbackWriteErrors.incrementAndGet()
         clearPlaybackSync("playback_write_failed")
@@ -673,15 +717,24 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       }
       playbackBytesWritten.addAndGet(written.toLong())
       totalWritten += written
-      if (totalWritten < data.size) {
+      if (totalWritten < playbackData.size) {
         playbackShortWrites.incrementAndGet()
       }
     }
-    val queuedMs = totalWritten / 2 * 1000 / MURMUR_SAMPLE_RATE
+    val queuedMs = totalWritten / 2 * 1000 / sampleRate
     lastPlaybackChunkRms = rms(data)
     lastPlaybackWriteCompletedAtMs = System.currentTimeMillis()
     schedulePlaybackIdle(queuedMs)
     emitState("playback_enqueued")
+  }
+
+  private fun playbackSampleRate(): Int = if (
+    captureSource == CAPTURE_SOURCE_MICROPHONE &&
+    microphoneAudioRoute?.legacyBluetoothScoActive == true
+  ) {
+    LEGACY_SCO_PLAYBACK_SAMPLE_RATE
+  } else {
+    MURMUR_SAMPLE_RATE
   }
 
   private fun clearPlaybackSync(reason: String) {
@@ -1145,6 +1198,47 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         "reason" to (error.message ?: error.javaClass.simpleName)
       )
     }
+  }
+
+  private fun resamplePcm16(data: ByteArray, inputRate: Int, outputRate: Int): ByteArray {
+    if (data.isEmpty()) return data
+    if (data.size % 2 != 0) {
+      throw IllegalArgumentException("PCM16 audio data must contain complete samples")
+    }
+    if (inputRate <= 0 || outputRate <= 0) {
+      throw IllegalArgumentException("PCM sample rates must be positive")
+    }
+    if (inputRate == outputRate) return data
+
+    val inputSampleCount = data.size / 2
+    val outputSampleCount = ((inputSampleCount.toLong() * outputRate + inputRate / 2) / inputRate)
+      .coerceAtMost(Int.MAX_VALUE.toLong())
+      .toInt()
+    if (outputSampleCount > Int.MAX_VALUE / 2) {
+      throw IllegalArgumentException("Resampled PCM16 audio exceeds the supported buffer size")
+    }
+    val output = ByteArray(outputSampleCount * 2)
+    for (outputIndex in 0 until outputSampleCount) {
+      val inputPosition = outputIndex.toDouble() * inputRate / outputRate
+      val leftIndex = inputPosition.toInt().coerceAtMost(inputSampleCount - 1)
+      val rightIndex = (leftIndex + 1).coerceAtMost(inputSampleCount - 1)
+      val leftSample = readPcm16Sample(data, leftIndex)
+      val rightSample = readPcm16Sample(data, rightIndex)
+      val fraction = inputPosition - leftIndex
+      val sample = (leftSample + (rightSample - leftSample) * fraction).toInt()
+        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+      val outputOffset = outputIndex * 2
+      output[outputOffset] = sample.toByte()
+      output[outputOffset + 1] = (sample shr 8).toByte()
+    }
+    return output
+  }
+
+  private fun readPcm16Sample(data: ByteArray, sampleIndex: Int): Int {
+    val offset = sampleIndex * 2
+    val low = data[offset].toInt() and 0xff
+    val high = data[offset + 1].toInt() and 0xff
+    return ((high shl 8) or low).toShort().toInt()
   }
 
   private fun rms(data: ByteArray): Double {
