@@ -45,6 +45,10 @@ assert(readiness.json?.providers?.report_webhook === "configured", "/ready repor
 assert(readiness.json?.providers?.product_analytics === "configured", "/ready product analytics must be configured");
 assert(readiness.json?.providers?.error_monitoring === "configured", "/ready error monitoring must be configured");
 
+// Better Auth builds every social provider on each request, so a malformed provider secret fails all auth routes.
+const authSession = await fetch(`${baseUrl}/api/auth/get-session`, { headers: { origin: baseUrl } });
+assert(authSession.status === 200, `/api/auth/get-session must return 200; got ${authSession.status}`);
+
 for (const path of ["/privacy", "/terms", "/support"]) {
   const page = await getText(path);
   const contentType = page.response.headers.get("content-type") ?? "";
