@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -52,7 +53,8 @@ private data class MicrophoneAudioRoute(
   var legacySpeakerphoneRouteConfigured: Boolean = false,
   var legacyBluetoothScoRouteConfigured: Boolean = false,
   var legacyBluetoothScoActive: Boolean = false,
-  var communicationDeviceRouteConfigured: Boolean = false
+  var communicationDeviceRouteConfigured: Boolean = false,
+  var communicationDeviceCallback: AudioDeviceCallback? = null
 )
 
 class MurmurAudioModule : Module(), MurmurCaptureListener {
@@ -61,7 +63,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   private var recorder: AudioRecord? = null
   private var captureThread: Thread? = null
   private var audioTrack: AudioTrack? = null
-  private var microphoneAudioRoute: MicrophoneAudioRoute? = null
+  @Volatile private var microphoneAudioRoute: MicrophoneAudioRoute? = null
   private var echoCanceler: AcousticEchoCanceler? = null
   private var noiseSuppressor: NoiseSuppressor? = null
   private var gainControl: AutomaticGainControl? = null
@@ -405,20 +407,12 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      val communicationDevice = audioManager.availableCommunicationDevices
-        .mapNotNull { device ->
-          communicationDevicePriority(device.type)?.let { priority -> priority to device }
-        }
-        .minByOrNull { it.first }
-        ?.second
-        ?: audioManager.availableCommunicationDevices.firstOrNull {
-          it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-        }
-        ?: throw IllegalStateException("No communication device is available for microphone capture")
+      val communicationDevice = selectCommunicationDevice(audioManager)
       if (!audioManager.setCommunicationDevice(communicationDevice)) {
         throw IllegalStateException("Could not route microphone capture to ${communicationDevice.productName}")
       }
       route.communicationDeviceRouteConfigured = true
+      registerCommunicationDeviceCallback(route)
       return
     }
 
@@ -427,7 +421,14 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       if (route.previousBluetoothScoOn != true) {
         route.legacyBluetoothScoRouteConfigured = true
         audioManager.startBluetoothSco()
-        awaitBluetoothScoConnection(audioManager)
+        if (!awaitBluetoothScoConnection(audioManager)) {
+          audioManager.stopBluetoothSco()
+          route.legacyBluetoothScoRouteConfigured = false
+          route.legacyBluetoothScoActive = false
+          route.legacySpeakerphoneRouteConfigured = true
+          audioManager.isSpeakerphoneOn = true
+          Log.w("MurmurAudio", "Bluetooth SCO unavailable; using the built-in speaker route")
+        }
       }
       return
     }
@@ -437,17 +438,67 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     audioManager.isSpeakerphoneOn = true
   }
 
-  private fun awaitBluetoothScoConnection(audioManager: AudioManager) {
+  private fun awaitBluetoothScoConnection(audioManager: AudioManager): Boolean {
     val deadlineMs = SystemClock.elapsedRealtime() + LEGACY_SCO_CONNECT_TIMEOUT_MS
     while (!audioManager.isBluetoothScoOn) {
-      if (SystemClock.elapsedRealtime() >= deadlineMs) {
-        throw IllegalStateException("Bluetooth SCO did not connect before microphone capture")
-      }
+      if (SystemClock.elapsedRealtime() >= deadlineMs) return false
       try {
         Thread.sleep(50)
       } catch (error: InterruptedException) {
         Thread.currentThread().interrupt()
         throw IllegalStateException("Interrupted while waiting for Bluetooth SCO", error)
+      }
+    }
+    return true
+  }
+
+  private fun selectCommunicationDevice(audioManager: AudioManager): AudioDeviceInfo {
+    val availableDevices = audioManager.availableCommunicationDevices
+    return availableDevices
+      .mapNotNull { device ->
+        communicationDevicePriority(device.type)?.let { priority -> priority to device }
+      }
+      .minByOrNull { it.first }
+      ?.second
+      ?: availableDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+      ?: throw IllegalStateException("No communication device is available for microphone capture")
+  }
+
+  private fun registerCommunicationDeviceCallback(route: MicrophoneAudioRoute) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val callback = object : AudioDeviceCallback() {
+      override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+        updateCommunicationDeviceRoute(route)
+      }
+
+      override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+        updateCommunicationDeviceRoute(route)
+      }
+    }
+    try {
+      route.audioManager.registerAudioDeviceCallback(callback, mainHandler)
+      route.communicationDeviceCallback = callback
+    } catch (error: Exception) {
+      throw IllegalStateException("Could not monitor communication-device changes", error)
+    }
+  }
+
+  private fun updateCommunicationDeviceRoute(route: MicrophoneAudioRoute) {
+    if (microphoneAudioRoute !== route || !route.communicationDeviceRouteConfigured) return
+    try {
+      val communicationDevice = selectCommunicationDevice(route.audioManager)
+      if (route.audioManager.communicationDevice?.id == communicationDevice.id) return
+      if (!route.audioManager.setCommunicationDevice(communicationDevice)) {
+        throw IllegalStateException("Could not route microphone capture to ${communicationDevice.productName}")
+      }
+      emitState("communication_device_changed")
+    } catch (error: Throwable) {
+      Log.e("MurmurAudio", "Could not update the microphone communication route", error)
+      try {
+        emitState("capture_route_update_failed")
+      } catch (reportError: Throwable) {
+        error.addSuppressed(reportError)
+        Log.e("MurmurAudio", "Could not emit the communication-route error state", reportError)
       }
     }
   }
@@ -492,6 +543,11 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       }
     }
 
+    val communicationDeviceCallback = route.communicationDeviceCallback
+    route.communicationDeviceCallback = null
+    if (communicationDeviceCallback != null) {
+      restore { route.audioManager.unregisterAudioDeviceCallback(communicationDeviceCallback) }
+    }
     if (route.communicationDeviceRouteConfigured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       restore { route.audioManager.clearCommunicationDevice() }
     }
