@@ -245,6 +245,7 @@ describe("worker routes", () => {
       `app_session_id=${encodeURIComponent(session.app_session_id)}`,
     );
     expect(session.realtime_ws_url).toContain("target_language=ar");
+    expect(session.realtime_ws_url).toContain("capture_source=microphone");
     expect(session.realtime_ws_url).toContain("playback_enabled=true");
     expect(session.realtime_ws_url).toMatch(/^wss:/);
     expect(session.session_epoch).toBe(1);

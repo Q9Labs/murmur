@@ -151,6 +151,7 @@ export async function createSession(
       request.url,
       appSessionId,
       parsed.value.targetLanguage,
+      parsed.value.captureSource,
       parsed.value.analyticsEnabled,
       parsed.value.playbackEnabled,
       parsed.value.appPlatform,
@@ -488,6 +489,7 @@ function realtimeUrl(
   requestUrl: string,
   appSessionId: string,
   targetLanguage: LanguageCode,
+  captureSource: ParsedCreateSessionRequest["captureSource"],
   analyticsEnabled: boolean,
   playbackEnabled: boolean,
   appPlatform: "android" | "ios" | null,
@@ -499,6 +501,7 @@ function realtimeUrl(
   url.search = new URLSearchParams({
     app_session_id: appSessionId,
     analytics_enabled: String(analyticsEnabled),
+    capture_source: captureSource,
     playback_enabled: String(playbackEnabled),
     ...(appPlatform ? { app_platform: appPlatform } : {}),
     ...(appVersion ? { app_version: appVersion } : {}),
