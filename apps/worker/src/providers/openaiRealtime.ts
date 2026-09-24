@@ -1,5 +1,8 @@
 import type { LanguageCode } from "@murmur/protocol/languages";
-import type { RealtimeServerEvent } from "@murmur/protocol/transport/types";
+import type {
+  CreateSessionRequest,
+  RealtimeServerEvent,
+} from "@murmur/protocol/transport/types";
 
 import type { WorkerWebSocket } from "../http/response";
 
@@ -35,15 +38,25 @@ export async function openTranslationSocket(params: {
   return socket;
 }
 
-export function createSessionUpdate(targetLanguage: LanguageCode, sourceTranscript = false): string {
+export function createSessionUpdate(
+  targetLanguage: LanguageCode,
+  captureSource: NonNullable<CreateSessionRequest["capture_source"]>,
+  sourceTranscript = false,
+): string {
   return JSON.stringify({
     type: "session.update",
     session: {
       audio: {
-        input: {
-          noise_reduction: { type: "near_field" },
-          ...(sourceTranscript ? { transcription: { model: "gpt-realtime-whisper" } } : {}),
-        },
+        ...(captureSource === "microphone" || sourceTranscript
+          ? {
+            input: {
+              ...(captureSource === "microphone"
+                ? { noise_reduction: { type: "near_field" } }
+                : {}),
+              ...(sourceTranscript ? { transcription: { model: "gpt-realtime-whisper" } } : {}),
+            },
+          }
+          : {}),
         output: {
           language: toOpenAILanguage(targetLanguage),
         },

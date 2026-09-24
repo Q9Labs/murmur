@@ -10,8 +10,8 @@ import {
 // cspell:ignore AQID
 
 describe("OpenAI realtime translation adapter", () => {
-  it("enables near-field noise reduction without source transcription by default", () => {
-    expect(JSON.parse(createSessionUpdate("pt-BR"))).toEqual({
+  it("enables near-field noise reduction only for microphone sessions", () => {
+    expect(JSON.parse(createSessionUpdate("pt-BR", "microphone"))).toEqual({
       type: "session.update",
       session: {
         audio: {
@@ -20,11 +20,10 @@ describe("OpenAI realtime translation adapter", () => {
         },
       },
     });
-    expect(JSON.parse(createSessionUpdate("zh-Hans"))).toEqual({
+    expect(JSON.parse(createSessionUpdate("zh-Hans", "phone_audio"))).toEqual({
       type: "session.update",
       session: {
         audio: {
-          input: { noise_reduction: { type: "near_field" } },
           output: { language: "zh" },
         },
       },
@@ -32,8 +31,22 @@ describe("OpenAI realtime translation adapter", () => {
   });
 
   it("enables source transcription only when the flag is on", () => {
-    expect(JSON.parse(createSessionUpdate("ar", true))).toMatchObject({
-      session: { audio: { input: { transcription: { model: "gpt-realtime-whisper" } } } },
+    expect(JSON.parse(createSessionUpdate("ar", "microphone", true))).toMatchObject({
+      session: {
+        audio: {
+          input: {
+            noise_reduction: { type: "near_field" },
+            transcription: { model: "gpt-realtime-whisper" },
+          },
+        },
+      },
+    });
+    expect(JSON.parse(createSessionUpdate("ar", "phone_audio", true))).toMatchObject({
+      session: {
+        audio: {
+          input: { transcription: { model: "gpt-realtime-whisper" } },
+        },
+      },
     });
   });
 

@@ -1,7 +1,11 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import { isLanguageCode, type LanguageCode } from "@murmur/protocol/languages";
-import type { RealtimeClientCommand, RealtimeServerEvent } from "@murmur/protocol/transport/types";
+import type {
+  CreateSessionRequest,
+  RealtimeClientCommand,
+  RealtimeServerEvent,
+} from "@murmur/protocol/transport/types";
 import * as Sentry from "@sentry/cloudflare";
 
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
@@ -60,6 +64,7 @@ type RealtimeSessionValidation =
       analyticsEnabled: boolean;
       availableMs: number;
       billingEnforced: boolean;
+      captureSource: NonNullable<CreateSessionRequest["capture_source"]>;
       customerId: string | null;
       expiresAtMs: number;
       ok: true;
@@ -100,9 +105,18 @@ export async function proxyRealtimeSession(
   const url = new URL(request.url);
   const appSessionId = url.searchParams.get("app_session_id") ?? "";
   const targetLanguage = url.searchParams.get("target_language") ?? "";
+  const captureSource = url.searchParams.get("capture_source") === "phone_audio"
+    ? "phone_audio"
+    : "microphone";
   const analyticsEnabled = url.searchParams.get("analytics_enabled") === "true";
   const realtimeStartedAtMs = Date.now();
-  const validated = await validateSession(appSessionId, targetLanguage, analyticsEnabled, env);
+  const validated = await validateSession(
+    appSessionId,
+    targetLanguage,
+    analyticsEnabled,
+    captureSource,
+    env,
+  );
   if (!validated.ok) {
     closeSocket(client, validated.code, validated.reason);
     return;
@@ -423,7 +437,11 @@ export async function proxyRealtimeSession(
     (delta) => insightCollector?.add(delta),
   );
   try {
-    upstream.send(createSessionUpdate(validated.targetLanguage, config.source_transcript));
+    upstream.send(createSessionUpdate(
+      validated.targetLanguage,
+      validated.captureSource,
+      config.source_transcript,
+    ));
     send(client, {
       kind: "session_opened",
       provider_metadata: {
@@ -451,6 +469,7 @@ async function validateSession(
   appSessionId: string,
   targetLanguage: string,
   analyticsEnabled: boolean,
+  captureSource: NonNullable<CreateSessionRequest["capture_source"]>,
   env: Env,
 ): Promise<RealtimeSessionValidation> {
   if (!appSessionId || !isLanguageCode(targetLanguage)) {
@@ -491,6 +510,7 @@ async function validateSession(
     analyticsEnabled,
     availableMs: billing.availableMs,
     billingEnforced,
+    captureSource,
     customerId: billing.customerId,
     expiresAtMs: reservation.expires_at_ms,
     ok: true,
