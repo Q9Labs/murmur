@@ -46,6 +46,7 @@ export function InsightsConsentScreen(): ReactNode {
       artwork={sessionInsightsIllustration}
       footer={(
         <>
+          <StatusLine error={error} notice={null} />
           <PrimaryAction disabled={saving} label={t("insights.yes")} onPress={() => choose(true)} />
           <QuietAction disabled={saving} label={t("insights.no")} onPress={() => choose(false)} />
         </>
@@ -66,7 +67,6 @@ export function InsightsConsentScreen(): ReactNode {
           );
         })}
       </View>
-      <StatusLine error={error} notice={null} />
     </ScreenScaffold>
   );
 }

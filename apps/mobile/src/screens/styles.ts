@@ -97,11 +97,13 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       marginBottom: -12,
     },
     // Illustrations carry a wide transparent margin; the negative margin keeps the artwork
-    // large without that margin pushing the title away.
+    // large without that margin pushing the title away. Sizing from the width keeps it inside
+    // compact phones.
     heroArtwork: {
       aspectRatio: 240 / 168,
-      height: 280,
       marginVertical: -24,
+      maxWidth: 400,
+      width: "100%",
     },
     heroLead: {
       color: theme.secondaryText,
