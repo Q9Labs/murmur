@@ -57,7 +57,7 @@ describe("settings screen", () => {
     expect(controlsRef.current.changeAnalytics).toHaveBeenCalledWith(false);
     findControl("Report translation")?.onPress?.();
     expect(controlsRef.current.openReport).toHaveBeenCalledOnce();
-    expect(router.back).toHaveBeenCalledOnce();
+    expect(router.back).not.toHaveBeenCalled();
     findControl("Privacy policy")?.onPress?.();
     expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
     findControl("Delete local data")?.onPress?.();

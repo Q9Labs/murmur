@@ -13,6 +13,9 @@ function createSheetStyles(theme: MurmurTheme) {
       paddingBottom: 28,
       paddingTop: 8,
     },
+    languageListScroll: {
+      flexShrink: 1,
+    },
     languageEmpty: {
       color: theme.muted,
       fontSize: 15,

@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { ScrollView } from "react-native";
+import { BackHandler, type ScrollView } from "react-native";
 
 import {
   autoSourceLanguageCode,
@@ -64,6 +64,7 @@ import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
 import { buildHomeViewModel } from "./viewModel";
 import { isAllowanceExhaustedError, isUpdateRequiredError } from "./errorCopy";
+import { previousOnboardingStep } from "./onboardingNavigation";
 
 const englishTranslate = createTranslator("en");
 const defaultCaptureCapabilities: CaptureCapabilities = {
@@ -212,10 +213,29 @@ export default function HomeScreen(): ReactNode {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
+  const privacyAcknowledgementPendingRef = useRef(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const router = useRouter();
   const services = useScreenServices();
   const { capture } = useLocalSearchParams<{ capture?: string }>();
+
+  useEffect(() => {
+    if (onboardingStep === "done") {
+      return undefined;
+    }
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      const acknowledgementPending = privacyAcknowledgementPendingRef.current;
+      const previousStep = previousOnboardingStep(onboardingStep, acknowledgementPending);
+      if (!previousStep) {
+        return false;
+      }
+      if (!acknowledgementPending) {
+        setOnboardingStep(previousStep);
+      }
+      return true;
+    });
+    return () => subscription.remove();
+  }, [onboardingStep]);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [outOfMinutesOpen, setOutOfMinutesOpen] = useState(false);
@@ -449,11 +469,21 @@ export default function HomeScreen(): ReactNode {
   }, [autoScrollKey, live.tentative_source_caption]);
 
   async function acceptThirdPartyDataSharing(): Promise<void> {
-    captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
-    await acknowledgePrivacyDisclosure();
-    setPrivacyAcknowledged(true);
-    setPrivacyConsentChecked(false);
-    setOnboardingStep("languages");
+    if (privacyAcknowledgementPendingRef.current) {
+      return;
+    }
+    privacyAcknowledgementPendingRef.current = true;
+    try {
+      captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
+      await acknowledgePrivacyDisclosure();
+      setPrivacyAcknowledged(true);
+      setPrivacyConsentChecked(false);
+      setOnboardingStep("languages");
+    } catch (failure) {
+      captureMobileFailure(failure, { operation: "acknowledge_privacy_disclosure" });
+    } finally {
+      privacyAcknowledgementPendingRef.current = false;
+    }
   }
 
   async function startAfterOnboarding(): Promise<void> {
