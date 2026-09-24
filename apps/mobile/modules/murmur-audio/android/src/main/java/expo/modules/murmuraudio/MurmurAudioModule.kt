@@ -41,12 +41,21 @@ private const val MURMUR_FRAME_DURATION_MS = 20
 private const val DEVICE_PLAYBACK_PERMISSION_REQUEST_CODE = 41_271
 private const val OVERLAY_PERMISSION_REQUEST_CODE = 41_272
 
+private data class MicrophoneAudioRoute(
+  val audioManager: AudioManager,
+  val previousMode: Int,
+  val previousSpeakerphoneOn: Boolean?,
+  var legacySpeakerphoneRouteConfigured: Boolean = false,
+  var communicationDeviceRouteConfigured: Boolean = false
+)
+
 class MurmurAudioModule : Module(), MurmurCaptureListener {
   @Volatile private var captureActive = false
   @Volatile private var playbackActive = false
   private var recorder: AudioRecord? = null
   private var captureThread: Thread? = null
   private var audioTrack: AudioTrack? = null
+  private var microphoneAudioRoute: MicrophoneAudioRoute? = null
   private var echoCanceler: AcousticEchoCanceler? = null
   private var noiseSuppressor: NoiseSuppressor? = null
   private var gainControl: AutomaticGainControl? = null
@@ -197,6 +206,13 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       scheduleCaptureDeadline(maxSessionSeconds)
       promise.resolve(statePayload("capture_started"))
     } catch (error: Throwable) {
+      if (captureActive || microphoneAudioRoute != null) {
+        try {
+          stopCaptureSync("capture_start_failed")
+        } catch (cleanupError: Throwable) {
+          error.addSuppressed(cleanupError)
+        }
+      }
       promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Microphone capture failed", error)
     }
   }
@@ -246,47 +262,169 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   }
 
   private fun startMicrophoneCapture() {
-    val minBuffer = max(
-      AudioRecord.getMinBufferSize(
-        MURMUR_SAMPLE_RATE,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-      ),
-      MURMUR_FRAME_BYTES * 8
-    )
-
-    val record = AudioRecord.Builder()
-      .setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
-      .setAudioFormat(
-        AudioFormat.Builder()
-          .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-          .setSampleRate(MURMUR_SAMPLE_RATE)
-          .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-          .build()
+    var record: AudioRecord? = null
+    try {
+      configureMicrophoneAudioRoute()
+      val minBuffer = max(
+        AudioRecord.getMinBufferSize(
+          MURMUR_SAMPLE_RATE,
+          AudioFormat.CHANNEL_IN_MONO,
+          AudioFormat.ENCODING_PCM_16BIT
+        ),
+        MURMUR_FRAME_BYTES * 8
       )
-      .setBufferSizeInBytes(minBuffer)
-      .build()
 
-    if (record.state != AudioRecord.STATE_INITIALIZED) {
-      record.release()
-      throw IllegalStateException("AudioRecord failed to initialize")
+      val createdRecord = AudioRecord.Builder()
+        .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+        .setAudioFormat(
+          AudioFormat.Builder()
+            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+            .setSampleRate(MURMUR_SAMPLE_RATE)
+            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+            .build()
+        )
+        .setBufferSizeInBytes(minBuffer)
+        .build()
+      record = createdRecord
+
+      if (createdRecord.state != AudioRecord.STATE_INITIALIZED) {
+        throw IllegalStateException("AudioRecord failed to initialize")
+      }
+
+      resetCaptureDiagnostics(CAPTURE_SOURCE_MICROPHONE)
+      startForegroundCaptureService(CAPTURE_SOURCE_MICROPHONE)
+      recorder = createdRecord
+      enableAudioEffects(createdRecord.audioSessionId)
+      createdRecord.startRecording()
+      if (createdRecord.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+        throw IllegalStateException("AudioRecord failed to start")
+      }
+      captureActive = true
+      captureThread = Thread({ captureLoop(createdRecord) }, "murmur-audio-capture").also { it.start() }
+      emitState("capture_started")
+    } catch (error: Throwable) {
+      fun cleanup(action: () -> Unit) {
+        try {
+          action()
+        } catch (cleanupError: Throwable) {
+          error.addSuppressed(cleanupError)
+        }
+      }
+
+      captureActive = false
+      val activeRecord = record
+      if (activeRecord != null) {
+        cleanup {
+          if (activeRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+            activeRecord.stop()
+          }
+        }
+      }
+      val thread = captureThread
+      captureThread = null
+      if (thread != null) {
+        cleanup {
+          try {
+            thread.join(250)
+          } catch (joinError: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw joinError
+          }
+        }
+      }
+      if (activeRecord != null) {
+        cleanup { activeRecord.release() }
+      }
+      recorder = null
+      cleanup { releaseAudioEffects() }
+      cleanup { stopForegroundCaptureService("capture_start_failed") }
+      cleanup { restoreMicrophoneAudioRoute() }
+      throw error
+    }
+  }
+
+  private fun configureMicrophoneAudioRoute() {
+    val context = appContext.reactContext
+      ?: throw IllegalStateException("React context is unavailable")
+    val audioManager = context.getSystemService(AudioManager::class.java)
+      ?: throw IllegalStateException("AudioManager is unavailable")
+    val headsetOrBluetoothConnected = hasHeadsetOrBluetoothOutput(audioManager)
+    val route = MicrophoneAudioRoute(
+      audioManager = audioManager,
+      previousMode = audioManager.mode,
+      previousSpeakerphoneOn = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        audioManager.isSpeakerphoneOn
+      } else {
+        null
+      }
+    )
+    microphoneAudioRoute = route
+    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+    if (headsetOrBluetoothConnected) return
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      val speaker = audioManager.availableCommunicationDevices.firstOrNull {
+        it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+      } ?: throw IllegalStateException("Built-in speaker is unavailable for microphone capture")
+      if (!audioManager.setCommunicationDevice(speaker)) {
+        throw IllegalStateException("Could not route microphone capture to the built-in speaker")
+      }
+      route.communicationDeviceRouteConfigured = true
+      return
     }
 
-    resetCaptureDiagnostics(CAPTURE_SOURCE_MICROPHONE)
-    startForegroundCaptureService(CAPTURE_SOURCE_MICROPHONE)
-    recorder = record
-    enableAudioEffects(record.audioSessionId)
-    try {
-      record.startRecording()
-      captureActive = true
-      captureThread = Thread({ captureLoop(record) }, "murmur-audio-capture").also { it.start() }
-      emitState("capture_started")
-    } catch (error: RuntimeException) {
-      releaseAudioEffects()
-      recorder = null
-      record.release()
-      stopForegroundCaptureService("capture_start_failed")
-      throw error
+    route.legacySpeakerphoneRouteConfigured = true
+    audioManager.isSpeakerphoneOn = true
+  }
+
+  private fun hasHeadsetOrBluetoothOutput(audioManager: AudioManager): Boolean =
+    audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
+      when (device.type) {
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> true
+        else -> (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+          device.type == AudioDeviceInfo.TYPE_USB_HEADSET) ||
+          (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+            device.type == AudioDeviceInfo.TYPE_HEARING_AID) ||
+          (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (
+            device.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+              device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER
+            ))
+      }
+    }
+
+  private fun restoreMicrophoneAudioRoute() {
+    val route = microphoneAudioRoute ?: return
+    microphoneAudioRoute = null
+    var restorationError: Throwable? = null
+
+    fun restore(action: () -> Unit) {
+      try {
+        action()
+      } catch (error: Throwable) {
+        val previousError = restorationError
+        if (previousError == null) {
+          restorationError = error
+        } else {
+          previousError.addSuppressed(error)
+        }
+      }
+    }
+
+    if (route.communicationDeviceRouteConfigured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      restore { route.audioManager.clearCommunicationDevice() }
+    }
+    if (route.legacySpeakerphoneRouteConfigured) {
+      val previousSpeakerphoneOn = route.previousSpeakerphoneOn
+      if (previousSpeakerphoneOn != null) {
+        restore { route.audioManager.isSpeakerphoneOn = previousSpeakerphoneOn }
+      }
+    }
+    restore { route.audioManager.mode = route.previousMode }
+    restorationError?.let {
+      throw IllegalStateException("Failed to restore microphone audio routing", it)
     }
   }
 
@@ -353,17 +491,52 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       return
     }
     captureActive = false
-    try {
-      recorder?.stop()
-    } catch (_: IllegalStateException) {
+    var cleanupError: Throwable? = null
+
+    fun cleanup(action: () -> Unit) {
+      try {
+        action()
+      } catch (error: Throwable) {
+        val previousError = cleanupError
+        if (previousError == null) {
+          cleanupError = error
+        } else {
+          previousError.addSuppressed(error)
+        }
+      }
     }
-    captureThread?.join(250)
+
+    val activeRecord = recorder
+    if (activeRecord != null) {
+      cleanup {
+        if (activeRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+          activeRecord.stop()
+        }
+      }
+    }
+    val thread = captureThread
     captureThread = null
-    recorder?.release()
     recorder = null
-    releaseAudioEffects()
-    stopForegroundCaptureService(reason)
-    emitState(reason)
+    if (thread != null) {
+      cleanup {
+        try {
+          thread.join(250)
+        } catch (joinError: InterruptedException) {
+          Thread.currentThread().interrupt()
+          throw joinError
+        }
+      }
+    }
+    if (activeRecord != null) {
+      cleanup { activeRecord.release() }
+    }
+    cleanup { releaseAudioEffects() }
+    cleanup { stopForegroundCaptureService(reason) }
+    cleanup { restoreMicrophoneAudioRoute() }
+    cleanup { emitState(reason) }
+    cleanupError?.let {
+      throw IllegalStateException("Failed to stop microphone capture", it)
+    }
   }
 
   private fun startPlaybackSync() {
@@ -380,7 +553,11 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     audioTrack = AudioTrack.Builder()
       .setAudioAttributes(
         AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_MEDIA)
+          .setUsage(if (captureSource == CAPTURE_SOURCE_MICROPHONE) {
+            AudioAttributes.USAGE_VOICE_COMMUNICATION
+          } else {
+            AudioAttributes.USAGE_MEDIA
+          })
           .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
           .build()
       )
@@ -567,7 +744,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       "audio_source" to if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
         "audio_playback_capture"
       } else {
-        "voice_recognition"
+        "voice_communication"
       },
       "automatic_gain_control" to currentAudioEffectState(
         AutomaticGainControl.isAvailable(),
@@ -592,7 +769,11 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       "playback_chunks_received" to playbackChunksReceived.get(),
       "playback_short_writes" to playbackShortWrites.get(),
       "playback_underrun_count" to lastPlaybackUnderrunCount,
-      "playback_usage" to "media",
+      "playback_usage" to if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+        "media"
+      } else {
+        "voice_communication"
+      },
       "playback_write_errors" to playbackWriteErrors.get(),
       "projection_active" to (captureDiagnostics["projection_active"] ?: false),
       "overlay_visible" to (captureDiagnostics["overlay_visible"] ?: false),

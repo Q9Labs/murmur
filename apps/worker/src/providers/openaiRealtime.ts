@@ -40,7 +40,10 @@ export function createSessionUpdate(targetLanguage: LanguageCode, sourceTranscri
     type: "session.update",
     session: {
       audio: {
-        ...(sourceTranscript ? { input: { transcription: { model: "gpt-realtime-whisper" } } } : {}),
+        input: {
+          noise_reduction: { type: "near_field" },
+          ...(sourceTranscript ? { transcription: { model: "gpt-realtime-whisper" } } : {}),
+        },
         output: {
           language: toOpenAILanguage(targetLanguage),
         },

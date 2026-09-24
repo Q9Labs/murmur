@@ -10,11 +10,12 @@ import {
 // cspell:ignore AQID
 
 describe("OpenAI realtime translation adapter", () => {
-  it("does not enable source transcription by default", () => {
+  it("enables near-field noise reduction without source transcription by default", () => {
     expect(JSON.parse(createSessionUpdate("pt-BR"))).toEqual({
       type: "session.update",
       session: {
         audio: {
+          input: { noise_reduction: { type: "near_field" } },
           output: { language: "pt" },
         },
       },
@@ -23,6 +24,7 @@ describe("OpenAI realtime translation adapter", () => {
       type: "session.update",
       session: {
         audio: {
+          input: { noise_reduction: { type: "near_field" } },
           output: { language: "zh" },
         },
       },
