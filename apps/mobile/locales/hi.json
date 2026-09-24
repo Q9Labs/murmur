@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "लाइव अनुवाद के लिए बोली भेजने को Murmur को माइक्रोफ़ोन चाहिए।"
+  "ios": {
+    "NSMicrophoneUsageDescription": "लाइव अनुवाद के लिए बोली भेजने को Murmur को माइक्रोफ़ोन चाहिए।"
+  }
 }

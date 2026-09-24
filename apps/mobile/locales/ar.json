@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "يحتاج Murmur إلى الميكروفون ليرسل الكلام للترجمة المباشرة."
+  "ios": {
+    "NSMicrophoneUsageDescription": "يحتاج Murmur إلى الميكروفون ليرسل الكلام للترجمة المباشرة."
+  }
 }

@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "Murmur, konuşmayı canlı çeviriye göndermek için mikrofona ihtiyaç duyar."
+  "ios": {
+    "NSMicrophoneUsageDescription": "Murmur, konuşmayı canlı çeviriye göndermek için mikrofona ihtiyaç duyar."
+  }
 }

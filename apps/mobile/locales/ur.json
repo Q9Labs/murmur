@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "براہِ راست ترجمے کے لیے آواز بھیجنے کو Murmur کو مائیکروفون چاہیے۔"
+  "ios": {
+    "NSMicrophoneUsageDescription": "براہِ راست ترجمے کے لیے آواز بھیجنے کو Murmur کو مائیکروفون چاہیے۔"
+  }
 }
