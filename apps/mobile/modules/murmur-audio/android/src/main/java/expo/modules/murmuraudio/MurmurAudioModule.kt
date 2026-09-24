@@ -90,6 +90,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   private var playbackQueuedMs = 0
   private var playbackEndsAtMs = 0L
   private var playbackIdleGeneration = 0
+  private var playbackResampleInputSamples = 0L
+  private var playbackResampleNextOutputPosition = 0.0
+  private var playbackResamplePreviousSample: Int? = null
   private val mainHandler = Handler(Looper.getMainLooper())
   private val captureDeadline = Runnable {
     if (captureActive || pendingCaptureStart != null) {
@@ -217,6 +220,8 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     }
     if (playbackActive) {
       clearPlaybackSync("capture_restart")
+    } else {
+      resetPlaybackResampler()
     }
 
     captureSource = source
@@ -753,16 +758,21 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
   private fun enqueuePcm16(data: ByteArray) {
     if (data.isEmpty()) return
-    if (!playbackActive) startPlaybackSync()
-    playbackChunksReceived.incrementAndGet()
-    playbackBytesRequested.addAndGet(data.size.toLong())
-    val track = audioTrack ?: throw IllegalStateException("AudioTrack is not available")
     val sampleRate = playbackSampleRate()
     val playbackData = if (sampleRate == MURMUR_SAMPLE_RATE) {
+      resetPlaybackResampler()
       data
     } else {
-      resamplePcm16(data, MURMUR_SAMPLE_RATE, sampleRate)
+      resamplePlaybackPcm16(data)
     }
+    playbackChunksReceived.incrementAndGet()
+    playbackBytesRequested.addAndGet(data.size.toLong())
+    if (playbackData.isEmpty()) {
+      emitState("playback_enqueued")
+      return
+    }
+    if (!playbackActive) startPlaybackSync()
+    val track = audioTrack ?: throw IllegalStateException("AudioTrack is not available")
     var totalWritten = 0
     while (totalWritten < playbackData.size) {
       val written = track.write(playbackData, totalWritten, playbackData.size - totalWritten)
@@ -795,6 +805,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
 
   private fun clearPlaybackSync(reason: String) {
     playbackIdleGeneration += 1
+    resetPlaybackResampler()
     rememberPlaybackState()
     val track = audioTrack
     audioTrack = null
@@ -1288,6 +1299,43 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       output[outputOffset + 1] = (sample shr 8).toByte()
     }
     return output
+  }
+
+  private fun resamplePlaybackPcm16(data: ByteArray): ByteArray {
+    if (data.size % 2 != 0) {
+      throw IllegalArgumentException("PCM16 audio data must contain complete samples")
+    }
+
+    val output = ByteArray(data.size)
+    var outputOffset = 0
+    for (inputOffset in data.indices step 2) {
+      val sample = readPcm16Sample(data, inputOffset / 2)
+      val inputIndex = playbackResampleInputSamples
+      while (playbackResampleNextOutputPosition <= inputIndex.toDouble()) {
+        val leftIndex = playbackResampleNextOutputPosition.toLong()
+        val outputSample = if (leftIndex == inputIndex) {
+          sample
+        } else {
+          val previousSample = playbackResamplePreviousSample
+            ?: throw IllegalStateException("Playback resampler boundary sample is unavailable")
+          val fraction = playbackResampleNextOutputPosition - leftIndex
+          (previousSample + (sample - previousSample) * fraction).toInt()
+        }.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+        output[outputOffset] = outputSample.toByte()
+        output[outputOffset + 1] = (outputSample shr 8).toByte()
+        outputOffset += 2
+        playbackResampleNextOutputPosition += MURMUR_SAMPLE_RATE.toDouble() / LEGACY_SCO_PLAYBACK_SAMPLE_RATE
+      }
+      playbackResamplePreviousSample = sample
+      playbackResampleInputSamples += 1
+    }
+    return output.copyOf(outputOffset)
+  }
+
+  private fun resetPlaybackResampler() {
+    playbackResampleInputSamples = 0L
+    playbackResampleNextOutputPosition = 0.0
+    playbackResamplePreviousSample = null
   }
 
   private fun readPcm16Sample(data: ByteArray, sampleIndex: Int): Int {
