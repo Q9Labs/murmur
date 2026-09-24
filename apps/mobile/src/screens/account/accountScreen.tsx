@@ -82,15 +82,8 @@ export function AccountScreen(): ReactNode {
           title={t("account.signIn")}
         />
       ) : null}
-      <RowGroup>
-        <LinkRow
-          disabled={busy}
-          label={t("account.deleteAccount")}
-          onPress={() => confirmAccountDeletion(billing.deleteAccount, t)}
-          tone="danger"
-        />
-      </RowGroup>
       <StatusLine error={billing.error} notice={billing.notice} />
+      <DeleteAccountAction disabled={busy} onPress={() => confirmAccountDeletion(billing.deleteAccount, t)} />
     </ScreenScaffold>
   );
 }
@@ -193,6 +186,26 @@ function SignInPrompt(props: {
   );
 }
 
+// Deleting is rare and irreversible, so it is a quiet text action at the foot of the screen
+// rather than a row as heavy as the ones above it.
+function DeleteAccountAction(props: { disabled: boolean; onPress: () => void }): ReactNode {
+  const colors = useMurmurTheme();
+  const styles = colors.dark ? darkStyles : lightStyles;
+  const { t } = useUiLocale();
+  return (
+    <Pressable
+      accessibilityLabel={t("account.deleteAccount")}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: props.disabled }}
+      disabled={props.disabled}
+      onPress={props.onPress}
+      style={({ pressed }) => [styles.deleteAction, (pressed || props.disabled) && styles.pressed]}
+    >
+      <Text style={styles.deleteText}>{t("account.deleteAccount")}</Text>
+    </Pressable>
+  );
+}
+
 function confirmAccountSwitch(switchAccount: () => Promise<void>, t: Translate): void {
   Alert.alert(
     t("account.switchTitle"),
@@ -224,6 +237,17 @@ function createAccountStyles(theme: MurmurTheme) {
       fontWeight: "900",
       letterSpacing: -1.2,
       lineHeight: 62,
+    },
+    deleteAction: {
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: "auto",
+      minHeight: 48,
+    },
+    deleteText: {
+      color: theme.danger,
+      fontSize: 16,
+      fontWeight: "700",
     },
     detail: {
       color: theme.onSelectedSecondary,
