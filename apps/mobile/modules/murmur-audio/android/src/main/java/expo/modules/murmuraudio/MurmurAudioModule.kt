@@ -21,6 +21,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Base64
+import android.util.Log
 import android.net.Uri
 import android.media.projection.MediaProjectionManager
 import com.google.android.gms.tasks.Tasks
@@ -45,7 +46,9 @@ private data class MicrophoneAudioRoute(
   val audioManager: AudioManager,
   val previousMode: Int,
   val previousSpeakerphoneOn: Boolean?,
+  val previousBluetoothScoOn: Boolean?,
   var legacySpeakerphoneRouteConfigured: Boolean = false,
+  var legacyBluetoothScoRouteConfigured: Boolean = false,
   var communicationDeviceRouteConfigured: Boolean = false
 )
 
@@ -85,8 +88,24 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   private val mainHandler = Handler(Looper.getMainLooper())
   private val captureDeadline = Runnable {
     if (captureActive || pendingCaptureStart != null) {
-      stopCaptureSync("capture_deadline")
-      clearPlaybackSync("capture_deadline")
+      var cleanupError: Throwable? = null
+
+      fun cleanup(action: () -> Unit) {
+        try {
+          action()
+        } catch (error: Throwable) {
+          val previousError = cleanupError
+          if (previousError == null) {
+            cleanupError = error
+          } else {
+            previousError.addSuppressed(error)
+          }
+        }
+      }
+
+      cleanup { stopCaptureSync("capture_deadline") }
+      cleanup { clearPlaybackSync("capture_deadline") }
+      cleanupError?.let { reportCaptureCleanupFailure("capture_deadline", it) }
     }
   }
   @Volatile private var captureSource = CAPTURE_SOURCE_MICROPHONE
@@ -348,7 +367,13 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       ?: throw IllegalStateException("React context is unavailable")
     val audioManager = context.getSystemService(AudioManager::class.java)
       ?: throw IllegalStateException("AudioManager is unavailable")
-    val headsetOrBluetoothConnected = hasHeadsetOrBluetoothOutput(audioManager)
+    val connectedOutputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+    val bluetoothScoConnected = connectedOutputs.any {
+      it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+    }
+    val wiredOrUsbHeadsetConnected = connectedOutputs.any {
+      isWiredOrUsbOutput(it.type)
+    }
     val route = MicrophoneAudioRoute(
       audioManager = audioManager,
       previousMode = audioManager.mode,
@@ -356,44 +381,68 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         audioManager.isSpeakerphoneOn
       } else {
         null
+      },
+      previousBluetoothScoOn = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        audioManager.isBluetoothScoOn
+      } else {
+        null
       }
     )
     microphoneAudioRoute = route
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-    if (headsetOrBluetoothConnected) return
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      val speaker = audioManager.availableCommunicationDevices.firstOrNull {
-        it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-      } ?: throw IllegalStateException("Built-in speaker is unavailable for microphone capture")
-      if (!audioManager.setCommunicationDevice(speaker)) {
-        throw IllegalStateException("Could not route microphone capture to the built-in speaker")
+      val communicationDevice = audioManager.availableCommunicationDevices
+        .mapNotNull { device ->
+          communicationDevicePriority(device.type)?.let { priority -> priority to device }
+        }
+        .minByOrNull { it.first }
+        ?.second
+        ?: audioManager.availableCommunicationDevices.firstOrNull {
+          it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        }
+        ?: throw IllegalStateException("No communication device is available for microphone capture")
+      if (!audioManager.setCommunicationDevice(communicationDevice)) {
+        throw IllegalStateException("Could not route microphone capture to ${communicationDevice.productName}")
       }
       route.communicationDeviceRouteConfigured = true
       return
     }
 
+    if (bluetoothScoConnected) {
+      if (route.previousBluetoothScoOn != true) {
+        route.legacyBluetoothScoRouteConfigured = true
+        audioManager.startBluetoothSco()
+      }
+      return
+    }
+    if (wiredOrUsbHeadsetConnected) return
+
     route.legacySpeakerphoneRouteConfigured = true
     audioManager.isSpeakerphoneOn = true
   }
 
-  private fun hasHeadsetOrBluetoothOutput(audioManager: AudioManager): Boolean =
-    audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
-      when (device.type) {
-        AudioDeviceInfo.TYPE_WIRED_HEADSET,
-        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
-        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
-        AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> true
-        else -> (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-          device.type == AudioDeviceInfo.TYPE_USB_HEADSET) ||
-          (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-            device.type == AudioDeviceInfo.TYPE_HEARING_AID) ||
-          (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (
-            device.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
-              device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER
-            ))
-      }
-    }
+  private fun communicationDevicePriority(type: Int): Int? = when (type) {
+    AudioDeviceInfo.TYPE_BLE_HEADSET -> 0
+    AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> 1
+    AudioDeviceInfo.TYPE_WIRED_HEADSET,
+    AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+    AudioDeviceInfo.TYPE_USB_HEADSET,
+    AudioDeviceInfo.TYPE_USB_DEVICE -> 2
+    AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> 3
+    AudioDeviceInfo.TYPE_BLE_SPEAKER -> 4
+    AudioDeviceInfo.TYPE_HEARING_AID -> 5
+    else -> null
+  }
+
+  private fun isWiredOrUsbOutput(type: Int): Boolean = when (type) {
+    AudioDeviceInfo.TYPE_WIRED_HEADSET,
+    AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> true
+    else -> (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+      type == AudioDeviceInfo.TYPE_USB_HEADSET) ||
+      (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+        type == AudioDeviceInfo.TYPE_USB_DEVICE)
+  }
 
   private fun restoreMicrophoneAudioRoute() {
     val route = microphoneAudioRoute ?: return
@@ -416,6 +465,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     if (route.communicationDeviceRouteConfigured && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       restore { route.audioManager.clearCommunicationDevice() }
     }
+    if (route.legacyBluetoothScoRouteConfigured) {
+      restore { route.audioManager.stopBluetoothSco() }
+    }
     if (route.legacySpeakerphoneRouteConfigured) {
       val previousSpeakerphoneOn = route.previousSpeakerphoneOn
       if (previousSpeakerphoneOn != null) {
@@ -425,6 +477,16 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     restore { route.audioManager.mode = route.previousMode }
     restorationError?.let {
       throw IllegalStateException("Failed to restore microphone audio routing", it)
+    }
+  }
+
+  private fun reportCaptureCleanupFailure(reason: String, error: Throwable) {
+    Log.e("MurmurAudio", "Audio cleanup failed after $reason", error)
+    try {
+      emitState("capture_cleanup_failed")
+    } catch (reportError: Throwable) {
+      error.addSuppressed(reportError)
+      Log.e("MurmurAudio", "Could not emit the audio cleanup failure state", reportError)
     }
   }
 
@@ -479,15 +541,33 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     }
   }
 
-  private fun stopCaptureSync(reason: String) {
+  private fun stopCaptureSync(reason: String, stopService: Boolean = true) {
     mainHandler.removeCallbacks(captureDeadline)
     if (captureSource == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
       projectionResultData = null
       pendingCaptureStart?.reject("E_CAPTURE_STOPPED", "Capture stopped before startup completed", null)
       pendingCaptureStart = null
       captureActive = false
-      stopForegroundCaptureService(reason)
-      emitState(reason)
+      var cleanupError: Throwable? = null
+
+      fun cleanup(action: () -> Unit) {
+        try {
+          action()
+        } catch (error: Throwable) {
+          val previousError = cleanupError
+          if (previousError == null) {
+            cleanupError = error
+          } else {
+            previousError.addSuppressed(error)
+          }
+        }
+      }
+
+      if (stopService) {
+        cleanup { stopForegroundCaptureService(reason) }
+      }
+      cleanup { emitState(reason) }
+      cleanupError?.let { reportCaptureCleanupFailure(reason, it) }
       return
     }
     captureActive = false
@@ -531,12 +611,12 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       cleanup { activeRecord.release() }
     }
     cleanup { releaseAudioEffects() }
-    cleanup { stopForegroundCaptureService(reason) }
+    if (stopService) {
+      cleanup { stopForegroundCaptureService(reason) }
+    }
     cleanup { restoreMicrophoneAudioRoute() }
     cleanup { emitState(reason) }
-    cleanupError?.let {
-      throw IllegalStateException("Failed to stop microphone capture", it)
-    }
+    cleanupError?.let { reportCaptureCleanupFailure(reason, it) }
   }
 
   private fun startPlaybackSync() {
@@ -997,17 +1077,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     mainHandler.removeCallbacks(captureDeadline)
     projectionResultData = null
     if (source == CAPTURE_SOURCE_MICROPHONE) {
-      captureActive = false
-      try {
-        recorder?.stop()
-      } catch (_: IllegalStateException) {
-      }
-      captureThread?.join(250)
-      captureThread = null
-      recorder?.release()
-      recorder = null
-      releaseAudioEffects()
-      emitState(reason)
+      stopCaptureSync(reason, stopService = false)
       return
     }
     captureActive = false
@@ -1021,6 +1091,10 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
   override fun onServiceCaptureError(source: String, reason: String, error: Throwable?) {
     mainHandler.removeCallbacks(captureDeadline)
     projectionResultData = null
+    if (source == CAPTURE_SOURCE_MICROPHONE) {
+      stopCaptureSync(reason, stopService = false)
+      return
+    }
     captureActive = false
     pendingCaptureStart?.reject(
       "E_CAPTURE_START_FAILED",
