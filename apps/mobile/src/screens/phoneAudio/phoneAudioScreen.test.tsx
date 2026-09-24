@@ -8,8 +8,9 @@ import type { ScreenServices } from "../screenServices";
 
 const state = vi.hoisted(() => ({ services: null as ScreenServices | null }));
 
-vi.mock("../../home/illustrations", () => ({ phoneAudioGiftIllustration: 1 }));
-vi.mock("../proGate", () => ({ ProGate: (props: { body: string; title: string }) => <p>gate {props.body}</p> }));
+vi.mock("../../home/illustrations", () => ({ phoneAudioGiftIllustration: 1, phoneAudioIllustration: 2 }));
+vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("../proGate", () => ({ ProGate: (props: { lead: string; title: string }) => <p>gate {props.title}. {props.lead}</p> }));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
@@ -49,7 +50,7 @@ describe("phone audio screen", () => {
 
   it("gates free listeners without a gift behind Pro", () => {
     state.services = fixtureServices();
-    expect(renderToStaticMarkup(<PhoneAudioScreen />)).toContain("Phone audio is part of Pro.");
+    expect(renderToStaticMarkup(<PhoneAudioScreen />)).toContain("Pro translates videos, calls and podcasts playing on this phone.");
   });
 
   it("lets Pro listeners straight in", () => {

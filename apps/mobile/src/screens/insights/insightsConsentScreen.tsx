@@ -1,12 +1,13 @@
 import { useRouter } from "expo-router";
 import { Settings, ShieldCheck, Sparkles } from "lucide-react-native";
-import { useState, type ComponentType, type ReactNode } from "react";
-import { Text, View } from "react-native";
+import { useState, type ReactNode } from "react";
+import { Text } from "react-native";
 
 import { sessionInsightsIllustration } from "../../home/illustrations";
 import type { MessageKey } from "../../i18n/catalogs/en";
 import { failureCopy } from "../../i18n/localizedError";
 import { useUiLocale } from "../../i18n/runtime";
+import { type HeroPoint, HeroPoints } from "../heroPoints";
 import { PrimaryAction, QuietAction, ScreenScaffold, StatusLine } from "../screenScaffold";
 import { useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
@@ -15,7 +16,7 @@ import { useScreenStyles } from "../styles";
 // we want the help, but this consent sends translations to a third-party AI, so it must
 // stay freely given: nothing is pre-selected, No is always visible, readable and just as
 // easy to tap, and the points below state plainly what happens either way.
-const disclosurePoints: ReadonlyArray<{ icon: ComponentType<{ color?: string; size?: number }>; text: MessageKey }> = [
+const disclosurePoints: ReadonlyArray<{ icon: HeroPoint["icon"]; text: MessageKey }> = [
   { icon: Sparkles, text: "insights.summary" },
   { icon: ShieldCheck, text: "insights.kept" },
   { icon: Settings, text: "insights.changeLater" },
@@ -24,7 +25,7 @@ const disclosurePoints: ReadonlyArray<{ icon: ComponentType<{ color?: string; si
 export function InsightsConsentScreen(): ReactNode {
   const router = useRouter();
   const services = useScreenServices();
-  const { colors, styles } = useScreenStyles();
+  const { styles } = useScreenStyles();
   const ui = useUiLocale();
   const { t } = ui;
   const [saving, setSaving] = useState(false);
@@ -54,19 +55,7 @@ export function InsightsConsentScreen(): ReactNode {
       title={t("insights.title")}
     >
       <Text style={styles.heroLead}>{t("insights.lead")}</Text>
-      <View style={styles.points}>
-        {disclosurePoints.map((point) => {
-          const Icon = point.icon;
-          return (
-            <View key={point.text} style={styles.point}>
-              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.pointIcon}>
-                <Icon color={colors.primary} size={20} />
-              </View>
-              <Text style={styles.pointText}>{t(point.text)}</Text>
-            </View>
-          );
-        })}
-      </View>
+      <HeroPoints points={disclosurePoints.map((point) => ({ icon: point.icon, text: t(point.text) }))} />
     </ScreenScaffold>
   );
 }

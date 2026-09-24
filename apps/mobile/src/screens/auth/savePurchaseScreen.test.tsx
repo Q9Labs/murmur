@@ -20,6 +20,7 @@ vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("react-native-svg", () => ({ default: () => null, Path: () => null }));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("../../home/illustrations", () => ({ savePurchaseIllustration: 1 }));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 
 import { SavePurchaseScreen } from "./savePurchaseScreen";

@@ -43,7 +43,9 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       flexDirection: "row",
       gap: 12,
     },
+    // Grows to the visible height so a short screen, like an empty state, can centre itself.
     content: {
+      flexGrow: 1,
       gap: 24,
       paddingBottom: 40,
       paddingHorizontal: 20,
@@ -78,6 +80,36 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     },
     danger: {
       color: theme.danger,
+    },
+    emptyArtwork: {
+      aspectRatio: 240 / 168,
+      marginVertical: -20,
+      maxWidth: 320,
+      width: "86%",
+    },
+    emptyBody: {
+      color: theme.secondaryText,
+      fontSize: 16,
+      fontWeight: "500",
+      lineHeight: 23,
+      maxWidth: 320,
+      textAlign: "center",
+    },
+    // Centred in the space under the title, lifted slightly so it reads as the screen's focus.
+    emptyState: {
+      alignItems: "center",
+      flex: 1,
+      gap: 8,
+      justifyContent: "center",
+      paddingBottom: 72,
+    },
+    emptyTitle: {
+      color: theme.primary,
+      fontSize: 22,
+      fontWeight: "800",
+      letterSpacing: -0.2,
+      marginTop: 4,
+      textAlign: "center",
     },
     footer: {
       gap: 10,
