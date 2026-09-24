@@ -135,7 +135,7 @@ export function SpanTimeline({
         {...timelineScrollHandlers(refs)}
       >
         {!hasTimeline ? (
-          <Text numberOfLines={2} style={[textStyles.source, uiTextDirectionStyle(direction)]}>
+          <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
             {timelineEmptyText(
               viewModel.isLive,
               showSource ? null : viewModel.targetLanguageDisplayName,

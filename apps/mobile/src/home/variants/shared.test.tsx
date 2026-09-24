@@ -17,7 +17,7 @@ vi.mock("posthog-react-native", () => ({
 beforeEach(() => resetRecorded());
 
 describe("SpanTimeline empty state", () => {
-  it("allows the translation instruction to wrap to two lines", () => {
+  it("lets the translation instruction wrap without a line cap", () => {
     const live = {
       source_transcript_enabled: false,
       spans: [],
@@ -42,7 +42,7 @@ describe("SpanTimeline empty state", () => {
 
     expect(recorded.texts).toContainEqual({
       content: "Tap Listen and hear the room in Arabic.",
-      numberOfLines: 2,
+      numberOfLines: undefined,
     });
   });
 });
