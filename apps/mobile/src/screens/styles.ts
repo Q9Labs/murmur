@@ -145,6 +145,11 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       paddingHorizontal: 24,
       paddingTop: 16,
     },
+    footerScroll: {
+      flexGrow: 0,
+      flexShrink: 1,
+      maxHeight: "60%",
+    },
     heroFooter: {
       gap: 12,
       paddingBottom: 8,

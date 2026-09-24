@@ -60,7 +60,16 @@ export function ScreenScaffold(props: {
           </View>
         ) : props.children}
       </ScrollView>
-      {props.footer ? <View style={props.artwork ? styles.heroFooter : styles.footer}>{props.footer}</View> : null}
+      {props.footer ? (
+        // The footer scrolls on its own when many actions or large text can't fit.
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={props.artwork ? styles.heroFooter : styles.footer}
+          style={styles.footerScroll}
+        >
+          {props.footer}
+        </ScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }

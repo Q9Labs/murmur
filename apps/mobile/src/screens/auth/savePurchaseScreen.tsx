@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { Clock, KeyRound } from "lucide-react-native";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { AccessibilityInfo } from "react-native";
 
 import { savePurchaseIllustration } from "../../home/illustrations";
 import { useUiLocale } from "../../i18n/runtime";
@@ -16,8 +17,17 @@ export function SavePurchaseScreen(): ReactNode {
   const { t } = useUiLocale();
   const [error, setError] = useState<string | null>(null);
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
+  const saved = billing.customer?.isRegistered === true;
+  const savedAnnouncement = `${t("savePurchase.savedTitle")}. ${t("savePurchase.savedBody")}`;
 
-  if (billing.customer?.isRegistered) {
+  // Sign-in swaps the focused controls for the saved state in place, so screen readers hear it.
+  useEffect(() => {
+    if (saved) {
+      AccessibilityInfo.announceForAccessibility(savedAnnouncement);
+    }
+  }, [saved, savedAnnouncement]);
+
+  if (saved) {
     return (
       <ScreenScaffold
         artwork={savePurchaseIllustration}

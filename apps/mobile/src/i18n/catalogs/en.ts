@@ -242,7 +242,7 @@ export const enCatalog = {
   "proGate.notNow": "Not now",
   "history.gateTitle": "Keep every conversation",
   "history.gateLead": "Pro saves your conversations so you can come back to them.",
-  "history.gateRevisit": "Read, copy or share them anytime.",
+  "history.gateRevisit": "Read, copy or share them later.",
   "history.gateOnThisPhone": "Saved on this phone only.",
   "history.gateAlsoInPro": "Pro also gives you more minutes a month and sessions up to an hour.",
   "history.title": "History",
