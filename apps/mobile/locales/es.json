@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "Murmur necesita el micrófono para enviar la voz a la traducción en vivo."
+  "ios": {
+    "NSMicrophoneUsageDescription": "Murmur necesita el micrófono para enviar la voz a la traducción en vivo."
+  }
 }

@@ -1,3 +1,5 @@
 {
-  "NSMicrophoneUsageDescription": "Murmur braucht das Mikrofon, um Sprache für die Liveübersetzung zu senden."
+  "ios": {
+    "NSMicrophoneUsageDescription": "Murmur braucht das Mikrofon, um Sprache für die Liveübersetzung zu senden."
+  }
 }
