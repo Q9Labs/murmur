@@ -1,15 +1,24 @@
 import { useRouter } from "expo-router";
+import { AudioLines, Captions, Clock } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Image, Text, View } from "react-native";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
 import { failureCopy } from "../../i18n/localizedError";
 import { formatUiNumber, useUiLocale } from "../../i18n/runtime";
-import { phoneAudioGiftIllustration } from "../../home/illustrations";
+import { phoneAudioGiftIllustration, phoneAudioIllustration } from "../../home/illustrations";
+import type { HeroPoint } from "../heroPoints";
 import { ProGate } from "../proGate";
 import { PrimaryAction, QuietAction, ScreenScaffold, StatusLine } from "../screenScaffold";
 import { useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
 import { phoneAudioAccess, phoneAudioGiftMinutes } from "./phoneAudioAccess";
+
+const phoneAudioBenefits: ReadonlyArray<{ icon: HeroPoint["icon"]; text: MessageKey }> = [
+  { icon: AudioLines, text: "phoneAudio.gateDirect" },
+  { icon: Captions, text: "phoneAudio.gateCaptions" },
+  { icon: Clock, text: "phoneAudio.gateAlsoInPro" },
+];
 
 export function PhoneAudioScreen(): ReactNode {
   const router = useRouter();
@@ -24,7 +33,14 @@ export function PhoneAudioScreen(): ReactNode {
   const usePhoneAudio = () => router.dismissTo({ params: { capture: "phone-audio" }, pathname: "/" });
 
   if (access === "locked") {
-    return <ProGate body={t("phoneAudio.gateBody")} title={t("capture.phoneAudio")} />;
+    return (
+      <ProGate
+        artwork={phoneAudioIllustration}
+        benefits={phoneAudioBenefits.map((benefit) => ({ icon: benefit.icon, text: t(benefit.text) }))}
+        lead={t("phoneAudio.gateLead")}
+        title={t("phoneAudio.gateTitle")}
+      />
+    );
   }
 
   if (access === "gift_claimable") {

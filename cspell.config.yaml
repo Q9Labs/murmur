@@ -211,6 +211,7 @@ words:
   - achats
   - acheter
   - achou
+  - acompa
   - acompanhe
   - activ
   - activadas
@@ -265,6 +266,7 @@ words:
   - angebotspreis
   - angemeldet
   - anlat
+  - Anlegen
   - anmeldecode
   - anmelden
   - anmeldung
@@ -303,6 +305,7 @@ words:
   - assinatura
   - assinaturas
   - assunto
+  - atas
   - atau
   - atenci
   - atendimento
@@ -361,6 +364,7 @@ words:
   - baru
   - batalkan
   - beende
+  - beendest
   - beendet
   - behalte
   - behalten
@@ -421,6 +425,7 @@ words:
   - borraron
   - braucht
   - buka
+  - bukan
   - bulan
   - bulanan
   - bulle
@@ -475,6 +480,7 @@ words:
   - cihaz
   - cihazda
   - ckgesetzt
+  - ckkommen
   - cksetzen
   - ckzuholen
   - clairs
@@ -486,10 +492,12 @@ words:
   - cocok
   - commencer
   - commencez
+  - comparte
   - compartido
   - compartilhado
   - compartilhamento
   - compartilhar
+  - compartilhe
   - compartir
   - compartirlas
   - complet
@@ -520,6 +528,7 @@ words:
   - consegue
   - conseguir
   - conseguiu
+  - Conserva
   - conservar
   - conservarla
   - consiga
@@ -530,16 +539,19 @@ words:
   - contenido
   - continuam
   - continuar
+  - contrase
   - conversa
   - conversaci
   - conversaciones
   - conversas
   - convidado
   - copi
+  - copia
   - copiado
   - copiar
   - copiarlas
   - copie
+  - copiez
   - correo
   - cort
   - corto
@@ -550,7 +562,9 @@ words:
   - couter
   - coutez
   - cran
+  - crear
   - cretsiz
+  - criar
   - cualquier
   - cuando
   - cuenta
@@ -568,6 +582,7 @@ words:
   - dann
   - dans
   - daqui
+  - darauf
   - dari
   - dasar
   - dass
@@ -580,6 +595,7 @@ words:
   - deine
   - deinen
   - deiner
+  - dejas
   - demandes
   - demandez
   - demasiadas
@@ -613,6 +629,7 @@ words:
   - desligado
   - desligar
   - despu
+  - dessus
   - deste
   - destek
   - destekle
@@ -630,6 +647,7 @@ words:
   - dibaca
   - dibagikan
   - dibatalkan
+  - dibuat
   - dical
   - dich
   - dico
@@ -643,6 +661,7 @@ words:
   - digite
   - digo
   - dihapus
+  - diingat
   - diizinkan
   - dikirim
   - diklaim
@@ -667,8 +686,12 @@ words:
   - dipulihkan
   - diputar
   - direcci
+  - directamente
+  - directement
   - directo
+  - direkt
   - direset
+  - diretamente
   - disalin
   - disiapkan
   - disimpan
@@ -697,6 +720,7 @@ words:
   - dukungan
   - durdu
   - durdur
+  - durdurdu
   - durduruluyor
   - echtzeit
   - eder
@@ -743,10 +767,12 @@ words:
   - endonym
   - engelliyor
   - enregistr
+  - enregistre
   - enregistrement
   - enregistrer
   - entendez
   - entfernt
+  - enth
   - entrando
   - entrar
   - entrou
@@ -758,6 +784,7 @@ words:
   - enviarme
   - enviaron
   - envoyer
+  - erdem
   - erhalten
   - erkennen
   - erlaube
@@ -802,6 +829,7 @@ words:
   - evir
   - eviri
   - evirilerini
+  - evirir
   - eviriye
   - eviriyi
   - eviriyoruz
@@ -846,10 +874,13 @@ words:
   - fiyat
   - flotante
   - flotantes
+  - flotar
   - flottante
   - flottants
+  - flotter
   - flutuante
   - flutuantes
+  - flutuar
   - fois
   - folge
   - fonctionne
@@ -882,10 +913,12 @@ words:
   - gelembung
   - gelen
   - geli
+  - gelir
   - gente
   - genutzt
   - gepr
   - gerade
+  - gereken
   - gerekir
   - gerekiyor
   - gerekli
@@ -926,6 +959,7 @@ words:
   - guarda
   - guardada
   - guardamos
+  - guardan
   - guardar
   - guarde
   - guiadas
@@ -983,7 +1017,9 @@ words:
   - identitas
   - idioma
   - idiomas
+  - ifre
   - iguais
+  - ikut
   - ikuti
   - ildi
   - ileti
@@ -993,7 +1029,9 @@ words:
   - imprecisa
   - inchang
   - inclus
+  - inclut
   - incorrecto
+  - inde
   - indir
   - indirildi
   - indirim
@@ -1033,14 +1071,17 @@ words:
   - jahr
   - jamais
   - jaringan
+  - jedem
   - jeder
   - jederzeit
+  - jedes
   - jelas
   - jemand
   - jetzt
   - jika
   - joindre
   - joue
+  - juga
   - juridique
   - jusqu
   - kalabilir
@@ -1063,6 +1104,7 @@ words:
   - kaufbest
   - kaufen
   - kayd
+  - kaydeder
   - kaydedildi
   - kaydedilemedi
   - kaydedilmedi
@@ -1072,6 +1114,7 @@ words:
   - keagamaan
   - kebijakan
   - kedaluwarsa
+  - Kein
   - keine
   - keinen
   - kelayakan
@@ -1096,6 +1139,7 @@ words:
   - kodla
   - kodu
   - kodun
+  - kommen
   - koneksi
   - konferans
   - konferensi
@@ -1106,6 +1150,7 @@ words:
   - kontrol
   - konu
   - konusu
+  - kopiere
   - kopieren
   - kopiert
   - kopyala
@@ -1146,9 +1191,11 @@ words:
   - leerlas
   - legendas
   - leia
+  - lembrar
   - lemi
   - lenta
   - lesen
+  - lewat
   - liest
   - liga
   - ligadas
@@ -1175,6 +1222,7 @@ words:
   - mais
   - mant
   - mantener
+  - Mantenha
   - manter
   - marrage
   - masih
@@ -1205,6 +1253,7 @@ words:
   - memberi
   - memblokirnya
   - membuka
+  - membukanya
   - memeriksa
   - memperbarui
   - memuat
@@ -1213,6 +1262,7 @@ words:
   - memutar
   - menampilkan
   - mendapatkannya
+  - Mendengar
   - mendengarkan
   - menerjemahkan
   - mengambang
@@ -1235,6 +1285,7 @@ words:
   - menyimpan
   - menyinkronkan
   - merekam
+  - Merken
   - meses
   - mettez
   - mettre
@@ -1243,6 +1294,7 @@ words:
   - microfone
   - mikro
   - mikrofon
+  - mikrofondan
   - mikrofonu
   - mikrofonzugriff
   - milik
@@ -1301,6 +1353,7 @@ words:
   - ndern
   - ndert
   - ndigen
+  - nebilirsin
   - necek
   - necesita
   - necess
@@ -1366,6 +1419,7 @@ words:
   - oturumlar
   - oturumu
   - outra
+  - outros
   - ouve
   - ouvert
   - ouvindo
@@ -1400,11 +1454,14 @@ words:
   - partag
   - partage
   - partager
+  - partagez
   - partie
   - passeios
   - passent
+  - Passwort
   - payla
   - pelanggan
+  - pelo
   - pembayaran
   - pembelian
   - pemeriksaan
@@ -1445,6 +1502,7 @@ words:
   - pihak
   - pilih
   - pilihan
+  - pindah
   - planda
   - planlar
   - planlara
@@ -1492,9 +1550,11 @@ words:
   - puanlama
   - pudieron
   - pudo
+  - puedas
   - puede
   - puedes
   - puis
+  - puissiez
   - pulihkan
   - punya
   - putar
@@ -1526,6 +1586,7 @@ words:
   - recibido
   - recommencer
   - reconnectant
+  - recordar
   - recuper
   - recuperando
   - recuperar
@@ -1540,6 +1601,7 @@ words:
   - relat
   - religi
   - relire
+  - Relisez
   - removida
   - rence
   - rences
@@ -1576,10 +1638,12 @@ words:
   - resumen
   - resumo
   - resumos
+  - retenir
   - retir
   - retour
   - reuni
   - revenez
+  - revenir
   - revisa
   - revisando
   - revisi
@@ -1591,10 +1655,12 @@ words:
   - ringkasannya
   - riwayat
   - rken
+  - rlaman
   - rlanamad
   - rland
   - rler
   - ruangan
+  - rudan
   - rulamas
   - ruland
   - saat
@@ -1618,6 +1684,7 @@ words:
   - salva
   - salvar
   - salvas
+  - sandi
   - satu
   - sauvegard
   - sauvegardez
@@ -1628,6 +1695,7 @@ words:
   - schreibt
   - schritt
   - scht
+  - schweben
   - schwebende
   - schwebenden
   - seau
@@ -1645,7 +1713,9 @@ words:
   - semenit
   - semua
   - senden
+  - senha
   - senin
+  - seninle
   - senyap
   - seperti
   - seront
@@ -1696,11 +1766,13 @@ words:
   - sitzungen
   - sitzungsdiagnose
   - sobald
+  - sobre
   - solde
   - solicita
   - solicitudes
   - sollicit
   - sollten
+  - sonando
   - sonra
   - sonst
   - sonstiges
@@ -1741,6 +1813,7 @@ words:
   - sudah
   - suena
   - suenan
+  - suivent
   - suivez
   - sujet
   - sumber
@@ -1776,6 +1849,7 @@ words:
   - tauschen
   - tection
   - teil
+  - teile
   - teilen
   - teklif
   - tekrar
@@ -1868,12 +1942,14 @@ words:
   - traduisez
   - traduit
   - tradutor
+  - traduz
   - traduza
   - traduzido
   - traduzindo
   - traduzir
   - tramos
   - tras
+  - trav
   - trecho
   - trechos
   - tront
@@ -1883,6 +1959,7 @@ words:
   - tulos
   - tunggu
   - turlar
+  - turman
   - tutup
   - tuyo
   - tztes
@@ -1893,6 +1970,7 @@ words:
   - ulan
   - ulang
   - ullar
+  - unda
   - unduh
   - ungenau
   - uniquement
@@ -1911,6 +1989,7 @@ words:
   - utiliser
   - uygulama
   - uygulamada
+  - uygulamalar
   - uygunlu
   - vais
   - valable
@@ -2001,11 +2080,14 @@ words:
   - yenilenir
   - yerel
   - yine
+  - ylece
   - ysan
   - zaman
   - zararl
+  - zebilir
   - zeigen
   - zeigt
+  - zerinde
   - zeti
   - zetleri
   - zielsprache

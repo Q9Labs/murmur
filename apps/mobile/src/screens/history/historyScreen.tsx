@@ -1,10 +1,14 @@
 import { useRouter } from "expo-router";
+import { Clock, MessagesSquare, Smartphone } from "lucide-react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Image, Pressable, Text, View } from "react-native";
 import { PostHogMaskView } from "posthog-react-native";
 
+import { conversationHistoryIllustration } from "../../home/illustrations";
+import type { MessageKey } from "../../i18n/catalogs/en";
 import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
 import { captureMobileFailure } from "../../lib/observability/sentry";
+import type { HeroPoint } from "../heroPoints";
 import { ProGate } from "../proGate";
 import { RowGroup } from "../rowGroup";
 import { ScreenScaffold, SecondaryAction, StatusLine } from "../screenScaffold";
@@ -12,14 +16,28 @@ import { type ConversationRecord, useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
 import { conversationDetails, conversationStarted, conversationTextDirection } from "./conversationFormat";
 
+const historyBenefits: ReadonlyArray<{ icon: HeroPoint["icon"]; text: MessageKey }> = [
+  { icon: MessagesSquare, text: "history.gateRevisit" },
+  { icon: Smartphone, text: "history.gateOnThisPhone" },
+  { icon: Clock, text: "history.gateAlsoInPro" },
+];
+
 export function HistoryGate({ children }: { children?: ReactNode } = {}): ReactNode {
   const { t } = useUiLocale();
-  return <ProGate body={t("history.gateBody")} title={t("history.gateTitle")}>{children}</ProGate>;
+  return (
+    <ProGate
+      artwork={conversationHistoryIllustration}
+      benefits={historyBenefits.map((benefit) => ({ icon: benefit.icon, text: t(benefit.text) }))}
+      lead={t("history.gateLead")}
+      title={t("history.gateTitle")}
+    >
+      {children}
+    </ProGate>
+  );
 }
 
 export function HistoryScreen(): ReactNode {
   const services = useScreenServices();
-  const { styles } = useScreenStyles();
   const { t } = useUiLocale();
   const [deleteError, setDeleteError] = useState(false);
   const { reloadConversations } = services;
@@ -50,9 +68,28 @@ export function HistoryScreen(): ReactNode {
   }
   return (
     <ScreenScaffold title={t("history.title")}>
-      {conversationRows ?? <Text style={styles.body}>{t("history.empty")}</Text>}
+      {conversationRows ?? <EmptyHistory />}
       <StatusLine error={deleteError ? t("history.deleteFailed") : null} notice={null} />
     </ScreenScaffold>
+  );
+}
+
+// A Pro listener before their first saved conversation: what will appear here, and when.
+function EmptyHistory(): ReactNode {
+  const { styles } = useScreenStyles();
+  const { t } = useUiLocale();
+  return (
+    <View style={styles.emptyState}>
+      <Image
+        accessibilityIgnoresInvertColors
+        accessible={false}
+        resizeMode="contain"
+        source={conversationHistoryIllustration}
+        style={styles.emptyArtwork}
+      />
+      <Text accessibilityRole="header" style={styles.emptyTitle}>{t("history.emptyTitle")}</Text>
+      <Text style={styles.emptyBody}>{t("history.empty")}</Text>
+    </View>
   );
 }
 

@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 
 import { recorded } from "./reactNativePrimitives";
 
-export function ScreenScaffold(props: { children: ReactNode; footer?: ReactNode; title: string }): ReactNode {
+export function ScreenScaffold(props: { children?: ReactNode; footer?: ReactNode; lead?: string; title: string }): ReactNode {
   return (
     <section>
       <h1>{props.title}</h1>
+      {props.lead ? <p>{props.lead}</p> : null}
       {props.children}
       {props.footer}
     </section>

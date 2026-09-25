@@ -43,7 +43,9 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       flexDirection: "row",
       gap: 12,
     },
+    // Grows to the visible height so a short screen, like an empty state, can centre itself.
     content: {
+      flexGrow: 1,
       gap: 24,
       paddingBottom: 40,
       paddingHorizontal: 20,
@@ -79,6 +81,35 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     danger: {
       color: theme.danger,
     },
+    emptyArtwork: {
+      height: 168,
+      marginBottom: 4,
+      width: 240,
+    },
+    emptyBody: {
+      color: theme.secondaryText,
+      fontSize: 16,
+      fontWeight: "500",
+      lineHeight: 24,
+      marginTop: 8,
+      maxWidth: 300,
+      textAlign: "center",
+    },
+    // Centred in the space under the title and lifted slightly, like the hero screens.
+    emptyState: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      paddingBottom: 48,
+    },
+    emptyTitle: {
+      color: theme.primary,
+      fontSize: 22,
+      fontWeight: "800",
+      letterSpacing: -0.2,
+      lineHeight: 28,
+      textAlign: "center",
+    },
     footer: {
       gap: 10,
       paddingBottom: 12,
@@ -90,26 +121,48 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       height: 168,
       width: 240,
     },
-    // The first line under the hero reads as its subtitle, so it sits closer than the section gap.
+    // Hero screens use one spacing scale (4, 8, 12, 16, 24, 32, 48). The title and its lead
+    // read as one unit, and the points follow after a larger step.
     hero: {
       alignItems: "center",
-      gap: 4,
-      marginBottom: -12,
     },
-    // Illustrations carry a wide transparent margin; the negative margin keeps the artwork
-    // large without that margin pushing the title away. Sizing from the width keeps it inside
-    // compact phones.
+    // Every illustration renders in the same box at its native @1x size, so titles line up
+    // from one hero screen to the next. The art carries its own transparent margin, which
+    // together with this margin makes a visual gap of about 24 above the title.
     heroArtwork: {
-      aspectRatio: 240 / 168,
-      marginVertical: -24,
-      maxWidth: 400,
-      width: "100%",
+      height: 168,
+      marginBottom: 4,
+      width: 240,
+    },
+    heroBody: {
+      gap: 32,
+    },
+    // Padding more below than above lifts the centred block slightly above true centre.
+    heroContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingBottom: 48,
+      paddingHorizontal: 24,
+      paddingTop: 16,
+    },
+    footerScroll: {
+      flexGrow: 0,
+      flexShrink: 1,
+      maxHeight: "60%",
+    },
+    heroFooter: {
+      gap: 12,
+      paddingBottom: 8,
+      paddingHorizontal: 24,
+      paddingTop: 16,
     },
     heroLead: {
       color: theme.secondaryText,
       fontSize: 17,
       fontWeight: "500",
       lineHeight: 25,
+      marginTop: 12,
+      maxWidth: 320,
       textAlign: "center",
     },
     heroTitle: {
@@ -117,6 +170,7 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       fontSize: 32,
       fontWeight: "800",
       letterSpacing: -0.4,
+      lineHeight: 38,
       textAlign: "center",
     },
     giftCard: {
@@ -173,27 +227,32 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     point: {
       alignItems: "flex-start",
       flexDirection: "row",
-      gap: 14,
+      gap: 16,
     },
     pointIcon: {
       alignItems: "center",
       backgroundColor: theme.input,
       borderRadius: 999,
-      height: 38,
+      height: 40,
       justifyContent: "center",
-      width: 38,
+      width: 40,
     },
+    // The top padding centres the first line (24 high) on the 40 icon circle.
     pointText: {
       ...text,
       color: theme.secondaryText,
-      flex: 1,
+      flexShrink: 1,
       fontSize: 16,
       fontWeight: "500",
-      lineHeight: 23,
-      paddingTop: 7,
+      lineHeight: 24,
+      paddingTop: 8,
     },
+    // As wide as its longest point, up to a column narrower than the screen, and centred as a
+    // unit under the centred title so the left-aligned points don't run ragged against it.
     points: {
-      gap: 16,
+      alignSelf: "center",
+      gap: 20,
+      maxWidth: 320,
     },
     quietButton: {
       alignItems: "center",

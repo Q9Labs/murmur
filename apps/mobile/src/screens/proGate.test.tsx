@@ -10,18 +10,36 @@ vi.mock("react-native", () => import("./__tests__/reactNativePrimitives").then((
 
 import { ProGate } from "./proGate";
 
+const Icon = () => null;
+
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
 });
 
 describe("Pro gate", () => {
-  it("says what the feature does and leads to the Pro plans", () => {
-    const markup = renderToStaticMarkup(<ProGate body="Keep your translations." title="Conversation history" />);
+  it("sells the feature with its benefits and leads to the Pro plans", () => {
+    const markup = renderToStaticMarkup(
+      <ProGate
+        artwork={1}
+        benefits={[{ icon: Icon, text: "Read any conversation later." }, { icon: Icon, text: "Saved on this phone only." }]}
+        lead="Pro saves each conversation."
+        title="Keep every conversation"
+      />,
+    );
 
-    expect(markup).toContain("Conversation history");
-    expect(markup).toContain("Keep your translations.");
+    expect(markup).toContain("Keep every conversation");
+    expect(markup).toContain("Pro saves each conversation.");
+    expect(markup.indexOf("Read any conversation later.")).toBeLessThan(markup.indexOf("Saved on this phone only."));
+    expect(markup.indexOf("See Pro plans")).toBeLessThan(markup.indexOf("Not now"));
     findControl("See Pro plans")?.onPress?.();
     expect(router.push).toHaveBeenCalledWith({ params: { term: "monthly" }, pathname: "/plans" });
+  });
+
+  it("lets the listener decline as easily as going back", () => {
+    renderToStaticMarkup(<ProGate artwork={1} benefits={[]} lead="Lead" title="Title" />);
+
+    findControl("Not now")?.onPress?.();
+    expect(router.back).toHaveBeenCalledOnce();
   });
 });

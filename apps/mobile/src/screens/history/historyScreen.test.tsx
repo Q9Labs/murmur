@@ -24,6 +24,7 @@ vi.mock("../proGate", () => ({
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("../../home/illustrations", () => ({ conversationHistoryIllustration: 1 }));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 
@@ -37,7 +38,7 @@ beforeEach(() => {
 describe("history screen", () => {
   it("gates free listeners", () => {
     state.services = fixtureServices({ conversations: [fixtureConversation] });
-    expect(renderToStaticMarkup(<HistoryScreen />)).toContain("gate Conversation history");
+    expect(renderToStaticMarkup(<HistoryScreen />)).toContain("gate Keep every conversation");
   });
 
   it("keeps old local entries deletable without exposing their translation after Pro expires", async () => {
@@ -46,7 +47,7 @@ describe("history screen", () => {
     });
     const markup = renderToStaticMarkup(<HistoryScreen />);
 
-    expect(markup).toContain("gate Conversation history");
+    expect(markup).toContain("gate Keep every conversation");
     expect(markup).not.toContain("Welcome to the conference");
     expect(findControl("Delete")).toBeDefined();
     findControl("Delete")?.onPress?.();
@@ -70,6 +71,9 @@ describe("history screen", () => {
 
   it("explains where conversations will go when there are none", () => {
     state.services = fixtureServices({ features: { history: true, phoneAudio: false } });
-    expect(renderToStaticMarkup(<HistoryScreen />)).toContain("on this phone only");
+    const markup = renderToStaticMarkup(<HistoryScreen />);
+
+    expect(markup).toContain("No conversations yet");
+    expect(markup).toContain("When you stop translating, the conversation is saved here, on this phone only.");
   });
 });
