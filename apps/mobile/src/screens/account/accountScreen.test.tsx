@@ -29,12 +29,14 @@ beforeEach(() => {
 
 
 describe("account screen", () => {
-  it("shows a guest their balance, sign-in and one primary action", () => {
+  it("shows a guest their balance, why to sign in and one primary action", () => {
     billingRef.current = fixtureBilling({ availableMs: 5 * 60_000 });
     const markup = renderToStaticMarkup(<AccountScreen />);
 
     expect(markup).toContain("5 min");
     expect(markup).toContain("left on Free");
+    expect(markup).toContain("Keep your minutes and plans on any phone.");
+    expect(findControl("Sign in")?.accessibilityHint).toBe("Keep your minutes and plans on any phone.");
     expect(findControl("Restore purchases")).toBeUndefined();
     findControl("Sign in")?.onPress?.();
     expect(router.push).toHaveBeenCalledWith("/sign-in");

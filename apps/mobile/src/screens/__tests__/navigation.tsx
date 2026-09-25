@@ -20,12 +20,20 @@ export const safeAreaMock = {
 };
 
 export const lucideMock = {
+  AudioLines: () => null,
+  Captions: () => null,
   Check: () => null,
   ChevronLeft: () => null,
   ChevronRight: () => null,
+  Clock: () => null,
+  KeyRound: () => null,
   Mail: () => null,
+  MessagesSquare: () => null,
   Settings: () => null,
+  ShieldAlert: () => null,
   ShieldCheck: () => null,
+  Smartphone: () => null,
   Sparkles: () => null,
   Star: () => null,
+  UserRound: () => null,
 };

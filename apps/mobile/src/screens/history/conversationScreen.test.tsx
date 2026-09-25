@@ -21,6 +21,7 @@ vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn()
 vi.mock("../screenServices", () => ({ useScreenServices: () => state.services }));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("../../home/illustrations", () => ({ conversationHistoryIllustration: 1 }));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 
@@ -60,12 +61,12 @@ describe("conversation screen", () => {
   it("handles a missing conversation and the Pro gate", () => {
     expect(renderToStaticMarkup(<ConversationScreen id="gone" />)).toContain("no longer on this phone");
     state.services = fixtureServices({ conversations: [fixtureConversation] });
-    expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Conversation history");
+    expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Keep every conversation");
 
     state.services = fixtureServices({
       conversations: [{ ...fixtureConversation, canView: false, text: "" }],
       features: pro,
     });
-    expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Conversation history");
+    expect(renderToStaticMarkup(<ConversationScreen id="conversation-1" />)).toContain("gate Keep every conversation");
   });
 });

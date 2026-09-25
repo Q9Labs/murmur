@@ -7,12 +7,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
 import { useScreenStyles } from "./styles";
 
-// With artwork, the screen opens on a large centred illustration and title instead of the
-// header title, for moments that ask the user something rather than list settings.
+// With artwork, the screen becomes a hero: illustration, title and lead replace the header
+// title, and the whole block sits a little above centre between the header and the footer,
+// for moments that ask the user something rather than list settings. It scrolls when it
+// doesn't fit.
 export function ScreenScaffold(props: {
   artwork?: ImageSourcePropType;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
+  lead?: string;
   title: string;
 }): ReactNode {
   const router = useRouter();
@@ -36,25 +39,37 @@ export function ScreenScaffold(props: {
         {props.artwork ? null : <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>}
       </View>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={props.artwork ? styles.heroContent : styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {props.artwork ? (
-          <View style={styles.hero}>
-            <Image
-              accessibilityIgnoresInvertColors
-              accessible={false}
-              resizeMode="contain"
-              source={props.artwork}
-              style={styles.heroArtwork}
-            />
-            <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
+          <View style={styles.heroBody}>
+            <View style={styles.hero}>
+              <Image
+                accessibilityIgnoresInvertColors
+                accessible={false}
+                resizeMode="contain"
+                source={props.artwork}
+                style={styles.heroArtwork}
+              />
+              <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
+              {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
+            </View>
+            {props.children}
           </View>
-        ) : null}
-        {props.children}
+        ) : props.children}
       </ScrollView>
-      {props.footer ? <View style={styles.footer}>{props.footer}</View> : null}
+      {props.footer ? (
+        // The footer scrolls on its own when many actions or large text can't fit.
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={props.artwork ? styles.heroFooter : styles.footer}
+          style={styles.footerScroll}
+        >
+          {props.footer}
+        </ScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }
