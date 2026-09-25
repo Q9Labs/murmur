@@ -45,6 +45,7 @@ describe("language picker keyboard layout", () => {
       keyboardShouldPersistTaps: "handled",
       style: { flexShrink: 1 },
     });
-    expect(recorded.keyboardAvoidingViews).toContainEqual({ behavior: "height" });
+    // Android lifts the sheet by the measured keyboard height instead of KeyboardAvoidingView.
+    expect(recorded.keyboardAvoidingViews).toContainEqual({ behavior: undefined });
   });
 });
