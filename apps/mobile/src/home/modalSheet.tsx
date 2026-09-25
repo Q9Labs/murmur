@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react-native";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -33,6 +34,7 @@ export function ModalSheet({
 }): ReactNode {
   const { styles } = useSheetStyles();
   const { direction, locale, t } = useUiLocale();
+  const androidKeyboardInset = useAndroidKeyboardInset();
   return (
     <Modal
       animationType="slide"
@@ -50,9 +52,13 @@ export function ModalSheet({
           style={styles.sheetDismissArea}
         />
         <KeyboardAvoidingView
-          behavior={Platform.select({ android: "height", ios: "padding" })}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           pointerEvents="box-none"
-          style={[styles.sheetKeyboard, uiContentDirectionStyle(direction)]}
+          style={[
+            styles.sheetKeyboard,
+            uiContentDirectionStyle(direction),
+            { paddingBottom: androidKeyboardInset },
+          ]}
         >
           <SafeAreaView edges={["bottom"]} style={[styles.sheet, uiContentDirectionStyle(direction)]}>
             <View accessibilityElementsHidden style={styles.sheetHandle} />
@@ -71,6 +77,25 @@ export function ModalSheet({
       </View>
     </Modal>
   );
+}
+
+// Android runs edge to edge, so the window doesn't resize for the keyboard and
+// KeyboardAvoidingView misreads the overlap inside a translucent modal. Lift the
+// sheet by the keyboard's own height instead.
+function useAndroidKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+    const show = Keyboard.addListener("keyboardDidShow", (event) => setInset(event.endCoordinates.height));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setInset(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return inset;
 }
 
 const sheetContent = { paddingBottom: 32 } as const;
