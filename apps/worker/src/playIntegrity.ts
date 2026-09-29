@@ -84,6 +84,9 @@ type DecodedPlayIntegrityResponse = {
 };
 
 const playIntegrityScope = "https://www.googleapis.com/auth/playintegrity";
+// Verification runs inline on session start, so each Google call gets a tight budget.
+const googleRequestTimeoutMs = 3_000;
+let cachedGoogleAccessToken: { expiresAtMs: number; value: string } | null = null;
 const optionalVerificationFailures = new Set<string>();
 
 function unverifiedResult(): PlayIntegrityVerificationResult {
@@ -174,7 +177,8 @@ export async function verifyPlayIntegrityIfRequired(params: {
   }
 
   const returnedHash = payload?.requestDetails?.requestHash ?? payload?.requestDetails?.nonce;
-  if (integrity.nonce && returnedHash !== integrity.nonce) {
+  const nonceMatches = Boolean(integrity.nonce && sameBase64Bytes(returnedHash, integrity.nonce));
+  if (integrity.nonce && !nonceMatches) {
     return { ok: false, code: "play_integrity_nonce_mismatch", status: 403 };
   }
 
@@ -199,8 +203,18 @@ export async function verifyPlayIntegrityIfRequired(params: {
     ok: true,
     app_verdict: payload?.appIntegrity?.appRecognitionVerdict ?? null,
     device_verdicts: deviceVerdicts,
-    request_hash_verified: Boolean(integrity.nonce && returnedHash === integrity.nonce),
+    request_hash_verified: nonceMatches,
   };
+}
+
+// Google echoes the nonce bytes back, but not always in the same base64 spelling the app sent
+// (padding and URL-safe alphabet can differ), so compare the decoded bytes.
+function sameBase64Bytes(returned: string | undefined, sent: string): boolean {
+  if (!returned) {
+    return false;
+  }
+  const canonical = (value: string) => value.replace(/-/g, "+").replace(/_/g, "/").replace(/=+$/, "");
+  return canonical(returned) === canonical(sent);
 }
 
 async function verifyAppAttest(params: {
@@ -320,6 +334,7 @@ async function decodePlayIntegrityToken(params: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ integrity_token: params.integrityToken }),
+      signal: AbortSignal.timeout(googleRequestTimeoutMs),
     },
   );
   if (!response.ok) {
@@ -335,6 +350,9 @@ async function getGoogleAccessToken(env: PlayIntegrityEnv): Promise<string | nul
   if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     return null;
   }
+  if (cachedGoogleAccessToken && cachedGoogleAccessToken.expiresAtMs > Date.now()) {
+    return cachedGoogleAccessToken.value;
+  }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const assertion = await signServiceAccountJwt({
@@ -349,9 +367,19 @@ async function getGoogleAccessToken(env: PlayIntegrityEnv): Promise<string | nul
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion,
     }),
+    signal: AbortSignal.timeout(googleRequestTimeoutMs),
   });
-  const body = (await response.json().catch(() => ({}))) as { access_token?: string };
-  return response.ok && body.access_token ? body.access_token : null;
+  const body = (await response.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
+  if (!response.ok || !body.access_token) {
+    return null;
+  }
+  // Refresh a minute early so a cached token never expires mid-verification.
+  const lifetimeSeconds = typeof body.expires_in === "number" ? body.expires_in : 3600;
+  cachedGoogleAccessToken = {
+    expiresAtMs: Date.now() + (lifetimeSeconds - 60) * 1000,
+    value: body.access_token,
+  };
+  return body.access_token;
 }
 
 async function signServiceAccountJwt(params: {

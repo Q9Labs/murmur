@@ -210,6 +210,39 @@ describe("verifyPlayIntegrityIfRequired", () => {
     });
   });
 
+  it("matches a nonce that Google echoes back with padding or the standard alphabet", async () => {
+    const params = {
+      device_integrity: {
+        available: true,
+        nonce: "bXVybXVyX2E-_w",
+        platform: "android",
+        provider: "play_integrity",
+        token: "integrity_token_long_enough",
+      },
+      env: {
+        GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN: "access_token",
+        GOOGLE_PLAY_PACKAGE_NAME: "com.q9labsai.murmur",
+      },
+      hashed_install_id: "install_hash",
+      now_ms: 2_000_000_000_000,
+      required: true,
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ tokenPayloadExternal: {
+      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      deviceIntegrity: { deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"] },
+      requestDetails: {
+        nonce: "bXVybXVyX2E+/w==",
+        requestPackageName: "com.q9labsai.murmur",
+        timestampMillis: String(params.now_ms),
+      },
+    } }));
+
+    await expect(verifyPlayIntegrityIfRequired(params)).resolves.toMatchObject({
+      ok: true,
+      request_hash_verified: true,
+    });
+  });
+
   it("rejects Android verification when the verifier is unconfigured", async () => {
     await expect(verifyPlayIntegrityIfRequired({
       device_integrity: {
