@@ -5,6 +5,12 @@ compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
 workers_dev = true
 
+# Session start makes ~30 sequential D1 and Durable Object round trips, and D1's primary is in
+# Western Europe. Running the Worker there keeps each trip ~20 ms instead of up to ~150 ms from
+# far edges. Every environment inherits this.
+[placement]
+region = "aws:eu-central-1"
+
 # Static files for the marketing site; requests that match no file fall through to the Worker.
 [assets]
 directory = "./public"
