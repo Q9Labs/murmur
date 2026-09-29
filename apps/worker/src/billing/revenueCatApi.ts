@@ -71,7 +71,14 @@ export async function fetchRevenueCatCustomerState(params: {
   const [subscriptionItems, purchaseItems] = await Promise.all([
     fetchRevenueCatList(params.env, projectId, `${customerPath}/subscriptions?limit=100`),
     fetchRevenueCatList(params.env, projectId, `${customerPath}/purchases?limit=100`),
-  ]);
+  ]).catch((failure: unknown): [object[], object[]] => {
+    // RevenueCat creates a customer only when the app first opens its SDK, so a guest who
+    // never reached a paywall is unknown to RevenueCat and has nothing to reconcile.
+    if (failure instanceof RevenueCatCustomerMissingError) {
+      return [[], []];
+    }
+    throw failure;
+  });
   const productIds = new Set<string>();
   for (const item of [...subscriptionItems, ...purchaseItems]) {
     const productId = stringField(item, "product_id");
@@ -215,6 +222,20 @@ async function fetchRevenueCatList(
   return items;
 }
 
+class RevenueCatCustomerMissingError extends Error {}
+
+// A wrong project answers 403, but other ancestors can also be missing, so only the
+// unknown-customer 404 counts as an empty customer.
+async function isCustomerMissing(response: Response): Promise<boolean> {
+  const payload: unknown = await response.json().catch(() => null);
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+  const message = Reflect.get(payload, "message");
+  return Reflect.get(payload, "type") === "resource_missing" &&
+    typeof message === "string" && message.startsWith("Could not find customer");
+}
+
 async function fetchRevenueCatObject(env: Env, path: string): Promise<object> {
   const apiKey = requiredConfiguration(env.REVENUECAT_API_KEY, "server API key");
   const response = await fetch(new URL(path, "https://api.revenuecat.com"), {
@@ -224,7 +245,11 @@ async function fetchRevenueCatObject(env: Env, path: string): Promise<object> {
     },
   });
   if (!response.ok) {
-    throw new Error(`RevenueCat customer verification failed (${response.status})`);
+    const message = `RevenueCat customer verification failed (${response.status})`;
+    if (response.status === 404 && await isCustomerMissing(response)) {
+      throw new RevenueCatCustomerMissingError(message);
+    }
+    throw new Error(message);
   }
   const payload: unknown = await response.json().catch(() => null);
   if (typeof payload !== "object" || payload === null) {

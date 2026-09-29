@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { decodeRevenueCatCustomerState, verifyRevenueCatEvent } from "./revenueCatApi";
+import {
+  decodeRevenueCatCustomerState,
+  fetchRevenueCatCustomerState,
+  verifyRevenueCatEvent,
+} from "./revenueCatApi";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -127,5 +131,42 @@ describe("RevenueCat customer verification", () => {
       "Bearer secret-key",
       "Bearer secret-key",
     ]);
+  });
+
+  it("treats a customer RevenueCat has never seen as having no purchases", async () => {
+    vi.stubGlobal("fetch", async () => Response.json(
+      { message: "Could not find customer ID associated with this project", type: "resource_missing" },
+      { status: 404 },
+    ));
+
+    await expect(fetchRevenueCatCustomerState({
+      appUserId: "guest-1",
+      env: { REVENUECAT_API_KEY: "secret-key", REVENUECAT_PROJECT_ID: "project-id" },
+    })).resolves.toEqual(decodeRevenueCatCustomerState({
+      productIdentifiers: new Map(),
+      purchaseItems: [],
+      subscriptionItems: [],
+    }));
+  });
+
+  it("still fails when a resource other than the customer is missing", async () => {
+    vi.stubGlobal("fetch", async () => Response.json(
+      { message: "Could not find project", type: "resource_missing" },
+      { status: 404 },
+    ));
+
+    await expect(fetchRevenueCatCustomerState({
+      appUserId: "guest-1",
+      env: { REVENUECAT_API_KEY: "secret-key", REVENUECAT_PROJECT_ID: "project-id" },
+    })).rejects.toThrow("RevenueCat customer verification failed (404)");
+  });
+
+  it("still fails on other RevenueCat errors", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ type: "unauthorized" }, { status: 401 }));
+
+    await expect(fetchRevenueCatCustomerState({
+      appUserId: "guest-1",
+      env: { REVENUECAT_API_KEY: "secret-key", REVENUECAT_PROJECT_ID: "project-id" },
+    })).rejects.toThrow("RevenueCat customer verification failed (401)");
   });
 });
