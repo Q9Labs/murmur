@@ -74,7 +74,7 @@ export async function fetchRevenueCatCustomerState(params: {
   ]).catch((failure: unknown): [object[], object[]] => {
     // RevenueCat creates a customer only when the app first opens its SDK, so a guest who
     // never reached a paywall is unknown to RevenueCat and has nothing to reconcile.
-    if (failure instanceof RevenueCatResourceMissingError) {
+    if (failure instanceof RevenueCatCustomerMissingError) {
       return [[], []];
     }
     throw failure;
@@ -222,12 +222,18 @@ async function fetchRevenueCatList(
   return items;
 }
 
-class RevenueCatResourceMissingError extends Error {}
+class RevenueCatCustomerMissingError extends Error {}
 
-async function isResourceMissing(response: Response): Promise<boolean> {
+// A wrong project answers 403, but other ancestors can also be missing, so only the
+// unknown-customer 404 counts as an empty customer.
+async function isCustomerMissing(response: Response): Promise<boolean> {
   const payload: unknown = await response.json().catch(() => null);
-  return typeof payload === "object" && payload !== null &&
-    Reflect.get(payload, "type") === "resource_missing";
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+  const message = Reflect.get(payload, "message");
+  return Reflect.get(payload, "type") === "resource_missing" &&
+    typeof message === "string" && message.startsWith("Could not find customer");
 }
 
 async function fetchRevenueCatObject(env: Env, path: string): Promise<object> {
@@ -240,8 +246,8 @@ async function fetchRevenueCatObject(env: Env, path: string): Promise<object> {
   });
   if (!response.ok) {
     const message = `RevenueCat customer verification failed (${response.status})`;
-    if (response.status === 404 && await isResourceMissing(response)) {
-      throw new RevenueCatResourceMissingError(message);
+    if (response.status === 404 && await isCustomerMissing(response)) {
+      throw new RevenueCatCustomerMissingError(message);
     }
     throw new Error(message);
   }

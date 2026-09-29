@@ -149,6 +149,18 @@ describe("RevenueCat customer verification", () => {
     }));
   });
 
+  it("still fails when a resource other than the customer is missing", async () => {
+    vi.stubGlobal("fetch", async () => Response.json(
+      { message: "Could not find project", type: "resource_missing" },
+      { status: 404 },
+    ));
+
+    await expect(fetchRevenueCatCustomerState({
+      appUserId: "guest-1",
+      env: { REVENUECAT_API_KEY: "secret-key", REVENUECAT_PROJECT_ID: "project-id" },
+    })).rejects.toThrow("RevenueCat customer verification failed (404)");
+  });
+
   it("still fails on other RevenueCat errors", async () => {
     vi.stubGlobal("fetch", async () => Response.json({ type: "unauthorized" }, { status: 401 }));
 
