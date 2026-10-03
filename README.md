@@ -7,7 +7,7 @@ The mobile client is built with Expo and React Native. A Cloudflare Worker keeps
 ## Requirements
 
 - Node.js 22 or newer
-- pnpm 10.26.2 or newer
+- pnpm 12.8.1 or newer
 - Xcode for local iOS builds
 - Android Studio and a JDK for local Android builds
 - A Cloudflare account for Worker development or deployment
