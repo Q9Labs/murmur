@@ -5,7 +5,7 @@ Oort reads this file before Codex starts, but it does not run these commands for
 ## Runtime
 
 - Node.js 22 or newer.
-- pnpm 10.26.2, pinned in `package.json` and already installed by Oort.
+- pnpm 12.8.1, pinned in `package.json` and already installed by Oort.
 
 ## Oort mappings
 
