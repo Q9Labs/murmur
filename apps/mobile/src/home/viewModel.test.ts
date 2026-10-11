@@ -74,6 +74,25 @@ describe("home view model", () => {
     });
   });
 
+  it("does not claim translation is healthy before the first caption", () => {
+    const live = makeLive({ status: "live" });
+    const waiting = buildHomeViewModel({ live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
+    expect(waiting).toMatchObject({
+      isLive: true,
+      canStart: false,
+      healthText: "Listening",
+      statusText: "Waiting for translation",
+    });
+    const translated = buildHomeViewModel({
+      live: { ...live, spans: [{ ...createSpan(), partial_translated_caption: "مرحبا" }] },
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+    expect(translated.healthText).toBe("OK");
+    expect(translated.statusText).toBe("Listening");
+    expect(translated.latestTranslationText).toBe("مرحبا");
+  });
+
   it("cannot start when the server has disabled the language pair", () => {
     const model = buildHomeViewModel({
       languagePairEnabled: false,

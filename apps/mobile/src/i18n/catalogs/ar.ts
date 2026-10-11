@@ -96,6 +96,7 @@ export const arCatalog: Catalog = {
   "status.networkDegraded": "الشبكة ضعيفة",
   "status.recovering": "جارٍ التعافي",
   "status.disconnected": "غير متصل",
+  "status.waitingForTranslation": "بانتظار الترجمة",
   "status.connecting": "جارٍ الاتصال",
   "status.ready": "جاهز",
   "status.degraded": "متراجع",

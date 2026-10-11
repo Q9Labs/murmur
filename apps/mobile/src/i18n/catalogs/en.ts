@@ -108,6 +108,7 @@ export const enCatalog = {
   "status.networkDegraded": "Network degraded",
   "status.recovering": "Recovering",
   "status.disconnected": "Disconnected",
+  "status.waitingForTranslation": "Waiting for translation",
   "status.connecting": "Connecting",
   "status.ready": "Ready",
   "status.degraded": "Degraded",

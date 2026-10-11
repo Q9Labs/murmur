@@ -96,6 +96,7 @@ export const idCatalog: Catalog = {
   "status.networkDegraded": "Jaringan lambat",
   "status.recovering": "Memulihkan",
   "status.disconnected": "Terputus",
+  "status.waitingForTranslation": "Menunggu terjemahan",
   "status.connecting": "Menghubungkan",
   "status.ready": "Siap",
   "status.degraded": "Terbatas",
