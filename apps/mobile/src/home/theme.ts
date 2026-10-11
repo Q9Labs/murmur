@@ -1,4 +1,4 @@
-import { useColorScheme } from "react-native";
+import { useColorScheme, type ColorSchemeName } from "react-native";
 
 export type MurmurTheme = {
   action: string;
@@ -75,7 +75,7 @@ export const darkMurmurTheme: MurmurTheme = {
   violet: "#B093FF",
 };
 
-export function resolveMurmurTheme(scheme: "dark" | "light" | null | undefined): MurmurTheme {
+export function resolveMurmurTheme(scheme: ColorSchemeName | null): MurmurTheme {
   return scheme === "dark" ? darkMurmurTheme : lightMurmurTheme;
 }
 
