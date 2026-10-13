@@ -1,5 +1,6 @@
 const app = require("./app.json").expo;
 const withHistoryBackupExclusion = require("./plugins/withHistoryBackupExclusion");
+const withIosPodDeploymentTarget = require("./plugins/withIosPodDeploymentTarget");
 
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const iosUrlScheme = iosClientId?.endsWith(".apps.googleusercontent.com")
@@ -14,14 +15,17 @@ module.exports = ({ config }) => ({
   ios: {
     ...app.ios,
     usesAppleSignIn: true,
+    deploymentTarget: "16.4",
   },
   updates: updatesChannel
     ? { ...app.updates, requestHeaders: { ...app.updates.requestHeaders, "expo-channel-name": updatesChannel } }
     : app.updates,
   plugins: [
     ...app.plugins,
+    ["expo-build-properties", { ios: { enableSceneSupport: true } }],
     "expo-apple-authentication",
     ["@react-native-google-signin/google-signin", { iosUrlScheme }],
     withHistoryBackupExclusion,
+    withIosPodDeploymentTarget,
   ],
 });

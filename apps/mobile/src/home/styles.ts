@@ -929,7 +929,7 @@ export const styles = StyleSheet.create<AppStyles>({
     shadowRadius: 24,
   },
   sheetDismissArea: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheetDone: {
     alignItems: "center",
