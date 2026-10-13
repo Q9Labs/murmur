@@ -106,7 +106,7 @@ function createSheetStyles(theme: MurmurTheme) {
       shadowRadius: 24,
     },
     sheetDismissArea: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     sheetDone: {
       alignItems: "center",

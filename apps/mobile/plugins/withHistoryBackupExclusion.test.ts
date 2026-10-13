@@ -8,8 +8,8 @@ const appConfig = require("../app.json").expo;
 const resolveAppConfig = require("../app.config.js");
 
 const generatedAppDelegate = `import Expo
-@UIApplicationMain
-public class AppDelegate: ExpoAppDelegate {
+@main
+class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {
   public override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil

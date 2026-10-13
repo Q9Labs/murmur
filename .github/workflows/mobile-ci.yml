@@ -75,7 +75,8 @@ jobs:
 
       - name: Test and build unsigned Android app
         working-directory: apps/mobile/android
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        # Test our native module, not unit-test fixtures shipped by Expo dependencies.
+        run: ./gradlew --no-daemon :murmur-audio:testDebugUnitTest :app:assembleDebug
 
   ios:
     name: iOS unsigned simulator build

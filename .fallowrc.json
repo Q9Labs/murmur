@@ -24,9 +24,12 @@
     "babel-preset-expo",
     "@posthog/react-native-plugin",
     "expo-device",
+    "expo-build-properties",
     "expo-localization",
     "expo-updates",
     "expo-web-browser",
+    "react-native-reanimated",
+    "react-native-worklets",
     "react-native-web"
   ],
   "audit": {
