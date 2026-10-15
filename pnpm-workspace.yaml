@@ -25,6 +25,7 @@ overrides:
   ws: ^8.21.0
 
 allowBuilds:
+  tsc-rs: true
   "@sentry/cli": false
   esbuild: false
   lefthook: false

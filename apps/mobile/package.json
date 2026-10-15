@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "eas-build-on-success": "node ../../tooling/scripts/link-mobile-sentry-release.mjs",
     "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc-rs --noEmit",
     "unit": "vitest run"
   },
   "dependencies": {

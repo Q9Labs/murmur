@@ -7,7 +7,7 @@
     "deploy:production": "node ../../tooling/scripts/deploy-worker-release.mjs production",
     "deploy:sandbox": "node ../../tooling/scripts/deploy-worker-release.mjs sandbox",
     "dev": "wrangler dev --config wrangler.toml",
-    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "typecheck": "tsc-rs --noEmit --project tsconfig.json",
     "unit": "vitest run"
   },
   "dependencies": {
