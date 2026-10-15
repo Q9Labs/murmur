@@ -76,7 +76,7 @@ describe("customer ledger command decoder", () => {
     const command = {
       action: "bootstrap_guest",
       customerId: "customer-1",
-      freeAllowanceMs: 420_000,
+      freeAllowanceMs: 300_000,
       grantFreeAllowance: true,
       nowMs: 1,
       periodExpiresAtMs: 3,

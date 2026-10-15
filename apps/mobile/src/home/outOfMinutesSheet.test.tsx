@@ -23,14 +23,14 @@ describe("out-of-minutes sheet", () => {
     );
 
     expect(markup).toContain("Out of minutes");
-    expect(markup).toContain("You&#x27;ve used your 7 free minutes for this month.");
+    expect(markup).toContain("You&#x27;ve used your 5 free minutes for this month.");
     recorded.controls.find((control) => control.accessibilityRole === "button")?.onPress?.();
     expect(onSeePlans).toHaveBeenCalledOnce();
   });
 
   it("words the message for paid customers", () => {
     expect(outOfMinutesMessage({ ...fixtureCustomer, plan: "pro" }, en)).toBe("You've used all your translation time.");
-    expect(outOfMinutesMessage(null, en)).toContain("7 free minutes");
+    expect(outOfMinutesMessage(null, en)).toContain("5 free minutes");
   });
 
   it("closes once a refreshed balance is larger than when it opened", () => {

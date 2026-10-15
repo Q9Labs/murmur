@@ -8,11 +8,11 @@ afterEach(() => {
 });
 
 describe("server configuration", () => {
-  it("defaults to no source transcript and a seven-minute free grant", () => {
+  it("defaults to no source transcript and a five-minute free grant", () => {
     const config = defaultServerConfig({});
     expect(config.source_transcript).toBe(false);
     expect(config.insights_model).toBe("openai/gpt-6-luna");
-    expect(config.free_allowance_minutes).toBe(7);
+    expect(config.free_allowance_minutes).toBe(5);
     expect(config.max_session_seconds_free).toBe(300);
     expect(config.max_session_seconds_paid).toBe(3600);
     expect(sessionLimitSeconds(config, "free")).toBe(300);
@@ -30,7 +30,7 @@ describe("server configuration", () => {
         sessions_enabled: true,
       },
       featureFlagPayloads: {
-        free_allowance_minutes: "7",
+        free_allowance_minutes: "9",
         max_session_seconds_free: "240",
         sessions_enabled: "false",
       },
@@ -44,7 +44,7 @@ describe("server configuration", () => {
     });
     expect(config.source_transcript).toBe(true);
     expect(config.max_session_seconds_free).toBe(240);
-    expect(config.free_allowance_minutes).toBe(7);
+    expect(config.free_allowance_minutes).toBe(9);
     expect(config.sessions_enabled).toBe(false);
     const request = fetchMock.mock.calls[0]?.[1];
     expect(JSON.parse(request.body)).toMatchObject({
@@ -146,7 +146,7 @@ describe("server configuration", () => {
         free_allowance_minutes: {
           enabled: true,
           key: "free_allowance_minutes",
-          metadata: { description: null, has_experiment: false, id: 903399, payload: "7", version: 2 },
+          metadata: { description: null, has_experiment: false, id: 903399, payload: "5", version: 2 },
           reason: { code: "condition_match", condition_index: 0, description: "Matched condition set 1" },
           variant: null,
         },
@@ -158,7 +158,7 @@ describe("server configuration", () => {
       plan: "free",
       platform: "ios",
     });
-    expect(config.free_allowance_minutes).toBe(7);
+    expect(config.free_allowance_minutes).toBe(5);
   });
 
   it("compares dotted app versions numerically", () => {

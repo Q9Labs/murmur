@@ -274,7 +274,7 @@ export const legalPages: Record<string, Page> = {
     path: "/",
     title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 7 free minutes and no cloud transcript history; eligible paid users keep translated captions on device.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 5 free minutes and no cloud transcript history; eligible paid users keep translated captions on device.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
@@ -361,7 +361,7 @@ export const legalPages: Record<string, Page> = {
             <span class="icon-tile tone-teal">${icon("gift")}</span>
             <h3>Free</h3>
             <p class="price">$0</p>
-            <p>7 minutes every month.</p>
+            <p>5 minutes every month.</p>
           </article>
           <article class="price-card price-card-featured">
             <span class="bloom" aria-hidden="true"></span>
@@ -396,7 +396,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
     description:
-      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 7 free minutes each month.",
+      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 5 free minutes each month.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
     heading: "Understand the guide without interrupting the tour.",
     lede:
