@@ -185,6 +185,10 @@ export function createRealtimeTranslationClient(options: {
         activeSocket?.readyState === WebSocket.OPEN ||
         activeSocket?.readyState === WebSocket.CONNECTING
       ) {
+        if (activeSocket.readyState === WebSocket.OPEN &&
+          (reason === "user_cancel" || reason === "hook_unmount" || reason === "session_ended")) {
+          activeSocket.send(JSON.stringify({ kind: "close_session" }));
+        }
         activeSocket.close(1000, reason);
       }
       await Promise.resolve();

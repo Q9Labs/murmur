@@ -359,6 +359,11 @@ describe("app-facing realtime socket", () => {
     expect(client.sent.map(String).join(" ")).toContain("session_expired");
     expect(client.closeCalls).toContainEqual({ code: 1008, reason: "session_expired" });
     expect(upstream.closeCalls).toContainEqual({ code: 1008, reason: "session_expired" });
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      failure_code: null,
+      outcome: "completed",
+      close_reason: "session_expired",
+    }));
   });
 
   it("closes silent sessions after 120 seconds even when silent PCM continues", async () => {
@@ -372,6 +377,11 @@ describe("app-facing realtime socket", () => {
     }
 
     expect(client.sent.map(String).join(" ")).toContain("session_silence_timeout");
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      failure_code: null,
+      outcome: "completed",
+      close_reason: "session_silence_timeout",
+    }));
     expect(client.closeCalls).toContainEqual({
       code: 1008,
       reason: "session_silence_timeout",
@@ -605,6 +615,62 @@ describe("app-facing realtime socket", () => {
       failure_code: "client_transport_closed",
       outcome: "failed",
     }));
+  });
+
+  it.each(["client_finish", "user_cancel", "hook_unmount", "session_ended"])(
+    "recognizes an explicit clean %s even without a preceding command",
+    async (reason) => {
+      const { client } = await openTestRealtimeSession({ name: reason });
+      client.dispatchEvent(Object.assign(new Event("close"), { code: 1000, reason, wasClean: true }));
+      expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+        failure_code: null,
+        outcome: "completed",
+        close_reason: "client_close_session",
+        transport_close_code: 1000,
+        transport_close_reason: reason,
+        transport_close_was_clean: true,
+        transport_close_source: "client",
+      }));
+    },
+  );
+
+  it.each([
+    { code: 1006, reason: "session_ended", wasClean: false },
+    { code: 1000, reason: "session_complete", wasClean: true },
+    { code: 1000, reason: "", wasClean: true },
+  ])("does not infer intent from a close code alone: %j", async (close) => {
+    const { client } = await openTestRealtimeSession({ name: "ambiguous_close" });
+    client.dispatchEvent(Object.assign(new Event("close"), close));
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      failure_code: "client_transport_closed",
+      outcome: "failed",
+      transport_close_code: close.code,
+    }));
+  });
+
+  it("records a provider transport close without treating 1000 as successful translation", async () => {
+    const { upstream } = await openTestRealtimeSession({ name: "provider_close_code" });
+    upstream.dispatchEvent(Object.assign(new Event("close"), { code: 1000, reason: "idle timeout", wasClean: true }));
+    expect(sessionEndedEvents()).toContainEqual(expect.objectContaining({
+      failure_code: "provider_transport_closed",
+      outcome: "failed",
+      transport_close_source: "provider",
+      transport_close_code: 1000,
+      transport_close_reason: "idle_timeout",
+      transport_close_was_clean: true,
+    }));
+  });
+
+  it("does not capture arbitrary peer close text or let cleanup replace the terminal cause", async () => {
+    const { client, upstream } = await openTestRealtimeSession({ name: "close_privacy" });
+    upstream.dispatchEvent(Object.assign(new Event("close"), { code: 1006, reason: "private peer text" }));
+    client.dispatchEvent(Object.assign(new Event("close"), { code: 1000, reason: "session_ended", wasClean: true }));
+    expect(sessionEndedEvents()).toEqual([expect.objectContaining({
+      failure_code: "provider_transport_closed",
+      transport_close_code: 1006,
+      transport_close_reason: "other",
+      transport_close_source: "provider",
+    })]);
   });
 
   it("records the provider close reason when the provider ends the session", async () => {
