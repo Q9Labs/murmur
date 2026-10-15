@@ -26,8 +26,8 @@ const customer: MurmurCustomer = {
 };
 
 describe("allowance rules", () => {
-  it("matches the worker's seven-minute free allowance", () => {
-    expect(freeAllowanceMinutes).toBe(7);
+  it("matches the worker's five-minute free allowance", () => {
+    expect(freeAllowanceMinutes).toBe(5);
   });
 
   it("treats Pro, Pro Max and top-up credit as paid", () => {

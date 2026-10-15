@@ -12,7 +12,7 @@ import {
 
 describe("billing catalog", () => {
   it("keeps the approved allowance values", () => {
-    expect(freeAllowanceMs).toBe(7 * 60_000);
+    expect(freeAllowanceMs).toBe(5 * 60_000);
     expect(proAllowanceMs).toBe(120 * 60_000);
     expect(proMaxAllowanceMs).toBe(400 * 60_000);
     expect(liteProAllowanceMs).toBe(90 * 60_000);

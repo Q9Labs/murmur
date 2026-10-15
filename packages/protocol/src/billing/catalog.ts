@@ -16,7 +16,7 @@ export type BillingProduct = {
   revenueCatPackageId: string;
 };
 
-export const freeAllowanceMs = 7 * 60_000;
+export const freeAllowanceMs = 5 * 60_000;
 export const proAllowanceMs = 120 * 60_000;
 export const proMaxAllowanceMs = 400 * 60_000;
 export const liteProAllowanceMs = 90 * 60_000;
