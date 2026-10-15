@@ -51,8 +51,8 @@ function seedPaidGuest(sqlite, destinationHasFreeGrant = true) {
     "INSERT INTO store_transactions (store_transaction_row_id, customer_id, provider, environment, transaction_id, product_id, product_kind, status, purchased_at_ms, expires_at_ms, created_at_ms, updated_at_ms) VALUES ('purchase-1', 'guest-1', 'apple', 'production', 'transaction-1', 'com.q9labsai.murmur.credits.60', 'credit_pack', 'purchased', ?, ?, ?, ?)",
   ).run(nowMs, nowMs + 90 * 24 * 60 * 60_000, nowMs, nowMs);
   for (const [customerId, grantId, amountMs] of [
-    ["guest-1", "guest-free", 420_000],
-    ...(destinationHasFreeGrant ? [["registered-1", "registered-free", 420_000]] : []),
+    ["guest-1", "guest-free", 300_000],
+    ...(destinationHasFreeGrant ? [["registered-1", "registered-free", 300_000]] : []),
     ["guest-1", "guest-pack", 3_600_000],
   ]) {
     sqlite.prepare(
