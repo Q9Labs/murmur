@@ -77,6 +77,10 @@ export type WorkerTelemetryEvent =
       session_duration_ms: number;
       source_received: boolean;
       translation_received: boolean;
+      transport_close_code: number | null;
+      transport_close_reason: string | null;
+      transport_close_source: "client" | "provider" | null;
+      transport_close_was_clean: boolean | null;
     };
 
 export type TelemetryExecutionContext = Pick<ExecutionContext, "waitUntil">;

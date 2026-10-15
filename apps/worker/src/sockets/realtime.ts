@@ -51,6 +51,9 @@ const maxAudioFrameBytes = 64 * 1024;
 const meaningfulAudioRmsThreshold = 0.01;
 const providerConnectionTimeoutMs = 15_000;
 const realtimeSilenceTimeoutMs = 120_000;
+const intentionalClientCloseReasons = new Set([
+  "client_finish", "user_cancel", "hook_unmount", "session_ended",
+]);
 
 type SessionValidationFailure = { code: number; ok: false; reason: string };
 
@@ -181,6 +184,7 @@ export async function proxyRealtimeSession(
       inputAudioChunks: 0,
       sourceReceived: false,
       translationReceived: false,
+      transportClose: null,
     },
   };
   const providerAbort = new AbortController();
@@ -270,8 +274,8 @@ export async function proxyRealtimeSession(
     silenceTimer = setTimeout(() => {
       terminate({
         errorCode: "session_silence_timeout",
-        failureCode: "session_silence_timeout",
-        outcome: "failed",
+        failureCode: null,
+        outcome: "completed",
         reason: "session_silence_timeout",
         retryable: false,
         socketCode: 1008,
@@ -279,12 +283,16 @@ export async function proxyRealtimeSession(
     }, realtimeSilenceTimeoutMs);
   };
 
-  client.addEventListener("close", () => {
+  client.addEventListener("close", (event) => {
+    if (sessionFinished) return;
+    telemetry.stats.transportClose = transportCloseDetails(event, "client");
+    // Old clients used session_complete for both success and failure; it is not proof of intent.
+    const intentional = event.code === 1000 && event.wasClean && intentionalClientCloseReasons.has(event.reason);
     terminate({
       errorCode: null,
-      failureCode: "client_transport_closed",
-      outcome: "failed",
-      reason: "client_transport_closed",
+      failureCode: intentional ? null : "client_transport_closed",
+      outcome: intentional ? "completed" : "failed",
+      reason: intentional ? "client_close_session" : "client_transport_closed",
       retryable: false,
       socketCode: 1000,
     });
@@ -320,8 +328,8 @@ export async function proxyRealtimeSession(
   deadlineTimer = setTimeout(() => {
     terminate({
       errorCode: "session_expired",
-      failureCode: "session_expired",
-      outcome: "failed",
+      failureCode: null,
+      outcome: "completed",
       reason: "session_expired",
       retryable: false,
       socketCode: 1008,
@@ -396,8 +404,8 @@ export async function proxyRealtimeSession(
       }
       terminate({
         errorCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
-        failureCode: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
-        outcome: "failed",
+        failureCode: null,
+        outcome: "completed",
         reason: settlement.giftExhausted ? "phone_audio_gift_exhausted" : "allowance_exhausted",
         retryable: false,
         socketCode: 1008,
@@ -432,6 +440,7 @@ export async function proxyRealtimeSession(
     upstream,
     telemetry,
     terminate,
+    () => sessionFinished,
     () => playback.enabled && config.output_audio_enabled,
     config.source_transcript,
     (delta) => insightCollector?.add(delta),
@@ -622,8 +631,8 @@ function bindClientEvents(
   const stopForBilling = (code: "allowance_exhausted" | "phone_audio_gift_exhausted" | "billing_unavailable"): void => {
     terminate({
       errorCode: code,
-      failureCode: code,
-      outcome: "failed",
+      failureCode: code === "billing_unavailable" ? code : null,
+      outcome: code === "billing_unavailable" ? "failed" : "completed",
       reason: code,
       retryable: code === "billing_unavailable",
       socketCode: code === "billing_unavailable" ? 1011 : 1008,
@@ -707,6 +716,7 @@ function bindProviderEvents(
   upstream: WorkerWebSocket,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
+  isFinished: () => boolean,
   isPlaybackEnabled: () => boolean,
   sourceTranscript: boolean,
   onTranslation: (delta: string) => void,
@@ -743,7 +753,9 @@ function bindProviderEvents(
       });
     }
   });
-  upstream.addEventListener("close", () => {
+  upstream.addEventListener("close", (event) => {
+    if (isFinished()) return;
+    telemetry.stats.transportClose = transportCloseDetails(event, "provider");
     terminate({
       errorCode: "provider_transport_closed",
       failureCode: "provider_transport_closed",
@@ -858,6 +870,12 @@ type RealtimeTelemetry = {
     inputAudioChunks: number;
     sourceReceived: boolean;
     translationReceived: boolean;
+    transportClose: {
+      code: number | null;
+      reason: string | null;
+      source: "client" | "provider";
+      wasClean: boolean | null;
+    } | null;
   };
 };
 
@@ -901,6 +919,26 @@ function createSessionEndedEvent(
     session_duration_ms: Math.max(0, Date.now() - telemetry.startedAtMs),
     source_received: telemetry.stats.sourceReceived,
     translation_received: telemetry.stats.translationReceived,
+    transport_close_code: telemetry.stats.transportClose?.code ?? null,
+    transport_close_reason: telemetry.stats.transportClose?.reason ?? null,
+    transport_close_source: telemetry.stats.transportClose?.source ?? null,
+    transport_close_was_clean: telemetry.stats.transportClose?.wasClean ?? null,
+  };
+}
+
+function transportCloseDetails(event: CloseEvent, source: "client" | "provider") {
+  const reason = event.reason ? normalizeFailureCode(event.reason) : null;
+  // Close text is peer-controlled. Record known lifecycle reasons, never arbitrary user content.
+  const knownReasons = [
+    "client_finish", "user_cancel", "hook_unmount", "session_ended", "session_complete",
+    "session_failed", "transport_error", "idle_timeout", "session_timeout",
+    "max_duration_reached", "session_expired", "insufficient_quota", "credit_balance_exhausted",
+  ];
+  return {
+    code: event.code ?? null,
+    reason: reason === null || knownReasons.includes(reason) ? reason : "other",
+    source,
+    wasClean: event.wasClean ?? null,
   };
 }
 

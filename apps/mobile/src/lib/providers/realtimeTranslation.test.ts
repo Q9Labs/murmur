@@ -112,6 +112,21 @@ describe("RealtimeTranslationClient", () => {
     });
   });
 
+  it.each([
+    { reason: "user_cancel", expectedCompletion: true },
+    { reason: "hook_unmount", expectedCompletion: true },
+    { reason: "session_ended", expectedCompletion: true },
+    { reason: "session_complete", expectedCompletion: false },
+    { reason: "session_failed", expectedCompletion: false },
+    { reason: "transport_error", expectedCompletion: false },
+  ])("signals completion only for an explicit normal close: $reason", async ({ reason, expectedCompletion }) => {
+    const client = createRealtimeTranslationClient({ onEvent: vi.fn(), url: "wss://worker.test" });
+    client.connect();
+    await client.close(reason);
+    expect(MockWebSocket.instances[0]?.sent).toEqual(expectedCompletion ? [JSON.stringify({ kind: "close_session" })] : []);
+    expect(MockWebSocket.instances[0]?.closeCalls).toEqual([{ code: 1000, reason }]);
+  });
+
   it("sends the latest playback preference after the worker is ready", async () => {
     const client = createRealtimeTranslationClient({
       onEvent: vi.fn(),

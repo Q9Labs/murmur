@@ -61,6 +61,7 @@ import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
 import { getDevicePlaybackCaptureError } from "./captureLifecycle";
 import {
   preserveFirstLiveError,
+  sessionErrorOutcome,
   shouldIgnoreLateTransportEvent,
 } from "./errorState";
 import {
@@ -330,7 +331,7 @@ export function useLiveTranslation(
       setLiveError("session_silence_timeout");
       playbackSuppressedRef.current = true;
       observeBackgroundOperation(
-        finishSession("failed"),
+        finishSession("ended"),
         "finish_session_after_silence",
       );
     };
@@ -711,7 +712,7 @@ export function useLiveTranslation(
     if (event.kind === "session_error") {
       setLiveError(`realtime_${event.code}`);
       recordDebug("realtime.error", "Live translation failed", "error");
-      await finishSession("failed");
+      await finishSession(sessionErrorOutcome(event.code));
       return;
     }
     if (event.kind === "transport_error") {
@@ -860,7 +861,7 @@ export function useLiveTranslation(
     const providerClose = settleCleanup(
       "realtime.client_close_failed",
       "Could not confirm the realtime transport closed",
-      () => client?.close("session_complete") ?? Promise.resolve(),
+      () => client?.close(state === "ended" ? "session_ended" : "session_failed") ?? Promise.resolve(),
     );
     const workerClose = workerClosePromiseRef.current ?? startWorkerSessionClose(state);
     await Promise.all([
