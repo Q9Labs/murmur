@@ -96,6 +96,7 @@ export const jaCatalog: Catalog = {
   "status.networkDegraded": "通信が不安定",
   "status.recovering": "復旧中",
   "status.disconnected": "切断",
+  "status.waitingForTranslation": "翻訳を待っています",
   "status.connecting": "接続中",
   "status.ready": "準備完了",
   "status.degraded": "制限あり",

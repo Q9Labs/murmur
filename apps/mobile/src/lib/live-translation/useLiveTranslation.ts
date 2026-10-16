@@ -398,7 +398,11 @@ export function useLiveTranslation(
   }
 
   function recordListenTiming(step: ListenTimingStep, atMs?: number): void {
-    appendLatencySample(timingRef.current!.recordListen(step, atMs));
+    const sample = timingRef.current!.recordListen(step, atMs);
+    appendLatencySample(sample);
+    if (sample) {
+      recordDebug(`startup.${step}`, `${sample.value_ms}ms since Listen`);
+    }
   }
 
   function recordStopTiming(step: StopTimingStep, atMs?: number): void {

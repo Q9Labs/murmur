@@ -29,6 +29,7 @@ describe("Phone audio session gate", () => {
       OPENAI_API_KEY: "test-key",
     });
     expect(response.status).toBe(403);
+    expect(mocks.session).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toEqual({ error: "feature_requires_pro" });
     expect(mocks.gift).toHaveBeenCalledWith(expect.anything(), "customer-1");
   });
@@ -46,6 +47,7 @@ describe("Phone audio session gate", () => {
     }), { OPENAI_API_KEY: "test-key" });
 
     expect(response.status).toBe(200);
+    expect(mocks.session).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({
       realtime_ws_url: expect.stringContaining("capture_source=phone_audio"),
     });

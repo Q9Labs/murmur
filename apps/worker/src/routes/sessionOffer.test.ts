@@ -51,6 +51,33 @@ describe("session exhaustion offer", () => {
     }));
   });
 
+  it("uses the identity already authenticated by session creation", async () => {
+    const authenticatedSession = await dependencies.getSession();
+    vi.clearAllMocks();
+    await prepareBillingUsage(
+      new Request("https://worker.example/v2/session"),
+      { BILLING_ENFORCEMENT_ENABLED: "true" },
+      "session-authenticated", 1_000, defaultServerConfig({}), "free", 300,
+      undefined, authenticatedSession,
+    );
+    expect(dependencies.getSession).not.toHaveBeenCalled();
+    expect(dependencies.ensureAllowance).toHaveBeenCalledWith(expect.objectContaining({
+      customerId: "customer-1",
+    }));
+  });
+
+  it("does not reauthenticate a known missing identity", async () => {
+    const result = await prepareBillingUsage(
+      new Request("https://worker.example/v2/session"),
+      { BILLING_ENFORCEMENT_ENABLED: "true" },
+      "session-anonymous", 1_000, defaultServerConfig({}), "free", 300,
+      undefined, null,
+    );
+    expect(dependencies.getSession).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
+  });
+
   it("does not offer a discount for exhausted Pro minutes", async () => {
     const result = await prepareBillingUsage(
       new Request("https://worker.example/v2/session"),

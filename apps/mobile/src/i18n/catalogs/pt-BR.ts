@@ -96,6 +96,7 @@ export const ptBRCatalog: Catalog = {
   "status.networkDegraded": "Rede lenta",
   "status.recovering": "Recuperando",
   "status.disconnected": "Desconectado",
+  "status.waitingForTranslation": "Aguardando tradução",
   "status.connecting": "Conectando",
   "status.ready": "Pronto",
   "status.degraded": "Limitado",
