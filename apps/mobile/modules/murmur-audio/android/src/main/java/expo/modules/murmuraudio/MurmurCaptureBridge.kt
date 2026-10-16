@@ -1,9 +1,12 @@
 package expo.modules.murmuraudio
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 
 internal const val CAPTURE_SOURCE_MICROPHONE = "microphone"
 internal const val CAPTURE_SOURCE_DEVICE_PLAYBACK = "device_playback"
+private const val CAPTURE_START_ID_EXTRA = "murmur_capture_start_id"
 
 internal interface MurmurCaptureListener {
   fun onServiceCaptureStarted(source: String)
@@ -15,6 +18,35 @@ internal interface MurmurCaptureListener {
 internal object MurmurCaptureBridge {
   @Volatile private var listener: MurmurCaptureListener? = null
   @Volatile private var service: MurmurForegroundService? = null
+  private var nextStartId = 0L
+  private val pendingStarts = mutableMapOf<Long, String?>()
+
+  fun startService(context: Context, intent: Intent) {
+    val requestId = synchronized(this) {
+      val id = ++nextStartId
+      pendingStarts[id] = null
+      intent.putExtra(CAPTURE_START_ID_EXTRA, id)
+      id
+    }
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        context.startForegroundService(intent)
+      } else {
+        context.startService(intent)
+      }
+    } catch (error: Throwable) {
+      synchronized(this) {
+        pendingStarts.remove(requestId)
+      }
+      throw error
+    }
+  }
+
+  @Synchronized
+  fun completeServiceStart(intent: Intent?): String? {
+    val requestId = intent?.getLongExtra(CAPTURE_START_ID_EXTRA, -1L) ?: return null
+    return pendingStarts.remove(requestId)
+  }
 
   fun attach(listener: MurmurCaptureListener) {
     this.listener = listener
@@ -53,7 +85,14 @@ internal object MurmurCaptureBridge {
   }
 
   fun stopCapture(reason: String): Boolean {
-    val captureService = service ?: return false
+    val captureService = synchronized(this) {
+      // Android can crash the process if a foreground-required start is stopped before promotion.
+      if (pendingStarts.isNotEmpty()) {
+        pendingStarts.keys.forEach { pendingStarts[it] = reason }
+        return true
+      }
+      service
+    } ?: return false
     captureService.requestStop(reason)
     return true
   }

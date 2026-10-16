@@ -1051,19 +1051,11 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         putExtra(MURMUR_CAPTURE_PROJECTION_DATA_EXTRA, projectionData)
       }
     }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      context.startForegroundService(intent)
-      return
-    }
-    context.startService(intent)
+    MurmurCaptureBridge.startService(context, intent)
   }
 
   private fun stopForegroundCaptureService(reason: String = "capture_stop") {
-    val context = appContext.reactContext ?: return
-    val serviceWillStopItself = MurmurCaptureBridge.stopCapture(reason)
-    if (!serviceWillStopItself) {
-      context.stopService(Intent(context, MurmurForegroundService::class.java))
-    }
+    MurmurCaptureBridge.stopCapture(reason)
   }
 
   private fun captureCapabilities(): Map<String, Boolean> {
