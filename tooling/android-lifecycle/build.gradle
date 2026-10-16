@@ -1,0 +1,38 @@
+// cspell:ignore murmuraudio lifecycletests androidx
+plugins {
+  id 'com.android.application' version '8.10.1'
+  id 'org.jetbrains.kotlin.android' version '2.1.20'
+}
+
+android {
+  namespace 'expo.modules.murmuraudio'
+  compileSdk 35
+  useLibrary 'android.test.runner'
+  useLibrary 'android.test.base'
+  defaultConfig {
+    applicationId 'ai.q9labs.murmur.lifecycletests'
+    minSdk 29
+    targetSdk 31
+    testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+  }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions { jvmTarget = '17' }
+  sourceSets {
+    main {
+      java.srcDirs += layout.buildDirectory.dir('capture-sources')
+      res.srcDirs = ['../../apps/mobile/modules/murmur-audio/android/src/main/res']
+    }
+  }
+}
+
+dependencies { implementation 'androidx.annotation:annotation:1.9.1' }
+
+tasks.register('copyCaptureSources', Sync) {
+  from '../../apps/mobile/modules/murmur-audio/android/src/main/java'
+  include '**/MurmurForegroundService.kt', '**/MurmurCaptureBridge.kt', '**/MurmurOverlayController.kt', '**/MurmurCaptionWindow.kt'
+  into layout.buildDirectory.dir('capture-sources')
+}
+tasks.named('preBuild') { dependsOn 'copyCaptureSources' }

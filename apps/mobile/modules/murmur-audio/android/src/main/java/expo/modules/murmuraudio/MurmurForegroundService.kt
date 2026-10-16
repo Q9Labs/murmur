@@ -62,21 +62,27 @@ class MurmurForegroundService : Service() {
       return START_NOT_STICKY
     }
     if (captureActive) {
+      stopCancelledStartup(intent, startId)
       return START_NOT_STICKY
     }
 
     source = intent?.getStringExtra(MURMUR_CAPTURE_SOURCE_EXTRA) ?: CAPTURE_SOURCE_MICROPHONE
     if (source != CAPTURE_SOURCE_MICROPHONE && source != CAPTURE_SOURCE_DEVICE_PLAYBACK) {
+      MurmurCaptureBridge.completeServiceStart(intent)
       reportStartupFailure(IllegalArgumentException("Unknown capture source: $source"))
       return START_NOT_STICKY
     }
 
     try {
       startForegroundForSource()
+      if (stopCancelledStartup(intent, startId)) {
+        return START_NOT_STICKY
+      }
       if (source == CAPTURE_SOURCE_DEVICE_PLAYBACK) {
         startDevicePlaybackCapture(intent)
       }
     } catch (error: Throwable) {
+      MurmurCaptureBridge.completeServiceStart(intent)
       reportStartupFailure(error)
     }
     return START_NOT_STICKY
@@ -89,6 +95,15 @@ class MurmurForegroundService : Service() {
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
+
+  private fun stopCancelledStartup(intent: Intent?, startId: Int): Boolean {
+    val reason = MurmurCaptureBridge.completeServiceStart(intent) ?: return false
+    // An older cancelled command must not stop a newer start already accepted by Android.
+    if (stopSelfResult(startId)) {
+      stopCaptureInternal(reason)
+    }
+    return true
+  }
 
   fun requestStop(reason: String) {
     if (Looper.myLooper() == Looper.getMainLooper()) {
