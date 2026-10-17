@@ -444,34 +444,39 @@ describe("app-facing realtime socket", () => {
     });
   });
 
-  it("ignores queued audio, captions, errors, and close callbacks from a retired upstream", async () => {
+  it("keeps original audio and ignores all retired caption-only callbacks", async () => {
     vi.useFakeTimers();
-    const { client, upstream } = await openTestRealtimeSession({ name: "retired_upstream" });
-    upstream.stayOpenOnClose = true;
-    const replacement = new FakeSocket();
-    providerMocks.openTranslationSocket.mockResolvedValueOnce(replacement);
+    const { client, upstream } = await openTestRealtimeSession({ name: "caption_only" });
+    const retired = new FakeSocket(), active = new FakeSocket();
+    retired.stayOpenOnClose = true;
+    providerMocks.openTranslationSocket.mockResolvedValueOnce(retired).mockResolvedValueOnce(active);
     client.dispatchEvent(new MessageEvent("message", { data: new ArrayBuffer(4800) }));
     await vi.advanceTimersByTimeAsync(0);
-    upstream.dispatchEvent(new MessageEvent("message", {
-      data: JSON.stringify({ type: "session.output_audio.delta", delta: "AQID" }),
-    }));
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(upstream.closeCalls).toContainEqual({ code: 1000, reason: "caption_retry_replaced" });
+    const audio = { type: "session.output_audio.delta", delta: "AQID" };
+    upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
+    await vi.advanceTimersByTimeAsync(15_025);
+    expect(upstream.closeCalls).toEqual([]);
+    expect(retired.closeCalls).toContainEqual({ code: 1000, reason: "caption_retry_replaced" });
     const sent = [...client.sent];
-    for (const output of [
-      { type: "session.output_audio.delta", delta: "AQID" },
+    for (const output of [audio,
       { type: "session.output_transcript.delta", delta: "stale caption" },
-      { type: "session.closed" },
-      { type: "error", error: { code: "server_error" } },
-    ]) upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(output) }));
-    upstream.dispatchEvent(new Event("close"));
-    upstream.dispatchEvent(new Event("error"));
+      { type: "session.closed" }, { type: "error", error: { code: "server_error" } },
+    ]) retired.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(output) }));
+    retired.dispatchEvent(new Event("close"));retired.dispatchEvent(new Event("error"));
+    active.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
     expect(client.sent).toEqual(sent);
+    upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
+    expect(client.sent.at(-1)).toBeInstanceOf(ArrayBuffer);
     expect(client.closeCalls).toEqual([]);
-    replacement.dispatchEvent(new MessageEvent("message", {
+    active.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ type: "session.output_transcript.delta", delta: "new caption" }),
     }));
     expect(client.sent.at(-1)).toContain("new caption");
+    const selected = [...client.sent];
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.output_transcript.delta", delta: "late duplicate" }),
+    }));
+    expect(client.sent).toEqual(selected);
     client.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ kind: "close_session" }) }));
   });
 

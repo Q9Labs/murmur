@@ -1,189 +1,197 @@
 import type { WorkerWebSocket } from "../http/response";
-import { createInputAudioMessage } from "../providers/openaiRealtime";
+import { createInputAudioMessage, parseTranslationOutput, type OpenAITranslationOutput } from "../providers/openaiRealtime";
 
-// Empirical guard, not a provider delivery guarantee. See the long-speech evidence.
 export const captionStallTimeoutMs = 10_000;
+// Long-speech healthy audio-to-caption max was 4.158s. Include replay time separately.
+export const captionResponseTimeoutMs = 5_000;
 const maxCaptionRetries = 2;
-const maxBufferedBytes = 30 * 24_000 * 2;
+const maxBufferedBytes = 60 * 24_000 * 2;
 const replayFrameBytes = 4_800;
 const replaySpeed = 4;
-
-type Replay = {
-  frames: ArrayBuffer[];
-  bytes: number;
-  socket: WorkerWebSocket;
-};
+type Translation = Extract<Extract<OpenAITranslationOutput, { kind: "event" }>["event"], { kind: "translation_delta" | "source_delta" }>;
+type AudioQueue = { frames: ArrayBuffer[]; bytes: number };
+type CaptionConnection = AudioQueue & { socket: WorkerWebSocket; replaying: boolean; received: boolean };
+function appendFrames(queue: AudioQueue, frames: ArrayBuffer[], bytes: number): void {
+  queue.frames.push(...frames);
+  queue.bytes += bytes;
+  while (queue.bytes > maxBufferedBytes) queue.bytes -= queue.frames.shift()?.byteLength ?? 0;
+}
 
 export function createCaptionRecovery(params: {
   initial: WorkerWebSocket;
   open: (signal: AbortSignal) => Promise<WorkerWebSocket>;
-  activate: (socket: WorkerWebSocket) => void;
   retire: (socket: WorkerWebSocket) => void;
+  onCaption: (event: Translation) => void;
   onRetry: (count: number) => void;
   onRecovered: () => void;
   onRetryFailure: () => void;
-  onReplayFailure: () => void;
+  onConnection: () => void;
+  onConnectionCaption: () => void;
+  onConnectionFailure: () => void;
+  onInput: (bytes: number) => void;
 }) {
-  let current = params.initial;
-  let history: ArrayBuffer[] = [];
-  let historyBytes = 0;
-  let completeHistory = true;
-  let outputBytes = 0;
-  let hasAudibleOutput = false;
-  let skipOutputBytes = 0;
-  let replayDurationMs = 0;
-  let replay: Replay | null = null;
+  const history: AudioQueue = { frames: [], bytes: 0 };
+  let retainHistory = true;
+  let active: CaptionConnection | null = null;
   let retries = 0;
-  let captionReceived = false;
+  let source: "pending" | "original" | "recovery" = "pending";
   let stopped = false;
+  let started = false;
   let connecting: AbortController | null = null;
-  let stallTimer: ReturnType<typeof setTimeout> | null = null;
+  let deadline: ReturnType<typeof setTimeout> | null = null;
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function clearStall(): void {
-    if (stallTimer) clearTimeout(stallTimer);
-    stallTimer = null;
+  function clearDeadline(): void {
+    if (deadline) clearTimeout(deadline);
+    deadline = null;
   }
-
   function releaseHistory(): void {
-    history = [];
-    historyBytes = 0;
+    retainHistory = false;
+    history.frames = [];
+    history.bytes = 0;
   }
-
+  function retire(): void {
+    const previous = active;
+    active = null;
+    if (replayTimer) clearTimeout(replayTimer);
+    replayTimer = null;
+    if (previous) params.retire(previous.socket);
+  }
+  function fail(connection: CaptionConnection): void {
+    if (active !== connection || stopped) return;
+    if (!connection.received) params.onConnectionFailure();
+    params.onRetryFailure();
+    clearDeadline();
+    retire();
+    if (source === "pending") void retry();
+  }
+  function sendFrame(connection: CaptionConnection, frame: ArrayBuffer): boolean {
+    try {
+      connection.socket.send(createInputAudioMessage(frame));
+      params.onInput(frame.byteLength);
+      return true;
+    } catch {
+      fail(connection);
+      return false;
+    }
+  }
   function pumpReplay(): void {
     replayTimer = null;
-    const active = replay;
-    if (!active || stopped) return;
-    const frame = active.frames.shift();
-    if (!frame) {
-      replay = null;
-      return;
+    const connection = active;
+    if (!connection || stopped) return;
+    const frame = connection.frames.shift();
+    if (!frame) { connection.replaying = false; return; }
+    connection.bytes -= frame.byteLength;
+    if (sendFrame(connection, frame)) {
+      replayTimer = setTimeout(pumpReplay, frame.byteLength / 48 / replaySpeed);
     }
-    active.bytes -= frame.byteLength;
+  }
+  function receiveEvent(connection: CaptionConnection, output: Extract<OpenAITranslationOutput, { kind: "event" }>): void {
+    if (output.event.kind === "translation_delta" && output.event.delta.trim()) {
+      if (!connection.received) { connection.received = true; params.onConnectionCaption(); }
+      if (source === "pending") {
+        source = "recovery";
+        clearDeadline();
+        releaseHistory();
+        params.onRecovered();
+      }
+      if (source === "recovery") params.onCaption(output.event);
+    } else if (output.event.kind === "session_error" || output.event.kind === "session_closed") {
+      fail(connection);
+    }
+  }
+  function bind(connection: CaptionConnection): void {
+    connection.socket.addEventListener("message", (event: MessageEvent) => {
+      if (stopped || active !== connection) return;
+      try {
+        const output = parseTranslationOutput(event.data);
+        // Caption-only audio and source transcripts are never client playback/caption sources.
+        if (output.kind === "event") receiveEvent(connection, output);
+      } catch { fail(connection); }
+    });
+    connection.socket.addEventListener("close", () => fail(connection));
+    connection.socket.addEventListener("error", () => fail(connection));
+  }
+  async function connect(controller: AbortController): Promise<WorkerWebSocket | null> {
+    const connectDeadline = setTimeout(() => controller.abort(), captionResponseTimeoutMs);
     try {
-      active.socket.send(createInputAudioMessage(frame));
+      const socket = await params.open(controller.signal);
+      if (stopped || source !== "pending" || controller.signal.aborted) { params.retire(socket); return null; }
+      return socket;
     } catch {
-      params.onReplayFailure();
-      return;
+      if (!stopped && source === "pending") params.onRetryFailure();
+      return null;
+    } finally {
+      clearTimeout(connectDeadline);
+      connecting = null;
     }
-    replayTimer = setTimeout(pumpReplay, frame.byteLength / 48 / replaySpeed);
   }
-
-  function canReplay(): boolean {
-    return !stopped && !captionReceived && completeHistory && history.length > 0;
+  function activate(socket: WorkerWebSocket): void {
+    if (stopped || source !== "pending") { params.retire(socket); return; }
+    const connection = { socket, frames: [...history.frames], bytes: history.bytes, replaying: true, received: false };
+    active = connection;
+    params.onConnection();
+    bind(connection);
+    // Arm at connection, including silent providers. Buffer eviction never touches this timer.
+    deadline = setTimeout(() => {
+      if (active === connection && !connection.received) fail(connection);
+    }, captionResponseTimeoutMs + history.bytes / 48 / replaySpeed);
+    if (retries === maxCaptionRetries) releaseHistory();
+    pumpReplay();
   }
-
-  function canRetry(): boolean {
-    return canReplay() && !connecting && retries < maxCaptionRetries;
-  }
-
   async function retry(): Promise<void> {
-    stallTimer = null;
-    if (!canRetry()) return;
+    clearDeadline();
+    if (stopped || source !== "pending" || connecting) return;
+    if (retries >= maxCaptionRetries) { retire(); releaseHistory(); return; }
+    retire();
     retries += 1;
     params.onRetry(retries);
     const controller = new AbortController();
     connecting = controller;
-    const deadline = setTimeout(() => controller.abort(), 15_000);
-    try {
-      const replacement = await params.open(controller.signal);
-      if (!canReplay() || controller.signal.aborted) {
-        params.retire(replacement);
-        return;
-      }
-      const previous = current;
-      if (replayTimer) clearTimeout(replayTimer);
-      replayTimer = null;
-      replay = { socket: replacement, frames: [...history], bytes: historyBytes };
-      // Every replacement starts at the beginning of the same input. Preserve the
-      // audible frontier across generations; replay captions are still forwarded.
-      // An audio-only failure can be near-silent noise, not translated speech.
-      if (!hasAudibleOutput) outputBytes = 0;
-      skipOutputBytes = outputBytes;
-      replayDurationMs = historyBytes / 48 / replaySpeed;
-      current = replacement;
-      // Activate before closing: all callbacks from the previous generation become inert.
-      params.activate(replacement);
-      params.retire(previous);
-      pumpReplay();
-    } catch {
-      if (canReplay()) {
-        params.onRetryFailure();
-        // The old connection is still usable if the replacement handshake failed.
-        stallTimer = setTimeout(() => { void retry(); }, captionStallTimeoutMs * 2);
-      }
-    } finally {
-      clearTimeout(deadline);
-      connecting = null;
-    }
+    const socket = await connect(controller);
+    if (socket) activate(socket);
+    else if (!stopped && source === "pending") void retry();
   }
-
   function sendAudio(audio: ArrayBuffer): void {
     if (stopped) return;
-    // Split large client frames so the replay rate is bounded, not a large burst.
+    // The original is permanent. Replay and fan-out never enter the usage meter again.
+    params.initial.send(createInputAudioMessage(audio));
     const frames: ArrayBuffer[] = [];
-    for (let offset = 0; offset < audio.byteLength; offset += replayFrameBytes) {
-      frames.push(audio.slice(offset, offset + replayFrameBytes));
+    for (let offset = 0; offset < audio.byteLength; offset += replayFrameBytes) frames.push(audio.slice(offset, offset + replayFrameBytes));
+    if (retainHistory) {
+      appendFrames(history, frames, audio.byteLength);
     }
-    if (!captionReceived && completeHistory) {
-      history.push(...frames);
-      historyBytes += audio.byteLength;
-      if (historyBytes > maxBufferedBytes) {
-        // A truncated prefix cannot be aligned with the audible frontier safely.
-        completeHistory = false;
-        connecting?.abort();
-        clearStall();
-        releaseHistory();
-      }
-    }
-    if (replay) {
-      // Real-time input drains at 4x. An unbounded sender must not grow this queue.
-      if (replay.bytes + audio.byteLength > maxBufferedBytes) {
-        params.onReplayFailure();
-        return;
-      }
-      replay.frames.push(...frames);
-      replay.bytes += audio.byteLength;
+    const connection = active;
+    if (!connection) return;
+    if (connection.replaying) {
+      appendFrames(connection, frames, audio.byteLength);
     } else {
-      current.send(createInputAudioMessage(audio));
+      for (const frame of frames) { if (!sendFrame(connection, frame)) break; }
     }
   }
-
   return {
     sendAudio,
     outputAudio(): void {
-      if (!stallTimer && canRetry()) {
-        const timeout = current === params.initial
-          ? captionStallTimeoutMs
-          : captionStallTimeoutMs * 2 + replayDurationMs;
-        stallTimer = setTimeout(() => { void retry(); }, timeout);
+      if (stopped || started || source !== "pending") return;
+      started = true;
+      deadline = setTimeout(() => { void retry(); }, captionStallTimeoutMs);
+    },
+    acceptOriginalCaption(delta: string): boolean {
+      if (stopped || !delta.trim() || source === "recovery") return false;
+      if (source === "pending") {
+        source = "original";
+        clearDeadline();
+        connecting?.abort();
+        retire();
+        releaseHistory();
       }
-    },
-    filterOutputAudio(audio: ArrayBuffer, audible: boolean): ArrayBuffer {
-      const skipped = Math.min(skipOutputBytes, audio.byteLength);
-      skipOutputBytes -= skipped;
-      const fresh = audio.slice(skipped);
-      // Track the playback timeline even while muted, so toggling playback cannot
-      // move a replacement behind output already consumed by the current stream.
-      hasAudibleOutput ||= audible;
-      outputBytes += fresh.byteLength;
-      return fresh;
-    },
-    caption(): void {
-      if (captionReceived || stopped) return;
-      captionReceived = true;
-      clearStall();
-      connecting?.abort();
-      releaseHistory();
-      if (current !== params.initial) params.onRecovered();
+      return true;
     },
     stop(): void {
       stopped = true;
       connecting?.abort();
-      clearStall();
-      if (replayTimer) clearTimeout(replayTimer);
-      replayTimer = null;
-      replay = null;
+      clearDeadline();
+      retire();
       releaseHistory();
     },
   };

@@ -181,6 +181,11 @@ export async function proxyRealtimeSession(
     stats: {
       captionRetryCount: 0,
       captionsRecovered: false,
+      originalCaptionReceived: false,
+      captionConnections: 0,
+      captionConnectionsWithTranscript: 0,
+      captionConnectionsFailed: 0,
+      captionInputBytes: 0,
       closeReason: null,
       failureCode: null,
       inputAudioBytes: 0,
@@ -439,13 +444,14 @@ export async function proxyRealtimeSession(
       () => sessionFinished || upstream !== socket,
       config.source_transcript,
       (delta) => {
-        if (delta.trim()) captionRecovery?.caption();
+        if (delta.trim()) telemetry.stats.originalCaptionReceived = true;
+        if (!captionRecovery?.acceptOriginalCaption(delta)) return false;
         insightCollector?.add(delta);
+        return true;
       },
       (audio) => {
         captionRecovery?.outputAudio();
-        const fresh = captionRecovery?.filterOutputAudio(audio, hasMeaningfulPcm16Audio(audio)) ?? audio;
-        if (playback.enabled && config.output_audio_enabled && fresh.byteLength && client.readyState === WebSocket.OPEN) client.send(fresh);
+        if (playback.enabled && config.output_audio_enabled && client.readyState === WebSocket.OPEN) client.send(audio);
       },
     );
   };
@@ -474,22 +480,18 @@ export async function proxyRealtimeSession(
       }
       return socket;
     },
-    activate: (socket) => {
-      upstream = socket;
-      bindUpstream(socket);
-    },
+    onCaption: (event) => forwardProviderEvent(
+      { kind: "event", event }, client, telemetry, terminate,
+      (delta) => { insightCollector?.add(delta); return true; },
+    ),
     retire: (socket) => safelyCloseSocket(socket, 1000, "caption_retry_replaced", appSessionId),
     onRetry: (count) => { telemetry.stats.captionRetryCount = count; },
     onRecovered: () => { telemetry.stats.captionsRecovered = true; },
     onRetryFailure: retryFailure,
-    onReplayFailure: () => terminate({
-      errorCode: "provider_replay_failed",
-      failureCode: "provider_replay_failed",
-      outcome: "failed",
-      reason: "provider_replay_failed",
-      retryable: true,
-      socketCode: 1011,
-    }),
+    onConnection: () => { telemetry.stats.captionConnections += 1; },
+    onConnectionCaption: () => { telemetry.stats.captionConnectionsWithTranscript += 1; },
+    onConnectionFailure: () => { telemetry.stats.captionConnectionsFailed += 1; },
+    onInput: (bytes) => { telemetry.stats.captionInputBytes += bytes; },
   });
   const recovery = captionRecovery;
   bindClientEvents(
@@ -778,7 +780,7 @@ function bindProviderEvents(
   terminate: (termination: RealtimeTermination) => void,
   isFinished: () => boolean,
   sourceTranscript: boolean,
-  onTranslation: (delta: string) => void,
+  onTranslation: (delta: string) => boolean,
   onOutputAudio: (audio: ArrayBuffer) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
@@ -847,9 +849,9 @@ function forwardProviderEvent(
   client: WorkerWebSocket,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
-  onTranslation: (delta: string) => void,
+  onTranslation: (delta: string) => boolean,
 ): void {
-  if (output.event.kind === "translation_delta") onTranslation(output.event.delta);
+  if (output.event.kind === "translation_delta" && !onTranslation(output.event.delta)) return;
   captureFirstProviderSignal(output.event, telemetry);
   if (output.event.kind === "session_error") {
     telemetry.stats.failureCode = normalizeFailureCode(output.event.code);
@@ -925,6 +927,11 @@ type RealtimeTelemetry = {
   stats: {
     captionRetryCount: number;
     captionsRecovered: boolean;
+    originalCaptionReceived: boolean;
+    captionConnections: number;
+    captionConnectionsWithTranscript: number;
+    captionConnectionsFailed: number;
+    captionInputBytes: number;
     closeReason: string | null;
     failureCode: string | null;
     inputAudioBytes: number;
@@ -975,6 +982,11 @@ function createSessionEndedEvent(
     event: "worker_session_ended",
     caption_retry_count: telemetry.stats.captionRetryCount,
     captions_recovered: telemetry.stats.captionsRecovered,
+    caption_original_received: telemetry.stats.originalCaptionReceived,
+    caption_recovery_connections: telemetry.stats.captionConnections,
+    caption_recovery_with_transcript: telemetry.stats.captionConnectionsWithTranscript,
+    caption_recovery_failed: telemetry.stats.captionConnectionsFailed,
+    caption_recovery_input_bytes: telemetry.stats.captionInputBytes,
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,
     input_audio_chunks: telemetry.stats.inputAudioChunks,

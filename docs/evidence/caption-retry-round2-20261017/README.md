@@ -1,5 +1,7 @@
 # Caption recovery: longer speech and playback
 
+> Historical round-two evidence for `832cc4b`. The caption-only design and final proof in [round four](../caption-retry-round4-20261017/README.md) supersede the playback and retry policies below.
+
 All audio here is synthetic. No production service was called or changed.
 
 ## Timing rule
