@@ -2,14 +2,46 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.select.outputs.native }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Select native builds
+        id: select
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git ls-files -z > "$RUNNER_TEMP/native-changes"
+          elif [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/native-changes"
+          else
+            git diff --name-only --no-renames -z "$BASE_SHA" "$HEAD_SHA" > "$RUNNER_TEMP/native-changes"
+          fi
+          node tooling/ci/select-native-builds.mjs < "$RUNNER_TEMP/native-changes" >> "$GITHUB_OUTPUT"
+
   test:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -20,8 +52,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run gate:hygiene
-      - run: pnpm test
-      - run: pnpm run test:coverage
+      - run: pnpm run test:ci
       - run: pnpm run test:presence
       - run: pnpm run deps:syncpack
       - run: pnpm run lint:spelling
@@ -33,6 +64,7 @@ jobs:
       - run: pnpm run store:blockers
 
   secrets:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,7 +76,7 @@ jobs:
           args: git --redact --verbose --log-opts=--all .
 
   dependency-review:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -52,3 +84,102 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+
+  android:
+    needs: [changes, test]
+    if: needs.changes.outputs.native == 'true'
+    name: Android unsigned debug build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Java 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+
+      - name: Generate Android native project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --clean --no-install --platform android
+
+      - name: Test and build unsigned Android app
+        working-directory: apps/mobile/android
+        # Test our native module, not unit-test fixtures shipped by Expo dependencies.
+        run: ./gradlew --no-daemon :murmur-audio:testDebugUnitTest :app:assembleDebug
+
+  ios:
+    needs: [changes, test]
+    if: needs.changes.outputs.native == 'true'
+    name: iOS unsigned simulator build
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate iOS native project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --clean --no-install --platform ios
+
+      - name: Cache CocoaPods
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            apps/mobile/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ runner.arch }}-xcode-26.6-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/package.json', 'apps/mobile/app.config.*', 'apps/mobile/plugins/**', 'apps/mobile/modules/**') }}
+
+      - name: Cache iOS build products
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/murmur-derived-data
+          key: ios-${{ runner.os }}-${{ runner.arch }}-xcode-26.6-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/package.json', 'apps/mobile/app.config.*', 'apps/mobile/plugins/**', 'apps/mobile/modules/**') }}-${{ github.sha }}
+          restore-keys: |
+            ios-${{ runner.os }}-${{ runner.arch }}-xcode-26.6-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/package.json', 'apps/mobile/app.config.*', 'apps/mobile/plugins/**', 'apps/mobile/modules/**') }}-
+
+      - name: Install CocoaPods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Build unsigned iOS simulator app
+        run: >-
+          xcodebuild
+          -workspace apps/mobile/ios/Murmur.xcworkspace
+          -scheme Murmur
+          -configuration Debug
+          -derivedDataPath "${{ runner.temp }}/murmur-derived-data"
+          -destination "generic/platform=iOS Simulator"
+          CODE_SIGNING_ALLOWED=NO
+          build

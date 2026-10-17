@@ -37,17 +37,8 @@ pnpm run test:presence
 # Run Murmur's project-specific secret validator.
 pnpm run store:secrets
 
-# Typecheck the Expo app and shared TypeScript surface.
-pnpm run typecheck
-
-# Typecheck the Cloudflare Worker project specifically.
-pnpm run worker:types
-
-# Run the unit test suite.
-pnpm run unit
-
-# Run coverage thresholds.
-pnpm run test:coverage
+# Typecheck every workspace and run each unit suite once with coverage.
+pnpm run test:ci
 
 # Validate app configuration needed for release/store correctness.
 pnpm run store:config
