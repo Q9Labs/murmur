@@ -31,8 +31,12 @@ let startupTimeout;
 await mkdir(output, { recursive: true });
 try {
   await writeFile(fixturePath, `import worker from './src/entrypoint';
-export { RateLimitDurableObject, CustomerLedgerDurableObject } from './src/entrypoint';
+export { RateLimitDurableObject } from './src/entrypoint';
+export { CustomerLedgerDurableObject } from './privacy-probe';
 export default { fetch(request, env, context) {
+  if (new URL(request.url).pathname === '/__proof/ledger') {
+    return env.CUSTOMER_LEDGER.get(env.CUSTOMER_LEDGER.idFromName('runtime-ordinary-call')).fetch('https://customer-ledger.internal/');
+  }
   console.error('PRIVATE_DEPENDENCY_EMAIL@example.invalid');
   const database = new Proxy(env.BILLING_DB, { get(target, key) {
     if (key === 'prepare') return () => { throw new Error('PRIVATE_AUTH_EMAIL@example.invalid'); };
@@ -72,6 +76,9 @@ export default { fetch(request, env, context) {
     child.once("exit", () => reject(new Error("workerd exited before readiness")));
   });
   clearTimeout(startupTimeout);
+  const ordinaryLedger = await fetch(`http://127.0.0.1:${port}/__proof/ledger`, { signal: AbortSignal.timeout(15_000) });
+  assert.equal(ordinaryLedger.status, 403, "sandbox ledger must pass ordinary calls through to the real class");
+  assert.equal((await ordinaryLedger.json()).code, "invalid_ledger_command");
   const probes = [];
   for (const auth of [false, true]) {
     const trace = randomBytes(16).toString("hex");

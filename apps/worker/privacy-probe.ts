@@ -119,7 +119,7 @@ export class CustomerLedgerDurableObject extends CustomerLedger {
       await this.actualState.storage.deleteAll();
       return Response.json({ cleaned: true });
     }
-    this.fault = readFault(request);
+    this.fault = request.headers.has("x-probe-operation") ? readFault(request) : undefined;
     return super.fetch(request);
   }
 }
