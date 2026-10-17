@@ -119,7 +119,7 @@ for (const delay of [10000, 20000, 30000]) {
   });
   records = result.events?.events;
   if (result.events?.count > records?.length) throw new Error("Retained query omitted matching records");
-  if (records?.some((event) => event.source?.report_id === expected.report_id) && records.some((event) => event.source?.event === "session_stop" && event.source.app_session_id === expected.session_id) && (!authDeleteTrace || records.some((event) => event.source?.trace_id === authDeleteTrace))) break;
+  if (records?.some((event) => event.source?.report_id === expected.report_id) && records.some((event) => event.source?.event === "session_stop" && event.source.app_session_id === expected.session_id) && records.some((event) => event.source?.trace_id === expected.error_trace && event.source?.attributes?.error_code === "worker.request_failed") && records.some((event) => event.source?.trace_id === expected.relay_trace && event.source?.attributes?.error_code === "mobile.operation_failed") && (!authDeleteTrace || records.some((event) => event.source?.trace_id === authDeleteTrace))) break;
 }
 if (!records?.length || records.length >= 1000 || records.some((event) => event.$workers?.truncated || event.$cloudflare?.truncated)) throw new Error("Incomplete retained record retrieval");
 const serialized = JSON.stringify(records);
