@@ -47,6 +47,7 @@ let socket;
 let tail;
 const timeout = setTimeout(() => { socket?.close(); }, 120_000);
 const receipt = { diagnostic_code: diagnosticCode, retrieved: false, source: "workers-tail", production: false };
+let stage = "tail";
 try {
   tail = await api(resource, "POST", { filters: [{ query: diagnosticCode }] });
   socket = new WebSocket(tail.url, "trace-v1");
@@ -80,7 +81,7 @@ try {
   receipt.record = delivered.record;
   receipt.complete_log_batch_checked = true;
   // Retained exports add Cloudflare metadata absent from our JSON line.
-  await new Promise((accept) => setTimeout(accept, 10_000));
+  stage = "retained_lookup";
   const at = Date.parse(delivered.outcome._time);
   const query = (filters) => api(`/accounts/${account}/workers/observability/telemetry/query`, "POST", {
     queryId: `murmur-pilot-${diagnosticCode}`, view: "events", limit: 100,
@@ -89,10 +90,17 @@ try {
       { key: "$metadata.service", operation: "eq", type: "string", value: "murmur-worker-sandbox" }, ...filters,
     ] },
   });
-  const matched = await query([{ key: "trace_id", operation: "eq", type: "string", value: diagnosticCode }]);
-  const requestId = matched.events?.events?.[0]?.$metadata?.requestId;
+  let requestId;
+  // Streaming delivery precedes retained indexing. Give indexing one bounded minute.
+  for (const delay of [10_000, 20_000, 30_000]) {
+    await new Promise((accept) => setTimeout(accept, delay));
+    const matched = await query([{ key: "trace_id", operation: "eq", type: "string", value: diagnosticCode }]);
+    requestId = matched.events?.events?.[0]?.$metadata?.requestId;
+    if (requestId) break;
+  }
   if (!requestId) throw new Error("Retained outcome did not include its request id");
   // Include records from the invocation that have no diagnostic code.
+  stage = "complete_retained_invocation";
   const invocation = await query([{ key: "$metadata.requestId", operation: "eq", type: "string", value: requestId }]);
   const records = invocation.events?.events;
   if (!records?.length || records.length >= 100 || records.some((record) => record.$workers?.truncated)) {
@@ -107,6 +115,7 @@ try {
   receipt.retrieved = true;
   receipt.retrieved_at = new Date().toISOString();
 } catch {
+  receipt.failed_stage = stage;
   receipt.error = "Delivery verification failed; check sandbox configuration and Cloudflare access";
   process.exitCode = 1;
 } finally {
