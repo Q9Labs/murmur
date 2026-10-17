@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 function select(paths) {
-  const result = spawnSync(process.execPath, [new URL("select-native-builds.mjs", import.meta.url).pathname], {
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL("select-native-builds.mjs", import.meta.url))], {
     input: paths.join("\0"),
     encoding: "utf8",
   });

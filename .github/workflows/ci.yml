@@ -41,7 +41,6 @@ jobs:
           node tooling/ci/select-native-builds.mjs < "$RUNNER_TEMP/native-changes" >> "$GITHUB_OUTPUT"
 
   test:
-    needs: changes
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
