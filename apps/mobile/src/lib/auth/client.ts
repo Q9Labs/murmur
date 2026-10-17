@@ -19,6 +19,9 @@ const murmurAuthClient = createAuthClient({
       context.headers.set(freeAllowanceIdHeader, await getOrCreateFreeAllowanceId());
       context.headers.set("x-murmur-install-id", await getOrCreateInstallId());
       const release = getAppRelease();
+      if (release.app_platform !== "web") {
+        context.headers.set("origin", "murmur://");
+      }
       context.headers.set("x-murmur-app-platform", release.app_platform);
       context.headers.set("x-murmur-app-version", release.app_version);
       return context;

@@ -17,7 +17,7 @@ import { uiLocales } from "./types";
 const englishKeys = Object.keys(enCatalog).filter(isMessageKey).sort();
 const translated = { ar: arCatalog, de: deCatalog, es: esCatalog, fr: frCatalog, hi: hiCatalog, id: idCatalog, ja: jaCatalog, "pt-BR": ptBRCatalog, tr: trCatalog, ur: urCatalog };
 const productNames = ["Murmur", "Pro Max", "Trip Pass", "Event Pass"];
-const vendorPattern = /openai|chatgpt|gpt-|gemini|anthropic|claude|soniox|google ai/i;
+const vendorPattern = /openai|openrouter|chatgpt|gpt-|gemini|anthropic|claude|soniox|google ai/i;
 
 describe("UI catalogs", () => {
   it("registers a catalog for every shipped locale", () => {
@@ -33,11 +33,17 @@ describe("UI catalogs", () => {
     }
   });
 
-  it.each(Object.entries(translated))("keeps product names untranslated and names no AI vendor in %s", (_locale, catalog) => {
+  it.each(Object.entries(translated))("keeps product names untranslated and names the live AI recipient in %s", (_locale, catalog) => {
     for (const key of englishKeys) {
       const english: string = enCatalog[key];
       const message = catalogMessage(catalog, key);
-      expect(vendorPattern.test(message), key).toBe(false);
+      if (key === "onboarding.consent" || key === "onboarding.privacySentToAi") {
+        expect(message, key).toContain("OpenAI");
+      } else if (key === "insights.summary") {
+        expect(message, key).toContain("OpenRouter");
+      } else {
+        expect(vendorPattern.test(message), key).toBe(false);
+      }
       for (const name of productNames.filter((product) => english.includes(product))) {
         expect(message, key).toContain(name);
       }

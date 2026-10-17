@@ -1,9 +1,9 @@
 [[IgnoredVulns]]
-id = "GHSA-5p2g-fcmc-qvqq"
-ignoreUntil = 2026-10-13
-reason = "No patched image-size release exists as of 2026-09-13. The package is only used transitively by Metro while resolving local build assets; reassess within 30 days."
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-10-24
+reason = "No fixed braces release exists as of 2026-10-17. Only micromatch in local build/test tooling consumes it; Murmur does not accept user-supplied glob patterns or bundle this package into its mobile or Worker runtime. Reassess within seven days."
 
 [[IgnoredVulns]]
-id = "GHSA-w3rx-r6r6-pgpr"
-ignoreUntil = 2026-10-13
-reason = "No patched image-size release exists as of 2026-09-13. The package is only used transitively by Metro while resolving local build assets; reassess within 30 days."
+id = "GHSA-86w9-cpqp-85rv"
+ignoreUntil = 2026-10-24
+reason = "No fixed node-forge release exists as of 2026-10-17. It is used by Expo CLI and its build-time code-signing-certificate tooling, not Murmur's mobile or Worker signature verification. Release signing uses OpenSSL and platform tools. Reassess within seven days."

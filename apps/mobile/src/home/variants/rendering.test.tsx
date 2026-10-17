@@ -235,8 +235,7 @@ describe("shared variant onboarding flow", () => {
     harness.controls.length = 0;
     const privacy = onboardingProps("privacy");
     const privacyMarkup = render(<OnboardingFlow {...privacy} text={onboardingText} theme={onboardingTheme} />);
-    expect(privacyMarkup).toContain("sent to a third-party AI service");
-    expect(privacyMarkup).not.toMatch(/OpenAI|PostHog|Sentry|Cloudflare/);
+    expect(privacyMarkup).toContain("sent to OpenAI");
     harness.controls.find((control) => control.accessibilityRole === "link")?.onPress?.();
     expect(openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
     const consent = harness.controls.find((control) => control.accessibilityRole === "checkbox");

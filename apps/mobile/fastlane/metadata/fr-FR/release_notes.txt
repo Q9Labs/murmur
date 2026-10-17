@@ -1,1 +1,3 @@
 Nouvelles formules Pro, Pro Max, Trip Pass et Event Pass. Écoute en arrière-plan, connexion avec Apple ou Google et nouvelle interface. L’app est disponible en 11 langues.
+
+Consentement OpenAI plus clair, connexion Apple et Google corrigée et enregistrement en arrière-plan plus stable.

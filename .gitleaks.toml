@@ -35,3 +35,27 @@ regexTarget = "line"
 targetRules = ["generic-api-key"]
 paths = ['''^apps/mobile/eas\.json$''']
 regexes = ['''"EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN"\s*:\s*"phc_[A-Za-z0-9]{43}"''']
+
+[[allowlists]]
+description = "These exact public local-storage names are not API credentials."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^apps/mobile/src/lib/(installIdentity|insightsConsent)\.ts$''']
+regexes = ['''^\s*const [A-Za-z]+ = "murmur_(privacy_acknowledged_v1|third_party_ai_consent_v[234]|insights_consent_v[12])";$''']
+
+[[allowlists]]
+description = "The Apple example contains this exact non-key placeholder."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["private-key"]
+paths = ['''^apps/worker/\.dev\.vars\.example$''']
+regexes = ['''(?m)^APPLE_PRIVATE_KEY="-----[B]EGIN PRIVATE KEY-----\\nreplace-with-apple-sign-in-key\\n-----END PRIVATE KEY-----\\n"$''']
+
+[[allowlists]]
+description = "The secret validator searches for this literal PEM header."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["private-key"]
+paths = ['''^tooling/scripts/validate-no-secrets\.mjs$''']
+regexes = ['''(?m)^\s*contents\.includes\('\.replace\("-----[B]EGIN PRIVATE KEY-----"'\),$''']

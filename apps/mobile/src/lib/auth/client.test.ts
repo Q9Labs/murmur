@@ -14,6 +14,7 @@ const installIdentity = vi.hoisted(() => ({
   getOrCreateFreeAllowanceId: vi.fn(),
   getOrCreateInstallId: vi.fn(),
 }));
+const release = vi.hoisted(() => ({ app_platform: "android", app_version: "1.2.3" }));
 const nativeProviders = vi.hoisted(() => ({
   getAppleIdentity: vi.fn(),
   getGoogleIdentity: vi.fn(),
@@ -44,7 +45,7 @@ vi.mock("better-auth/react", () => ({
 }));
 vi.mock("expo-secure-store", () => ({}));
 vi.mock("../appRelease", () => ({
-  getAppRelease: () => ({ app_platform: "android", app_version: "1.2.3" }),
+  getAppRelease: () => release,
 }));
 vi.mock("../installIdentity", () => installIdentity);
 vi.mock("./nativeProviders", () => nativeProviders);
@@ -60,6 +61,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  release.app_platform = "android";
   auth.getSession.mockResolvedValue({ data: { user: { id: "customer-1" } } });
   auth.getCookie.mockResolvedValue("murmur.session=test-cookie");
   auth.signInAnonymous.mockResolvedValue({ error: null });
@@ -78,10 +80,26 @@ describe("mobile Murmur authentication client", () => {
     const headers = new Headers();
     await auth.requestHook({ headers });
 
+    expect(headers.get("origin")).toBe("murmur://");
     expect(headers.get("x-murmur-free-allowance-id")).toBe("free_test_123");
     expect(headers.get("x-murmur-install-id")).toBe("install_test_123");
     expect(headers.get("x-murmur-app-platform")).toBe("android");
     expect(headers.get("x-murmur-app-version")).toBe("1.2.3");
+  });
+
+  it.each(["ios", "android"])("supplies the trusted origin for native %s sign-in", async (platform) => {
+    release.app_platform = platform;
+    const headers = new Headers({ cookie: "murmur.session=guest" });
+    await auth.requestHook({ headers });
+    expect(headers.get("origin")).toBe("murmur://");
+    expect(headers.get("cookie")).toBe("murmur.session=guest");
+  });
+
+  it("leaves browser origin handling to the browser", async () => {
+    release.app_platform = "web";
+    const headers = new Headers();
+    await auth.requestHook({ headers });
+    expect(headers.has("origin")).toBe(false);
   });
 
   it("adds the durable account cookie to Worker requests", async () => {

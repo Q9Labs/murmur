@@ -1,0 +1,1 @@
+Consentimento mais claro para OpenAI, correções no login com Apple e Google e gravação em segundo plano mais estável.
