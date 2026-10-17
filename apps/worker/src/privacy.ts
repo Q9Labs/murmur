@@ -41,9 +41,8 @@ function isLogIdKey(key: string): boolean {
 function isSafeLogId(key: string, value: unknown): boolean {
   if (typeof value !== "string") return false;
   if (key === "trace_id" || key === "sentry_event_id") return /^(?!0{32}$)[a-f0-9]{32}$/.test(value);
-  if (key === "translation_span_id") return /^span_[a-z0-9]{8}_[a-z0-9]{8}$/.test(value);
   if (key === "span_id") return /^(?!0{16}$)[a-f0-9]{16}$/.test(value);
-  if (key === "hashed_install_id") return /^[a-f0-9]{64}$/.test(value);
+  if (key === "hashed_install_id" || key === "translation_span_id") return /^[a-f0-9]{64}$/.test(value);
   return /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value) ||
     /^(?:[a-f0-9]{16}|[a-f0-9]{32}|[a-f0-9]{64})$/.test(value);
 }

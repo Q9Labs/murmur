@@ -27,6 +27,7 @@ async function api(path, method, body) {
 // fallow-ignore-next-line complexity
 function findOutcome(event) {
   const record = { logs: event.logs ?? [], exceptions: event.exceptions ?? [] };
+  if (!Array.isArray(record.logs) || !Array.isArray(record.exceptions)) throw new Error("Invalid stream batch");
   if (/SYNTHETIC_PRIVATE_TRANSCRIPT|PRIVATE_TRANSCRIPT_SENTINEL|secret=fixture/i.test(JSON.stringify(record)) ||
     JSON.stringify(record).includes(fixture)) throw new Error("Private fixture escaped in the complete log batch");
   for (const log of event.logs ?? []) {
@@ -39,7 +40,23 @@ function findOutcome(event) {
         /SYNTHETIC_PRIVATE_TRANSCRIPT|secret=fixture|authorization/i.test(JSON.stringify(outcome))) {
         throw new Error("Retrieved outcome failed classification/privacy/correlation checks");
       }
-      return { outcome, record };
+      const at = typeof outcome._time === "string" ? Date.parse(outcome._time) : NaN;
+      const duration = outcome.attributes.duration_ms;
+      if (!Number.isFinite(at) || typeof outcome.span_id !== "string" || !/^(?!0{16}$)[a-f0-9]{16}$/.test(outcome.span_id) ||
+        typeof outcome.sentry_event_id !== "string" || !/^(?!0{32}$)[a-f0-9]{32}$/.test(outcome.sentry_event_id) ||
+        typeof outcome["service.version"] !== "string" || !/^murmur-worker@\d{1,4}\.\d{1,4}\.\d{1,4}\+[a-f0-9]{7,40}$/.test(outcome["service.version"]) ||
+        !Number.isSafeInteger(duration) || duration < 0 || duration > 86_400_000) {
+        throw new Error("Retrieved outcome contained invalid receipt fields");
+      }
+      // Persist the fixed safe envelope, never raw platform records or extra log fields.
+      return { log_count: record.logs.length, exception_count: record.exceptions.length, outcome: {
+        _time: new Date(at).toISOString(), trace_id: diagnosticCode, span_id: outcome.span_id,
+        "service.name": "murmur-worker", "service.version": outcome["service.version"],
+        "deployment.environment": "sandbox", body: "Worker request did not complete", severity_text: "ERROR",
+        attributes: { action: "http_request", reason: "unknown", error_code: "worker.request_failed",
+          outcome: "failed", duration_ms: duration, retryable: false },
+        synthetic: true, sentry_event_id: outcome.sentry_event_id,
+      } };
     }
   }
 }
@@ -78,7 +95,8 @@ try {
   if (response.status !== 500 || body.diagnostic_code !== diagnosticCode) throw new Error("Synthetic boundary did not return its code");
   const delivered = await received;
   receipt.outcome = delivered.outcome;
-  receipt.record = delivered.record;
+  receipt.stream_log_count = delivered.log_count;
+  receipt.stream_exception_count = delivered.exception_count;
   receipt.complete_log_batch_checked = true;
   // Retained exports add Cloudflare metadata absent from our JSON line.
   stage = "retained_lookup";
@@ -110,7 +128,7 @@ try {
   if (/SYNTHETIC_PRIVATE_TRANSCRIPT|PRIVATE_TRANSCRIPT_SENTINEL|secret=fixture/i.test(exported) || exported.includes(fixture)) {
     throw new Error("Private fixture escaped in the complete retained record");
   }
-  receipt.retained_records = records;
+  receipt.retained_record_count = records.length;
   receipt.complete_retained_invocation_checked = true;
   receipt.retrieved = true;
   receipt.retrieved_at = new Date().toISOString();

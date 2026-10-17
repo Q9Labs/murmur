@@ -43,9 +43,11 @@ describe("worker privacy logging", () => {
     },
   );
 
-  it("preserves real translation span correlation separately from tracing spans", () => {
+  it("rejects raw translation spans even when private words fit their format", () => {
     const span = createSpan();
-    expect(redactWorkerEvent({ translation_span_id: span.span_id })).toEqual({ translation_span_id: span.span_id });
+    expect(redactWorkerEvent({ translation_span_id: span.span_id })).toEqual({ translation_span_id: "[redacted]" });
+    expect(redactWorkerEvent({ translation_span_id: "span_password_personal" })).toEqual({ translation_span_id: "[redacted]" });
+    expect(redactWorkerEvent({ translation_span_id: "a".repeat(64) })).toEqual({ translation_span_id: "a".repeat(64) });
     expect(redactWorkerEvent({ translation_span_id: "PRIVATE_TRANSCRIPT_SENTINEL" }))
       .toEqual({ translation_span_id: "[redacted]" });
     expect(redactWorkerEvent({ span_id: span.span_id })).toEqual({ span_id: "[redacted]" });

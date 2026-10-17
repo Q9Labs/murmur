@@ -9,7 +9,8 @@ import { getSentryOptions } from "./sentry";
 import { withHttpDiagnostics } from "./outcomes";
 import { createReport } from "../routes/report";
 import { createSessionRecordDurable } from "../rateLimitDurableObject";
-import { logWorkerEvent } from "../privacy";
+import { hashInstallId, logWorkerEvent } from "../privacy";
+import { createSpan } from "@murmur/protocol/session";
 
 // External native library is not involved in these Android/HTTP fixtures.
 vi.mock("@bradford-tech/supabase-integrity-attest", () => ({
@@ -232,16 +233,27 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
     expect(JSON.stringify({ logs: lines, envelopes: sentryBodies })).not.toContain("PRIVATE_TRANSCRIPT_SENTINEL");
   });
 
-  it("P5: real report parser and logger cannot log a private span id", async () => {
+  it.each([
+    ["PRIVATE_TRANSCRIPT_SENTINEL", "PRIVATE_SALT", false],
+    ["span_password_personal", "PRIVATE_SALT", false],
+    [createSpan().span_id, "PRIVATE_SALT", false],
+    [createSpan().span_id, undefined, false],
+    [createSpan().span_id, "PRIVATE_SALT", true],
+  ] as const)("P5/P6: real report parser logs only a digest or marker (%s, salt=%s, hash failure=%s)", async (rawSpan, salt, hashBroken) => {
     const session = crypto.randomUUID();
     await createSessionRecordDurable({ app_session_id: session, now_ms: Date.now(), hashed_install_id: "a".repeat(64) });
+    if (hashBroken) vi.spyOn(crypto.subtle, "digest").mockRejectedValueOnce(new Error("PRIVATE_HASH_FAILURE"));
     const response = await createReport(new Request("https://worker.example/v2/report", {
-      method: "POST", body: JSON.stringify({ app_session_id: session, span_id: "PRIVATE_TRANSCRIPT_SENTINEL",
+      method: "POST", body: JSON.stringify({ app_session_id: session, span_id: rawSpan,
         error_category: "inaccurate", revision: 1, source_language: "en", target_language: "ar" }),
-    }), env);
+    }), { ...env, SESSION_HASH_SALT: salt });
     expect(response.status).toBe(202);
-    expect(lines.some((line) => JSON.parse(line).event === "translation_reported")).toBe(true);
-    expect(JSON.stringify({ logs: lines, envelopes: sentryBodies })).not.toContain("PRIVATE_TRANSCRIPT_SENTINEL");
+    const reported = lines.map((line) => JSON.parse(line)).find((line) => line.event === "translation_reported");
+    expect(reported.translation_span_id).toBe(salt && !hashBroken && rawSpan.startsWith("span_")
+      ? await hashInstallId(rawSpan, salt) : "[redacted]");
+    const exported = JSON.stringify({ logs: lines, envelopes: sentryBodies });
+    expect(exported).not.toContain(rawSpan);
+    expect(exported).not.toMatch(/PRIVATE_SALT|PRIVATE_HASH_FAILURE/);
   });
 
   // One shape for every console producer, including the scheduled producers outside this pilot's HTTP scope.

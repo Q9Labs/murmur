@@ -1,6 +1,6 @@
 import type { Env } from "../env";
 import { json } from "../http/response";
-import { logWorkerEvent } from "../privacy";
+import { hashInstallId, logWorkerEvent } from "../privacy";
 import {
   canAcceptReportDurable,
   deleteReportDurable,
@@ -72,11 +72,15 @@ export async function createReport(request: Request, env: Env): Promise<Response
     });
   }
 
+  // Client-generated base-36 spans can contain words. Retain only a salted digest.
+  const spanId = env.SESSION_HASH_SALT && /^span_[a-z0-9]{8}_[a-z0-9]{8}$/.test(report.span_id)
+    ? await hashInstallId(report.span_id, env.SESSION_HASH_SALT).catch(() => "[redacted]")
+    : "[redacted]";
   logWorkerEvent({
     event: "translation_reported",
     app_session_id: report.app_session_id,
     report_id: receipt.report_id,
-    translation_span_id: report.span_id,
+    translation_span_id: spanId,
     revision: report.revision,
     error_category: report.error_category,
     retained_text_snapshot: receipt.retained_text_snapshot,
