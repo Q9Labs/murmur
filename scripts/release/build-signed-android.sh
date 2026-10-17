@@ -90,6 +90,7 @@ export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 pnpm exec expo prebuild --clean --no-install --platform android
 # Tests, R8 and Kotlin compilation exhaust the template's metaspace cap on CI runners.
 cat >> android/gradle.properties <<'PROPERTIES'
+
 org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8
 kotlin.daemon.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
 PROPERTIES
