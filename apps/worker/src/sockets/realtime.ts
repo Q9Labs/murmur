@@ -437,13 +437,16 @@ export async function proxyRealtimeSession(
       telemetry,
       terminate,
       () => sessionFinished || upstream !== socket,
-      () => playback.enabled && config.output_audio_enabled,
       config.source_transcript,
       (delta) => {
         if (delta.trim()) captionRecovery?.caption();
         insightCollector?.add(delta);
       },
-      () => captionRecovery?.outputAudio(),
+      (audio) => {
+        captionRecovery?.outputAudio();
+        const fresh = captionRecovery?.filterOutputAudio(audio, hasMeaningfulPcm16Audio(audio)) ?? audio;
+        if (playback.enabled && config.output_audio_enabled && fresh.byteLength && client.readyState === WebSocket.OPEN) client.send(fresh);
+      },
     );
   };
   const retryFailure = (): void => {
@@ -774,20 +777,16 @@ function bindProviderEvents(
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
   isFinished: () => boolean,
-  isPlaybackEnabled: () => boolean,
   sourceTranscript: boolean,
   onTranslation: (delta: string) => void,
-  onOutputAudio: () => void,
+  onOutputAudio: (audio: ArrayBuffer) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
     if (isFinished()) return;
     try {
       const output = parseTranslationOutput(event.data);
       if (output.kind === "audio") {
-        onOutputAudio();
-        if (isPlaybackEnabled() && client.readyState === WebSocket.OPEN) {
-          client.send(output.pcm16);
-        }
+        onOutputAudio(output.pcm16);
         return;
       }
       if (output.kind === "event") {

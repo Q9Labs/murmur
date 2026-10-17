@@ -455,7 +455,7 @@ describe("app-facing realtime socket", () => {
     upstream.dispatchEvent(new MessageEvent("message", {
       data: JSON.stringify({ type: "session.output_audio.delta", delta: "AQID" }),
     }));
-    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(upstream.closeCalls).toContainEqual({ code: 1000, reason: "caption_retry_replaced" });
     const sent = [...client.sent];
     for (const output of [

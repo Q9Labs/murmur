@@ -1,8 +1,8 @@
 import type { WorkerWebSocket } from "../http/response";
 import { createInputAudioMessage } from "../providers/openaiRealtime";
 
-// Saved robot trials: healthy audio-to-caption p95 500ms, maximum 590ms (n=20).
-export const captionStallTimeoutMs = 2_000;
+// Empirical guard, not a provider delivery guarantee. See the long-speech evidence.
+export const captionStallTimeoutMs = 10_000;
 const maxCaptionRetries = 2;
 const maxBufferedBytes = 30 * 24_000 * 2;
 const replayFrameBytes = 4_800;
@@ -27,6 +27,11 @@ export function createCaptionRecovery(params: {
   let current = params.initial;
   let history: ArrayBuffer[] = [];
   let historyBytes = 0;
+  let completeHistory = true;
+  let outputBytes = 0;
+  let hasAudibleOutput = false;
+  let skipOutputBytes = 0;
+  let replayDurationMs = 0;
   let replay: Replay | null = null;
   let retries = 0;
   let captionReceived = false;
@@ -64,8 +69,12 @@ export function createCaptionRecovery(params: {
     replayTimer = setTimeout(pumpReplay, frame.byteLength / 48 / replaySpeed);
   }
 
+  function canReplay(): boolean {
+    return !stopped && !captionReceived && completeHistory && history.length > 0;
+  }
+
   function canRetry(): boolean {
-    return !stopped && !captionReceived && !connecting && retries < maxCaptionRetries && history.length > 0;
+    return canReplay() && !connecting && retries < maxCaptionRetries;
   }
 
   async function retry(): Promise<void> {
@@ -78,7 +87,7 @@ export function createCaptionRecovery(params: {
     const deadline = setTimeout(() => controller.abort(), 15_000);
     try {
       const replacement = await params.open(controller.signal);
-      if (stopped || captionReceived || controller.signal.aborted) {
+      if (!canReplay() || controller.signal.aborted) {
         params.retire(replacement);
         return;
       }
@@ -86,16 +95,22 @@ export function createCaptionRecovery(params: {
       if (replayTimer) clearTimeout(replayTimer);
       replayTimer = null;
       replay = { socket: replacement, frames: [...history], bytes: historyBytes };
+      // Every replacement starts at the beginning of the same input. Preserve the
+      // audible frontier across generations; replay captions are still forwarded.
+      // An audio-only failure can be near-silent noise, not translated speech.
+      if (!hasAudibleOutput) outputBytes = 0;
+      skipOutputBytes = outputBytes;
+      replayDurationMs = historyBytes / 48 / replaySpeed;
       current = replacement;
       // Activate before closing: all callbacks from the previous generation become inert.
       params.activate(replacement);
       params.retire(previous);
       pumpReplay();
     } catch {
-      if (!stopped && !captionReceived) {
+      if (canReplay()) {
         params.onRetryFailure();
         // The old connection is still usable if the replacement handshake failed.
-        stallTimer = setTimeout(() => { void retry(); }, captionStallTimeoutMs);
+        stallTimer = setTimeout(() => { void retry(); }, captionStallTimeoutMs * 2);
       }
     } finally {
       clearTimeout(deadline);
@@ -110,12 +125,15 @@ export function createCaptionRecovery(params: {
     for (let offset = 0; offset < audio.byteLength; offset += replayFrameBytes) {
       frames.push(audio.slice(offset, offset + replayFrameBytes));
     }
-    if (!captionReceived) {
+    if (!captionReceived && completeHistory) {
       history.push(...frames);
       historyBytes += audio.byteLength;
-      while (historyBytes > maxBufferedBytes) {
-        const oldest = history.shift();
-        if (oldest) historyBytes -= oldest.byteLength;
+      if (historyBytes > maxBufferedBytes) {
+        // A truncated prefix cannot be aligned with the audible frontier safely.
+        completeHistory = false;
+        connecting?.abort();
+        clearStall();
+        releaseHistory();
       }
     }
     if (replay) {
@@ -135,8 +153,21 @@ export function createCaptionRecovery(params: {
     sendAudio,
     outputAudio(): void {
       if (!stallTimer && canRetry()) {
-        stallTimer = setTimeout(() => { void retry(); }, captionStallTimeoutMs);
+        const timeout = current === params.initial
+          ? captionStallTimeoutMs
+          : captionStallTimeoutMs * 2 + replayDurationMs;
+        stallTimer = setTimeout(() => { void retry(); }, timeout);
       }
+    },
+    filterOutputAudio(audio: ArrayBuffer, audible: boolean): ArrayBuffer {
+      const skipped = Math.min(skipOutputBytes, audio.byteLength);
+      skipOutputBytes -= skipped;
+      const fresh = audio.slice(skipped);
+      // Track the playback timeline even while muted, so toggling playback cannot
+      // move a replacement behind output already consumed by the current stream.
+      hasAudibleOutput ||= audible;
+      outputBytes += fresh.byteLength;
+      return fresh;
     },
     caption(): void {
       if (captionReceived || stopped) return;

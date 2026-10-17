@@ -19,6 +19,7 @@ const bundled = await build({
   bundle: true, write: false, format: "esm", platform: "neutral",
   conditions: ["workerd", "worker", "browser"], external: ["node:*", "cloudflare:*"],
 });
+const captionSentinel = "SYNTHETIC_PRIVATE_TRANSCRIPT_CAPTION_RETRY";
 const provider = `
 const states = new Map();
 export default { async fetch(request) {
@@ -39,9 +40,9 @@ export default { async fetch(request) {
  const index = state.connections.length + 1;
  const connection = {index,bytes:0,chunks:0,closed:false,config:null};state.connections.push(connection);
  const pair = new WebSocketPair();const socket=pair[1];socket.accept();
- let interval; let captionTimer; let sentCaption=false;
- const send = value => {try{socket.send(JSON.stringify(value));}catch{clearInterval(interval);}};
- const caption = () => { if(!sentCaption){sentCaption=true;send({type:'session.output_transcript.delta',delta:'Recovered caption'});} };
+ let captionTimer; let sentCaption=false;
+ const send = value => {try{socket.send(JSON.stringify(value));}catch{}};
+ const caption = () => { if(!sentCaption){sentCaption=true;send({type:'session.output_transcript.delta',delta:'${captionSentinel}'});} };
  socket.addEventListener('message',event=>{
    const data=JSON.parse(event.data);
    if(data.type==='session.update') {
@@ -50,13 +51,12 @@ export default { async fetch(request) {
    }
    if(data.type==='session.input_audio_buffer.append') {
      connection.bytes+=atob(data.audio).length;connection.chunks++;
-     send({type:'session.output_audio.delta',delta:btoa(String.fromCharCode(index,0))});
-     interval ??= setInterval(()=>send({type:'session.output_audio.delta',delta:btoa(String.fromCharCode(index,0))}),40);
-     if(key.startsWith('recover_') && index===2 && connection.bytes>=48000) caption();
-     if(key.startsWith('healthy_')) captionTimer ??= setTimeout(caption,1500);
+     send({type:'session.output_audio.delta',delta:btoa(String.fromCharCode(atob(data.audio).charCodeAt(0),key.startsWith('quiet_') && index===1 ? 0 : 16))});
+     if((key.startsWith('recover_') || key.startsWith('quiet_')) && index===2 && connection.bytes>=48000) caption();
+     if(key.startsWith('healthy_')) captionTimer ??= setTimeout(caption,2500);
    }
  });
- socket.addEventListener('close',()=>{connection.closed=true;clearInterval(interval);clearTimeout(captionTimer);socket.close(1000);});
+ socket.addEventListener('close',()=>{connection.closed=true;clearTimeout(captionTimer);socket.close(1000);});
  return new Response(null,{status:101,webSocket:pair[0]});
 }};
 `;
@@ -70,7 +70,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({
       POSTHOG_PROJECT_TOKEN: "fake-test-only", MURMUR_ENV: "development" },
   }, {name: "provider", modules: true, script: provider, compatibilityDate: "2026-05-16"}],
 }));
-const deadline = setTimeout(() => { console.error("caption proof exceeded 60s"); process.exit(2); }, 60_000);
+const deadline = setTimeout(() => { console.error("caption proof exceeded 90s"); process.exit(2); }, 90_000);
 const sockets=[];
 try {
   const database = await mf.getD1Database("BILLING_DB", "proxy");
@@ -83,7 +83,7 @@ try {
   }
   const upstream = await mf.getWorker("provider");
   const results=[];
-  for(const mode of ["recover", "cap", "healthy"]) {
+  for(const mode of ["recover", "quiet", "cap", "healthy"]) {
     const id=randomUUID();const key=mode+"_"+id;
     const response=await mf.dispatchFetch(`http://proxy.test/v2/realtime?case=${mode}&app_session_id=${id}&target_language=es&analytics_enabled=true`,{headers:{Upgrade:"websocket"}});
     assert.equal(response.status,101,await response.text());
@@ -91,34 +91,33 @@ try {
     const events=[];const audio=[];let clientClosed=false;
     ws.addEventListener("message",event=>{
       if(typeof event.data==='string')events.push(JSON.parse(event.data));
-      else audio.push(new Uint8Array(event.data)[0]);
+      else if(Math.abs(new DataView(event.data).getInt16(0,true))>=1000) audio.push(new Uint8Array(event.data)[0]);
     });
     ws.addEventListener("close",()=>{clientClosed=true;});
-    const until=async(predicate,label,ms=12000)=>{
+    const until=async(predicate,label,ms=20000)=>{
       const end=Date.now()+ms;
       while(!predicate()&&Date.now()<end&&!clientClosed)await sleep(25);
       assert.ok(predicate(),`${mode}: ${label}; events=${JSON.stringify(events)}`);
     };
     await until(()=>events.some(e=>e.kind==='session_opened'),"session opens");
-    for(let i=0;i<10;i++){ws.send(new Uint8Array(4800).fill(16).buffer);await sleep(100);}
-    if(mode==='cap') await sleep(7000);
+    for(let i=0;i<10;i++){ws.send(new Uint8Array(4800).fill(16+i).buffer);await sleep(100);}
+    if(mode==='cap') await sleep(32000);
     else await until(()=>events.some(e=>e.kind==='translation_delta'),"caption recovers");
     assert.equal(clientClosed,false,"retry must not close the client");
     assert.equal(events.filter(e=>e.kind==='session_opened').length,1);
     assert.equal(events.filter(e=>e.kind==='session_closed'||e.kind==='session_error').length,0);
     const state=await (await upstream.fetch(`http://fake/state?key=${key}`)).json();
     assert.equal(state.connections.length,mode==='healthy'?1:mode==='cap'?3:2);
-    if(mode==='recover') {
+    if(mode==='recover'||mode==='quiet') {
       assert.equal(state.connections[1].bytes,48000,"all buffered audio replayed once");
       assert.deepEqual(state.connections[0].config,state.connections[1].config);
       assert.ok(state.connections[0].closed,"old upstream closed cleanly");
-      assert.ok(audio.includes(2));
-      assert.ok(!audio.slice(audio.indexOf(2)).includes(1),"stale audio cannot leak after switch");
     }
     // Real input after recovery/cap must still flow, and must be charged only once.
     ws.send(new Uint8Array(4800).fill(32).buffer);
     await until(()=>events.filter(e=>e.kind==='input_audio_ack').length===11,"live input continues");
-    await sleep(100);
+    await until(()=>audio.includes(32),"new live playback continues");
+    assert.deepEqual(audio, [...Array.from({length:10},(_,i)=>16+i),32], "each input marker plays exactly once, including replay recovery");
     ws.send(JSON.stringify({kind:"close_session"}));
     await until(()=>clientClosed,"client closes on its own command");
     let usage;
@@ -131,11 +130,14 @@ try {
     const telemetry=await (await upstream.fetch(`http://fake/state?key=${id}`)).json();
     const ended=telemetry.events.find(e=>e.event==='worker_session_ended');
     assert.ok(ended,"session-ended telemetry delivered");
+    const capturedTelemetry = JSON.stringify(telemetry.events);
+    assert.ok(!capturedTelemetry.includes(captionSentinel), "complete telemetry must not contain captions");
+    assert.ok(!capturedTelemetry.includes(Buffer.alloc(4800, 16).toString("base64")), "complete telemetry must not contain input audio");
     assert.equal(ended.properties.caption_retry_count,mode==='healthy'?0:mode==='cap'?2:1);
-    assert.equal(ended.properties.captions_recovered,mode==='recover');
+    assert.equal(ended.properties.captions_recovered,mode==='recover'||mode==='quiet');
     assert.equal(ended.properties.input_audio_bytes,52800);
     assert.equal(ended.properties.transport_close_source,null,"deliberate retired socket close is not a failure");
-    results.push({mode,connections:state.connections.length,billedMs:usage.settled_ms,retries:ended.properties.caption_retry_count,recovered:ended.properties.captions_recovered});
+    results.push({mode,connections:state.connections.length,billedMs:usage.settled_ms,retries:ended.properties.caption_retry_count,recovered:ended.properties.captions_recovered,privacySentinelMatches:0,telemetryEventsScanned:telemetry.events.length});
   }
   await writeFile(resolve(output,"results.json"),JSON.stringify(results,null,2)+"\n");
   console.log(JSON.stringify(results));

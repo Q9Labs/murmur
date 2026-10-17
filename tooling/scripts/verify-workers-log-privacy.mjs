@@ -43,8 +43,13 @@ async function api(path, body) {
     body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000),
   });
   const value = await response.json();
-  if (!value.success) throw new Error(`Cloudflare query failed (${response.status})`);
+  if (!value.success) throw cloudflareError(path, body, response.status, value);
   return value.result;
+}
+function cloudflareError(path, body, status, value) {
+  const safeBody = [token, fixture, authToken, cookie, ...sentinels].filter(Boolean)
+    .reduce((body, privateValue) => body.replaceAll(privateValue, "[redacted]"), JSON.stringify(value));
+  return new Error(`Cloudflare ${body ? "POST" : "GET"} /accounts/${account}${path} HTTP ${status}: ${safeBody}`);
 }
 function requireStatus(receipt, status, operation) {
   if (receipt.response.status !== status) throw new Error(`${operation}: expected ${status}, got ${receipt.response.status}; safe code=${receipt.result.error ?? receipt.result.code ?? "none"}`);
@@ -87,7 +92,10 @@ try {
     socket.addEventListener("open", done, { once: true });
   });
   rows.push({ path: "/v2/realtime", method: "WebSocket", status: "handshake sent" });
-  requireStatus(await request(`/v2/session/${sessionId}/stop`, "POST", { text }, auth), 200, "session stop");
+  // Repeated stops are idempotent controls, and each retained copy must be private.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    requireStatus(await request(`/v2/session/${sessionId}/stop`, "POST", { text }, auth), 200, "session stop");
+  }
   expected = { error_trace: error.result.diagnostic_code, relay_trace: relay.trace_id, report_id: report.result.report_id, session_id: sessionId };
   rows.push(expected);
 } catch (error) { failure = error; }

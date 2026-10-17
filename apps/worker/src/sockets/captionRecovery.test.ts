@@ -93,7 +93,7 @@ describe("first-caption recovery", () => {
     const f = fixture(vi.fn(async () => { throw new Error("external handshake failed"); }));
     f.recovery.sendAudio(new ArrayBuffer(4800));
     f.recovery.outputAudio();
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(f.open).toHaveBeenCalledTimes(2);
     expect(f.onRetry).toHaveBeenLastCalledWith(2);
     expect(f.activate).not.toHaveBeenCalled();
@@ -102,11 +102,11 @@ describe("first-caption recovery", () => {
     f.recovery.stop();
   });
 
-  it("retains only the most recent 30 seconds and paces replay at 4x", async () => {
+  it("retains a complete bounded prefix and paces replay at 4x", async () => {
     vi.useFakeTimers();
     const replacement = socket();
     const f = fixture(vi.fn(async () => replacement));
-    for (let i = 0; i < 31; i++) f.recovery.sendAudio(new Uint8Array(48_000).fill(i).buffer);
+    for (let i = 0; i < 30; i++) f.recovery.sendAudio(new Uint8Array(48_000).fill(i).buffer);
     f.recovery.outputAudio();
     await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
     expect(replacement.send).toHaveBeenCalledTimes(1);
@@ -118,7 +118,92 @@ describe("first-caption recovery", () => {
     const messages = vi.mocked(replacement.send).mock.calls.map(([message]) => JSON.parse(String(message)));
     expect(messages).toHaveLength(300);
     expect(messages.reduce((sum, message) => sum + atob(message.audio).length, 0)).toBe(1_440_000);
-    expect(atob(messages[0].audio).charCodeAt(0)).toBe(1);
+    expect(atob(messages[0].audio).charCodeAt(0)).toBe(0);
+    f.recovery.stop();
+  });
+
+  it("does not retry a healthy 2.5-second caption or call it recovered", async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    f.recovery.sendAudio(new ArrayBuffer(4800));
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(2500);
+    f.recovery.caption();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(f.open).not.toHaveBeenCalled();
+    expect(f.onRecovered).not.toHaveBeenCalled();
+    f.recovery.stop();
+  });
+
+  it("gives a replacement twice the floor plus its replay duration", async () => {
+    vi.useFakeTimers();
+    const replacement = socket();
+    const f = fixture(vi.fn(async () => replacement));
+    f.recovery.sendAudio(new ArrayBuffer(48_000));
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs + 2500);
+    expect(f.open).toHaveBeenCalledOnce();
+    f.recovery.caption();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(f.open).toHaveBeenCalledOnce();
+    f.recovery.stop();
+  });
+
+  it("drops the replayed playback prefix across frame boundaries and two retries", async () => {
+    vi.useFakeTimers();
+    const f = fixture(vi.fn(async () => socket()));
+    f.recovery.sendAudio(new ArrayBuffer(4800));
+    expect(f.recovery.filterOutputAudio(new Uint8Array([1, 0, 2, 0]).buffer, true).byteLength).toBe(4);
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
+    expect(f.recovery.filterOutputAudio(new Uint8Array([1, 0]).buffer, true).byteLength).toBe(0);
+    expect([...new Uint8Array(f.recovery.filterOutputAudio(new Uint8Array([2, 0, 3, 0]).buffer, true))]).toEqual([3, 0]);
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs * 2 + 25);
+    expect([...new Uint8Array(f.recovery.filterOutputAudio(new Uint8Array([1, 0, 2, 0, 3, 0, 4, 0]).buffer, true))]).toEqual([4, 0]);
+    expect(f.open).toHaveBeenCalledTimes(2);
+    f.recovery.stop();
+  });
+
+  it("does not replay a truncated history whose audible prefix cannot be aligned", async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    f.recovery.sendAudio(new ArrayBuffer(1_440_000));
+    f.recovery.outputAudio();
+    f.recovery.sendAudio(new ArrayBuffer(4800));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(f.open).not.toHaveBeenCalled();
+    expect(f.initial.send).toHaveBeenCalledTimes(2);
+    f.recovery.stop();
+  });
+
+  it("retires a pending replacement if the complete replay history overflows", async () => {
+    vi.useFakeTimers();
+    const replacement = socket();
+    const pending = pendingSocket();
+    const f = fixture(vi.fn(() => pending.promise));
+    f.recovery.sendAudio(new ArrayBuffer(1_440_000));
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
+    f.recovery.sendAudio(new ArrayBuffer(4800));
+    pending.resolve(replacement);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(f.activate).not.toHaveBeenCalled();
+    expect(f.retire).toHaveBeenCalledWith(replacement);
+    expect(f.onRetryFailure).not.toHaveBeenCalled();
+    f.recovery.stop();
+  });
+
+  it("does not suppress recovered speech when the old output was only quiet noise", async () => {
+    vi.useFakeTimers();
+    const f = fixture(vi.fn(async () => socket()));
+    f.recovery.sendAudio(new ArrayBuffer(4800));
+    f.recovery.filterOutputAudio(new ArrayBuffer(48_000), false);
+    f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
+    expect(f.recovery.filterOutputAudio(new ArrayBuffer(48_000), true).byteLength).toBe(48_000);
     f.recovery.stop();
   });
 
