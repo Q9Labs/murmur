@@ -137,13 +137,14 @@ export default {
     if (env.MURMUR_ENV !== "sandbox") return new Response(null, { status: 404 });
     const url = new URL(request.url);
     // Keep the real secret binding unchanged; only this sandbox invocation exports here.
-    const probeEnv = { ...env, SENTRY_DSN: "https://privacyproof@murmur-worker-sandbox.msbilal.workers.dev/1" };
+    const authenticated = Boolean(env.MURMUR_DIAGNOSTICS_FIXTURE) && request.headers.get("Authorization") === `Bearer ${env.MURMUR_DIAGNOSTICS_FIXTURE}`;
+    const probeEnv = authenticated && request.headers.get("x-probe-sentry") === "live"
+      ? env : { ...env, SENTRY_DSN: "https://privacyproof@murmur-worker-sandbox.msbilal.workers.dev/1" };
     if (url.pathname === "/api/1/envelope/") {
       if (request.method !== "POST" || !(url.searchParams.get("sentry_key") === "privacyproof" || request.headers.get("x-sentry-auth")?.includes("sentry_key=privacyproof"))) return new Response(null, { status: 403 });
       await stub(env, "privacy-proof-envelopes").fetch("https://probe.internal/envelopes", { method: "POST", body: await request.text() });
       return Response.json({ accepted: true });
     }
-    const authenticated = Boolean(env.MURMUR_DIAGNOSTICS_FIXTURE) && request.headers.get("Authorization") === `Bearer ${env.MURMUR_DIAGNOSTICS_FIXTURE}`;
     if (url.pathname === "/__diagnostics/privacy") {
       if (!authenticated) return new Response(null, { status: 403 });
       if (url.searchParams.get("case") === "envelopes") return stub(env, "privacy-proof-envelopes").fetch("https://probe.internal/envelopes");

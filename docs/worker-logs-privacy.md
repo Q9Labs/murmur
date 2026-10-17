@@ -30,6 +30,7 @@ Both production and sandbox use:
 
 ```toml
 [env.production.observability]
+enabled = true
 redact_query_string = true
 
 [env.production.observability.logs]
@@ -104,6 +105,14 @@ cd /Users/macmini/code/murmur/.worktrees/prod-logs
 After deployment or rollback, read the active version and non-versioned settings back from Cloudflare and check complete retained records. A rollback cannot recall records already retained; they expire after seven days. The sandbox restoration exercised the same settings-disable, version-restore and settings-read-back sequence, not a production rollback.
 
 ## Review follow-up verification
+
+`pnpm verify:log-runtime` starts the actual entry point in local workerd. It requires one runtime-console outcome and one real SDK envelope for each synthetic and internal-auth failure, and rejects raw dependency/email output. At `953a505`, both routes passed this check; `apps/worker/src` is byte-identical to the earlier retained-record-producing `c7d6fb4`. There is no console-boundary change to bisect between them.
+
+Both environments explicitly set the parent `observability.enabled = true` as well as `logs.enabled = true`. Rollback writes the parent false; deployment must not rely on a partial nested settings update clearing that prior state. Deployed read-back must confirm the parent, persistence and sampling before accepting a logging proof.
+
+Cloudflare's Workers Logs documentation does not specify a numeric ingestion-delay bound. The retained verifiers allow five minutes (queries after two, three and five minutes), independently of the immediate runtime/tail evidence. Delay guidance for other logging products is not used as a Workers Logs SLA.
+
+The sandbox secret repair used the active Default key `25ee86fab83f97e42e7f6501ae476036` in `q9labs/murmur-worker`, project ID `4511994430816336`, ingestion host `o4509774141063168.ingest.de.sentry.io`. The exact DSN bytes have SHA-256 `2d78f55350e8045fc75edd6155b619466f6d9de488aabe8ea1612c3fcd456adb`. This is the shared Worker project, also used by production, not a separate sandbox project. The account lists only `murmur-worker` and `murmur-mobile`; historical sandbox events use `environment=sandbox`. Do not claim project isolation. The probe's authenticated `x-probe-sentry: live` mode uses the unchanged secret so hosted ingestion and its sandbox environment can be checked separately from the envelope collector.
 
 The separate `apps/worker/privacy-probe.ts` entry point imports the real production entry point and Durable Object classes. It is not reachable from the production Wrangler configuration. Its sandbox-only storage wrappers inject private-email failures at limiter state reads/writes, native alarm reads/writes, customer binding reads/writes and ledger execution. Native callback exception records must contain only fixed failure messages. The verifier retrieves every matching retained record, requires each native positive control, and scans the complete JSON, not just outcomes.
 

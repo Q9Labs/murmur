@@ -69,7 +69,7 @@ try {
   if (!response.ok) throw new Error("Envelope collector cleanup failed");
 }
 let records;
-for (const delay of [10000, 20000, 30000]) {
+for (const delay of [120000, 60000, 120000]) {
   await pause(delay);
   const query = { queryId: `boundaries-${run}`, view: "events", limit: 1000, timeframe: { from: start - 1000, to: Date.now() },
     parameters: { datasets: [], filterCombination: "and", filters: [
@@ -79,7 +79,7 @@ for (const delay of [10000, 20000, 30000]) {
   };
   const result = await api("/observability/telemetry/query", query);
   records = result.events?.events;
-  if (!records?.length || records.length >= 1000 || result.events.count > records.length || records.some((event) => event.$workers?.truncated)) throw new Error("Incomplete boundary record retrieval");
+  if (!Array.isArray(records) || records.length >= 1000 || result.events.count > records.length || records.some((event) => event.$workers?.truncated)) throw new Error("Incomplete boundary record retrieval");
   if (records.some((event) => event.source?.trace_id === trace)) break;
 }
 const serialized = JSON.stringify({ records, envelopes });

@@ -98,6 +98,7 @@ routes = [
 ]
 
 [env.production.observability]
+enabled = true
 redact_query_string = true
 
 [env.production.observability.logs]
@@ -156,6 +157,7 @@ workers_dev = true
 crons = [ "17 3 * * *" ]
 
 [env.sandbox.observability]
+enabled = true
 redact_query_string = true
 
 [env.sandbox.observability.logs]

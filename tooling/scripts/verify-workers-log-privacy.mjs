@@ -108,7 +108,7 @@ await mkdir("artifacts/observability", { recursive: true });
 await writeFile("artifacts/observability/privacy-requests.json", JSON.stringify({ run_id: runId, rows }, null, 2));
 if (failure) throw failure;
 let records;
-for (const delay of [10000, 20000, 30000]) {
+for (const delay of [120000, 60000, 120000]) {
   await new Promise((resolve) => setTimeout(resolve, delay));
   const result = await api("/workers/observability/telemetry/query", {
     queryId: `privacy-${runId}`, view: "events", limit: 1000, timeframe: { from: start - 5000, to: Date.now() },

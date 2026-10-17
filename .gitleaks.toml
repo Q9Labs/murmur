@@ -4,6 +4,14 @@ title = "Murmur Gitleaks"
 useDefault = true
 
 [[allowlists]]
+description = "The auth failure test uses this exact public, local-only fixture secret."
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^apps/worker/src/observability/outcomes\.test\.ts$''']
+regexes = ['''BETTER_AUTH_SECRET: "fixture-secret-with-at-least-32-characters"''']
+
+[[allowlists]]
 description = "Repo paths that intentionally contain store copy, generated metadata, or local scratch evidence."
 paths = [
   '''^docs/legal/''',
