@@ -88,6 +88,7 @@ afterEach(async () => {
 });
 
 afterAll(() => {
+  if (process.env.MURMUR_DIAGNOSTIC_PROOF !== "1") return;
   mkdirSync("../../artifacts/observability", { recursive: true });
   writeFileSync("../../artifacts/observability/sdk-proofs.json", JSON.stringify(receipts, null, 2));
 });
@@ -313,6 +314,18 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
     expect(lines).toHaveLength(1);
     expect(exceptionCount()).toBe(1);
     expect(sentryBodies.join("")).not.toContain("PRIVATE_DNS_FAILURE");
+  });
+
+  it.each(["00", "01", "09", "fe", "ff"])("P1: preserves caller correlation with trace flags %s", async (flags) => {
+    const incoming = request();
+    incoming.headers.set("traceparent", `00-${trace}-1234567890abcdef-${flags}`);
+    const response = await worker.fetch(incoming, env, context);
+    expect(response.status).toBe(500);
+    expect(response.headers.get("X-Diagnostic-Code")).toBe(trace);
+    await response.text(); await drain();
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "").trace_id).toBe(trace);
+    expect(sentryBodies.join("")).toContain(trace);
   });
 
   it("ignores invalid incoming correlation and never enables a production crash route", async () => {

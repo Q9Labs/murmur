@@ -27,7 +27,7 @@ const env: Env = {
 function event() {
   return {
     trace_id: "1234567890abcdef1234567890abcdef", span_id: "1234567890abcdef",
-    timestamp: new Date().toISOString(), release: "murmur-mobile@1.3.0+198b2da",
+    timestamp: new Date().toISOString(), release: "com.q9labsai.murmur@1.3.1+15",
     source_surface: "ios", error_code: "mobile.operation_failed", outcome: "failed", duration_ms: 10,
   };
 }
@@ -48,20 +48,22 @@ describe("authenticated bounded mobile outcome relay", () => {
     expect((await captureMobileDiagnostics(request({ events: [event()] }), env)).status).toBe(401);
     expect(console.log).not.toHaveBeenCalled();
   });
-  it("writes one safe log line with the mobile correlation and source, never the identity", async () => {
-    const response = await captureMobileDiagnostics(request({ events: [event()] }), env);
+  it.each(["ios", "android"])("writes one safe log line with the mobile correlation and source, never the identity (%s)", async (sourceSurface) => {
+    const response = await captureMobileDiagnostics(request({ events: [{ ...event(), source_surface: sourceSurface }] }), env);
     expect(response.status).toBe(202);
     expect(console.log).toHaveBeenCalledTimes(1);
     const exported = String(vi.mocked(console.log).mock.calls[0]?.[0]);
     expect(JSON.parse(exported)).toMatchObject({ trace_id: event().trace_id,
-      attributes: { source_surface: "ios", reason: "unknown", error_code: "mobile.operation_failed" } });
+      "service.version": event().release,
+      attributes: { source_surface: sourceSurface, reason: "unknown", error_code: "mobile.operation_failed" } });
     expect(exported).not.toMatch(/PRIVATE_USER|192\.0\.2\.1|fixture-only-salt/);
   });
   it.each([
     { extra: "PRIVATE_CREDENTIAL" }, { error_code: "config.flags_credentials_invalid" },
     { source_surface: "worker" }, { trace_id: "private-email@example.test" },
     { duration_ms: Infinity }, { timestamp: "2000-01-01T00:00:00.000Z" },
-    { release: "PRIVATE_TRANSCRIPT" }, { span_id: "0000000000000000" },
+    { release: "PRIVATE_TRANSCRIPT" }, { release: "murmur-worker@1.3.0+198b2da" },
+    { release: "com.q9labsai.murmur@1.3.1+PRIVATE" }, { span_id: "0000000000000000" },
   ])("rejects unsafe or forged fields before any batch write: %j", async (invalid) => {
     expect((await captureMobileDiagnostics(request({ events: [event(), { ...event(), ...invalid }] }), env)).status).toBe(400);
     expect(console.log).not.toHaveBeenCalled();

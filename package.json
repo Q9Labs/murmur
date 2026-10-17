@@ -59,7 +59,7 @@
     "coverage": "pnpm run test:coverage",
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit",
     "verify:diagnostics": "node tooling/scripts/verify-diagnostic-delivery.mjs",
-    "test:diagnostics": "pnpm --filter @murmur/worker exec vitest run src/observability/outcomes.test.ts src/observability/sentry.test.ts src/routes/diagnostics.test.ts"
+    "test:diagnostics": "MURMUR_DIAGNOSTIC_PROOF=1 pnpm --filter @murmur/worker exec vitest run src/observability/outcomes.test.ts src/observability/sentry.test.ts src/routes/diagnostics.test.ts"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.11",

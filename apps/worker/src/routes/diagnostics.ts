@@ -28,7 +28,7 @@ function parseMobileOutcome(value: unknown, now: number): MobileOutcome | null {
     !("timestamp" in value) || typeof value.timestamp !== "string" ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.timestamp) ||
     !Number.isFinite(Date.parse(value.timestamp)) || Math.abs(now - Date.parse(value.timestamp)) > 86_400_000 ||
-    !("release" in value) || typeof value.release !== "string" || !value.release.startsWith("murmur-mobile@") || !safeRelease(value.release) ||
+    !("release" in value) || typeof value.release !== "string" || !value.release.startsWith("com.q9labsai.murmur@") || !safeRelease(value.release) ||
     !("source_surface" in value) || (value.source_surface !== "ios" && value.source_surface !== "android") ||
     !("error_code" in value) || value.error_code !== "mobile.operation_failed" ||
     !("outcome" in value) || value.outcome !== "failed" ||

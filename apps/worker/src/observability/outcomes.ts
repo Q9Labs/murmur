@@ -11,7 +11,7 @@ function randomDiagnosticCode(): string {
   return crypto.randomUUID().replaceAll("-", "");
 }
 export function safeRelease(value: unknown): string | undefined {
-  return typeof value === "string" && /^murmur-(?:worker|mobile)@\d{1,4}\.\d{1,4}\.\d{1,4}(?:\+[a-f0-9]{7,40})?$/.test(value)
+  return typeof value === "string" && /^(?:murmur-worker@\d{1,4}\.\d{1,4}\.\d{1,4}(?:\+[a-f0-9]{7,40})?|com\.q9labsai\.murmur@\d{1,4}\.\d{1,4}\.\d{1,4}\+\d{1,10})$/.test(value)
     ? value : undefined;
 }
 
@@ -112,7 +112,7 @@ export async function withHttpDiagnostics(
   request: Request, env: Env, run: () => Promise<Response>,
 ): Promise<Response> {
   const incoming = request.headers.get("traceparent");
-  const trace = incoming?.match(/^00-((?!0{32})[a-f0-9]{32})-(?!0{16})[a-f0-9]{16}-0[01]$/)?.[1];
+  const trace = incoming?.match(/^00-((?!0{32})[a-f0-9]{32})-(?!0{16})[a-f0-9]{16}-[a-f0-9]{2}$/)?.[1];
   const context = { ...diagnosticContext(env), trace_id: trace ?? randomDiagnosticCode() };
   return requestContext.run(context, async () => {
     const start = Date.now();
