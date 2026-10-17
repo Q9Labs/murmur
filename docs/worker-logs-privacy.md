@@ -66,9 +66,23 @@ The retained query covers the sandbox deployment version and the test window, no
 
 The passing run has 34 probes and seven complete retained records. No sentinel, real fixture credential, session token or cookie appears anywhere in those records. The report retains a 64-character digest for a short span. No query, auth header, email, cookie, request body or response body appears in platform metadata. This proves this deployed corpus, not all future traffic or Sentry server ingestion.
 
-The old sandbox lacks newer billing/insight tables. A temporary sandbox-only billing-enforcement override reaches session/report paths without migrations. Auth remains real for relay verification. The account-delete hook fails on the missing schema; the verifier removes only its own synthetic auth rows through the sandbox D1 API. Synthetic report receipts remain under the sandbox's existing report retention; no production data changes. Live Google/Apple provider login and a successful translation are outside this logging proof.
+The old sandbox lacks newer billing/insight tables. A temporary sandbox-only billing-enforcement override reaches session/report paths without migrations. Auth remains real for relay verification. The account-delete hook fails on the missing schema; the verifier removes only its own synthetic auth rows through the sandbox D1 API. Synthetic report receipts remain under the sandbox's existing report retention; no production data changes. Live Google/Apple provider login and a successful translation were outside that historical proof. The first-translation control below closes the translation coverage gap.
 
 The owner-loss watchdog restores sandbox version `2ca27398-d8d2-432e-9a4e-17cd99edd209` and the exact prior non-versioned observability settings. The deployment API confirms the restored version at 100%. No migration, production deployment or mobile change is part of this phase.
+
+## First-translation release control
+
+The privacy proof must receive a real Spanish translation through `/v2/realtime`. A successful session create, WebSocket handshake or audio acknowledgement cannot pass it. Supply `MURMUR_TRANSLATION_PCM` with the on-call robot's `good-morning.pcm`. The verifier checks its 89,114-byte length and SHA-256 `8367b2effbee45c55c563ce3954d809b5bb914f0b9ae93975eedcdffd9a5b0fb` before sending it as 24 kHz mono PCM16 in paced 100 ms chunks. It requires `Buenos días`, all bytes acknowledged and a first translation within 20 seconds. Its receipt includes the latency, fixture digest, source SHA and deployed version. The complete-record scan also forbids the fixture's transcript.
+
+Set `MURMUR_LOG_PROOF_SHA` to the complete source SHA. The verifier reads the deployed version's tag back and requires an exact match. Use a disposable, fully migrated sandbox D1 database with billing enforcement enabled and a real provider key. The verifier discovers that database from the deployed version instead of deleting synthetic users from a fixed database. Restore the original sandbox version and exact logging settings after the proof, then delete the disposable database.
+
+`pnpm run verify:realtime-runtime` is part of the commit gate. It runs the actual Worker entry point and realtime proxy in workerd with a local fake provider. It verifies PCM forwarding, complete audio acknowledgement and the first translation. Its negative control, `MURMUR_REALTIME_FAKE_MODE=audio-only pnpm run verify:realtime-runtime`, must fail when the provider emits audio without a transcript. This catches the missing-positive-control gap. It does not reproduce or fix the production timeout's root cause.
+
+### Round 4 investigation boundary
+
+Production remains on version `a661d412-8bec-4c3a-9b96-8c1bdb6ac146` with logging disabled. No Worker runtime change is proposed here. Valid sandbox runs were mixed: master passed, #100 both failed and passed, and #96 also timed out. Those results do not identify a first bad commit.
+
+A failed #96 diagnostic run forwarded the fixture bytes intact and received provider audio events but no provider transcript events. Waiting for the provider's configuration acknowledgement did not eliminate the timeout, so that candidate fix was removed. This evidence locates the observed missing transcript before the proxy's parser, but does not establish why the provider omitted it. Production must stay rolled back until that cause is isolated and a fix passes the same real first-translation control.
 
 ## Retention, volume and cost
 
@@ -89,7 +103,7 @@ Do not run these commands until the lead has completed independent review and ex
 Deploy the reviewed checkout directly, without the release helper's automatic D1 migrations or any sandbox-only overrides:
 
 ```sh
-cd /Users/macmini/code/murmur/.worktrees/prod-logs
+cd /Users/macmini/code/murmur/.worktrees/realtime-translation-regression
 source_sha="$(git rev-parse HEAD)"
 release="murmur-worker@1.3.0+$source_sha"
 2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release" --tag "$source_sha"
@@ -98,7 +112,7 @@ release="murmur-worker@1.3.0+$source_sha"
 Observability settings are not versioned. A version rollback alone does not disable logging. Use the single fail-closed rollback script. It disables logs and traces, reads the settings back, and only then changes the version. The canonical script-settings read-back must show explicit null (fully disabled) or explicit disabled log/trace fields; a missing field fails closed. Any failed API step or mismatched read-back stops the script with a clear error. Do not replace this with independent commands:
 
 ```sh
-cd /Users/macmini/code/murmur/.worktrees/prod-logs
+cd /Users/macmini/code/murmur/.worktrees/realtime-translation-regression
 2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm rollback:worker-logs --env production --version a661d412-8bec-4c3a-9b96-8c1bdb6ac146
 ```
 

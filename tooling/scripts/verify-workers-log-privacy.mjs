@@ -1,12 +1,18 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { assertTranscriptAbsent, firstTranslation } from "./first-translation.mjs";
 
 // Run only against a deployed sandbox build with invocation logs off and query redaction on.
 const account = process.env.CLOUDFLARE_ACCOUNT_ID ?? "5281943bd26d5bdcf4c3915606cd6bfb";
 const token = process.env.CLOUDFLARE_API_TOKEN;
 const fixture = process.env.MURMUR_DIAGNOSTICS_FIXTURE;
 const version = process.env.MURMUR_LOG_PROOF_VERSION;
-if (!token || !fixture || !version) throw new Error("Cloudflare token, sandbox fixture and deployed version are required");
+const sha = process.env.MURMUR_LOG_PROOF_SHA;
+if (!token || !fixture || !version || !/^[a-f0-9]{40}$/.test(sha ?? "")) throw new Error("Cloudflare token, sandbox fixture, deployed version and full source SHA are required");
+if (!process.env.MURMUR_TRANSLATION_PCM) throw new Error("Supply the on-call good-morning.pcm fixture; a handshake alone cannot pass this proof");
+const pcm = await readFile(process.env.MURMUR_TRANSLATION_PCM);
+const fixtureSha256 = "8367b2effbee45c55c563ce3954d809b5bb914f0b9ae93975eedcdffd9a5b0fb";
+if (pcm.length !== 89114 || createHash("sha256").update(pcm).digest("hex") !== fixtureSha256) throw new Error("On-call speech fixture checksum mismatch");
 const base = "https://murmur-worker-sandbox.msbilal.workers.dev";
 const runId = randomBytes(8).toString("hex");
 const sentinels = ["PRIVATE_TEXT_", "PRIVATE_TOKEN_", "private-email-"].map((prefix) => prefix + runId);
@@ -18,6 +24,7 @@ let authToken;
 let userId;
 let expected;
 let authDeleteTrace;
+let translation;
 const headers = {
   "Content-Type": "application/json", Authorization: `Bearer ${secret}`,
   "X-Private-Email": `${emailLocal}@example.invalid`, "X-Murmur-Free-Allowance-Id": randomUUID(),
@@ -49,6 +56,10 @@ async function api(path, body) {
 function requireStatus(receipt, status, operation) {
   if (receipt.response.status !== status) throw new Error(`${operation}: expected ${status}, got ${receipt.response.status}; safe code=${receipt.result.error ?? receipt.result.code ?? "none"}`);
 }
+const deployed = await api(`/workers/scripts/murmur-worker-sandbox/versions/${version}`);
+if (deployed.annotations?.["workers/tag"] !== sha) throw new Error("Deployed tag does not match the full proof source SHA");
+const proofDatabase = deployed.resources.bindings.find((binding) => binding.name === "BILLING_DB" && binding.type === "d1")?.id;
+if (!/^[a-f0-9-]{36}$/.test(proofDatabase ?? "")) throw new Error("Proof version is missing its D1 binding");
 let failure;
 try {
   for (const path of ["/", "/privacy", "/terms", "/support", "/health", "/ready", "/v3/config", "/v3/customer", "/v1/reports"]) await request(path);
@@ -73,7 +84,7 @@ try {
   requireStatus(rejected, 400, "private relay rejection");
   const accepted = await request("/v1/diagnostics", "POST", { events: [relay] }, auth);
   requireStatus(accepted, 202, "authenticated relay");
-  const session = await request("/v2/session", "POST", { app_install_id: text, app_platform: "ios", app_version: "1.3.1", source_language: "en", target_language: "ar", analytics_enabled: false, acquisition: { source: text, campaign: text } }, auth);
+  const session = await request("/v2/session", "POST", { app_install_id: text, app_platform: "ios", app_version: "1.3.1", source_language: "en", target_language: "es", playback_enabled: false, analytics_enabled: false, acquisition: { source: text, campaign: text } }, auth);
   requireStatus(session, 200, "session creation");
   const sessionId = session.result.app_session_id;
   if (!/^[a-f0-9-]{36}$/.test(sessionId)) throw new Error("Session response missing UUID");
@@ -87,6 +98,12 @@ try {
     socket.addEventListener("open", done, { once: true });
   });
   rows.push({ path: "/v2/realtime", method: "WebSocket", status: "handshake sent" });
+  const realtimeUrl = new URL(session.result.realtime_ws_url);
+  realtimeUrl.searchParams.set("private", text);
+  realtimeUrl.searchParams.set("token", secret);
+  realtimeUrl.searchParams.set("email", `${emailLocal}@example.invalid`);
+  translation = await firstTranslation({ realtimeUrl, pcm, expectedOrigin: base.replace("https:", "wss:") });
+  rows.push({ path: "/v2/realtime", method: "WebSocket", status: "first translation received", ...translation });
   requireStatus(await request(`/v2/session/${sessionId}/stop`, "POST", { text }, auth), 200, "session stop");
   expected = { error_trace: error.result.diagnostic_code, relay_trace: relay.trace_id, report_id: report.result.report_id, session_id: sessionId };
   rows.push(expected);
@@ -99,7 +116,7 @@ finally {
     // Delete only this run's synthetic auth rows if that hook cannot finish.
     if (deleted.response.status !== 200 && typeof userId === "string" && /^[a-f0-9-]{36}$/.test(userId)) {
       for (const [table, column] of [["session", "userId"], ["account", "userId"], ["user", "id"]]) {
-        await api("/d1/database/b841dec2-93b6-4dea-94ee-8efabb5575d8/query", { sql: `DELETE FROM "${table}" WHERE "${column}" = ?`, params: [userId] });
+        await api(`/d1/database/${proofDatabase}/query`, { sql: `DELETE FROM "${table}" WHERE "${column}" = ?`, params: [userId] });
       }
     }
   }
@@ -123,7 +140,8 @@ for (const delay of [120000, 60000, 120000]) {
 }
 if (!records?.length || records.length >= 1000 || records.some((event) => event.$workers?.truncated || event.$cloudflare?.truncated)) throw new Error("Incomplete retained record retrieval");
 const serialized = JSON.stringify(records);
-const banned = [...sentinels, fixture, authToken, cookie, "SYNTHETIC_PRIVATE_TRANSCRIPT", "secret=fixture-only"].filter(Boolean);
+assertTranscriptAbsent(records, translation);
+const banned = [...sentinels, fixture, authToken, cookie, translation.caption, "Buenos días", "Good morning", "SYNTHETIC_PRIVATE_TRANSCRIPT", "secret=fixture-only"].filter(Boolean);
 if (banned.some((value) => serialized.includes(value) || serialized.includes(encodeURIComponent(value)))) throw new Error("Private sentinel present in COMPLETE retained records");
 const eventNames = records.map((event) => event.source?.event);
 for (const name of ["session_created", "session_stop"]) {
@@ -138,6 +156,6 @@ if (authDeleteTrace && records.filter((event) => event.source?.trace_id === auth
 if (records.some((event) => JSON.stringify(event.$workers?.event?.request ?? {}).includes("?") || event.$metadata?.type === "cf-worker-event")) throw new Error("Unsafe invocation/query metadata");
 // Persist complete records only after the all-field sentinel scan, never response bodies or cookies.
 await writeFile("artifacts/observability/privacy-retained-records.json", JSON.stringify(records, null, 2));
-const receipt = { run_id: runId, version, auth_delete_trace: authDeleteTrace, request_count: rows.filter((row) => row.method).length, retained_count: records.length, complete_records_sha256: createHash("sha256").update(serialized).digest("hex"), sentinels_found: 0, invocation_logs: false, query_strings_present: false, source_events: [...new Set(eventNames.filter(Boolean))], retained_bytes: Buffer.byteLength(serialized), checked_at: new Date().toISOString() };
+const receipt = { run_id: runId, source_sha: sha, version, first_translation: { ...translation, fixture_sha256: fixtureSha256 }, auth_delete_trace: authDeleteTrace, request_count: rows.filter((row) => row.method).length, retained_count: records.length, complete_records_sha256: createHash("sha256").update(serialized).digest("hex"), sentinels_found: 0, invocation_logs: false, query_strings_present: false, source_events: [...new Set(eventNames.filter(Boolean))], retained_bytes: Buffer.byteLength(serialized), checked_at: new Date().toISOString() };
 await writeFile("artifacts/observability/privacy-receipt.json", JSON.stringify(receipt, null, 2));
 console.log(JSON.stringify(receipt));
