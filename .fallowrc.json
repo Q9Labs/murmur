@@ -7,7 +7,8 @@
     "apps/worker/src/billing/creditPackExpiry.test.mjs",
     "apps/worker/src/insights/deleteCustomerData.test.mjs",
     "apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs",
-    "apps/worker/src/routes/customer.test.mjs"
+    "apps/worker/src/routes/customer.test.mjs",
+    "apps/worker/privacy-probe.ts"
   ],
   "ignorePatterns": [
     "apps/mobile/assets/**",

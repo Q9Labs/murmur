@@ -17,6 +17,7 @@ let cookie;
 let authToken;
 let userId;
 let expected;
+let authDeleteTrace;
 const headers = {
   "Content-Type": "application/json", Authorization: `Bearer ${secret}`,
   "X-Private-Email": `${emailLocal}@example.invalid`, "X-Murmur-Free-Allowance-Id": randomUUID(),
@@ -34,7 +35,7 @@ async function request(path, method = "GET", body, extra = {}) {
   let result;
   try { result = JSON.parse(raw); } catch { result = {}; }
   rows.push({ path: path.includes(text) ? "[private path]" : path, method, status: response.status, trace, ray: response.headers.get("cf-ray")?.split("-")[0] });
-  return { response, result };
+  return { response, result, trace_id: trace };
 }
 async function api(path, body) {
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}${path}`, {
@@ -93,6 +94,7 @@ try {
 finally {
   if (cookie || authToken) {
     const deleted = await request("/api/auth/delete-user", "POST", {}, { Cookie: cookie, Authorization: `Bearer ${authToken ?? secret}` });
+    if (deleted.response.status === 500) authDeleteTrace = deleted.trace_id;
     // This old sandbox lacks insight tables required by the account-delete hook.
     // Delete only this run's synthetic auth rows if that hook cannot finish.
     if (deleted.response.status !== 200 && typeof userId === "string" && /^[a-f0-9-]{36}$/.test(userId)) {
@@ -117,7 +119,7 @@ for (const delay of [10000, 20000, 30000]) {
   });
   records = result.events?.events;
   if (result.events?.count > records?.length) throw new Error("Retained query omitted matching records");
-  if (records?.some((event) => event.source?.report_id === expected.report_id) && records.some((event) => event.source?.event === "session_stop" && event.source.app_session_id === expected.session_id)) break;
+  if (records?.some((event) => event.source?.report_id === expected.report_id) && records.some((event) => event.source?.event === "session_stop" && event.source.app_session_id === expected.session_id) && (!authDeleteTrace || records.some((event) => event.source?.trace_id === authDeleteTrace))) break;
 }
 if (!records?.length || records.length >= 1000 || records.some((event) => event.$workers?.truncated || event.$cloudflare?.truncated)) throw new Error("Incomplete retained record retrieval");
 const serialized = JSON.stringify(records);
@@ -130,11 +132,12 @@ for (const name of ["session_created", "session_stop"]) {
 if (!records.some((event) => event.source?.event === "translation_reported" && event.source.report_id === expected.report_id && /^[a-f0-9]{64}$/.test(event.source.translation_span_id))) throw new Error("Missing current-run report/digest");
 if (!records.some((event) => event.source?.trace_id === expected.relay_trace && event.source?.attributes?.error_code === "mobile.operation_failed")) throw new Error("Missing current-run authenticated relay");
 if (!records.some((event) => event.source?.trace_id === expected.error_trace && event.source?.attributes?.error_code === "worker.request_failed")) throw new Error("Missing current-run synthetic error");
+if (authDeleteTrace && records.filter((event) => event.source?.trace_id === authDeleteTrace && event.source?.attributes?.error_code === "worker.request_failed").length !== 1) throw new Error("Missing single current-run account-delete failure outcome");
 // Both metadata checks must inspect every complete record, including platform errors.
 // fallow-ignore-next-line complexity
 if (records.some((event) => JSON.stringify(event.$workers?.event?.request ?? {}).includes("?") || event.$metadata?.type === "cf-worker-event")) throw new Error("Unsafe invocation/query metadata");
 // Persist complete records only after the all-field sentinel scan, never response bodies or cookies.
 await writeFile("artifacts/observability/privacy-retained-records.json", JSON.stringify(records, null, 2));
-const receipt = { run_id: runId, version, request_count: rows.filter((row) => row.method).length, retained_count: records.length, complete_records_sha256: createHash("sha256").update(serialized).digest("hex"), sentinels_found: 0, invocation_logs: false, query_strings_present: false, source_events: [...new Set(eventNames.filter(Boolean))], retained_bytes: Buffer.byteLength(serialized), checked_at: new Date().toISOString() };
+const receipt = { run_id: runId, version, auth_delete_trace: authDeleteTrace, request_count: rows.filter((row) => row.method).length, retained_count: records.length, complete_records_sha256: createHash("sha256").update(serialized).digest("hex"), sentinels_found: 0, invocation_logs: false, query_strings_present: false, source_events: [...new Set(eventNames.filter(Boolean))], retained_bytes: Buffer.byteLength(serialized), checked_at: new Date().toISOString() };
 await writeFile("artifacts/observability/privacy-receipt.json", JSON.stringify(receipt, null, 2));
 console.log(JSON.stringify(receipt));

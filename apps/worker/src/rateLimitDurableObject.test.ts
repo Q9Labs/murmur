@@ -36,6 +36,24 @@ async function call(
 }
 
 describe("RateLimitDurableObject", () => {
+  it.each([
+    { operation: "get", entry: "fetch" }, { operation: "put", entry: "fetch" },
+    { operation: "get", entry: "alarm" }, { operation: "put", entry: "alarm" },
+  ] as const)("sanitizes $entry $operation before its concurrency callback rejects", async ({ operation, entry }) => {
+    const state = createState();
+    const runtimeFailures: unknown[] = [];
+    state.storage[operation].mockRejectedValue(new Error("PRIVATE_DO_EMAIL@example.invalid"));
+    state.blockConcurrencyWhile.mockImplementation(async (callback) => {
+      try { return await callback(); } catch (failure) { runtimeFailures.push(failure); throw failure; }
+    });
+    const durableObject = new RateLimitDurableObject(state as unknown as DurableObjectState);
+    const result = entry === "alarm" ? durableObject.alarm() : call(durableObject, { action: "get_session", app_session_id: "fixture" });
+    const code = entry === "alarm" ? "rate_limiter_alarm_failed" : "rate_limiter_request_failed";
+    await expect(result).rejects.toThrow(code);
+    expect(runtimeFailures).toHaveLength(1);
+    expect(runtimeFailures[0]).toEqual(new Error(code));
+  });
+
   it("distinguishes dependency failures from ordinary rate limits", () => {
     expect(isRateLimiterUnavailable({ code: "rate_limiter_unavailable", ok: false })).toBe(true);
     expect(isRateLimiterUnavailable({ code: "rate_limiter_invalid_response", ok: false })).toBe(true);

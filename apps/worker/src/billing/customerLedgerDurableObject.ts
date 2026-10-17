@@ -29,8 +29,6 @@ export class CustomerLedgerDurableObject {
     private readonly env: Env,
   ) {}
 
-  // Cloudflare invokes this Durable Object entry point outside the TypeScript graph.
-  // fallow-ignore-next-line unused-class-member
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get(internalHeader) !== "1") {
       return response({ code: "invalid_ledger_command", ok: false }, 403);
@@ -45,11 +43,11 @@ export class CustomerLedgerDurableObject {
     }
 
     return this.state.blockConcurrencyWhile(async () => {
-      const bindingFailure = await bindCustomer(this.state.storage, command.customerId);
-      if (bindingFailure) {
-        return bindingFailure;
-      }
       try {
+        const bindingFailure = await bindCustomer(this.state.storage, command.customerId);
+        if (bindingFailure) {
+          return bindingFailure;
+        }
         return await executeLedgerCommand(
           new LedgerRepository(database),
           this.state.storage,
@@ -62,7 +60,7 @@ export class CustomerLedgerDurableObject {
         }
         throw new Error("customer_ledger_request_failed");
       }
-    }).catch(() => { throw new Error("customer_ledger_request_failed"); });
+    });
   }
 }
 

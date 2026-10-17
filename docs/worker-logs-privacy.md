@@ -4,7 +4,7 @@ This change prepares production logging. It does not deploy production. The lead
 
 ## Producers
 
-Only `privacy.ts` retains a native console writer. `entrypoint.ts` installs the console boundary before dependency modules evaluate. All other console methods become no-ops, including debug, errors, assertions, tables and timers. The Sentry SDK initializes with `debug: false`, `enableLogs: false`, no tracing and the existing event sanitizer. Better Auth also disables its own logger.
+Only `privacy.ts` retains a native console writer. `entrypoint.ts` installs the console boundary before dependency modules evaluate. All other console methods become no-ops, including debug, errors, assertions, tables and timers. The Sentry SDK initializes with `debug: false`, `enableLogs: false`, no tracing and the existing event sanitizer. Better Auth also disables its own logger. Its `onAPIError` hook reports internal failures through the existing classified reporter, producing one sanitized Sentry event and one outcome. Expected client errors do not enter that reporter.
 
 | Producer | Retained values | Dropped values |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ Turning invocation logs off does **not** remove all metadata from custom records
 
 A request-scoped logging guard therefore permits only fixed known hosts, standard methods, exact route paths and UUID-format dynamic report/session paths. Unknown auth paths, arbitrary session-stop segments and unrecognized paths produce no custom records. Normal routing and responses are unchanged. Query values are removed by Cloudflare, not by changing the application's request.
 
-Invocation records remain disabled because their richer request/response metadata is not part of this contract. Native platform errors still exist; the complete-record proof includes one WebSocket network error. Owned Durable Object and scheduled rejection boundaries replace raw error messages before they escape.
+Invocation records remain disabled because their richer request/response metadata is not part of this contract. Native platform errors still exist; the complete-record proof includes one WebSocket network error. Owned Durable Object callbacks catch failures before they reject to workerd, including state loading, state writes and customer binding. An outer promise catch is too late. Scheduled rejection boundaries also replace raw messages.
 
 ## Deployed proof
 
@@ -89,16 +89,26 @@ Deploy the reviewed checkout directly, without the release helper's automatic D1
 
 ```sh
 cd /Users/macmini/code/murmur/.worktrees/prod-logs
-release="murmur-worker@1.3.0+$(git rev-parse --short=12 HEAD)"
-2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release"
+source_sha="$(git rev-parse HEAD)"
+release="murmur-worker@1.3.0+$source_sha"
+2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release" --tag "$source_sha"
 ```
 
-Observability settings are not versioned. A version rollback alone does not disable logging. First disable retained logs and traces, then restore the recorded production version:
+Observability settings are not versioned. A version rollback alone does not disable logging. Use the single fail-closed rollback script. It disables logs and traces, reads the settings back, and only then changes the version. Any failed API step or mismatched read-back stops the script with a clear error. Do not replace this with independent commands:
 
 ```sh
 cd /Users/macmini/code/murmur/.worktrees/prod-logs
-2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- node --input-type=module -e 'const r=await fetch("https://api.cloudflare.com/client/v4/accounts/5281943bd26d5bdcf4c3915606cd6bfb/workers/scripts/murmur-worker-production/script-settings",{method:"PATCH",headers:{Authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,"Content-Type":"application/json"},body:JSON.stringify({observability:{enabled:false,logs:{enabled:false},traces:{enabled:false}}})});const j=await r.json();if(!j.success)throw new Error(`Disable logs failed: ${r.status}`);console.log("Production log export disabled");'
-2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler versions deploy a661d412-8bec-4c3a-9b96-8c1bdb6ac146@100% --env production --yes --message 'Rollback production log enablement'
+2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm rollback:worker-logs --env production --version a661d412-8bec-4c3a-9b96-8c1bdb6ac146
 ```
 
 After deployment or rollback, read the active version and non-versioned settings back from Cloudflare and check complete retained records. A rollback cannot recall records already retained; they expire after seven days. The sandbox restoration exercised the same settings-disable, version-restore and settings-read-back sequence, not a production rollback.
+
+## Review follow-up verification
+
+The separate `apps/worker/privacy-probe.ts` entry point imports the real production entry point and Durable Object classes. It is not reachable from the production Wrangler configuration. Its sandbox-only storage wrappers inject private-email failures at limiter state reads/writes, native alarm reads/writes, customer binding reads/writes and ledger execution. Native callback exception records must contain only fixed failure messages. The verifier retrieves every matching retained record, requires each native positive control, and scans the complete JSON, not just outcomes.
+
+A real Better Auth database failure runs through its own error handler and the production Sentry SDK. A temporary sandbox-only collector captures the actual outbound envelope. The verifier requires exactly one envelope and one retained outcome with the same current-run trace, and checks both for the email. This proves the SDK export, not ingestion by Sentry's hosted service. The broad route proof also checks the account-delete failure.
+
+Before deployment, require a clean checkout and record the complete source SHA. Deploy the production entry point and the separate probe entry point from that same SHA with the full SHA as both the version tag and Sentry release suffix. Read both deployed version tags and release bindings back from Cloudflare. Attach the receipts and complete records to PR #103 without changing the deployed source commit afterwards.
+
+The rollback proof first forces a real Cloudflare PATCH denial on the sandbox and verifies that no later API call runs and that its active version/settings do not change. It then runs the normal script, verifies logs/traces are off before the version POST, checks the restored version, and restores the exact prior sandbox settings. The owner-loss watchdog uses the same fail-closed rollback.
