@@ -66,15 +66,15 @@
     "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.11",
-    "cspell": "10.0.1",
-    "fallow": "2.96.0",
-    "lefthook": "2.1.9",
-    "syncpack": "15.3.1",
+    "@vitest/coverage-v8": "5.0.4",
+    "cspell": "10.4.0",
+    "fallow": "3.33.1",
+    "lefthook": "2.2.2",
+    "syncpack": "15.3.3",
     "tsc-rs": "0.7.0",
-    "typescript": "~5.9.2",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.11"
+    "typescript": "~7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   },
   "private": true,
   "workspaces": [
