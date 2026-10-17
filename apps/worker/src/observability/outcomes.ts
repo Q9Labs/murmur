@@ -62,8 +62,7 @@ export function writeOutcome(params: {
   };
   try {
     // This is the only outcome sink. Changing destination must not change the record.
-    logWorkerEvent(record);
-    return true;
+    return logWorkerEvent(record);
   } catch {
     // No retries, secondary exporter or Sentry recursion. Delivery markers land in PR 3.
     return false;

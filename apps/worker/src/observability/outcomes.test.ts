@@ -9,7 +9,7 @@ import { getSentryOptions } from "./sentry";
 import { withHttpDiagnostics } from "./outcomes";
 import { createReport } from "../routes/report";
 import { createSessionRecordDurable } from "../rateLimitDurableObject";
-import { hashInstallId, logWorkerEvent } from "../privacy";
+import { hashInstallId, installConsolePrivacyBoundary, logWorkerEvent } from "../privacy";
 import { createSpan } from "@murmur/protocol/session";
 
 // External native library is not involved in these Android/HTTP fixtures.
@@ -95,6 +95,25 @@ afterAll(() => {
 });
 
 describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () => {
+  it("reports a caught Better Auth database failure with one envelope and one outcome", async () => {
+    // Substitute only the D1 boundary; exercise the real auth router, hook and SDK.
+    const database = { batch: async () => [], exec: async () => undefined, prepare: () => { throw new Error("PRIVATE_AUTH_EMAIL@example.invalid"); } } as unknown as D1Database;
+    const restore = installConsolePrivacyBoundary();
+    try {
+      const response = await worker.fetch(new Request("https://worker.example/api/auth/sign-in/anonymous", {
+        method: "POST", headers: { "Content-Type": "application/json", traceparent: `00-${trace}-1234567890abcdef-00` }, body: "{}",
+      }), { ...env, BILLING_DB: database, BETTER_AUTH_SECRET: "fixture-secret-with-at-least-32-characters" }, context);
+      expect(await response.text()).not.toContain("worker_operation_failed");
+      await drain();
+      expect(lines).toHaveLength(1);
+      expect(JSON.parse(lines[0] ?? "")).toMatchObject({ trace_id: trace, attributes: { error_code: "worker.request_failed" } });
+      expect(response.status).toBe(500);
+      expect(exceptionCount()).toBe(1);
+      expect(sentryBodies.join("")).toContain(trace);
+      expect(sentryBodies.join("") + lines.join("")).not.toContain("PRIVATE_AUTH_EMAIL");
+    } finally { restore(); }
+  });
+
   it("P1: reports an unexpected HTTP failure once, with matching safe code and outcome", async () => {
     const response = await worker.fetch(request(), env, context);
     expect(response.status).toBe(500);
@@ -236,6 +255,8 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
   it.each([
     ["PRIVATE_TRANSCRIPT_SENTINEL", "PRIVATE_SALT", false],
     ["span_password_personal", "PRIVATE_SALT", false],
+    ["span_12345678_i", "PRIVATE_SALT", false],
+    ["span_12345678_", "PRIVATE_SALT", false],
     [createSpan().span_id, "PRIVATE_SALT", false],
     [createSpan().span_id, undefined, false],
     [createSpan().span_id, "PRIVATE_SALT", true],
@@ -267,7 +288,7 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
     { event: "session_insight_retention_completed", deleted_insights: 1, deleted_session_contexts: 1 },
     { event: "rating_survey_retention_completed", deleted_rating_surveys: 1 },
     { event: "expired_auth_sessions_deleted", deleted_sessions: 1 },
-    { trace_id: "PRIVATE_TRANSCRIPT_SENTINEL", span_id: "PRIVATE_TRANSCRIPT_SENTINEL", sentry_event_id: "PRIVATE_TRANSCRIPT_SENTINEL", body: "Worker request did not complete" },
+    { trace_id: "PRIVATE_TRANSCRIPT_SENTINEL", span_id: "PRIVATE_TRANSCRIPT_SENTINEL", sentry_event_id: "PRIVATE_TRANSCRIPT_SENTINEL", body: "Worker request did not complete", attributes: { error_code: "worker.request_failed" } },
   ])("P5: complete outgoing console record is safe for producer %j", async (record) => {
     logWorkerEvent(record);
     await drain();

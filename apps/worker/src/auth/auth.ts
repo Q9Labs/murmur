@@ -2,6 +2,7 @@
 
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
+import { isAPIError } from "better-auth/api";
 import { anonymous, emailOTP } from "better-auth/plugins";
 
 import { freeAllowancePeriod } from "../billing/allowancePeriods";
@@ -15,6 +16,7 @@ import { mergeGuestCustomer } from "../billing/guestAccountMerge";
 import type { Env } from "../env";
 import { deleteCustomerInsightsAndRatings } from "../insights/deleteCustomerData";
 import { hashInstallId } from "../privacy";
+import { reportFailure } from "../observability/outcomes";
 import { getServerConfig } from "../serverConfig";
 import { socialProviders } from "./socialProviders";
 
@@ -33,7 +35,18 @@ export function createMurmurAuth(
     return null;
   }
 
+  const startedAt = Date.now();
   return betterAuth({
+    logger: { disabled: true },
+    onAPIError: {
+      onError: (failure) => {
+        if (isAPIError(failure) && failure.statusCode < 500) return;
+        reportFailure({
+          code: "worker.request_failed", failure, env,
+          duration_ms: Date.now() - startedAt,
+        });
+      },
+    },
     account: {
       accountLinking: {
         allowDifferentEmails: false,

@@ -135,7 +135,7 @@ describe("worker routes", () => {
     await expect(response.json()).resolves.toEqual({ error: "webhook_payload_too_large" });
   });
 
-  it("normalizes acquisition tags and logs hashed install measurement", async () => {
+  it("drops acquisition values from logs and keeps hashed install measurement", async () => {
     const installId = `install_measurement_${crypto.randomUUID()}`;
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
@@ -167,17 +167,9 @@ describe("worker routes", () => {
         .map(([value]) => JSON.parse(String(value)) as Record<string, unknown>)
         .find((event) => event.event === "session_created");
 
-      expect(sessionEvent).toMatchObject({
-        acquisition: {
-          campaign: "gulf-summer-2026",
-          content: "caption-demo",
-          landing: "live-translation-for-travel",
-          medium: "instagram-stories",
-          partner: "guide-partner",
-          source: "instagram",
-        },
-        event: "session_created",
-      });
+      expect(sessionEvent).toMatchObject({ event: "session_created" });
+      expect(sessionEvent).not.toHaveProperty("acquisition");
+      expect(JSON.stringify(sessionEvent)).not.toContain("gulf-summer");
       expect(sessionEvent?.hashed_install_id).toMatch(/^[a-f0-9]{64}$/);
       expect(JSON.stringify(sessionEvent)).not.toContain(installId);
       expect(JSON.stringify(sessionEvent)).not.toContain("raw content");

@@ -185,14 +185,14 @@ const handler = {
       Sentry.captureException(failure, {
         tags: { operation: "revenuecat_reconciliation" },
       });
-      throw failure;
+      throw new Error("scheduled_operation_failed");
     });
     const freeClaimCleanup = deleteExpiredFreeAllowanceClaims(env.BILLING_DB, nowMs)
       .catch((failure: unknown) => {
         Sentry.captureException(failure, {
           tags: { operation: "free_allowance_claim_cleanup" },
         });
-        throw failure;
+        throw new Error("scheduled_operation_failed");
       });
     const abandonedSessionSweep = closeAbandonedUsageSessions(
       env.BILLING_DB,
@@ -208,7 +208,7 @@ const handler = {
       Sentry.captureException(failure, {
         tags: { operation: "abandoned_usage_session_sweep" },
       });
-      throw failure;
+      throw new Error("scheduled_operation_failed");
     });
     const sessionInsightRetention = deleteExpiredSessionInsights(env.BILLING_DB, nowMs)
       .then(({ deletedInsights, deletedSessionContexts }) => {
@@ -224,7 +224,7 @@ const handler = {
         Sentry.captureException(failure, {
           tags: { operation: "session_insight_retention_cleanup" },
         });
-        throw failure;
+        throw new Error("scheduled_operation_failed");
       });
     const ratingSurveyRetention = deleteExpiredRatingSurveys(env.BILLING_DB, nowMs)
       .then((deletedRatingSurveys) => {
@@ -239,7 +239,7 @@ const handler = {
         Sentry.captureException(failure, {
           tags: { operation: "rating_survey_retention_cleanup" },
         });
-        throw failure;
+        throw new Error("scheduled_operation_failed");
       });
     const expiredAuthSessions = deleteExpiredAuthSessions(env.BILLING_DB, nowMs)
       .then((deletedSessions) => {
@@ -254,7 +254,7 @@ const handler = {
         Sentry.captureException(failure, {
           tags: { operation: "expired_auth_session_cleanup" },
         });
-        throw failure;
+        throw new Error("scheduled_operation_failed");
       });
     context.waitUntil(
       Promise.all([

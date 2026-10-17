@@ -1,5 +1,5 @@
 name = "murmur-worker"
-main = "src/index.ts"
+main = "src/entrypoint.ts"
 compatibility_date = "2026-05-16"
 compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
@@ -97,9 +97,14 @@ routes = [
   { pattern = "murmur.q9labs.ai", custom_domain = true },
 ]
 
+[env.production.observability]
+enabled = true
+redact_query_string = true
+
 [env.production.observability.logs]
-# Legacy custom log fields do not yet have a complete privacy contract.
-enabled = false
+# Only registered, value-checked custom records. Invocation metadata is not retained.
+enabled = true
+persist = true
 head_sampling_rate = 1
 invocation_logs = false
 
@@ -151,8 +156,13 @@ workers_dev = true
 [env.sandbox.triggers]
 crons = [ "17 3 * * *" ]
 
+[env.sandbox.observability]
+enabled = true
+redact_query_string = true
+
 [env.sandbox.observability.logs]
 enabled = true
+persist = true
 head_sampling_rate = 1
 invocation_logs = false
 

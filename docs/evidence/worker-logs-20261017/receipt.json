@@ -1,0 +1,17 @@
+{
+  "run_id": "3f50590e4978c2a2",
+  "version": "67337a57-4b12-43be-a836-9b07ce71a328",
+  "request_count": 34,
+  "retained_count": 7,
+  "complete_records_sha256": "8eda099444c8c18725b44d9e2d7a079f61cbba537c43d886a7ff1caf1984fde3",
+  "sentinels_found": 0,
+  "invocation_logs": false,
+  "query_strings_present": false,
+  "source_events": [
+    "session_stop",
+    "translation_reported",
+    "session_created"
+  ],
+  "retained_bytes": 7394,
+  "checked_at": "2026-10-17T08:19:28.157Z"
+}

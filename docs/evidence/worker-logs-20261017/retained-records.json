@@ -1,0 +1,324 @@
+[
+  {
+    "source": {
+      "event": "session_stop",
+      "app_session_id": "73316089-2bc6-4ce3-b87c-374fc588e0b2",
+      "at_ms": 1792225153479
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225153479,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "POST",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v2/session/REDACTED/stop",
+          "path": "/v2/session/REDACTED/stop"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F34E70000000000000007",
+      "requestId": "ecbfec0e72c7b23ab6424ffcd78e4ce8",
+      "rayId": "a4bde088abbab975",
+      "traceId": "88cb40b05471600ae4616dc0fbb91624",
+      "spanId": "503be91ddbfe22af",
+      "trigger": "POST /v2/session/REDACTED/stop",
+      "timestampNs": "1792225153479000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 864
+    }
+  },
+  {
+    "source": {
+      "message": "Network connection lost.",
+      "exception": {
+        "name": "Error",
+        "timestamp": 1792225153372
+      }
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225153372,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "GET",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v2/realtime",
+          "path": "/v2/realtime"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F34AW0000000000000001",
+      "requestId": "58ea7df373c48cba130695dcc7fc3199",
+      "rayId": "a4bde082cc75004f",
+      "traceId": "b37993101617edcedd8939534afed60b",
+      "spanId": "e22b100a3e077324",
+      "trigger": "GET /v2/realtime",
+      "timestampNs": "1792225153372000000",
+      "service": "murmur-worker-sandbox",
+      "level": "error",
+      "error": "Network connection lost.",
+      "message": "Network connection lost.",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 877
+    }
+  },
+  {
+    "source": {
+      "retained_text_snapshot": true,
+      "event": "translation_reported",
+      "app_session_id": "73316089-2bc6-4ce3-b87c-374fc588e0b2",
+      "report_id": "e211b098-26af-412b-bba9-877898c16cbb",
+      "translation_span_id": "886ea68af205b3d76aaac0adfbd0c1b4bfa41b33fe899ed786f3927226fd42e9",
+      "error_category": "other",
+      "revision": 1,
+      "at_ms": 1792225149128
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225149239,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "POST",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v1/report",
+          "path": "/v1/report"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F309Q000000000000000D",
+      "requestId": "83e4ea4ab6cddb782fd7114591e51ffe",
+      "rayId": "a4bde06b893bb975",
+      "traceId": "f87909fbfab4c01902a2dd72991c8d92",
+      "spanId": "a0580fd3970363d9",
+      "trigger": "POST /v1/report",
+      "timestampNs": "1792225149239000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 998
+    }
+  },
+  {
+    "source": {
+      "event": "session_created",
+      "app_session_id": "73316089-2bc6-4ce3-b87c-374fc588e0b2",
+      "hashed_install_id": "fb182f537d8699fe00b9383850900f3c8c6e598546be33baecd6cf73200abba9",
+      "at_ms": 1792225146838
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225148409,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "POST",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v2/session",
+          "path": "/v2/session"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F2ZFS000000000000001E",
+      "requestId": "9a07f6db319799e05227606270c07703",
+      "rayId": "a4bde05f9c0ab975",
+      "traceId": "81dcfeffbc4f0d77d7612a1194cef618",
+      "spanId": "2e01fd2a7ad5b100",
+      "trigger": "POST /v2/session",
+      "timestampNs": "1792225148409000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 892
+    }
+  },
+  {
+    "source": {
+      "attributes": {
+        "retryable": false,
+        "action": "mobile_operation",
+        "reason": "unknown",
+        "error_code": "mobile.operation_failed",
+        "outcome": "failed",
+        "source_surface": "ios",
+        "duration_ms": 7
+      },
+      "synthetic": false,
+      "service": {
+        "name": "murmur-worker",
+        "version": "com.q9labsai.murmur@1.3.1+130"
+      },
+      "body": "Mobile operation did not complete",
+      "severity_text": "ERROR",
+      "_time": "2026-10-17T08:19:05.201Z",
+      "trace_id": "d88db7b28c286517836994f75b7dfe95",
+      "span_id": "af7063df6fa68ed7",
+      "deployment": {
+        "environment": "sandbox"
+      }
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225146569,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "POST",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v1/diagnostics",
+          "path": "/v1/diagnostics"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F2XP9000000000000000K",
+      "requestId": "5c3999d277cbf2ca0322d9d43c5e5002",
+      "rayId": "a4bde05afe91b975",
+      "traceId": "9793199e8963ff1190a2f51009638da3",
+      "spanId": "74f5620d0cb04a3a",
+      "trigger": "POST /v1/diagnostics",
+      "timestampNs": "1792225146569000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 1203
+    }
+  },
+  {
+    "source": {
+      "attributes": {
+        "retryable": false,
+        "action": "http_request",
+        "reason": "unknown",
+        "error_code": "worker.request_failed",
+        "outcome": "failed",
+        "duration_ms": 0
+      },
+      "synthetic": true,
+      "service": {
+        "name": "murmur-worker",
+        "version": "murmur-worker@1.3.0+1cd92ee1f5c1"
+      },
+      "body": "Worker request did not complete",
+      "severity_text": "ERROR",
+      "_time": "2026-10-17T08:19:01.255Z",
+      "trace_id": "4aa10fe64a701f866b8ee93be4c1a08e",
+      "span_id": "3ae2f7cf68384973",
+      "sentry_event_id": "5fd79772030f42979e5fd41e94d509c0",
+      "deployment": {
+        "environment": "sandbox"
+      }
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225141255,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "GET",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/__diagnostics/failure",
+          "path": "/__diagnostics/failure"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F2RG70000000000000001",
+      "requestId": "dcbeeff9a69a20e90375fdb69aa69820",
+      "rayId": "a4bde03b7ba1b975",
+      "traceId": "d67f0acbf2a3d566d89cb138c1a5b6c3",
+      "spanId": "854c74021faac33a",
+      "trigger": "GET /__diagnostics/failure",
+      "timestampNs": "1792225141255000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 1243
+    }
+  },
+  {
+    "source": {
+      "event": "session_stop",
+      "app_session_id": "18a8ae69-a85d-4b92-a81c-8330b00af2c6",
+      "at_ms": 1792225127846
+    },
+    "dataset": "cloudflare-workers",
+    "timestamp": 1792225127846,
+    "$workers": {
+      "truncated": false,
+      "scriptName": "murmur-worker-sandbox",
+      "scriptVersion": {
+        "id": "67337a57-4b12-43be-a836-9b07ce71a328"
+      },
+      "eventType": "fetch",
+      "executionModel": "stateless",
+      "event": {
+        "request": {
+          "method": "POST",
+          "url": "https://murmur-worker-sandbox.msbilal.workers.dev/v2/session/REDACTED/stop",
+          "path": "/v2/session/REDACTED/stop"
+        }
+      }
+    },
+    "$metadata": {
+      "id": "01M54F2BD60000000000000007",
+      "requestId": "e37f8ee6e84918f73a76f9509470c073",
+      "rayId": "a4bddfe77ff88563",
+      "traceId": "0d344689e3cff4e5375cac27aefab157",
+      "spanId": "f814760a448b42ba",
+      "trigger": "POST /v2/session/REDACTED/stop",
+      "timestampNs": "1792225127846000000",
+      "service": "murmur-worker-sandbox",
+      "account": "5281943bd26d5bdcf4c3915606cd6bfb",
+      "type": "cf-worker",
+      "origin": "fetch",
+      "eventSize": 864
+    }
+  }
+]

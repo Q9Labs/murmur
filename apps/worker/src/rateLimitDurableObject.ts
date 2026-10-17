@@ -39,7 +39,12 @@ export class RateLimitDurableObject {
 
   async alarm(): Promise<void> {
     await this.state.blockConcurrencyWhile(async () => {
-      await this.saveState(await this.loadState());
+      try {
+        await this.saveState(await this.loadState());
+      } catch {
+        // workerd observes this callback's rejection before the returned promise.
+        throw new Error("rate_limiter_alarm_failed");
+      }
     });
   }
 
@@ -50,10 +55,14 @@ export class RateLimitDurableObject {
     }
 
     return this.state.blockConcurrencyWhile(async () => {
-      const state = await this.loadState();
-      const result = this.handle(body, state);
-      await this.saveState(state);
-      return json(result);
+      try {
+        const state = await this.loadState();
+        const result = this.handle(body, state);
+        await this.saveState(state);
+        return json(result);
+      } catch {
+        throw new Error("rate_limiter_request_failed");
+      }
     });
   }
 
