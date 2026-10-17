@@ -55,10 +55,10 @@
     "expo-splash-screen": "~57.0.10"
   },
   "devDependencies": {
-    "@sentry/cli": "3.6.2",
+    "@sentry/cli": "3.8.0",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.3",
-    "babel-preset-expo": "~57.0.14",
-    "vitest": "^4.1.11"
+    "babel-preset-expo": "~58.0.13",
+    "vitest": "^5.0.4"
   }
 }
