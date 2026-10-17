@@ -34,6 +34,7 @@ export function createMurmurAuth(
   }
 
   return betterAuth({
+    logger: { disabled: true },
     account: {
       accountLinking: {
         allowDifferentEmails: false,

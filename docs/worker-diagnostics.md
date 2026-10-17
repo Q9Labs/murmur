@@ -16,9 +16,7 @@ The sink emits one JSON line per outcome using q9stack's existing OTel log conve
 
 The diagnostic code is a random W3C trace ID. Valid `traceparent` continues correlation; invalid input is replaced rather than reflected. Non-upgrade HTTP responses expose `X-Diagnostic-Code` through CORS; unexpected failures also return `diagnostic_code` in the JSON response. WebSocket lifecycle reporting is deferred.
 
-Sandbox enables retained Workers Logs at sampling 1 and disables invocation logs and traces. **Production Workers Logs remain disabled.** Disabling invocation logs alone does not suppress custom console output. All Worker-owned console producers already use `logWorkerEvent`; its boundary now replaces invalid ID-shaped values with `[redacted]` (UUID or fixed-length hex, with exact trace/span/hash lengths; translation spans use a separate, salted 64-digit hex `translation_span_id`). The privacy corpus includes the actual exported session-stop handler, the report parser/logger, and every existing producer shape. Other legacy fields do not yet have a complete value allowlist, so this PR does not authorize their production retention.
-
-Cloudflare's published limits at planning time were 3-day retention on Free and 7-day retention on Paid, with pricing changes announced for 1 December 2026. Actual account tier, shared usage and incremental cost must be checked before production rollout. This pilot does not provide Axiom's 30-day history or an independent missing-marker alert. See [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/). Do not infer zero incremental cost from full sampling.
+Production and sandbox logging configuration, the complete producer/value contract, platform metadata controls, deployed privacy evidence and account pricing are in [Workers Logs privacy contract](worker-logs-privacy.md). Production deployment remains a separate, independently reviewed phase. The runtime sink remains Workers Logs, not Axiom.
 
 ## Mobile relay
 
@@ -34,8 +32,8 @@ For live verification, deploy only sandbox without invoking the release helper (
 
 Restore the recorded sandbox version after the proof so the fixture is disabled and the prior deployment/settings are back. For code undo, revert this PR and redeploy the previous Worker artifact through the separately approved release process. No database, billing state, mobile binary, symbol upload, production deployment or OTA is part of this PR. Disabling log export loses future outcomes; already-retained records expire under Cloudflare retention and cannot be recalled by a code revert.
 
-Relay tests currently supply the authenticated session at the auth seam. They prove validation and limiting **after authentication**, not real Better Auth session creation or cookie verification. The current Vitest harness has no D1-backed auth fixture.
+Relay unit tests supply the authenticated session at the auth seam. They prove validation and limiting **after authentication**. The separate [Workers Logs proof](worker-logs-privacy.md) also creates a real anonymous Better Auth session and submits an authenticated relay batch on the deployed sandbox.
 
 The relay accepts the existing mobile release format, `com.q9labsai.murmur@<version>+<numeric build>`. HTTP correlation accepts all two-digit lowercase hexadecimal trace flags without enabling Sentry tracing. SDK proof files are written only in explicit `pnpm run test:diagnostics` proof mode; ordinary unit and gate runs do not write them.
 
-Client-generated translation spans are not trusted just because they match the protocol format. The report logger hashes well-shaped spans with `SESSION_HASH_SALT`; missing salt or failed hashing produces a marker without changing report acceptance. Raw protocol spans never pass the log boundary. Full Cloudflare records are checked only in memory and are not persisted by the live verifier.
+Client-generated translation spans are not trusted just because they match the protocol format. The report logger hashes well-shaped spans with `SESSION_HASH_SALT`; missing salt or failed hashing produces a marker without changing report acceptance. Raw protocol spans never pass the log boundary. The diagnostic verifier checks full Cloudflare records in memory. The broader Workers Logs verifier saves complete records only after the privacy scan passes.

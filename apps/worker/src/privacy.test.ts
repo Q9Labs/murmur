@@ -1,83 +1,61 @@
-import { createSpan } from "@murmur/protocol/session";
 import { describe, expect, it, vi } from "vitest";
+import { installConsolePrivacyBoundary, logWorkerEvent, redactWorkerEvent, withRequestLogPrivacy } from "./privacy";
 
-import { logWorkerEvent, redactWorkerEvent } from "./privacy";
+const uuid = "12345678-1234-4234-8234-123456789abc";
+const privateValue = "PRIVATE_TRANSCRIPT_SENTINEL";
 
-describe("worker privacy logging", () => {
-  it("redacts transcript, translation, audio, and token-like fields recursively", () => {
-    expect(
-      redactWorkerEvent({
-        app_session_id: "session_123",
-        nested: {
-          authorization: "Bearer secret",
-          source_caption: "hello",
-          translated_caption: "مرحبا",
-          provider: {
-            api_key: "provider_key",
-            token_bundle_id: "bundle_123",
-          },
-        },
-        optional_user_note: "bad translation",
-        pcm_audio: "base64_audio",
-      }),
-    ).toEqual({
-      app_session_id: "[redacted]",
-      nested: {
-        authorization: "[redacted]",
-        source_caption: "[redacted]",
-        translated_caption: "[redacted]",
-        provider: {
-          api_key: "[redacted]",
-          token_bundle_id: "[redacted]",
-        },
-      },
-      optional_user_note: "[redacted]",
-      pcm_audio: "[redacted]",
-    });
+describe("value-level log boundary", () => {
+  it("drops unknown events and arbitrary keys, including innocently named strings", () => {
+    expect(redactWorkerEvent({ event: privateValue, details: privateValue })).toBeNull();
+    expect(redactWorkerEvent({ event: "session_created", acquisition: { campaign: privateValue }, source_language: privateValue, target_language: privateValue, extra: privateValue, app_session_id: uuid, at_ms: 123 })).toEqual({ event: "session_created", app_session_id: uuid, hashed_install_id: "[redacted]", at_ms: 123 });
   });
 
-  it.each(["app_session_id", "span_id", "trace_id", "request_id", "sentry_event_id", "hashed_install_id", "userId", "requestID", "nested.request-id"])(
-    "replaces private values in id-shaped field %s", (key) => {
-      expect(redactWorkerEvent({ [key]: "PRIVATE_TRANSCRIPT_SENTINEL" })).toEqual({ [key]: "[redacted]" });
-      expect(redactWorkerEvent({ [key]: ["PRIVATE_TRANSCRIPT_SENTINEL"] })).toEqual({ [key]: "[redacted]" });
-    },
-  );
-
-  it("rejects raw translation spans even when private words fit their format", () => {
-    const span = createSpan();
-    expect(redactWorkerEvent({ translation_span_id: span.span_id })).toEqual({ translation_span_id: "[redacted]" });
-    expect(redactWorkerEvent({ translation_span_id: "span_password_personal" })).toEqual({ translation_span_id: "[redacted]" });
-    expect(redactWorkerEvent({ translation_span_id: "a".repeat(64) })).toEqual({ translation_span_id: "a".repeat(64) });
-    expect(redactWorkerEvent({ translation_span_id: "PRIVATE_TRANSCRIPT_SENTINEL" }))
-      .toEqual({ translation_span_id: "[redacted]" });
-    expect(redactWorkerEvent({ span_id: span.span_id })).toEqual({ span_id: "[redacted]" });
+  it.each(["app_session_id", "report_id", "translation_span_id", "revision", "error_category", "retained_text_snapshot", "at_ms"])("does not retain arbitrary values in %s", (key) => {
+    const record = redactWorkerEvent({ event: "translation_reported", [key]: privateValue });
+    expect(JSON.stringify(record)).not.toContain(privateValue);
   });
 
-  it("keeps only well-formed UUIDs and fixed-length hex ids", () => {
-    const safe = { app_session_id: "12345678-1234-4234-8234-123456789abc", trace_id: "1".repeat(32),
-      span_id: "2".repeat(16), hashed_install_id: "3".repeat(64), request_id: "4".repeat(32) };
-    expect(redactWorkerEvent(safe)).toEqual(safe);
-    expect(redactWorkerEvent({ span_id: "1".repeat(32), trace_id: "0".repeat(32), app_session_id: "not-a-uuid" }))
-      .toEqual({ span_id: "[redacted]", trace_id: "[redacted]", app_session_id: "[redacted]" });
+  it("rejects objects disguised as safe enum strings", () => {
+    const disguised = { toString: () => "other", secret: privateValue };
+    expect(JSON.stringify(redactWorkerEvent({ event: "translation_reported", error_category: disguised }))).not.toContain(privateValue);
   });
 
-  it("logs only the redacted worker event", () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  it("keeps only bounded counts, UUIDs, digests and registered enum values", () => {
+    expect(redactWorkerEvent({ event: "translation_reported", app_session_id: uuid, report_id: uuid, translation_span_id: "a".repeat(64), revision: 1, error_category: "other", retained_text_snapshot: true, at_ms: 123 })).toEqual({ event: "translation_reported", app_session_id: uuid, report_id: uuid, translation_span_id: "a".repeat(64), revision: 1, error_category: "other", retained_text_snapshot: true, at_ms: 123 });
+    expect(redactWorkerEvent({ event: "revenuecat_reconciliation_completed", attempted: NaN, failed: Infinity })).toEqual({ event: "revenuecat_reconciliation_completed" });
+  });
+
+  it("reconstructs outcomes from the registry, never caller messages or nested fields", () => {
+    const record = redactWorkerEvent({ _time: privateValue, trace_id: privateValue, "service.version": privateValue, "deployment.environment": privateValue, body: privateValue, attributes: { error_code: "worker.request_failed", action: privateValue, reason: privateValue, extra: privateValue, duration_ms: privateValue } });
+    expect(record).toMatchObject({ body: "Worker request did not complete", attributes: { action: "http_request", error_code: "worker.request_failed" } });
+    expect(JSON.stringify(record)).not.toContain(privateValue);
+  });
+
+  it.each(["/v2/session/PRIVATE_TRANSCRIPT_SENTINEL/stop", "/v1/reports/PRIVATE_TRANSCRIPT_SENTINEL", "/api/auth/PRIVATE_TRANSCRIPT_SENTINEL", "/PRIVATE_TRANSCRIPT_SENTINEL"])("drops records when platform metadata would leak path %s", (path) => {
+    const sink = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
-      logWorkerEvent({
-        event: "translation_reported",
-        optional_source_text_snapshot: "hello",
-        report_id: "report_123",
-      });
-      expect(spy).toHaveBeenCalledWith(
-        JSON.stringify({
-          event: "translation_reported",
-          optional_source_text_snapshot: "[redacted]",
-          report_id: "[redacted]",
-        }),
-      );
-    } finally {
-      spy.mockRestore();
-    }
+      expect(withRequestLogPrivacy(new Request(`https://worker.example${path}`), () => logWorkerEvent({ event: "session_stop", app_session_id: uuid }))).toBe(false);
+      expect(sink).not.toHaveBeenCalled();
+    } finally { sink.mockRestore(); }
+  });
+
+  it("retains a registered stop on a UUID path while dropping dependency console writes", () => {
+    const sink = vi.spyOn(console, "log").mockImplementation(() => {});
+    const restore = installConsolePrivacyBoundary();
+    try {
+      console.error(new Error(privateValue));
+      console.log(privateValue);
+      console.warn(privateValue);
+      console.table({ email: privateValue });
+      expect(withRequestLogPrivacy(new Request(`https://worker.example/v2/session/${uuid}/stop?email=${privateValue}`), () => logWorkerEvent({ event: "session_stop", app_session_id: uuid, details: privateValue }))).toBe(true);
+      expect(sink).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(sink.mock.calls)).not.toContain(privateValue);
+    } finally { restore(); sink.mockRestore(); }
+  });
+
+  it("contains exporter failure without retries or recursive console writes", () => {
+    const sink = vi.spyOn(console, "log").mockImplementation(() => { throw new Error(privateValue); });
+    try { expect(logWorkerEvent({ event: "session_stop", app_session_id: uuid })).toBe(false); expect(sink).toHaveBeenCalledTimes(1); }
+    finally { sink.mockRestore(); }
   });
 });

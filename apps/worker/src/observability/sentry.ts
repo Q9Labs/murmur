@@ -6,6 +6,8 @@ export function getSentryOptions(env: Env): CloudflareOptions | undefined {
   const dsn = env.SENTRY_DSN?.trim();
   if (!dsn) return undefined;
   return {
+    debug: false,
+    enableLogs: false,
     beforeSend: sanitizeWorkerEvent,
     beforeSendTransaction: () => null,
     dataCollection: {

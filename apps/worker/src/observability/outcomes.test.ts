@@ -236,6 +236,8 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
   it.each([
     ["PRIVATE_TRANSCRIPT_SENTINEL", "PRIVATE_SALT", false],
     ["span_password_personal", "PRIVATE_SALT", false],
+    ["span_12345678_i", "PRIVATE_SALT", false],
+    ["span_12345678_", "PRIVATE_SALT", false],
     [createSpan().span_id, "PRIVATE_SALT", false],
     [createSpan().span_id, undefined, false],
     [createSpan().span_id, "PRIVATE_SALT", true],
@@ -267,7 +269,7 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
     { event: "session_insight_retention_completed", deleted_insights: 1, deleted_session_contexts: 1 },
     { event: "rating_survey_retention_completed", deleted_rating_surveys: 1 },
     { event: "expired_auth_sessions_deleted", deleted_sessions: 1 },
-    { trace_id: "PRIVATE_TRANSCRIPT_SENTINEL", span_id: "PRIVATE_TRANSCRIPT_SENTINEL", sentry_event_id: "PRIVATE_TRANSCRIPT_SENTINEL", body: "Worker request did not complete" },
+    { trace_id: "PRIVATE_TRANSCRIPT_SENTINEL", span_id: "PRIVATE_TRANSCRIPT_SENTINEL", sentry_event_id: "PRIVATE_TRANSCRIPT_SENTINEL", body: "Worker request did not complete", attributes: { error_code: "worker.request_failed" } },
   ])("P5: complete outgoing console record is safe for producer %j", async (record) => {
     logWorkerEvent(record);
     await drain();

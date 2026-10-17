@@ -60,9 +60,9 @@ export class CustomerLedgerDurableObject {
         if (handled) {
           return handled;
         }
-        throw error;
+        throw new Error("customer_ledger_request_failed");
       }
-    });
+    }).catch(() => { throw new Error("customer_ledger_request_failed"); });
   }
 }
 

@@ -73,7 +73,7 @@ export async function createReport(request: Request, env: Env): Promise<Response
   }
 
   // Client-generated base-36 spans can contain words. Retain only a salted digest.
-  const spanId = env.SESSION_HASH_SALT && /^span_[a-z0-9]{8}_[a-z0-9]{8}$/.test(report.span_id)
+  const spanId = env.SESSION_HASH_SALT && /^span_[a-z0-9]{1,11}_[a-z0-9]{0,8}$/.test(report.span_id)
     ? await hashInstallId(report.span_id, env.SESSION_HASH_SALT).catch(() => "[redacted]")
     : "[redacted]";
   logWorkerEvent({

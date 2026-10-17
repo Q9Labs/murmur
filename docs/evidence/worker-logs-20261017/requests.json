@@ -1,0 +1,247 @@
+{
+  "run_id": "3f50590e4978c2a2",
+  "rows": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "trace": "a7878993de6845142c1b0d63f2be476f",
+      "ray": "a4bddff4e93fb975"
+    },
+    {
+      "path": "/privacy",
+      "method": "GET",
+      "status": 200,
+      "trace": "6f1c4027cc08ed62a58eed52e36dfa51",
+      "ray": "a4bddff86cebb975"
+    },
+    {
+      "path": "/terms",
+      "method": "GET",
+      "status": 200,
+      "trace": "7a671116b925e129e81080e7c5aefd0e",
+      "ray": "a4bddffa1ebcb975"
+    },
+    {
+      "path": "/support",
+      "method": "GET",
+      "status": 200,
+      "trace": "fef37c39b49ebc8a89da3dcae8d1ecfc",
+      "ray": "a4bddffe1af2b975"
+    },
+    {
+      "path": "/health",
+      "method": "GET",
+      "status": 200,
+      "trace": "7624a3230ad09c6b21ed0797abe0427f",
+      "ray": "a4bde0008db6b975"
+    },
+    {
+      "path": "/ready",
+      "method": "GET",
+      "status": 200,
+      "trace": "434088b3ef7cb025c124037e435b6894",
+      "ray": "a4bde00398d8b975"
+    },
+    {
+      "path": "/v3/config",
+      "method": "GET",
+      "status": 401,
+      "trace": "c1e09309f393352313c2d0afcc788f0f",
+      "ray": "a4bde004ca24b975"
+    },
+    {
+      "path": "/v3/customer",
+      "method": "GET",
+      "status": 401,
+      "trace": "a727a878557c2e57a645c0a548929d78",
+      "ray": "a4bde0060ba3b975"
+    },
+    {
+      "path": "/v1/reports",
+      "method": "GET",
+      "status": 401,
+      "trace": "c028ccb0df8bc29fa868813765a46c00",
+      "ray": "a4bde0087e34b975"
+    },
+    {
+      "path": "/v2/session",
+      "method": "OPTIONS",
+      "status": 200,
+      "trace": "ae51766d4d4ff9b0005d38a4682bd71c",
+      "ray": "a4bde00c69e1b975"
+    },
+    {
+      "path": "/v1/session",
+      "method": "POST",
+      "status": 426,
+      "trace": "c1c9d535cd74af390797804f4189e75a",
+      "ray": "a4bde00f3cc4b975"
+    },
+    {
+      "path": "/v3/gifts/phone-audio/claim",
+      "method": "POST",
+      "status": 401,
+      "trace": "15f79eaf6bbe079d6a93f4e597c8050a",
+      "ray": "a4bde010de62b975"
+    },
+    {
+      "path": "/v3/insights/consent",
+      "method": "PUT",
+      "status": 401,
+      "trace": "fa24f4fa6b6b33ecae5868684246209c",
+      "ray": "a4bde01419e4b975"
+    },
+    {
+      "path": "/v3/attribution",
+      "method": "POST",
+      "status": 400,
+      "trace": "3249d76f85f5eb544ec2ba28c98247a6",
+      "ray": "a4bde0185e5fb975"
+    },
+    {
+      "path": "/v3/ratings",
+      "method": "POST",
+      "status": 400,
+      "trace": "d1d84f73b8d61a73cb804b1c2a1ecfd9",
+      "ray": "a4bde01ab8afb975"
+    },
+    {
+      "path": "/v3/billing/reconcile",
+      "method": "POST",
+      "status": 401,
+      "trace": "699366aacddc3b905ccac6dd6e5cfd9c",
+      "ray": "a4bde01e1c92b975"
+    },
+    {
+      "path": "/v3/webhooks/revenuecat",
+      "method": "POST",
+      "status": 401,
+      "trace": "b9bbcad061dafa67ab0b3c1464800e4e",
+      "ray": "a4bde0214fe8b975"
+    },
+    {
+      "path": "/v1/telemetry",
+      "method": "POST",
+      "status": 400,
+      "trace": "3ff542112f1524257755f32e396e7ef5",
+      "ray": "a4bde022f99cb975"
+    },
+    {
+      "path": "/v1/diagnostics",
+      "method": "POST",
+      "status": 401,
+      "trace": "c45196e5dcd453d9e3549dc2584bb7b5",
+      "ray": "a4bde0255bfeb975"
+    },
+    {
+      "path": "/v1/report",
+      "method": "POST",
+      "status": 400,
+      "trace": "3349578df11bf2cb4bd4a9335ec06f87",
+      "ray": "a4bde0297873b975"
+    },
+    {
+      "path": "[private path]",
+      "method": "DELETE",
+      "status": 401,
+      "trace": "409bf1733e010f845a8e1b98a7839361",
+      "ray": "a4bde02b5abbb975"
+    },
+    {
+      "path": "/api/auth/sign-in/email-otp",
+      "method": "POST",
+      "status": 400,
+      "trace": "8d30a3516d16fd580654ca7661e165c8",
+      "ray": "a4bde02d5cbbb975"
+    },
+    {
+      "path": "[private path]",
+      "method": "POST",
+      "status": 200,
+      "trace": "5e3d2b28d72e7c609400c92ce67ceeca",
+      "ray": "a4bde034bc84b975"
+    },
+    {
+      "path": "[private path]",
+      "method": "POST",
+      "status": 404,
+      "trace": "cbc76e2947c9fa7095840acd1345101a",
+      "ray": "a4bde038788db975"
+    },
+    {
+      "path": "[private path]",
+      "method": "POST",
+      "status": 404,
+      "trace": "360d0e35d2720ae11c810709025011ca",
+      "ray": "a4bde039f9e8b975"
+    },
+    {
+      "path": "/__diagnostics/failure",
+      "method": "GET",
+      "status": 500,
+      "trace": "4aa10fe64a701f866b8ee93be4c1a08e",
+      "ray": "a4bde03b7ba1b975"
+    },
+    {
+      "path": "/api/auth/sign-in/anonymous",
+      "method": "POST",
+      "status": 200,
+      "trace": "761881c8cfa754c222831b1f779923ca",
+      "ray": "a4bde03e4e79b975"
+    },
+    {
+      "path": "/v1/diagnostics",
+      "method": "POST",
+      "status": 400,
+      "trace": "ec7a83c6b8b4801eeade23995067f16b",
+      "ray": "a4bde056288bb975"
+    },
+    {
+      "path": "/v1/diagnostics",
+      "method": "POST",
+      "status": 202,
+      "trace": "3cf56f2ed2daa9f81dbec41ae0c55efd",
+      "ray": "a4bde05afe91b975"
+    },
+    {
+      "path": "/v2/session",
+      "method": "POST",
+      "status": 200,
+      "trace": "336fcdd0fce1442633579fc34eb5e67d",
+      "ray": "a4bde05f9c0ab975"
+    },
+    {
+      "path": "/v1/report",
+      "method": "POST",
+      "status": 202,
+      "trace": "7fb26bc55ba1eb3c8c7f7afd093a7511",
+      "ray": "a4bde06b893bb975"
+    },
+    {
+      "path": "/v2/realtime",
+      "method": "WebSocket",
+      "status": "handshake sent"
+    },
+    {
+      "path": "/v2/session/73316089-2bc6-4ce3-b87c-374fc588e0b2/stop",
+      "method": "POST",
+      "status": 200,
+      "trace": "1ed95d23ff6d0ef0ac440efba33af4ad",
+      "ray": "a4bde088abbab975"
+    },
+    {
+      "error_trace": "4aa10fe64a701f866b8ee93be4c1a08e",
+      "relay_trace": "d88db7b28c286517836994f75b7dfe95",
+      "report_id": "e211b098-26af-412b-bba9-877898c16cbb",
+      "session_id": "73316089-2bc6-4ce3-b87c-374fc588e0b2"
+    },
+    {
+      "path": "/api/auth/delete-user",
+      "method": "POST",
+      "status": 500,
+      "trace": "fd19d371d59e929760fc5da88ab239f3",
+      "ray": "a4bde08b1e56b975"
+    }
+  ]
+}

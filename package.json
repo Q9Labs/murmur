@@ -58,6 +58,7 @@
     "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
     "coverage": "pnpm run test:coverage",
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit",
+    "verify:log-privacy": "node tooling/scripts/verify-workers-log-privacy.mjs",
     "verify:diagnostics": "node tooling/scripts/verify-diagnostic-delivery.mjs",
     "test:diagnostics": "MURMUR_DIAGNOSTIC_PROOF=1 pnpm --filter @murmur/worker exec vitest run src/observability/outcomes.test.ts src/observability/sentry.test.ts src/routes/diagnostics.test.ts"
   },
