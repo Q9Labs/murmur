@@ -69,6 +69,8 @@ export type WorkerTelemetryEvent =
       app_session_id: string;
       close_reason: string | null;
       event: "worker_session_ended";
+      caption_retry_count: number;
+      captions_recovered: boolean;
       failure_code: string | null;
       input_audio_bytes: number;
       input_audio_chunks: number;

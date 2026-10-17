@@ -54,7 +54,7 @@
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers:closed",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
     "tooling:test": "node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs tooling/scripts/rollback-worker-logs.test.mjs",
-    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test",
+    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test && pnpm run verify:caption-recovery",
     "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
     "coverage": "pnpm run test:coverage",
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit",
@@ -63,13 +63,16 @@
     "test:diagnostics": "MURMUR_DIAGNOSTIC_PROOF=1 pnpm --filter @murmur/worker exec vitest run src/observability/outcomes.test.ts src/observability/sentry.test.ts src/routes/diagnostics.test.ts",
     "rollback:worker-logs": "node tooling/scripts/rollback-worker-logs.mjs",
     "verify:log-boundaries": "node tooling/scripts/verify-workers-log-boundaries.mjs",
-    "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs"
+    "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs",
+    "verify:caption-recovery": "node tooling/scripts/verify-caption-recovery.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.11",
     "cspell": "10.0.1",
+    "esbuild": "0.28.1",
     "fallow": "2.96.0",
     "lefthook": "2.1.9",
+    "miniflare": "5.20261001.0-alpha",
     "syncpack": "15.3.1",
     "tsc-rs": "0.7.0",
     "typescript": "~5.9.2",

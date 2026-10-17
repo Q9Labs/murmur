@@ -444,6 +444,37 @@ describe("app-facing realtime socket", () => {
     });
   });
 
+  it("ignores queued audio, captions, errors, and close callbacks from a retired upstream", async () => {
+    vi.useFakeTimers();
+    const { client, upstream } = await openTestRealtimeSession({ name: "retired_upstream" });
+    upstream.stayOpenOnClose = true;
+    const replacement = new FakeSocket();
+    providerMocks.openTranslationSocket.mockResolvedValueOnce(replacement);
+    client.dispatchEvent(new MessageEvent("message", { data: new ArrayBuffer(4800) }));
+    await vi.advanceTimersByTimeAsync(0);
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.output_audio.delta", delta: "AQID" }),
+    }));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(upstream.closeCalls).toContainEqual({ code: 1000, reason: "caption_retry_replaced" });
+    const sent = [...client.sent];
+    for (const output of [
+      { type: "session.output_audio.delta", delta: "AQID" },
+      { type: "session.output_transcript.delta", delta: "stale caption" },
+      { type: "session.closed" },
+      { type: "error", error: { code: "server_error" } },
+    ]) upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(output) }));
+    upstream.dispatchEvent(new Event("close"));
+    upstream.dispatchEvent(new Event("error"));
+    expect(client.sent).toEqual(sent);
+    expect(client.closeCalls).toEqual([]);
+    replacement.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.output_transcript.delta", delta: "new caption" }),
+    }));
+    expect(client.sent.at(-1)).toContain("new caption");
+    client.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ kind: "close_session" }) }));
+  });
+
   it("forwards provider output and physically closes upstream on provider completion", async () => {
     const { client, upstream } = await openTestRealtimeSession({ name: "provider_complete" });
     upstream.dispatchEvent(new MessageEvent("message", {
