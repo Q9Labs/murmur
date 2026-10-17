@@ -43,7 +43,7 @@ describe("caption-only recovery", () => {
     expect(f.open).not.toHaveBeenCalled();
     f.recovery.outputAudio();
     await vi.advanceTimersByTimeAsync(2500);
-    expect(f.recovery.acceptOriginalCaption("late healthy")).toBe(true);
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "late healthy" });
     await vi.advanceTimersByTimeAsync(30_000);
     expect(f.open).not.toHaveBeenCalled();
     expect(f.onRecovered).not.toHaveBeenCalled();
@@ -96,10 +96,10 @@ describe("caption-only recovery", () => {
   it("lets the late original win, cancelling side captions without claiming recovery", async () => {
     vi.useFakeTimers();
     const { side, f } = await stalledSide();
-    expect(f.recovery.acceptOriginalCaption("original")).toBe(true);
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "original" });
     transcript(side, "replay");
-    expect(f.recovery.acceptOriginalCaption(" original continued")).toBe(true);
-    expect(f.onCaption).not.toHaveBeenCalled();expect(f.onRecovered).not.toHaveBeenCalled();
+    f.recovery.originalCaption({ kind: "translation_delta", delta: " original continued" });
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta)).toEqual(["original", " original continued"]);expect(f.onRecovered).not.toHaveBeenCalled();
     expect(f.retire).toHaveBeenCalledWith(side);
     f.recovery.stop();
   });
@@ -107,7 +107,7 @@ describe("caption-only recovery", () => {
     vi.useFakeTimers();
     const { side, f } = await stalledSide();
     transcript(side, "recovered");
-    expect(f.recovery.acceptOriginalCaption("duplicate original")).toBe(false);
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "duplicate original" });
     transcript(side, " continued");
     expect(f.onCaption.mock.calls.map(([e]) => e.delta)).toEqual(["recovered", " continued"]);
     expect(f.onRecovered).toHaveBeenCalledOnce();expect(f.onConnectionCaption).toHaveBeenCalledOnce();
@@ -146,8 +146,102 @@ describe("caption-only recovery", () => {
     const pending = pendingSocket(), side = socket(), late = fixture(vi.fn(() => pending.promise));
     late.recovery.sendAudio(new ArrayBuffer(4800));late.recovery.outputAudio();
     await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
-    late.recovery.acceptOriginalCaption("original wins while connecting");pending.resolve(side);
+    late.recovery.originalCaption({ kind: "translation_delta", delta: "original wins while connecting" });pending.resolve(side);
     await vi.advanceTimersByTimeAsync(0);
     expect(late.retire).toHaveBeenCalledWith(side);expect(late.onRecovered).not.toHaveBeenCalled();late.recovery.stop();
   });
+  it("preserves every whitespace delta after either source wins", async () => {
+    vi.useFakeTimers();
+    const original = fixture();
+    for (const delta of ["hello", " ", "world", "\n", "next"]) original.recovery.originalCaption({ kind: "translation_delta", delta: delta });
+    expect(original.onCaption.mock.calls.map(([e]) => e.delta)).toEqual(["hello", " ", "world", "\n", "next"]);
+    original.recovery.stop();
+    const { side, f } = await stalledSide();
+    for (const delta of ["hello", " ", "world", "\n", "next"]) transcript(side, delta);
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta)).toEqual(["hello", " ", "world", "\n", "next"]);
+    f.recovery.stop();
+  });
+  it("falls back to buffered original captions when the winning side closes", async () => {
+    vi.useFakeTimers();
+    const { side, f } = await stalledSide();
+    transcript(side, "first sentence.");
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "first " });f.recovery.originalCaption({ kind: "translation_delta", delta: "sentence. second sentence." });
+    side.dispatchEvent(new Event("close"));
+    f.recovery.originalCaption({ kind: "translation_delta", delta: " third sentence." });
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta).join("")).toBe("first sentence. second sentence. third sentence.");
+    expect(f.open).toHaveBeenCalledOnce();
+    f.recovery.stop();
+  });
+  it("retries a winning but silent side while original audio continues", async () => {
+    vi.useFakeTimers();
+    const sockets = [socket(), socket()];
+    let index = 0;
+    const f = fixture(vi.fn(async () => sockets[index++]));
+    f.recovery.sendAudio(new ArrayBuffer(4800));f.recovery.outputAudio();
+    await vi.advanceTimersByTimeAsync(captionStallTimeoutMs);
+    transcript(sockets[0], "first sentence.");f.recovery.outputAudio();
+    for (let i = 0; i < 10; i++) { await vi.advanceTimersByTimeAsync(1000); f.recovery.outputAudio(); }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.open).toHaveBeenCalledTimes(2);
+    transcript(sockets[1], "first ");transcript(sockets[1], "sentence.");transcript(sockets[1], " ");transcript(sockets[1], "next");
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta).join("")).toBe("first sentence. next");
+    f.recovery.outputAudio();
+    for (let i = 0; i < 10; i++) { await vi.advanceTimersByTimeAsync(1000); f.recovery.outputAudio(); }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.open).toHaveBeenCalledTimes(2);
+    f.recovery.originalCaption({ kind: "translation_delta", delta: " unique original" });
+    expect(f.onCaption.mock.calls.at(-1)?.[0].delta).toBe(" unique original");
+    f.recovery.stop();
+  });
+  it("does not discard shared letters in a unique replacement phrase", async () => {
+    vi.useFakeTimers();
+    const { side, f } = await stalledSide();
+    transcript(side, "first sentence.");
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "first different sentence." });
+    side.dispatchEvent(new Event("close"));
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta).join("")).toBe("first sentence.first different sentence.");
+    f.recovery.stop();
+  });
+  it("splices a rolling replay suffix and claims recovery only for new captions", async () => {
+    vi.useFakeTimers();
+    const side = socket(), f = fixture(vi.fn(async () => side));
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "old sentence. current sentence.", provider_event_id: "valid-provider-event" });
+    expect(f.onCaption.mock.calls[0][0].provider_event_id).toBe("valid-provider-event");
+    f.recovery.outputAudio();
+    for (let i = 0; i < 10; i++) { await vi.advanceTimersByTimeAsync(1000); f.recovery.outputAudio(); }
+    await vi.advanceTimersByTimeAsync(0);
+    transcript(side, "current ");transcript(side, "sentence.");
+    expect(f.onRecovered).not.toHaveBeenCalled();
+    transcript(side, " new words.");
+    expect(f.onCaption.mock.calls.map(([e]) => e.delta).join("")).toBe("old sentence. current sentence. new words.");
+    expect(f.onRecovered).toHaveBeenCalledOnce();
+    f.recovery.stop();
+  });
+  it("does not retry the end of healthy speech or a new utterance after silence", async () => {
+    vi.useFakeTimers();
+    const f = fixture(vi.fn(async () => socket()));
+    f.recovery.originalCaption({ kind: "translation_delta", delta: "healthy original" });
+    f.recovery.outputAudio();await vi.advanceTimersByTimeAsync(20_000);
+    expect(f.open).not.toHaveBeenCalled();
+    f.recovery.outputAudio();
+    for (let i = 0; i < 9; i++) { await vi.advanceTimersByTimeAsync(1000); f.recovery.outputAudio(); }
+    expect(f.open).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);f.recovery.outputAudio();await vi.advanceTimersByTimeAsync(0);
+    expect(f.open).toHaveBeenCalledOnce();
+    f.recovery.stop();
+  });
+  it("bounds all side input across successful streams to 120 seconds", async () => {
+    vi.useFakeTimers();
+    const { side, f } = await stalledSide();
+    transcript(side, "first sentence.");
+    await vi.advanceTimersByTimeAsync(100);
+    for (let i = 0; i < 121; i++) f.recovery.sendAudio(new ArrayBuffer(48_000));
+    const bytes = f.onInput.mock.calls.reduce((sum, [n]) => sum + n, 0);
+    expect(bytes).toBe(120 * 48_000);
+    expect(f.retire).toHaveBeenCalledWith(side);
+    expect(f.open).toHaveBeenCalledOnce();
+    expect(f.initial.send).toHaveBeenCalledTimes(122);
+    f.recovery.stop();
+  });
+
 });

@@ -443,11 +443,10 @@ export async function proxyRealtimeSession(
       terminate,
       () => sessionFinished || upstream !== socket,
       config.source_transcript,
-      (delta) => {
+      (delta, event) => {
         if (delta.trim()) telemetry.stats.originalCaptionReceived = true;
-        if (!captionRecovery?.acceptOriginalCaption(delta)) return false;
-        insightCollector?.add(delta);
-        return true;
+        captionRecovery?.originalCaption(event);
+        return false;
       },
       (audio) => {
         captionRecovery?.outputAudio();
@@ -780,7 +779,7 @@ function bindProviderEvents(
   terminate: (termination: RealtimeTermination) => void,
   isFinished: () => boolean,
   sourceTranscript: boolean,
-  onTranslation: (delta: string) => boolean,
+  onTranslation: (delta: string, event: Extract<RealtimeServerEvent, { kind: "translation_delta" | "source_delta" }>) => boolean,
   onOutputAudio: (audio: ArrayBuffer) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
@@ -849,9 +848,9 @@ function forwardProviderEvent(
   client: WorkerWebSocket,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
-  onTranslation: (delta: string) => boolean,
+  onTranslation: (delta: string, event: Extract<RealtimeServerEvent, { kind: "translation_delta" | "source_delta" }>) => boolean,
 ): void {
-  if (output.event.kind === "translation_delta" && !onTranslation(output.event.delta)) return;
+  if (output.event.kind === "translation_delta" && !onTranslation(output.event.delta, output.event)) return;
   captureFirstProviderSignal(output.event, telemetry);
   if (output.event.kind === "session_error") {
     telemetry.stats.failureCode = normalizeFailureCode(output.event.code);

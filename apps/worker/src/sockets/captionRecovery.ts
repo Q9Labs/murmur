@@ -2,19 +2,41 @@ import type { WorkerWebSocket } from "../http/response";
 import { createInputAudioMessage, parseTranslationOutput, type OpenAITranslationOutput } from "../providers/openaiRealtime";
 
 export const captionStallTimeoutMs = 10_000;
-// Long-speech healthy audio-to-caption max was 4.158s. Include replay time separately.
+// Include replay time separately; healthy direct 4x replay answered in 1.25s.
 export const captionResponseTimeoutMs = 5_000;
 const maxCaptionRetries = 2;
 const maxBufferedBytes = 60 * 24_000 * 2;
+// A connection cap alone would not bound successful, long-running fan-out.
+const maxRecoveryInputBytes = 2 * maxBufferedBytes;
 const replayFrameBytes = 4_800;
 const replaySpeed = 4;
 type Translation = Extract<Extract<OpenAITranslationOutput, { kind: "event" }>["event"], { kind: "translation_delta" | "source_delta" }>;
 type AudioQueue = { frames: ArrayBuffer[]; bytes: number };
-type CaptionConnection = AudioQueue & { socket: WorkerWebSocket; replaying: boolean; received: boolean };
+type CaptionSplice = { reference: string; pending: string; aligned: boolean };
+type CaptionConnection = AudioQueue & { socket: WorkerWebSocket; replaying: boolean; received: boolean; splice: CaptionSplice };
 function appendFrames(queue: AudioQueue, frames: ArrayBuffer[], bytes: number): void {
   queue.frames.push(...frames);
   queue.bytes += bytes;
   while (queue.bytes > maxBufferedBytes) queue.bytes -= queue.frames.shift()?.byteLength ?? 0;
+}
+
+// Suppress exact replay prefixes, never fuzzy-match independent wording.
+function spliceCaption(splice: CaptionSplice, delta: string): string {
+  if (splice.aligned) return delta;
+  splice.pending += delta;
+  let overlap = 0;
+  // A rolling audio prefix can start partway through the delivered transcript.
+  for (let start = splice.reference.indexOf(splice.pending[0] ?? ""); start >= 0 && start < splice.reference.length;
+    start = splice.reference.indexOf(splice.pending[0] ?? "", start + 1)) {
+    const suffix = splice.reference.slice(start);
+    if (suffix.length > splice.pending.length && suffix.startsWith(splice.pending)) return "";
+    if (splice.pending.startsWith(suffix)) overlap = Math.max(overlap, suffix.length);
+  }
+  splice.aligned = true;
+  const text = splice.pending.slice(overlap);
+  splice.pending = "";
+  splice.reference = "";
+  return text;
 }
 
 export function createCaptionRecovery(params: {
@@ -34,9 +56,17 @@ export function createCaptionRecovery(params: {
   let retainHistory = true;
   let active: CaptionConnection | null = null;
   let retries = 0;
+  let inputBytes = 0;
+  let budgetExhausted = false;
   let source: "pending" | "original" | "recovery" = "pending";
   let stopped = false;
-  let started = false;
+  let captionsStarted = false;
+  let lastAudioAt: number | null = null;
+  let audioWithoutCaptionSince: number | null = null;
+  let delivered = "";
+  let recovered = false;
+  let originalPending: Translation[] = [];
+  let originalSplice: CaptionSplice = { reference: "", pending: "", aligned: true };
   let connecting: AbortController | null = null;
   let deadline: ReturnType<typeof setTimeout> | null = null;
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -61,13 +91,40 @@ export function createCaptionRecovery(params: {
     if (active !== connection || stopped) return;
     if (!connection.received) params.onConnectionFailure();
     params.onRetryFailure();
+    stalled();
+  }
+  function forward(event: Translation, splice: CaptionSplice): void {
+    if (event.delta.trim()) { captionsStarted = true; audioWithoutCaptionSince = null; clearDeadline(); }
+    const delta = spliceCaption(splice, event.delta);
+    if (!delta) return;
+    delivered += delta;
+    params.onCaption({ ...event, delta });
+    if (source === "recovery" && !recovered && delta.trim()) { recovered = true; params.onRecovered(); }
+  }
+  function selectOriginal(): void {
+    source = "original";
     clearDeadline();
+    connecting?.abort();
     retire();
-    if (source === "pending") void retry();
+    originalSplice = { reference: delivered, pending: "", aligned: !delivered };
+    const pending = originalPending;
+    originalPending = [];
+    for (const event of pending) forward(event, originalSplice);
+  }
+  function stalled(): void {
+    clearDeadline();
+    audioWithoutCaptionSince = null;
+    source = "pending";
+    retire();
+    if (originalPending.some(event => event.delta.trim())) selectOriginal();
+    else void retry();
   }
   function sendFrame(connection: CaptionConnection, frame: ArrayBuffer): boolean {
+    if (inputBytes + frame.byteLength > maxRecoveryInputBytes) { budgetExhausted = true; stalled(); return false; }
     try {
       connection.socket.send(createInputAudioMessage(frame));
+      inputBytes += frame.byteLength;
+      budgetExhausted = inputBytes >= maxRecoveryInputBytes;
       params.onInput(frame.byteLength);
       return true;
     } catch {
@@ -87,15 +144,14 @@ export function createCaptionRecovery(params: {
     }
   }
   function receiveEvent(connection: CaptionConnection, output: Extract<OpenAITranslationOutput, { kind: "event" }>): void {
-    if (output.event.kind === "translation_delta" && output.event.delta.trim()) {
-      if (!connection.received) { connection.received = true; params.onConnectionCaption(); }
-      if (source === "pending") {
+    if (output.event.kind === "translation_delta") {
+      if (output.event.delta.trim() && !connection.received) {
+        connection.received = true;
+        params.onConnectionCaption();
         source = "recovery";
         clearDeadline();
-        releaseHistory();
-        params.onRecovered();
       }
-      if (source === "recovery") params.onCaption(output.event);
+      if (source === "recovery") forward(output.event, connection.splice);
     } else if (output.event.kind === "session_error" || output.event.kind === "session_closed") {
       fail(connection);
     }
@@ -128,7 +184,8 @@ export function createCaptionRecovery(params: {
   }
   function activate(socket: WorkerWebSocket): void {
     if (stopped || source !== "pending") { params.retire(socket); return; }
-    const connection = { socket, frames: [...history.frames], bytes: history.bytes, replaying: true, received: false };
+    const connection: CaptionConnection = { socket, frames: [...history.frames], bytes: history.bytes, replaying: true, received: false,
+      splice: { reference: delivered, pending: "", aligned: !delivered } };
     active = connection;
     params.onConnection();
     bind(connection);
@@ -142,7 +199,7 @@ export function createCaptionRecovery(params: {
   async function retry(): Promise<void> {
     clearDeadline();
     if (stopped || source !== "pending" || connecting) return;
-    if (retries >= maxCaptionRetries) { retire(); releaseHistory(); return; }
+    if (retries >= maxCaptionRetries || budgetExhausted) { retire(); releaseHistory(); return; }
     retire();
     retries += 1;
     params.onRetry(retries);
@@ -150,7 +207,7 @@ export function createCaptionRecovery(params: {
     connecting = controller;
     const socket = await connect(controller);
     if (socket) activate(socket);
-    else if (!stopped && source === "pending") void retry();
+    else if (source === "pending" && !stopped) void retry();
   }
   function sendAudio(audio: ArrayBuffer): void {
     if (stopped) return;
@@ -172,20 +229,24 @@ export function createCaptionRecovery(params: {
   return {
     sendAudio,
     outputAudio(): void {
-      if (stopped || started || source !== "pending") return;
-      started = true;
-      deadline = setTimeout(() => { void retry(); }, captionStallTimeoutMs);
+      if (stopped) return;
+      const now = Date.now();
+      if (lastAudioAt === null || now - lastAudioAt >= captionStallTimeoutMs) audioWithoutCaptionSince = now;
+      lastAudioAt = now;
+      audioWithoutCaptionSince ??= now;
+      if (deadline || connecting) return;
+      if (!captionsStarted) deadline = setTimeout(stalled, captionStallTimeoutMs);
+      // Ongoing stalls require arriving audio, not a timer after speech has ended.
+      else if (now - audioWithoutCaptionSince >= captionStallTimeoutMs) stalled();
     },
-    acceptOriginalCaption(delta: string): boolean {
-      if (stopped || !delta.trim() || source === "recovery") return false;
-      if (source === "pending") {
-        source = "original";
-        clearDeadline();
-        connecting?.abort();
-        retire();
-        releaseHistory();
+    originalCaption(event: Translation): void {
+      if (stopped) return;
+      if (source !== "original") {
+        originalPending.push(event);
+        if (source === "pending" && event.delta.trim()) selectOriginal();
+      } else {
+        forward(event, originalSplice);
       }
-      return true;
     },
     stop(): void {
       stopped = true;
@@ -193,6 +254,8 @@ export function createCaptionRecovery(params: {
       clearDeadline();
       retire();
       releaseHistory();
+      originalPending = [];
+      delivered = "";
     },
   };
 }

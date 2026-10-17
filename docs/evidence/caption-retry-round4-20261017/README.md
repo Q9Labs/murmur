@@ -1,5 +1,7 @@
 # Caption-only recovery
 
+Historical round-four evidence. Round five supersedes permanent caption-source ownership; see ../caption-retry-round5-20261017/README.md.
+
 This round supersedes the duration-alignment design at `832cc4b`. All live audio was synthetic. Only `murmur-worker-sandbox` received traffic or deployments; production was not accessed.
 
 ## Audio and caption ownership
