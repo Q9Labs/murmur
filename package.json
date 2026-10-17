@@ -63,7 +63,8 @@
     "test:diagnostics": "MURMUR_DIAGNOSTIC_PROOF=1 pnpm --filter @murmur/worker exec vitest run src/observability/outcomes.test.ts src/observability/sentry.test.ts src/routes/diagnostics.test.ts",
     "rollback:worker-logs": "node tooling/scripts/rollback-worker-logs.mjs",
     "verify:log-boundaries": "node tooling/scripts/verify-workers-log-boundaries.mjs",
-    "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs"
+    "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs",
+    "verify:realtime-runtime": "node tooling/scripts/verify-realtime-runtime.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.11",

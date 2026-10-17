@@ -46,6 +46,9 @@ pnpm run worker:types
 # Run the unit test suite.
 pnpm run unit
 
+# Exercise the real Workers WebSocket proxy, including PCM forwarding and the first translation.
+pnpm run verify:realtime-runtime
+
 # Run coverage thresholds.
 pnpm run test:coverage
 

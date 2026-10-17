@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { startWorkerd } from "./workerd-process.mjs";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const workerRoot = resolve(root, "apps/worker");
 const fixturePath = resolve(workerRoot, `.runtime-proof-${process.pid}.ts`);
-const output = resolve(root, "artifacts/observability/runtime");
+const output = resolve(root, "scratchpad/runtime-proof/logs");
 const fixture = "a".repeat(64);
 const envelopes = [];
 const stream = [];
@@ -25,9 +25,7 @@ collector.listen(0, "127.0.0.1");
 await once(collector, "listening");
 const collectorPort = collector.address().port;
 const port = Number(process.env.MURMUR_RUNTIME_PROOF_PORT ?? 8913);
-let child;
-let watchdog;
-let startupTimeout;
+let stopRuntime;
 await mkdir(output, { recursive: true });
 try {
   await writeFile(fixturePath, `import worker from './src/entrypoint';
@@ -46,36 +44,9 @@ export default { fetch(request, env, context) {
   return worker.fetch(request, request.headers.has('x-proof-auth') ? { ...env, BILLING_DB: database } : env, context);
 }};
 `, { flag: "wx" });
-  child = spawn("pnpm", ["exec", "wrangler", "dev", fixturePath, "--local", "--env", "sandbox",
-    "--ip", "127.0.0.1", "--port", String(port), "--persist-to", resolve(output, "state"),
-    "--var", `MURMUR_DIAGNOSTICS_FIXTURE:${fixture}`,
-    "--var", `SENTRY_DSN:http://public@127.0.0.1:${collectorPort}/1`,
-    "--var", `BETTER_AUTH_SECRET:${"a".repeat(32)}`],
-  { cwd: workerRoot, detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, WRANGLER_SEND_METRICS: "false" } });
-  const exit = once(child, "exit");
-  const stop = () => { if (child.exitCode === null && child.signalCode === null) process.kill(-child.pid, "SIGTERM"); };
-  watchdog = spawn(process.execPath, ["-e", `
-    const deadline = Date.now() + 120000;
-    setInterval(() => {
-      try { process.kill(${child.pid}, 0); } catch { process.exit(0); }
-      let ownerAlive = true;
-      try { process.kill(${process.pid}, 0); } catch { ownerAlive = false; }
-      if (!ownerAlive || Date.now() > deadline) {
-        try { process.kill(-${child.pid}, 'SIGTERM'); } catch {}
-        process.exit(0);
-      }
-    }, 1000);
-  `], { detached: true, stdio: "ignore" });
-  watchdog.unref();
-  await new Promise((ready, reject) => {
-    startupTimeout = setTimeout(() => reject(new Error("workerd startup timed out")), 90_000);
-    const receive = (chunk) => { const line = chunk.toString(); stream.push(line); if (line.includes("Ready on")) ready(); };
-    child.stdout.on("data", receive);
-    child.stderr.on("data", receive);
-    child.once("error", reject);
-    child.once("exit", () => reject(new Error("workerd exited before readiness")));
+  stopRuntime = await startWorkerd({ workerRoot, fixture: fixturePath, statePath: resolve(output, "state"), port, stream,
+    variables: { MURMUR_DIAGNOSTICS_FIXTURE: fixture, SENTRY_DSN: `http://public@127.0.0.1:${collectorPort}/1`, BETTER_AUTH_SECRET: "a".repeat(32) },
   });
-  clearTimeout(startupTimeout);
   const ordinaryLedger = await fetch(`http://127.0.0.1:${port}/__proof/ledger`, { signal: AbortSignal.timeout(15_000) });
   assert.equal(ordinaryLedger.status, 403, "sandbox ledger must pass ordinary calls through to the real class");
   assert.equal((await ordinaryLedger.json()).code, "invalid_ledger_command");
@@ -103,15 +74,8 @@ export default { fetch(request, env, context) {
   await writeFile(resolve(output, "receipt.json"), JSON.stringify({ probes, envelopes: envelopes.length, sentinel_matches: 0 }, null, 2));
   await writeFile(resolve(output, "envelopes.json"), JSON.stringify(envelopes, null, 2));
   console.log("workerd: two safe outcomes, two actual SDK envelopes, zero private values");
-  stop();
-  await exit;
 } finally {
-  clearTimeout(startupTimeout);
-  if (watchdog?.exitCode === null && watchdog.signalCode === null) watchdog.kill("SIGTERM");
-  if (child?.exitCode === null && child.signalCode === null) {
-    process.kill(-child.pid, "SIGTERM");
-    await once(child, "exit");
-  }
+  await stopRuntime?.();
   collector.closeAllConnections();
   await new Promise((done) => collector.close(done));
   await unlink(fixturePath).catch(() => {});

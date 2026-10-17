@@ -23,4 +23,6 @@ The static and security layers are:
 
 The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
 
+`verify:realtime-runtime` runs the real Worker entry point, Sentry SDK and realtime proxy in workerd. A local WebSocket provider verifies every PCM byte before returning the first translation. No provider credentials or external services are required. `MURMUR_REALTIME_FAKE_MODE=audio-only pnpm run verify:realtime-runtime` is a negative control and must fail when audio arrives without a transcript.
+
 Excluded from the hook on purpose: `store:live`, `store:preflight`, live production smoke checks, Fastlane submission validation, release lanes, and any command that mutates files.

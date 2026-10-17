@@ -27,6 +27,7 @@
     "expo-device",
     "expo-build-properties",
     "expo-localization",
+    "expo-splash-screen",
     "expo-updates",
     "expo-web-browser",
     "react-native-reanimated",
