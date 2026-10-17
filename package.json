@@ -53,11 +53,12 @@
     "store:submission-readiness": "pnpm store:preflight && pnpm store:live",
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers:closed",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
-    "tooling:test": "node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs",
+    "tooling:test": "node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs tooling/ci/*.test.mjs",
     "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test",
     "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
     "coverage": "pnpm run test:coverage",
-    "test": "pnpm typecheck && pnpm worker:types && pnpm unit"
+    "test": "pnpm typecheck && pnpm unit",
+    "test:ci": "pnpm typecheck && pnpm run test:coverage && pnpm run store:screenshots:test && pnpm run tooling:test"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.11",
