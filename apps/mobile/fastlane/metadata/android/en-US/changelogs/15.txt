@@ -1,0 +1,1 @@
+Clearer OpenAI consent, fixed Apple and Google sign-in, and improved background recording stability.

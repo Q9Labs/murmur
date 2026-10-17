@@ -1,1 +1,3 @@
 Yeni Pro, Pro Max, Trip Pass ve Event Pass planları. Arka planda dinleme, Apple veya Google ile giriş ve yenilenen tasarım. Uygulama artık 11 dilde.
+
+OpenAI onayı daha açık hale getirildi, Apple ve Google ile giriş düzeltildi ve arka planda kayıt kararlılığı iyileştirildi.

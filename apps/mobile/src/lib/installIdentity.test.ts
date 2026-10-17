@@ -83,7 +83,7 @@ describe("install identity storage", () => {
     } satisfies TestWebStorage,
     });
 
-    storedValues.set("murmur_third_party_ai_consent_v2", "true");
+    storedValues.set("murmur_third_party_ai_consent_v3", "true");
     expect(await hasAcknowledgedPrivacyDisclosure()).toBe(false);
     await acknowledgePrivacyDisclosure();
     expect(await hasAcknowledgedPrivacyDisclosure()).toBe(true);
@@ -99,5 +99,6 @@ describe("install identity storage", () => {
     expect(storedValues.has("murmur_free_allowance_id")).toBe(false);
     expect(storedValues.has("murmur_third_party_ai_consent_v2")).toBe(false);
     expect(storedValues.has("murmur_third_party_ai_consent_v3")).toBe(false);
+    expect(storedValues.has("murmur_third_party_ai_consent_v4")).toBe(false);
   });
 });

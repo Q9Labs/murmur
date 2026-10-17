@@ -12,7 +12,7 @@ vi.mock("./localStorage", () => ({
   setLocalValue: vi.fn(async (key: string, value: string) => { storage.set(key, value); }),
 }));
 
-import { getInsightsConsent, setInsightsConsent } from "./insightsConsent";
+import { deleteInsightsConsent, getInsightsConsent, setInsightsConsent } from "./insightsConsent";
 
 beforeEach(() => {
   storage.clear();
@@ -28,6 +28,13 @@ describe("insights consent", () => {
     await expect(getInsightsConsent()).resolves.toBe(true);
     expect(fetchMock.mock.calls[0][0]).toBe("https://murmur.test/v3/insights/consent");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ insights_consent: true });
+  });
+
+  it("requires fresh consent when the previous disclosure did not name the recipient", async () => {
+    storage.set("murmur_insights_consent_v1", "true");
+    await expect(getInsightsConsent()).resolves.toBeNull();
+    await deleteInsightsConsent();
+    expect(storage.size).toBe(0);
   });
 
   it("does not claim consent when the worker rejects the choice", async () => {

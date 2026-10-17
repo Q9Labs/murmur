@@ -27,13 +27,12 @@ beforeEach(() => {
 });
 
 describe("insights consent", () => {
-  it("discloses what happens to the translation without naming a vendor", () => {
+  it("names the recipient and explains how translated text is used", () => {
     const markup = renderToStaticMarkup(<InsightsConsentScreen />);
 
-    expect(markup).toContain("a third-party AI service reads the translation and writes a short summary");
+    expect(markup).toContain("your translated text is sent to OpenRouter to create an AI-generated summary");
     expect(markup).toContain("We keep the summary, never the translation.");
     expect(markup).toContain("You can change this anytime in Settings.");
-    expect(markup).not.toMatch(/OpenAI|OpenRouter|GPT/);
   });
 
   it("leads with yes and keeps no as a visible, enabled answer below it", () => {

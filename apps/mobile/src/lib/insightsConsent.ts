@@ -1,7 +1,8 @@
 import { deleteLocalValue, getLocalValue, setLocalValue } from "./localStorage";
 import { updateWorkerInsightsConsent } from "./providers/insightsWorker";
 
-const storageKey = "murmur_insights_consent_v1";
+const legacyStorageKey = "murmur_insights_consent_v1";
+const storageKey = "murmur_insights_consent_v2";
 
 export async function getInsightsConsent(): Promise<boolean | null> {
   const stored = await getLocalValue(storageKey);
@@ -14,5 +15,6 @@ export async function setInsightsConsent(consent: boolean): Promise<void> {
 }
 
 export async function deleteInsightsConsent(): Promise<void> {
+  await deleteLocalValue(legacyStorageKey);
   await deleteLocalValue(storageKey);
 }

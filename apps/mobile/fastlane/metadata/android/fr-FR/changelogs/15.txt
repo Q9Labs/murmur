@@ -1,0 +1,1 @@
+Consentement OpenAI plus clair, connexion Apple et Google corrigée et enregistrement en arrière-plan plus stable.

@@ -2333,3 +2333,34 @@ words:
   - wilayah
   - Yenilenen
   - yenilenen
+
+overrides:
+  - filename: apps/mobile/src/i18n/catalogs/{de,es,fr,id,pt-BR,tr}.ts
+    words:
+      - bersetzte
+      - bersetzten
+      - bersetzter
+      - bilgileri
+      - eren
+      - erstellen
+      - evrilen
+      - evrilmesi
+      - exemple
+      - generar
+      - lmesi
+      - metniniz
+      - retilmesi
+      - sesiniz
+      - stimme
+      - texte
+      - texto
+      - topik
+      - traducida
+      - traduite
+      - traduzida
+      - transcri
+      - transcribirlo
+      - transkripsi
+      - Transkription
+      - tratado
+      - turmak

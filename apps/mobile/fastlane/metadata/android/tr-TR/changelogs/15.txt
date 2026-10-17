@@ -1,0 +1,1 @@
+OpenAI onayı daha açık hale getirildi, Apple ve Google ile giriş düzeltildi ve arka planda kayıt kararlılığı iyileştirildi.

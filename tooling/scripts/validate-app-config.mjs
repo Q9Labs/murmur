@@ -27,9 +27,9 @@ const assert = (condition, message) => {
 const productionWorkerUrl = "https://murmur.q9labs.ai";
 const testingWorkerUrl = "https://murmur-worker-dev.msbilal.workers.dev";
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
-const releaseVersion = "1.3.0";
-const iosBuildNumber = "19";
-const androidVersionCode = 14;
+const releaseVersion = "1.3.1";
+const iosBuildNumber = "20";
+const androidVersionCode = 15;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
@@ -56,8 +56,9 @@ assert(appConfig.version === releaseVersion, `app version must be ${releaseVersi
 assert(appConfig.orientation === "portrait", `orientation must be portrait; got ${appConfig.orientation}`);
 assert(appConfig.scheme === "murmur", `scheme must be murmur; got ${appConfig.scheme}`);
 assert(appConfig.icon === "./assets/images/icon.png", "app icon path must use the validated icon asset");
-assert(appConfig.splash?.image === "./assets/images/splash-icon.png", "splash image must use the validated splash asset");
-assert(appConfig.splash?.backgroundColor === "#F8F4ED", "splash background must match the validated launch asset");
+const splashPlugin = appConfig.plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen")?.[1];
+assert(splashPlugin?.image === "./assets/images/splash-icon.png", "splash image must use the validated splash asset");
+assert(splashPlugin?.backgroundColor === "#F8F4ED", "splash background must match the validated launch asset");
 
 assert(appConfig.ios?.bundleIdentifier === "com.q9labsai.murmur", "iOS bundle id must be com.q9labsai.murmur");
 assert(
