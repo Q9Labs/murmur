@@ -65,27 +65,43 @@ export type PlayIntegrityVerificationResult =
     };
 
 type DecodedPlayIntegrityResponse = {
-  tokenPayloadExternal?: {
-    accountDetails?: {
-      appLicensingVerdict?: string;
-    };
-    appIntegrity?: {
-      appRecognitionVerdict?: string;
-      certificateSha256Digest?: string[];
-      packageName?: string;
-      versionCode?: string;
-    };
-    deviceIntegrity?: {
-      deviceRecognitionVerdict?: string[];
-    };
-    requestDetails?: {
-      nonce?: string;
-      requestHash?: string;
-      requestPackageName?: string;
-      timestampMillis?: string;
-    };
+  tokenPayloadExternal: {
+    appIntegrity: { appRecognitionVerdict: string; packageName?: string };
+    deviceIntegrity?: { deviceRecognitionVerdict?: string[] };
+    requestDetails: { requestPackageName: string; timestampMillis: string; nonce?: string; requestHash?: string };
   };
 };
+
+// Google can omit device verdicts for an untrusted device, but not the decoded request/app structure.
+// Decoded provider data is untrusted; validate every consumed field before constructing the response.
+// fallow-ignore-next-line complexity
+function parseDecodedIntegrity(value: unknown): DecodedPlayIntegrityResponse | null {
+  if (!value || typeof value !== "object" || !("tokenPayloadExternal" in value)) return null;
+  const payload = value.tokenPayloadExternal;
+  if (!payload || typeof payload !== "object" || !("requestDetails" in payload) || !("appIntegrity" in payload)) return null;
+  const request = payload.requestDetails;
+  const app = payload.appIntegrity;
+  if (!request || typeof request !== "object" || !("requestPackageName" in request) ||
+    typeof request.requestPackageName !== "string" || !("timestampMillis" in request) ||
+    typeof request.timestampMillis !== "string" || !/^\d+$/.test(request.timestampMillis)) return null;
+  const nonce = "nonce" in request ? request.nonce : undefined;
+  const requestHash = "requestHash" in request ? request.requestHash : undefined;
+  if ((nonce !== undefined && typeof nonce !== "string") || (requestHash !== undefined && typeof requestHash !== "string") ||
+    (nonce === undefined && requestHash === undefined)) return null;
+  if (!app || typeof app !== "object" || !("appRecognitionVerdict" in app) || typeof app.appRecognitionVerdict !== "string") return null;
+  const packageName = "packageName" in app ? app.packageName : undefined;
+  if (packageName !== undefined && typeof packageName !== "string") return null;
+  const device = "deviceIntegrity" in payload ? payload.deviceIntegrity : undefined;
+  if (device !== undefined && (!device || typeof device !== "object")) return null;
+  const verdicts = device && "deviceRecognitionVerdict" in device ? device.deviceRecognitionVerdict : undefined;
+  if (verdicts !== undefined && (!Array.isArray(verdicts) || !verdicts.every((item: unknown) => typeof item === "string"))) return null;
+  return { tokenPayloadExternal: {
+    appIntegrity: { appRecognitionVerdict: app.appRecognitionVerdict, ...(packageName !== undefined ? { packageName } : {}) },
+    requestDetails: { requestPackageName: request.requestPackageName, timestampMillis: request.timestampMillis,
+      ...(typeof nonce === "string" ? { nonce } : {}), ...(typeof requestHash === "string" ? { requestHash } : {}) },
+    ...(Array.isArray(verdicts) ? { deviceIntegrity: { deviceRecognitionVerdict: verdicts } } : {}),
+  } };
+}
 
 const playIntegrityScope = "https://www.googleapis.com/auth/playintegrity";
 // Verification runs inline on session start, so each Google call gets a tight budget.
@@ -376,7 +392,7 @@ async function decodePlayIntegrityToken(params: {
     return { kind: "failed", failure_code: response.status === 429 || response.status >= 500
       ? "integrity.optional_unavailable" : "integrity.optional_verification_failed" };
   }
-  const value = (await response.json().catch(() => null)) as DecodedPlayIntegrityResponse | null;
+  const value = parseDecodedIntegrity(await response.json().catch(() => null));
   return value ? { kind: "decoded", value } : { kind: "failed", failure_code: "integrity.optional_verification_failed" };
 }
 

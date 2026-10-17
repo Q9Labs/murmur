@@ -76,7 +76,7 @@ export async function createReport(request: Request, env: Env): Promise<Response
     event: "translation_reported",
     app_session_id: report.app_session_id,
     report_id: receipt.report_id,
-    span_id: report.span_id,
+    translation_span_id: report.span_id,
     revision: report.revision,
     error_category: report.error_category,
     retained_text_snapshot: receipt.retained_text_snapshot,

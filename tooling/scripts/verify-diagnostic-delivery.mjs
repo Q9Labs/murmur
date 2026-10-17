@@ -22,10 +22,13 @@ async function api(path, method, body) {
   if (!result.success) throw new Error("Cloudflare operation failed");
   return result.result;
 }
-// Workers tails nest JSON messages inside log batches; validate only the matching safe outcome.
+// Inspect every custom log and exception in the invocation, not just the selected outcome.
 // The live sandbox delivery proof exercises this parser against the actual tail shape.
 // fallow-ignore-next-line complexity
 function findOutcome(event) {
+  const record = { logs: event.logs ?? [], exceptions: event.exceptions ?? [] };
+  if (/SYNTHETIC_PRIVATE_TRANSCRIPT|PRIVATE_TRANSCRIPT_SENTINEL|secret=fixture/i.test(JSON.stringify(record)) ||
+    JSON.stringify(record).includes(fixture)) throw new Error("Private fixture escaped in the complete log batch");
   for (const log of event.logs ?? []) {
     for (const message of log.message ?? []) {
       let outcome;
@@ -36,7 +39,7 @@ function findOutcome(event) {
         /SYNTHETIC_PRIVATE_TRANSCRIPT|secret=fixture|authorization/i.test(JSON.stringify(outcome))) {
         throw new Error("Retrieved outcome failed classification/privacy/correlation checks");
       }
-      return outcome;
+      return { outcome, record };
     }
   }
 }
@@ -72,7 +75,35 @@ try {
   });
   const body = await response.json();
   if (response.status !== 500 || body.diagnostic_code !== diagnosticCode) throw new Error("Synthetic boundary did not return its code");
-  receipt.outcome = await received;
+  const delivered = await received;
+  receipt.outcome = delivered.outcome;
+  receipt.record = delivered.record;
+  receipt.complete_log_batch_checked = true;
+  // Retained exports add Cloudflare metadata absent from our JSON line.
+  await new Promise((accept) => setTimeout(accept, 10_000));
+  const at = Date.parse(delivered.outcome._time);
+  const query = (filters) => api(`/accounts/${account}/workers/observability/telemetry/query`, "POST", {
+    queryId: `murmur-pilot-${diagnosticCode}`, view: "events", limit: 100,
+    timeframe: { from: at - 60_000, to: at + 60_000 },
+    parameters: { datasets: [], filterCombination: "and", filters: [
+      { key: "$metadata.service", operation: "eq", type: "string", value: "murmur-worker-sandbox" }, ...filters,
+    ] },
+  });
+  const matched = await query([{ key: "trace_id", operation: "eq", type: "string", value: diagnosticCode }]);
+  const requestId = matched.events?.events?.[0]?.$metadata?.requestId;
+  if (!requestId) throw new Error("Retained outcome did not include its request id");
+  // Include records from the invocation that have no diagnostic code.
+  const invocation = await query([{ key: "$metadata.requestId", operation: "eq", type: "string", value: requestId }]);
+  const records = invocation.events?.events;
+  if (!records?.length || records.length >= 100 || records.some((record) => record.$workers?.truncated)) {
+    throw new Error("Complete retained invocation could not be retrieved");
+  }
+  const exported = JSON.stringify(records);
+  if (/SYNTHETIC_PRIVATE_TRANSCRIPT|PRIVATE_TRANSCRIPT_SENTINEL|secret=fixture/i.test(exported) || exported.includes(fixture)) {
+    throw new Error("Private fixture escaped in the complete retained record");
+  }
+  receipt.retained_records = records;
+  receipt.complete_retained_invocation_checked = true;
   receipt.retrieved = true;
   receipt.retrieved_at = new Date().toISOString();
 } catch {

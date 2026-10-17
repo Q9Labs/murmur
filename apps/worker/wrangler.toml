@@ -98,7 +98,8 @@ routes = [
 ]
 
 [env.production.observability.logs]
-enabled = true
+# Legacy custom log fields do not yet have a complete privacy contract.
+enabled = false
 head_sampling_rate = 1
 invocation_logs = false
 

@@ -60,7 +60,7 @@ describe("verifyPlayIntegrityIfRequired", () => {
       required: false,
     };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ tokenPayloadExternal: {
-      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED", packageName: "com.q9labsai.murmur" },
       deviceIntegrity: { deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"] },
       requestDetails: {
         nonce: "encoded_nonce",
@@ -143,7 +143,8 @@ describe("verifyPlayIntegrityIfRequired", () => {
       ok: false,
     });
 
-    responseFor({ tokenPayloadExternal: { requestDetails: {
+    responseFor({ tokenPayloadExternal: { appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED" }, requestDetails: {
+      timestampMillis: String(baseParams.now_ms), nonce: "expected_nonce",
       requestPackageName: "another.app",
     } } });
     await expect(verifyPlayIntegrityIfRequired(baseParams)).resolves.toMatchObject({
@@ -152,9 +153,10 @@ describe("verifyPlayIntegrityIfRequired", () => {
     });
 
     responseFor({ tokenPayloadExternal: {
-      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED", packageName: "com.q9labsai.murmur" },
       requestDetails: {
         nonce: "wrong_nonce",
+        timestampMillis: String(baseParams.now_ms),
         requestPackageName: "com.q9labsai.murmur",
       },
     } });
@@ -164,7 +166,7 @@ describe("verifyPlayIntegrityIfRequired", () => {
     });
 
     responseFor({ tokenPayloadExternal: {
-      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED", packageName: "com.q9labsai.murmur" },
       requestDetails: {
         nonce: "expected_nonce",
         requestPackageName: "com.q9labsai.murmur",
@@ -177,7 +179,7 @@ describe("verifyPlayIntegrityIfRequired", () => {
     });
 
     responseFor({ tokenPayloadExternal: {
-      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED", packageName: "com.q9labsai.murmur" },
       deviceIntegrity: { deviceRecognitionVerdict: [] },
       requestDetails: {
         nonce: "expected_nonce",
@@ -228,7 +230,7 @@ describe("verifyPlayIntegrityIfRequired", () => {
       required: true,
     };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ tokenPayloadExternal: {
-      appIntegrity: { packageName: "com.q9labsai.murmur" },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED", packageName: "com.q9labsai.murmur" },
       deviceIntegrity: { deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"] },
       requestDetails: {
         nonce: "bXVybXVyX2E+/w==",

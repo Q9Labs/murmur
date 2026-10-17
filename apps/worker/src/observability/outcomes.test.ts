@@ -7,6 +7,9 @@ import { verifyPlayIntegrityIfRequired } from "../playIntegrity";
 import { queuePostHogEvent } from "./posthog";
 import { getSentryOptions } from "./sentry";
 import { withHttpDiagnostics } from "./outcomes";
+import { createReport } from "../routes/report";
+import { createSessionRecordDurable } from "../rateLimitDurableObject";
+import { logWorkerEvent } from "../privacy";
 
 // External native library is not involved in these Android/HTTP fixtures.
 vi.mock("@bradford-tech/supabase-integrity-attest", () => ({
@@ -205,6 +208,59 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
     expect(exceptionCount()).toBe(1);
     expect(exported).not.toMatch(/PRIVATE_SENTINEL|SYNTHETIC_PRIVATE_TRANSCRIPT|fixture-admin|secret=fixture|worker\.example|Authorization/i);
     expect(exported).toContain("Worker request did not complete");
+  });
+
+  it.each([{}, { tokenPayloadExternal: {} }, { tokenPayloadExternal: { requestDetails: "PRIVATE_MALFORMED" } }])(
+    "P3: malformed Google success remains optional but reports an unknown defect (%j)", async (payload) => {
+      await withSdk(async () => {
+        providerFetch.mockResolvedValue(Response.json(payload));
+        const result = await verifyPlayIntegrityIfRequired(integrityFixture());
+        await expectIntegrityOutcome(result, "integrity.optional_verification_failed", 1, "PRIVATE_MALFORMED");
+      });
+    },
+  );
+
+  it("P5: real exported stop handler cannot log a private session id", async () => {
+    const response = await worker.fetch(new Request(
+      "https://worker.example/v2/session/PRIVATE_TRANSCRIPT_SENTINEL/stop", { method: "POST" },
+    ), env, context);
+    expect(response.status).toBe(200);
+    await drain();
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "")).toMatchObject({ event: "session_stop", app_session_id: "[redacted]" });
+    expect(JSON.stringify({ logs: lines, envelopes: sentryBodies })).not.toContain("PRIVATE_TRANSCRIPT_SENTINEL");
+  });
+
+  it("P5: real report parser and logger cannot log a private span id", async () => {
+    const session = crypto.randomUUID();
+    await createSessionRecordDurable({ app_session_id: session, now_ms: Date.now(), hashed_install_id: "a".repeat(64) });
+    const response = await createReport(new Request("https://worker.example/v2/report", {
+      method: "POST", body: JSON.stringify({ app_session_id: session, span_id: "PRIVATE_TRANSCRIPT_SENTINEL",
+        error_category: "inaccurate", revision: 1, source_language: "en", target_language: "ar" }),
+    }), env);
+    expect(response.status).toBe(202);
+    expect(lines.some((line) => JSON.parse(line).event === "translation_reported")).toBe(true);
+    expect(JSON.stringify({ logs: lines, envelopes: sentryBodies })).not.toContain("PRIVATE_TRANSCRIPT_SENTINEL");
+  });
+
+  // One shape for every console producer, including the scheduled producers outside this pilot's HTTP scope.
+  it.each([
+    { event: "session_created", app_session_id: "PRIVATE_TRANSCRIPT_SENTINEL", hashed_install_id: "PRIVATE_TRANSCRIPT_SENTINEL" },
+    { event: "session_stop", app_session_id: "PRIVATE_TRANSCRIPT_SENTINEL" },
+    { event: "translation_reported", app_session_id: "PRIVATE_TRANSCRIPT_SENTINEL", report_id: "PRIVATE_TRANSCRIPT_SENTINEL", translation_span_id: "PRIVATE_TRANSCRIPT_SENTINEL" },
+    { event: "translation_report_forward_failed", app_session_id: "PRIVATE_TRANSCRIPT_SENTINEL", report_id: "PRIVATE_TRANSCRIPT_SENTINEL", reason: "unconfigured" },
+    { event: "revenuecat_reconciliation_completed", attempted: 1, failed: 0 },
+    { event: "abandoned_usage_sessions_closed", closed: 1 },
+    { event: "session_insight_retention_completed", deleted_insights: 1, deleted_session_contexts: 1 },
+    { event: "rating_survey_retention_completed", deleted_rating_surveys: 1 },
+    { event: "expired_auth_sessions_deleted", deleted_sessions: 1 },
+    { trace_id: "PRIVATE_TRANSCRIPT_SENTINEL", span_id: "PRIVATE_TRANSCRIPT_SENTINEL", sentry_event_id: "PRIVATE_TRANSCRIPT_SENTINEL", body: "Worker request did not complete" },
+  ])("P5: complete outgoing console record is safe for producer %j", async (record) => {
+    logWorkerEvent(record);
+    await drain();
+    const exported = JSON.stringify({ logs: lines, envelopes: sentryBodies });
+    expect(lines).toHaveLength(1);
+    expect(exported).not.toContain("PRIVATE_TRANSCRIPT_SENTINEL");
   });
 
   it("P6: broken log sink and failed analytics export preserve success and original error", async () => {
