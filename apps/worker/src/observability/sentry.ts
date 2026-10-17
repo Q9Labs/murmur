@@ -1,65 +1,79 @@
-import type { CloudflareOptions } from "@sentry/cloudflare";
-import type { ErrorEvent } from "@sentry/cloudflare";
-
+import type { CloudflareOptions, ErrorEvent, StackFrame } from "@sentry/cloudflare";
+import { failureDefinition, isFailureCode } from "@murmur/protocol/diagnostics/failures";
 import type { Env } from "../env";
 
 export function getSentryOptions(env: Env): CloudflareOptions | undefined {
   const dsn = env.SENTRY_DSN?.trim();
-  if (!dsn) {
-    return undefined;
-  }
+  if (!dsn) return undefined;
   return {
     beforeSend: sanitizeWorkerEvent,
+    beforeSendTransaction: () => null,
     dataCollection: {
-      cookies: false,
-      databaseQueryData: false,
-      frameContextLines: 3,
+      cookies: false, databaseQueryData: false, frameContextLines: 0,
       genAI: { inputs: false, outputs: false },
-      graphQL: { document: false, variables: false },
-      httpBodies: [],
-      httpHeaders: { request: { allow: ["cf-ray"] }, response: false },
-      stackFrameVariables: false,
-      urlQueryParams: false,
-      userInfo: false,
+      graphQL: { document: false, variables: false }, httpBodies: [],
+      httpHeaders: { request: false, response: false },
+      stackFrameVariables: false, urlQueryParams: false, userInfo: false,
     },
     dsn,
     environment: env.MURMUR_ENV ?? "development",
     release: env.SENTRY_RELEASE?.trim() || undefined,
-    tracesSampleRate: env.MURMUR_ENV === "production" ? 0.1 : 0,
+    maxBreadcrumbs: 0,
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
+    transportOptions: {
+      bufferSize: 16,
+      fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(2_000) }),
+    },
+  };
+}
+
+function safeFrame(frame: StackFrame): StackFrame | undefined {
+  // Keep only repository-relative code locations, never URLs, locals or source context.
+  const filename = frame.filename?.match(/(?:^|\/)((?:apps\/worker\/src\/|src\/)[a-zA-Z0-9_/-]+\.[cm]?[jt]s|index\.js)$/)?.[1];
+  if (!filename) return undefined;
+  return {
+    filename: `app:///${filename}`, in_app: true,
+    ...(Number.isSafeInteger(frame.lineno) ? { lineno: frame.lineno } : {}),
+    ...(Number.isSafeInteger(frame.colno) ? { colno: frame.colno } : {}),
   };
 }
 
 export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
-  const exception = event.exception
-    ? {
-        ...event.exception,
-        values: event.exception.values?.map((value) => ({
-          ...value,
-          value: "worker_operation_failed",
-        })),
-      }
-    : undefined;
-  const request = event.request
-    ? {
-        method: event.request.method,
-        url: stripQueryString(event.request.url),
-      }
-    : undefined;
+  const code = isFailureCode(event.tags?.failure_code) ? event.tags.failure_code : "worker.request_failed";
+  const definition = failureDefinition(code);
+  const trace = event.tags?.trace_id;
   return {
-    ...event,
-    breadcrumbs: undefined,
-    exception,
-    extra: undefined,
-    message: event.message ? "worker_operation_failed" : undefined,
-    request,
-    user: undefined,
+    type: undefined,
+    event_id: event.event_id,
+    timestamp: event.timestamp,
+    platform: "javascript",
+    level: event.level === "fatal" ? "fatal" : "error",
+    // Release/environment come from trusted SDK initialization, not the thrown object.
+    release: event.release?.match(/^murmur-worker@\d{1,4}\.\d{1,4}\.\d{1,4}\+[a-f0-9]{7,40}$/)?.[0],
+    environment: ["production", "sandbox", "development"].includes(event.environment ?? "") ? event.environment : undefined,
+    debug_meta: event.debug_meta ? {
+      images: event.debug_meta.images?.flatMap((image) => {
+        if (image.type !== "sourcemap" || !/^[a-f0-9-]{36}$/.test(image.debug_id)) return [];
+        const filename = safeFrame({ filename: image.code_file })?.filename;
+        return filename ? [{ type: "sourcemap", debug_id: image.debug_id, code_file: filename }] : [];
+      }),
+    } : undefined,
+    tags: {
+      failure_code: code, operation: definition.operation,
+      ...(typeof trace === "string" && /^(?!0{32}$)[a-f0-9]{32}$/.test(trace) ? { trace_id: trace } : {}),
+    },
+    ...(event.message ? { message: definition.description } : {}),
+    exception: event.exception ? {
+      values: event.exception.values?.slice(0, 4).map((value) => ({
+        type: "Error", value: definition.description,
+        stacktrace: value.stacktrace ? {
+          frames: value.stacktrace.frames?.slice(-32).flatMap((frame) => {
+            const safe = safeFrame(frame);
+            return safe ? [safe] : [];
+          }),
+        } : undefined,
+      })),
+    } : undefined,
   };
-}
-
-function stripQueryString(url: string | undefined): string | undefined {
-  if (!url) {
-    return undefined;
-  }
-  const queryStart = url.indexOf("?");
-  return queryStart >= 0 ? url.slice(0, queryStart) : url;
 }

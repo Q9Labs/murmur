@@ -20,6 +20,8 @@ import {
 } from "./http/response";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
+import { syntheticFailure, withHttpDiagnostics } from "./observability/outcomes";
+import { captureMobileDiagnostics } from "./routes/diagnostics";
 import { getSentryOptions } from "./observability/sentry";
 import {
   closeSessionDurable,
@@ -51,6 +53,7 @@ export {
 const handler = {
   async fetch(request: Request, env: Env, context?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === "/__diagnostics/failure") syntheticFailure(request, env);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
@@ -117,6 +120,10 @@ const handler = {
 
     if (url.pathname === "/v2/realtime" && request.headers.get("Upgrade") === "websocket") {
       return connectRealtimeSocket(request, env, context);
+    }
+
+    if (url.pathname === "/v1/diagnostics" && request.method === "POST") {
+      return captureMobileDiagnostics(request, env, context);
     }
 
     if (url.pathname === "/v1/telemetry" && request.method === "POST") {
@@ -263,4 +270,9 @@ const handler = {
   },
 } satisfies ExportedHandler<Env>;
 
-export default Sentry.withSentry(getSentryOptions, handler);
+export default Sentry.withSentry(getSentryOptions, {
+  ...handler,
+  fetch(request: Request, env: Env, context?: ExecutionContext) {
+    return withHttpDiagnostics(request, env, () => handler.fetch(request, env, context));
+  },
+});

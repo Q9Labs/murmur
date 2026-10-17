@@ -1,6 +1,7 @@
 import type { AppConfigResponse } from "@murmur/protocol/transport/types";
 import { isLanguageCode } from "@murmur/protocol/languages";
-import * as Sentry from "@sentry/cloudflare";
+import { OperationFailure } from "@murmur/protocol/diagnostics/failures";
+import { reportFailure } from "./observability/outcomes";
 
 import type { CustomerPlan } from "./billing/allowanceService";
 import { freeAllowanceMs } from "./billing/catalog";
@@ -30,7 +31,7 @@ type ConfigIdentity = {
 
 const cache = new Map<string, { expiresAt: number; value: ServerConfig }>();
 const cacheTtlMs = 30_000;
-let failureReported = false;
+
 
 export function defaultServerConfig(env: Env): ServerConfig {
   return {
@@ -55,6 +56,13 @@ export function defaultServerConfig(env: Env): ServerConfig {
   };
 }
 
+function flagsFailureCode(status: number) {
+  if (status === 400) return "config.flags_request_invalid";
+  if ([401, 403].includes(status)) return "config.flags_credentials_invalid";
+  if (status === 429 || status >= 500) return "config.flags_unavailable";
+  return "config.flags_failed";
+}
+
 export async function getServerConfig(env: Env, identity: ConfigIdentity): Promise<ServerConfig> {
   const defaults = defaultServerConfig(env);
   const token = env.POSTHOG_PROJECT_TOKEN?.trim();
@@ -66,6 +74,7 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
   if (cached && cached.expiresAt > Date.now()) {
     return cached.value;
   }
+  const started = Date.now();
   try {
     const response = await fetch("https://us.i.posthog.com/flags/", {
       body: JSON.stringify({
@@ -82,7 +91,9 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
       signal: AbortSignal.timeout(800),
     });
     if (!response.ok) {
-      throw new Error(`posthog_flags_http_${response.status}`);
+      throw new OperationFailure(
+        flagsFailureCode(response.status),
+      );
     }
     const { flags, payloads } = readPostHogFlags(await response.json());
     const config = parseServerConfigFlags(defaults, flags, payloads);
@@ -92,10 +103,12 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
     cache.set(key, { expiresAt: Date.now() + cacheTtlMs, value: config });
     return config;
   } catch (failure) {
-    if (!failureReported) {
-      failureReported = true;
-      Sentry.captureException(failure, { tags: { operation: "posthog_server_config" } });
-    }
+    reportFailure({
+      code: failure instanceof OperationFailure ? failure.code
+        : failure instanceof DOMException && (failure.name === "TimeoutError" || failure.name === "AbortError")
+          ? "config.flags_timeout_fallback" : "config.flags_failed",
+      failure, env, duration_ms: Date.now() - started, outcome: "degraded",
+    });
     return defaults;
   }
 }

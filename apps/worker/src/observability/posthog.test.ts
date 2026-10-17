@@ -51,7 +51,7 @@ describe("PostHog delivery", () => {
     expect(JSON.stringify(body)).not.toMatch(/audio|caption|conversation|transcript/);
   });
 
-  it("reports delivery failures without rejecting the Worker response path", async () => {
+  it("does not report delivery failures or reject the Worker response path", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
 
     queuePostHogEvent({
@@ -67,6 +67,6 @@ describe("PostHog delivery", () => {
     });
     await waitUntil.mock.calls[0]?.[0];
 
-    expect(sentry.captureException).toHaveBeenCalledOnce();
+    expect(sentry.captureException).not.toHaveBeenCalled();
   });
 });
