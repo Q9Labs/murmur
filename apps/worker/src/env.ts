@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 export type Env = {
+  MURMUR_DIAGNOSTICS_FIXTURE?: string;
   APPLE_CLIENT_ID?: string;
   APPLE_TEAM_ID?: string;
   APPLE_KEY_ID?: string;

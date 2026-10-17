@@ -39,10 +39,10 @@ describe("Worker Sentry privacy controls", () => {
 
     expect(event.breadcrumbs).toBeUndefined();
     expect(event.extra).toBeUndefined();
-    expect(event.message).toBe("worker_operation_failed");
-    expect(event.request).toEqual({ method: "GET", url: "https://murmur.test/v1/realtime" });
+    expect(event.message).toBe("Worker request did not complete");
+    expect(event.request).toBeUndefined();
     expect(event.user).toBeUndefined();
-    expect(event.exception?.values?.[0]?.value).toBe("worker_operation_failed");
+    expect(event.exception?.values?.[0]?.value).toBe("Worker request did not complete");
     expect(JSON.stringify(event)).not.toContain("private");
     expect(JSON.stringify(event)).not.toContain("secret");
   });

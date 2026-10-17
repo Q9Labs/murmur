@@ -9,7 +9,8 @@
     "./languages": "./src/languages.ts",
     "./session": "./src/session.ts",
     "./telemetry": "./src/telemetry.ts",
-    "./transport/types": "./src/transport/types.ts"
+    "./transport/types": "./src/transport/types.ts",
+    "./diagnostics/failures": "./src/diagnostics/failures.ts"
   },
   "scripts": {
     "typecheck": "tsc-rs --noEmit --project tsconfig.json",

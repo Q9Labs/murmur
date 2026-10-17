@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import * as Sentry from "@sentry/cloudflare";
+import { OperationFailure, type FailureCode } from "@murmur/protocol/diagnostics/failures";
+import { reportFailure } from "./observability/outcomes";
 
 import {
   AssertionError,
@@ -16,6 +17,8 @@ import {
 } from "./rateLimitDurableObject";
 
 export type PlayIntegrityEnv = {
+  MURMUR_ENV?: string;
+  SENTRY_RELEASE?: string;
   APPLE_APP_ATTEST_APP_ID?: string;
   APPLE_APP_ATTEST_ENVIRONMENT?: string;
   GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN?: string;
@@ -58,6 +61,7 @@ export type PlayIntegrityVerificationResult =
         | "play_integrity_token_expired"
         | "play_integrity_verdict_failed";
       status: number;
+      failure_code?: Extract<FailureCode, `integrity.${string}`>;
     };
 
 type DecodedPlayIntegrityResponse = {
@@ -87,7 +91,7 @@ const playIntegrityScope = "https://www.googleapis.com/auth/playintegrity";
 // Verification runs inline on session start, so each Google call gets a tight budget.
 const googleRequestTimeoutMs = 3_000;
 let cachedGoogleAccessToken: { expiresAtMs: number; value: string } | null = null;
-const optionalVerificationFailures = new Set<string>();
+
 
 function unverifiedResult(): PlayIntegrityVerificationResult {
   return { ok: true, app_verdict: null, device_verdicts: [], request_hash_verified: false };
@@ -102,31 +106,7 @@ export async function verifyPlayIntegrityIfRequired(params: {
   required: boolean;
 }): Promise<PlayIntegrityVerificationResult> {
   if (!params.required) {
-    const integrity = params.device_integrity;
-    if (!integrity.available || !integrity.token || integrity.platform !== "android" ||
-      integrity.provider !== "play_integrity") {
-      return unverifiedResult();
-    }
-    try {
-      const result = await verifyPlayIntegrityIfRequired({ ...params, required: true });
-      if (result.ok) {
-        return result;
-      }
-      if (!optionalVerificationFailures.has(result.code)) {
-        optionalVerificationFailures.add(result.code);
-        Sentry.captureMessage("optional_play_integrity_verification_failed", {
-          tags: { code: result.code },
-        });
-      }
-    } catch (failure) {
-      if (!optionalVerificationFailures.has("unexpected_error")) {
-        optionalVerificationFailures.add("unexpected_error");
-        Sentry.captureException(failure, {
-          tags: { operation: "optional_play_integrity_verification" },
-        });
-      }
-    }
-    return unverifiedResult();
+    return verifyOptionalIntegrity(params);
   }
 
   const integrity = params.device_integrity;
@@ -157,16 +137,22 @@ export async function verifyPlayIntegrityIfRequired(params: {
     return { ok: false, code: "device_integrity_verifier_unconfigured", status: 503 };
   }
 
+  if (typeof accessToken !== "string") {
+    return { ok: false, code: "device_integrity_verifier_unconfigured", status: 503, failure_code: accessToken.failure_code };
+  }
   const decoded = await decodePlayIntegrityToken({
     accessToken,
     integrityToken: integrity.token,
     packageName: params.env.GOOGLE_PLAY_PACKAGE_NAME,
   });
-  if (!decoded) {
-    return { ok: false, code: "play_integrity_decode_failed", status: 403 };
+  if (decoded.kind === "failed") {
+    return {
+      ok: false, code: "play_integrity_decode_failed", status: 403,
+      ...(decoded.failure_code ? { failure_code: decoded.failure_code } : {}),
+    };
   }
 
-  const payload = decoded.tokenPayloadExternal;
+  const payload = decoded.value.tokenPayloadExternal;
   const requestPackageName = payload?.requestDetails?.requestPackageName;
   const appPackageName = payload?.appIntegrity?.packageName;
   if (
@@ -205,6 +191,40 @@ export async function verifyPlayIntegrityIfRequired(params: {
     device_verdicts: deviceVerdicts,
     request_hash_verified: nonceMatches,
   };
+}
+
+function optionalIntegrityFailureCode(failure: unknown) {
+  if (failure instanceof OperationFailure) return failure.code;
+  if (failure instanceof DOMException && ["TimeoutError", "AbortError"].includes(failure.name)) return "integrity.optional_unavailable";
+  return "integrity.optional_verification_failed";
+}
+
+// Optional verification must preserve rejection, configuration, outage and unknown causes; the SDK fixtures cover each.
+// fallow-ignore-next-line complexity
+async function verifyOptionalIntegrity(params: Parameters<typeof verifyPlayIntegrityIfRequired>[0]): Promise<PlayIntegrityVerificationResult> {
+    const integrity = params.device_integrity;
+    if (!integrity.available || !integrity.token || integrity.platform !== "android" ||
+      integrity.provider !== "play_integrity") {
+      return unverifiedResult();
+    }
+    const started = Date.now();
+    try {
+      const result = await verifyPlayIntegrityIfRequired({ ...params, required: true });
+      if (result.ok) return result;
+      reportFailure({
+        code: result.failure_code ?? (result.code === "device_integrity_verifier_unconfigured" ? "integrity.configuration_invalid"
+          : result.code === "play_integrity_decode_failed" ? "integrity.optional_unavailable"
+            : "integrity.optional_rejected"),
+        env: params.env, duration_ms: Date.now() - started, outcome: "degraded",
+      });
+    } catch (failure) {
+      reportFailure({
+        code: optionalIntegrityFailureCode(failure),
+        failure, env: params.env, duration_ms: Date.now() - started, outcome: "degraded",
+      });
+    }
+    return unverifiedResult();
+
 }
 
 // Google echoes the nonce bytes back, but not always in the same base64 spelling the app sent
@@ -320,11 +340,16 @@ async function sha256Bytes(value: string): Promise<Uint8Array> {
   );
 }
 
+// Google returns typed errors as well as HTTP statuses; keep their mapping together and cover each response fixture.
+// fallow-ignore-next-line complexity
 async function decodePlayIntegrityToken(params: {
   accessToken: string;
   integrityToken: string;
   packageName: string;
-}): Promise<DecodedPlayIntegrityResponse | null> {
+}): Promise<{ kind: "decoded"; value: DecodedPlayIntegrityResponse } | {
+  kind: "failed";
+  failure_code?: Extract<FailureCode, `integrity.${string}`>;
+}> {
   const response = await fetch(
     `https://playintegrity.googleapis.com/v1/${params.packageName}:decodeIntegrityToken`,
     {
@@ -338,12 +363,26 @@ async function decodePlayIntegrityToken(params: {
     },
   );
   if (!response.ok) {
-    return null;
+    if (response.status === 401 || response.status === 403) {
+      return { kind: "failed", failure_code: "integrity.configuration_invalid" };
+    }
+    if (response.status === 400) {
+      const rejection: unknown = await response.json().catch(() => null);
+      const invalidToken = rejection && typeof rejection === "object" && "error" in rejection &&
+        rejection.error && typeof rejection.error === "object" && "status" in rejection.error &&
+        rejection.error.status === "INVALID_ARGUMENT";
+      return { kind: "failed", failure_code: invalidToken ? "integrity.optional_rejected" : "integrity.optional_verification_failed" };
+    }
+    return { kind: "failed", failure_code: response.status === 429 || response.status >= 500
+      ? "integrity.optional_unavailable" : "integrity.optional_verification_failed" };
   }
-  return (await response.json().catch(() => null)) as DecodedPlayIntegrityResponse | null;
+  const value = (await response.json().catch(() => null)) as DecodedPlayIntegrityResponse | null;
+  return value ? { kind: "decoded", value } : { kind: "failed", failure_code: "integrity.optional_verification_failed" };
 }
 
-async function getGoogleAccessToken(env: PlayIntegrityEnv): Promise<string | null> {
+// Token refresh keeps credential, outage and unknown failures distinct; signed-JWT OAuth fixtures cover each status.
+// fallow-ignore-next-line complexity
+async function getGoogleAccessToken(env: PlayIntegrityEnv): Promise<string | null | { failure_code: Extract<FailureCode, `integrity.${string}`> }> {
   if (env.GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN) {
     return env.GOOGLE_PLAY_INTEGRITY_ACCESS_TOKEN;
   }
@@ -370,9 +409,12 @@ async function getGoogleAccessToken(env: PlayIntegrityEnv): Promise<string | nul
     signal: AbortSignal.timeout(googleRequestTimeoutMs),
   });
   const body = (await response.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
-  if (!response.ok || !body.access_token) {
-    return null;
+  if (!response.ok) {
+    const failure_code = response.status === 429 || response.status >= 500 ? "integrity.optional_unavailable"
+      : [400, 401, 403].includes(response.status) ? "integrity.configuration_invalid" : "integrity.optional_verification_failed";
+    return { failure_code };
   }
+  if (!body.access_token) return { failure_code: "integrity.optional_verification_failed" };
   // Refresh a minute early so a cached token never expires mid-verification.
   const lifetimeSeconds = typeof body.expires_in === "number" ? body.expires_in : 3600;
   cachedGoogleAccessToken = {

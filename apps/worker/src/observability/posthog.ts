@@ -1,6 +1,5 @@
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 import type { MobileTelemetryEvent } from "@murmur/protocol/telemetry";
-import * as Sentry from "@sentry/cloudflare";
 
 import type { Env } from "../env";
 
@@ -123,6 +122,7 @@ async function capturePostHogEvent(params: PostHogCaptureParams): Promise<void> 
     }),
     headers: { "Content-Type": "application/json" },
     method: "POST",
+    signal: AbortSignal.timeout(2_000),
   });
   if (!response.ok) {
     throw new Error(`posthog_capture_http_${response.status}`);
@@ -132,15 +132,8 @@ async function capturePostHogEvent(params: PostHogCaptureParams): Promise<void> 
 export function queuePostHogEvent(params: PostHogCaptureParams & {
   context?: TelemetryExecutionContext;
 }): void {
-  const capture = capturePostHogEvent(params).catch((failure: unknown) => {
-    Sentry.captureException(failure, {
-      tags: {
-        component: "worker",
-        operation: "posthog_capture",
-        product: "murmur",
-        telemetry_event: params.payload.event,
-      },
-    });
+  const capture = capturePostHogEvent(params).catch(() => {
+    // Export faults are not application exceptions. Never report telemetry through telemetry.
   });
   if (params.context) {
     params.context.waitUntil(capture);

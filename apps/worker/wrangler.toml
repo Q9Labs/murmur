@@ -97,6 +97,14 @@ routes = [
   { pattern = "murmur.q9labs.ai", custom_domain = true },
 ]
 
+[env.production.observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = false
+
+[env.production.observability.traces]
+enabled = false
+
 [env.production.triggers]
 crons = [ "17 3 * * *" ]
 
@@ -142,9 +150,13 @@ workers_dev = true
 [env.sandbox.triggers]
 crons = [ "17 3 * * *" ]
 
-[env.sandbox.observability]
+[env.sandbox.observability.logs]
 enabled = true
 head_sampling_rate = 1
+invocation_logs = false
+
+[env.sandbox.observability.traces]
+enabled = false
 
 [[env.sandbox.durable_objects.bindings]]
 name = "RATE_LIMITER"

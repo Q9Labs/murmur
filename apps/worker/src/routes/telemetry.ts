@@ -67,7 +67,7 @@ type BoundedJsonResult =
   | { kind: "json"; value: unknown }
   | { kind: "too_large" };
 
-async function readJsonWithinLimit(
+export async function readJsonWithinLimit(
   request: Request,
   maxBytes: number,
 ): Promise<BoundedJsonResult> {
@@ -80,21 +80,34 @@ async function readJsonWithinLimit(
   }
 
   const reader = request.body.getReader();
+  // Bound slow/chunked clients as well as declared body size. Cancellation unblocks read().
+  let expired = false;
+  const timer = setTimeout(() => {
+    expired = true;
+    void reader.cancel().catch(() => {});
+  }, 2_000);
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
-  while (true) {
-    const chunk = await reader.read();
-    if (chunk.done) {
-      break;
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        break;
+      }
+      totalBytes += chunk.value.byteLength;
+      if (totalBytes > maxBytes) {
+        void reader.cancel("telemetry_payload_too_large").catch(() => {});
+        return { kind: "too_large" };
+      }
+      chunks.push(chunk.value);
     }
-    totalBytes += chunk.value.byteLength;
-    if (totalBytes > maxBytes) {
-      await reader.cancel("telemetry_payload_too_large");
-      return { kind: "too_large" };
-    }
-    chunks.push(chunk.value);
-  }
 
+  } catch {
+    return { kind: "json", value: null };
+  } finally {
+    clearTimeout(timer);
+  }
+  if (expired) return { kind: "json", value: null };
   const body = new Uint8Array(totalBytes);
   let offset = 0;
   for (const chunk of chunks) {
