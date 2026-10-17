@@ -1,0 +1,92 @@
+[
+  {
+    "mode": "shorter",
+    "passed": true,
+    "connections": 2,
+    "billedMs": 1100,
+    "retries": 1,
+    "recovered": true,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "longer",
+    "passed": true,
+    "connections": 2,
+    "billedMs": 1100,
+    "retries": 1,
+    "recovered": true,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "mute",
+    "passed": true,
+    "connections": 2,
+    "billedMs": 1100,
+    "retries": 1,
+    "recovered": true,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "silent",
+    "passed": true,
+    "connections": 3,
+    "billedMs": 1100,
+    "retries": 2,
+    "recovered": true,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "continuous",
+    "passed": true,
+    "connections": 3,
+    "billedMs": 31100,
+    "retries": 2,
+    "recovered": false,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "cap",
+    "passed": true,
+    "connections": 3,
+    "billedMs": 1100,
+    "retries": 2,
+    "recovered": false,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "original-wins",
+    "passed": true,
+    "connections": 2,
+    "billedMs": 1100,
+    "retries": 1,
+    "recovered": false,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "recovery-wins",
+    "passed": true,
+    "connections": 2,
+    "billedMs": 1100,
+    "retries": 1,
+    "recovered": true,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  },
+  {
+    "mode": "healthy",
+    "passed": true,
+    "connections": 1,
+    "billedMs": 1100,
+    "retries": 0,
+    "recovered": false,
+    "markersExactlyOnce": true,
+    "privacySentinelMatches": 0
+  }
+]

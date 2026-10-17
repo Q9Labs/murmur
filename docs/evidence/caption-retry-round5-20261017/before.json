@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "winner-close",
+    "passed": false,
+    "error": "winner-close: original unique captions survive"
+  },
+  {
+    "mode": "winner-error",
+    "passed": false,
+    "error": "winner-error: original unique captions survive"
+  },
+  {
+    "mode": "winner-silent",
+    "passed": false,
+    "error": "winner-silent: silent winner falls back"
+  },
+  {
+    "mode": "winner-retry",
+    "passed": false,
+    "error": "winner-retry: silent winner opens second recovery"
+  },
+  {
+    "mode": "original-stall",
+    "passed": false,
+    "error": "original-stall: healthy original later stalls"
+  },
+  {
+    "mode": "winner-cap",
+    "passed": false,
+    "error": "winner-cap: silent winner opens second recovery"
+  },
+  {
+    "mode": "whitespace-original",
+    "passed": false,
+    "error": "active original deltas preserve whitespace\n+ actual - expected\n\n  [\n    'hello',\n-   ' ',\n    'world',\n-   '\\n',\n    'next'\n  ]\n"
+  },
+  {
+    "mode": "whitespace-side",
+    "passed": false,
+    "error": "active recovery deltas preserve whitespace\n+ actual - expected\n\n  [\n    'hello',\n-   ' ',\n    'world',\n-   '\\n',\n    'next'\n  ]\n"
+  }
+]

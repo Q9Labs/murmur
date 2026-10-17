@@ -444,6 +444,42 @@ describe("app-facing realtime socket", () => {
     });
   });
 
+  it("keeps original audio and ignores all retired caption-only callbacks", async () => {
+    vi.useFakeTimers();
+    const { client, upstream } = await openTestRealtimeSession({ name: "caption_only" });
+    const retired = new FakeSocket(), active = new FakeSocket();
+    retired.stayOpenOnClose = true;
+    providerMocks.openTranslationSocket.mockResolvedValueOnce(retired).mockResolvedValueOnce(active);
+    client.dispatchEvent(new MessageEvent("message", { data: new ArrayBuffer(4800) }));
+    await vi.advanceTimersByTimeAsync(0);
+    const audio = { type: "session.output_audio.delta", delta: "AQID" };
+    upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
+    await vi.advanceTimersByTimeAsync(15_025);
+    expect(upstream.closeCalls).toEqual([]);
+    expect(retired.closeCalls).toContainEqual({ code: 1000, reason: "caption_retry_replaced" });
+    const sent = [...client.sent];
+    for (const output of [audio,
+      { type: "session.output_transcript.delta", delta: "stale caption" },
+      { type: "session.closed" }, { type: "error", error: { code: "server_error" } },
+    ]) retired.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(output) }));
+    retired.dispatchEvent(new Event("close"));retired.dispatchEvent(new Event("error"));
+    active.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
+    expect(client.sent).toEqual(sent);
+    upstream.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(audio) }));
+    expect(client.sent.at(-1)).toBeInstanceOf(ArrayBuffer);
+    expect(client.closeCalls).toEqual([]);
+    active.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.output_transcript.delta", delta: "new caption" }),
+    }));
+    expect(client.sent.at(-1)).toContain("new caption");
+    const selected = [...client.sent];
+    upstream.dispatchEvent(new MessageEvent("message", {
+      data: JSON.stringify({ type: "session.output_transcript.delta", delta: "late duplicate" }),
+    }));
+    expect(client.sent).toEqual(selected);
+    client.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ kind: "close_session" }) }));
+  });
+
   it("forwards provider output and physically closes upstream on provider completion", async () => {
     const { client, upstream } = await openTestRealtimeSession({ name: "provider_complete" });
     upstream.dispatchEvent(new MessageEvent("message", {

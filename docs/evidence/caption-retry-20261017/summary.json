@@ -1,0 +1,1330 @@
+{
+  "method": {
+    "baseline_commit": "2b9cbd64f83a907d355e76bdb09f20a56149f03c",
+    "environment": "murmur-worker-sandbox",
+    "order": "Twenty alternating pairs: odd master then branch, even branch then master. No invalid trials or silent reruns.",
+    "input": "Same original robot clip, 89114 PCM16 bytes at 24 kHz mono, 19 real-time chunks.",
+    "pcm_sha256": "8367b2effbee45c55c563ce3954d809b5bb914f0b9ae93975eedcdffd9a5b0fb",
+    "settings": {
+      "model": "gpt-realtime-translate",
+      "source_language": "en",
+      "target_language": "es",
+      "noise_reduction": "near_field",
+      "source_transcription": false,
+      "playback": false,
+      "analytics": false,
+      "insights": false
+    },
+    "timing": "Milliseconds from first input send to first nonempty caption; exclude setup. Missing after 25 seconds. Successful sessions finish after the whole clip and first caption. Nearest-rank p95; median midpoint.",
+    "retry_measure": "Observed replacement session.updated acknowledgements; workerd independently tests attempted retry telemetry.",
+    "raw_results_sha256": "c9c0c3ae7c4edaf8163ac9b534cf7297de1a2ecfe47d2e2b1f2561ea8cc85dbd",
+    "limits": [
+      "One short English clip translated to Spanish, twenty sessions per version.",
+      "Healthy-session timing conditional on captions arriving; missing sessions excluded from timing.",
+      "Finite samples cannot guarantee no future missing captions or no healthy retries.",
+      "Provider internals and an invoice were not visible."
+    ]
+  },
+  "threshold": {
+    "method": "Saved evidence reanalysis; not new provider runs. Use firstTranslationMs (nonempty caption), minus first output_audio.delta time; clamp negative gaps to zero because captions already arrived. Nearest-rank p95.",
+    "batches": [
+      {
+        "source": "direct-baseline.jsonl",
+        "sha256": "157005a51a32bb8bd47e86e712b5d5bfaa27b675c4f377c7d1f999e57b1c644b",
+        "runs": 20,
+        "healthy": 14,
+        "healthy_without_output_audio": 1,
+        "caption_before_audio": 4,
+        "eligible": 13,
+        "p95_ms": 480,
+        "max_ms": 480
+      },
+      {
+        "source": "direct-inspect.jsonl",
+        "sha256": "0fc89551661d34c4b4bde0b2dd93e02372e6cb45c2dfd7c3e42168e60b816d3f",
+        "runs": 10,
+        "healthy": 7,
+        "healthy_without_output_audio": 0,
+        "caption_before_audio": 1,
+        "eligible": 7,
+        "p95_ms": 590,
+        "max_ms": 590
+      }
+    ],
+    "combined": {
+      "eligible": 20,
+      "p95_ms": 500,
+      "max_ms": 590
+    },
+    "candidate_threshold_ms": 2000,
+    "threshold_status": "Implemented; zero branch no-caption trials in the 20-session short-clip sandbox sample. No universal healthy-session guarantee."
+  },
+  "summary": {
+    "master": {
+      "sessions": 20,
+      "no_caption_at_25_seconds": 8,
+      "no_caption_rate": 0.4,
+      "caption_sessions": 12,
+      "first_caption_median_ms": 1105.0,
+      "first_caption_p95_ms": 1550,
+      "first_caption_max_ms": 1550,
+      "observed_retry_counts": {
+        "0": 20,
+        "1": 0,
+        "2": 0
+      }
+    },
+    "branch": {
+      "sessions": 20,
+      "no_caption_at_25_seconds": 0,
+      "no_caption_rate": 0.0,
+      "caption_sessions": 20,
+      "first_caption_median_ms": 1105.0,
+      "first_caption_p95_ms": 4250,
+      "first_caption_max_ms": 4441,
+      "observed_retry_counts": {
+        "0": 16,
+        "1": 4,
+        "2": 0
+      }
+    }
+  },
+  "trials": [
+    {
+      "pair": 1,
+      "label": "master",
+      "at": "2026-10-17T14:08:35.785Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25041,
+      "errors": []
+    },
+    {
+      "pair": 1,
+      "label": "branch",
+      "at": "2026-10-17T14:09:13.045Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 860,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1889,
+      "errors": []
+    },
+    {
+      "pair": 2,
+      "label": "branch",
+      "at": "2026-10-17T14:09:27.396Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1020,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 2,
+      "label": "master",
+      "at": "2026-10-17T14:09:41.256Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25029,
+      "errors": []
+    },
+    {
+      "pair": 3,
+      "label": "master",
+      "at": "2026-10-17T14:10:18.406Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 740,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1892,
+      "errors": []
+    },
+    {
+      "pair": 3,
+      "label": "branch",
+      "at": "2026-10-17T14:10:30.697Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 981,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 4,
+      "label": "branch",
+      "at": "2026-10-17T14:10:43.307Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1080,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 4,
+      "label": "master",
+      "at": "2026-10-17T14:10:56.456Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25035,
+      "errors": []
+    },
+    {
+      "pair": 5,
+      "label": "master",
+      "at": "2026-10-17T14:11:33.559Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25036,
+      "errors": []
+    },
+    {
+      "pair": 5,
+      "label": "branch",
+      "at": "2026-10-17T14:12:09.699Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 4441,
+      "observedRetryCount": 1,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        },
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 4486,
+      "errors": []
+    },
+    {
+      "pair": 6,
+      "label": "branch",
+      "at": "2026-10-17T14:12:26.258Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1009,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1896,
+      "errors": []
+    },
+    {
+      "pair": 6,
+      "label": "master",
+      "at": "2026-10-17T14:12:42.238Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1149,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 7,
+      "label": "master",
+      "at": "2026-10-17T14:12:56.391Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1151,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 7,
+      "label": "branch",
+      "at": "2026-10-17T14:13:10.271Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1241,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 8,
+      "label": "branch",
+      "at": "2026-10-17T14:13:22.769Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1090,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1892,
+      "errors": []
+    },
+    {
+      "pair": 8,
+      "label": "master",
+      "at": "2026-10-17T14:13:35.221Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25018,
+      "errors": []
+    },
+    {
+      "pair": 9,
+      "label": "master",
+      "at": "2026-10-17T14:14:11.219Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1151,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1895,
+      "errors": []
+    },
+    {
+      "pair": 9,
+      "label": "branch",
+      "at": "2026-10-17T14:14:23.980Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 4131,
+      "observedRetryCount": 1,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        },
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 4173,
+      "errors": []
+    },
+    {
+      "pair": 10,
+      "label": "branch",
+      "at": "2026-10-17T14:14:40.411Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1150,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1893,
+      "errors": []
+    },
+    {
+      "pair": 10,
+      "label": "master",
+      "at": "2026-10-17T14:14:53.710Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25027,
+      "errors": []
+    },
+    {
+      "pair": 11,
+      "label": "master",
+      "at": "2026-10-17T14:15:29.860Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1068,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1895,
+      "errors": []
+    },
+    {
+      "pair": 11,
+      "label": "branch",
+      "at": "2026-10-17T14:15:43.182Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1051,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 12,
+      "label": "branch",
+      "at": "2026-10-17T14:15:55.522Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 942,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1885,
+      "errors": []
+    },
+    {
+      "pair": 12,
+      "label": "master",
+      "at": "2026-10-17T14:16:08.409Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 888,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1890,
+      "errors": []
+    },
+    {
+      "pair": 13,
+      "label": "master",
+      "at": "2026-10-17T14:16:21.301Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 870,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1895,
+      "errors": []
+    },
+    {
+      "pair": 13,
+      "label": "branch",
+      "at": "2026-10-17T14:16:34.521Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 4210,
+      "observedRetryCount": 1,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        },
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 4228,
+      "errors": []
+    },
+    {
+      "pair": 14,
+      "label": "branch",
+      "at": "2026-10-17T14:16:49.461Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1260,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1894,
+      "errors": []
+    },
+    {
+      "pair": 14,
+      "label": "master",
+      "at": "2026-10-17T14:17:01.891Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1100,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1893,
+      "errors": []
+    },
+    {
+      "pair": 15,
+      "label": "master",
+      "at": "2026-10-17T14:17:14.262Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1230,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1896,
+      "errors": []
+    },
+    {
+      "pair": 15,
+      "label": "branch",
+      "at": "2026-10-17T14:17:27.022Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1260,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1893,
+      "errors": []
+    },
+    {
+      "pair": 16,
+      "label": "branch",
+      "at": "2026-10-17T14:17:40.153Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 960,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1895,
+      "errors": []
+    },
+    {
+      "pair": 16,
+      "label": "master",
+      "at": "2026-10-17T14:17:52.392Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25022,
+      "errors": []
+    },
+    {
+      "pair": 17,
+      "label": "master",
+      "at": "2026-10-17T14:18:28.132Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1070,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1892,
+      "errors": []
+    },
+    {
+      "pair": 17,
+      "label": "branch",
+      "at": "2026-10-17T14:18:40.623Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 4250,
+      "observedRetryCount": 1,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        },
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 4276,
+      "errors": []
+    },
+    {
+      "pair": 18,
+      "label": "branch",
+      "at": "2026-10-17T14:18:56.011Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 990,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1896,
+      "errors": []
+    },
+    {
+      "pair": 18,
+      "label": "master",
+      "at": "2026-10-17T14:19:08.843Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1110,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1895,
+      "errors": []
+    },
+    {
+      "pair": 19,
+      "label": "master",
+      "at": "2026-10-17T14:19:21.593Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": null,
+      "observedRetryCount": 0,
+      "timeout": true,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 25038,
+      "errors": []
+    },
+    {
+      "pair": 19,
+      "label": "branch",
+      "at": "2026-10-17T14:19:57.775Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1120,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1891,
+      "errors": []
+    },
+    {
+      "pair": 20,
+      "label": "branch",
+      "at": "2026-10-17T14:20:12.393Z",
+      "version": "1879f7ee-4f5f-4778-81a6-7d187db9aeb6",
+      "firstTranslationMs": 1150,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1886,
+      "errors": []
+    },
+    {
+      "pair": 20,
+      "label": "master",
+      "at": "2026-10-17T14:20:26.234Z",
+      "version": "7ebf821d-da6f-48a4-83a1-4a26e4fe11c5",
+      "firstTranslationMs": 1550,
+      "observedRetryCount": 0,
+      "timeout": false,
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "model": "gpt-realtime-translate",
+      "providerConfig": [
+        {
+          "phase": "created",
+          "output_language": "es",
+          "input_noise_reduction": null,
+          "transcription_model": null
+        },
+        {
+          "phase": "updated",
+          "output_language": "es",
+          "input_noise_reduction": "near_field",
+          "transcription_model": null
+        }
+      ],
+      "streamMs": 1893,
+      "errors": []
+    }
+  ],
+  "workerd_proof": {
+    "master": "Fails the recovery-caption assertion with the unchanged baseline proxy.",
+    "branch": [
+      {
+        "case": "recover",
+        "connections": 2,
+        "billed_ms": 1100,
+        "retries": 1,
+        "recovered": true
+      },
+      {
+        "case": "cap",
+        "connections": 3,
+        "billed_ms": 1100,
+        "retries": 2,
+        "recovered": false
+      },
+      {
+        "case": "healthy",
+        "connections": 1,
+        "billed_ms": 1100,
+        "retries": 0,
+        "recovered": false
+      }
+    ],
+    "assertions": [
+      "Continuous client session",
+      "Same provider config",
+      "Old upstream closes cleanly",
+      "No stale audio after switch",
+      "Real D1 settlement counts only client input",
+      "Retry cap leaves session open",
+      "Ended telemetry has retry count and recovered flag"
+    ],
+    "command": "pnpm run verify:caption-recovery"
+  },
+  "gate": {
+    "command": "pnpm run gate",
+    "exit": 0,
+    "machine": "agents-macmini",
+    "workspace_unit_tests": 946,
+    "protocol_tests": 96,
+    "worker_tests": 353,
+    "mobile_tests": 497,
+    "log_sha256": "98f5906f2c0b830482aa07cfaf61ea95ce1830c650b4d29bb4260c4d36dae50e",
+    "frozen_install": "1141 installed packages; unchanged supply-chain policy; no rejects or bypasses."
+  },
+  "privacy_proof": {
+    "command": "node tooling/scripts/verify-workers-log-privacy.mjs",
+    "result": "BLOCKED",
+    "reason": "Cloudflare retained telemetry query returned HTTP 403 using existing Wrangler OAuth. Existing analytics-read token also returned 403.",
+    "sentinel_matches": null,
+    "zero_sentinel_matches_verified": false
+  },
+  "restoration": {
+    "checkedAt": "2026-10-17T14:23:51.636Z",
+    "sandboxVersionRestored": true,
+    "fullObservabilityRestored": true,
+    "disposableDatabaseStatus": 404,
+    "productionAccessed": false
+  },
+  "spend": {
+    "conservative_estimated_usd": 0.5242975666666666,
+    "conservative_provider_seconds": 925.2309999999999,
+    "rate_usd_per_minute": 0.034,
+    "rate_source": "https://developers.openai.com/api/docs/models/gpt-realtime-translate",
+    "method": "Each baseline trial counts its full stream wall time plus seven seconds. Every branch trial counts three such full upstream lifetimes, even with no retries. No additional direct provider runs."
+  }
+}
