@@ -94,7 +94,7 @@ release="murmur-worker@1.3.0+$source_sha"
 2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release" --tag "$source_sha"
 ```
 
-Observability settings are not versioned. A version rollback alone does not disable logging. Use the single fail-closed rollback script. It disables logs and traces, reads the settings back, and only then changes the version. Any failed API step or mismatched read-back stops the script with a clear error. Do not replace this with independent commands:
+Observability settings are not versioned. A version rollback alone does not disable logging. Use the single fail-closed rollback script. It disables logs and traces, reads the settings back, and only then changes the version. The canonical script-settings read-back must show explicit null (fully disabled) or explicit disabled log/trace fields; a missing field fails closed. Any failed API step or mismatched read-back stops the script with a clear error. Do not replace this with independent commands:
 
 ```sh
 cd /Users/macmini/code/murmur/.worktrees/prod-logs
@@ -107,7 +107,7 @@ After deployment or rollback, read the active version and non-versioned settings
 
 The separate `apps/worker/privacy-probe.ts` entry point imports the real production entry point and Durable Object classes. It is not reachable from the production Wrangler configuration. Its sandbox-only storage wrappers inject private-email failures at limiter state reads/writes, native alarm reads/writes, customer binding reads/writes and ledger execution. Native callback exception records must contain only fixed failure messages. The verifier retrieves every matching retained record, requires each native positive control, and scans the complete JSON, not just outcomes.
 
-A real Better Auth database failure runs through its own error handler and the production Sentry SDK. A temporary sandbox-only collector captures the actual outbound envelope. The verifier requires exactly one envelope and one retained outcome with the same current-run trace, and checks both for the email. This proves the SDK export, not ingestion by Sentry's hosted service. The broad route proof also checks the account-delete failure.
+A real Better Auth database failure runs through its own error handler and the production Sentry SDK. A temporary sandbox-only collector captures the actual outbound envelope. The probe entry point overrides the DSN only for its invocation, leaving the real secret binding unchanged. Its deployment alone enables `global_fetch_strictly_public` for the collector loopback. The verifier requires exactly one envelope and one retained outcome with the same current-run trace, and checks both for the email. This proves the SDK export, not ingestion by Sentry's hosted service. The broad route proof also checks the account-delete failure.
 
 Before deployment, require a clean checkout and record the complete source SHA. Deploy the production entry point and the separate probe entry point from that same SHA with the full SHA as both the version tag and Sentry release suffix. Read both deployed version tags and release bindings back from Cloudflare. Attach the receipts and complete records to PR #103 without changing the deployed source commit afterwards.
 

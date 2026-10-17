@@ -32,8 +32,11 @@ export async function rollbackWorkerLogs({ environment, version, token, request 
   await api("/script-settings", "PATCH", {
     observability: { enabled: false, logs: { enabled: false, persist: false, invocation_logs: false }, traces: { enabled: false, persist: false } },
   }, "Disable log export; version rollback NOT attempted");
-  const settings = await api("/settings", "GET", undefined, "Verify disabled settings; version rollback NOT attempted");
-  if (settings?.observability?.enabled !== false || settings.observability.logs?.enabled !== false || settings.observability.traces?.enabled !== false) {
+  const settings = await api("/script-settings", "GET", undefined, "Verify disabled settings; version rollback NOT attempted");
+  // Cloudflare returns explicit null when observability is fully disabled.
+  // Missing or malformed fields are not evidence of disabled export.
+  const disabled = settings.observability === null || (settings.observability?.enabled === false && settings.observability.logs?.enabled === false && settings.observability.traces?.enabled === false);
+  if (!disabled) {
     throw new Error("Log/trace disable read-back did not match; version rollback NOT attempted");
   }
   await api("/deployments", "POST", {

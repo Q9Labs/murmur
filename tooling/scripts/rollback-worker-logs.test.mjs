@@ -32,3 +32,18 @@ test("rollback orders disable, verification, version restore and final read-back
   assert.equal((await rollbackWorkerLogs({ environment: "sandbox", version, token: "fixture", request })).version_verified, true);
   assert.deepEqual(calls, ["PATCH", "GET", "POST", "GET"]);
 });
+
+for (const [name, settings, accepted] of [["explicit null", { observability: null }, true], ["missing field", {}, false]]) {
+  test(`rollback handles ${name} settings fail-closed`, async () => {
+    const calls = [];
+    const request = async (url, init) => {
+      calls.push(init.method);
+      if (calls.length === 2) assert.ok(url.endsWith("/script-settings"));
+      return Response.json({ success: true, result: calls.length === 2 ? settings : calls.length === 4 ? { deployments: [{ versions: [{ version_id: version, percentage: 100 }] }] } : {} });
+    };
+    const result = rollbackWorkerLogs({ environment: "sandbox", version, token: "fixture", request });
+    if (accepted) assert.equal((await result).version_verified, true);
+    else await assert.rejects(result, /version rollback NOT attempted/);
+    assert.deepEqual(calls, accepted ? ["PATCH", "GET", "POST", "GET"] : ["PATCH", "GET"]);
+  });
+}

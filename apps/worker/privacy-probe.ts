@@ -136,6 +136,8 @@ export default {
   async fetch(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
     if (env.MURMUR_ENV !== "sandbox") return new Response(null, { status: 404 });
     const url = new URL(request.url);
+    // Keep the real secret binding unchanged; only this sandbox invocation exports here.
+    const probeEnv = { ...env, SENTRY_DSN: "https://privacyproof@murmur-worker-sandbox.msbilal.workers.dev/1" };
     if (url.pathname === "/api/1/envelope/") {
       if (request.method !== "POST" || !(url.searchParams.get("sentry_key") === "privacyproof" || request.headers.get("x-sentry-auth")?.includes("sentry_key=privacyproof"))) return new Response(null, { status: 403 });
       await stub(env, "privacy-proof-envelopes").fetch("https://probe.internal/envelopes", { method: "POST", body: await request.text() });
@@ -161,8 +163,8 @@ export default {
     }
     if (authenticated && request.headers.get("x-probe-operation") === "database") {
       const fault = readFault(request);
-      return worker.fetch(request, { ...env, BILLING_DB: databaseFault(env.BILLING_DB, () => fault) }, context);
+      return worker.fetch(request, { ...probeEnv, BILLING_DB: databaseFault(env.BILLING_DB, () => fault) }, context);
     }
-    return worker.fetch(request, env, context);
+    return worker.fetch(request, probeEnv, context);
   },
 };
