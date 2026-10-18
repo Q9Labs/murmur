@@ -43,7 +43,7 @@ export default { async fetch(request) {
  const key = request.headers.get('OpenAI-Safety-Identifier'), mode = key.split('_')[0];
  const state = states.get(key) ?? {connections:[],events:[]};states.set(key,state);
  const index = state.connections.length + 1;
- const connection = {index,bytes:0,chunks:0,closed:false,config:null};state.connections.push(connection);
+ const connection = {index,bytes:0,chunks:0,closed:false,config:null,markers:[]};state.connections.push(connection);
  const pair = new WebSocketPair(), socket=pair[1];socket.accept();
  const queue=[],list=controls.get(key)??[];list.push(queue);controls.set(key,list);
  const controlTimer=setInterval(()=>{for(const body of queue.splice(0)){if(body.close)socket.close(body.close,'synthetic close');else socket.send(JSON.stringify(body.event));}},10);
@@ -55,7 +55,7 @@ export default { async fetch(request) {
    if(data.type==='session.update') {connection.config=data.session;send({type:'session.updated',session:{audio:data.session.audio}});}
    if(data.type!=='session.input_audio_buffer.append') return;
    const raw=atob(data.audio), marker=raw.charCodeAt(0);
-   connection.bytes+=raw.length;connection.chunks++;
+   connection.bytes+=raw.length;connection.chunks++;connection.markers.push(marker);
    if(!(index>1 && ['silent','cap','continuous'].includes(mode))) {
      const bytes=index>1 ? (mode==='shorter'?2400:mode==='longer'?7200:4800) : 4800;
      const output={type:'session.output_audio.delta',delta:btoa(String.fromCharCode(marker,16).repeat(bytes/2))};
@@ -95,7 +95,7 @@ try {
   {mode:"longer",connections:2,recovered:true,tags:["recovered"]},
   {mode:"mute",connections:2,recovered:true,tags:["recovered"],muted:true},
   {mode:"silent",connections:3,recovered:true,tags:["recovered"]},
-  {mode:"continuous",connections:4,recovered:false,tags:[],frames:310,waitMs:6000},
+  {mode:"continuous",connections:4,recovered:false,exhausted:true,tags:[],frames:310,waitMs:12000},
   {mode:"cap",connections:4,recovered:false,tags:[],waitMs:28000},
   {mode:"original-wins",connections:2,recovered:false,tags:["original","continued"],original:true,afterCaptionMs:4000},
   {mode:"recovery-wins",connections:2,recovered:true,tags:["recovered"],original:true,afterCaptionMs:4000},
@@ -193,7 +193,7 @@ try {
    return await assertSettlement(id,frames,finalState,spec);
   }finally{try{ws.close();}catch{}}
  }
- const continuityCases = ["winner-close", "winner-error", "winner-silent", "winner-retry", "original-stall", "winner-cap", "whitespace-original", "whitespace-side", "long-recovered", "pause-resume"];
+ const continuityCases = ["winner-close", "winner-error", "winner-silent", "winner-retry", "original-stall", "winner-cap", "whitespace-original", "whitespace-side", "long-recovered", "pause-resume", "winner-bursts", "original-bursts", "winner-boundary", "original-boundary", "winner-tail", "original-tail", "bounded-buffer"];
  async function whitespaceScenario(context) {
   const original=context.mode==='whitespace-original',index=original?1:2;
   if(!original)await context.until(async()=>(await context.state()).connections.length===2,'first recovery opens');
@@ -260,6 +260,79 @@ try {
   assert.equal((await context.state()).connections.length,2,'healthy side never replaced');
   return {connections:2,answered:1,original:true,recovered:true};
  }
+ async function captionedSource(context) {
+  const original=context.mode.startsWith('original'),index=original?1:2;
+  if(!original)await context.until(async()=>(await context.state()).connections.length===2,'first recovery opens');
+  await context.caption(index,'healthy caption');
+  await context.until(()=>context.text().at(-1)==='healthy caption','winner delivers caption');
+  return {original,index};
+ }
+ async function shortBurst(context) {
+  for(let second=0;second<5;second++){context.feed(60+second);await sleep(1000);}
+ }
+ function feedSecond(context,marker) {
+  for(let frame=0;frame<10;frame++)context.feed(marker);
+ }
+ async function shortBurstsScenario(context) {
+  const {original,index}=await captionedSource(context);
+  await sleep(11000);
+  assert.equal((await context.state()).connections.length,index,'idle silence alone is not a failure');
+  for(let burst=0;burst<2;burst++) {
+   await shortBurst(context);
+   await context.until(async()=>(await context.state()).connections.length===index+burst+1,'short unanswered speech has a bounded response deadline');
+   await context.caption(index+burst+1,'resumed captions '+burst);
+   await context.until(()=>context.text().at(-1)==='resumed captions '+burst,'replacement answers');
+   await sleep(11000);
+   assert.equal((await context.state()).connections.length,index+burst+1,'healthy pause never replaces winner');
+  }
+  return {connections:index+2,answered:index+1,original,recovered:true};
+ }
+ async function trailingPlaybackScenario(context) {
+  const {original,index}=await captionedSource(context);
+  for(let tail=0;tail<2;tail++) {
+   await context.playback(110+tail);
+   context.silence();
+   await sleep(11000);
+   assert.equal((await context.state()).connections.length,index,'trailing output and silent input never arm recovery');
+  }
+  return {connections:index,answered:index-1,original,recovered:!original,syntheticOutputFrames:2};
+ }
+ async function boundedBufferScenario(context) {
+  for(let second=0;second<75;second++) {
+   feedSecond(context,30+second);
+   await context.until(async()=>(await context.state()).connections[0].bytes===(second+2)*48000,'input position delivered');
+  }
+  await context.until(async()=>(await context.state()).connections.length===2,'bounded first takeover opens');
+  await context.caption(2,'bounded takeover');
+  await context.until(()=>context.text().at(-1)==='bounded takeover','takeover answers');
+  await context.until(async()=>(await context.state()).connections[1].bytes>=15*48000,'first takeover replays bounded window');
+  assert.equal((await context.state()).connections[1].bytes,15*48000,'first takeover replay size');
+  assert.deepEqual([...new Set((await context.state()).connections[1].markers)],Array.from({length:15},(_,i)=>90+i),'old input evicted before any captions');
+  return {connections:2,answered:1,original:false,recovered:true};
+ }
+ async function replayBoundaryScenario(context) {
+  const {original,index}=await captionedSource(context);
+  await context.until(async()=>(await context.state()).connections[index-1].bytes===48000,'initial input delivered');
+  for(let second=0;second<70;second++) {
+   feedSecond(context,30+second);
+   await context.until(async()=>(await context.state()).connections[index-1].bytes===(second+2)*48000,'input position delivered');
+   await context.caption(index,'line-'+second);
+   await context.until(()=>context.text().at(-1)==='line-'+second,'caption boundary delivered');
+  }
+  for(let i=0;i<20;i++)context.feed(120);
+  await context.until(async()=>(await context.state()).connections[index-1].bytes===73*48000,'pending speech delivered');
+  if(original){await sleep(11000);context.feed(121);}
+  else await context.control(index,undefined,1011);
+  await context.until(async()=>(await context.state()).connections.length===index+1,'replacement opens at caption boundary');
+  const expectedBytes=(15+Number(original)*0.1)*48000;
+  await context.until(async()=>(await context.state()).connections[index].bytes>=expectedBytes,'fixed window and live input replayed');
+  const replacement=(await context.state()).connections[index];
+  assert.equal(replacement.bytes,expectedBytes,'exactly 15 seconds plus live input');
+  assert.deepEqual([...new Set(replacement.markers)],[...Array.from({length:13},(_,i)=>87+i),120,...Array.from({length:Number(original)},()=>121)],'fixed 15-second input window');
+  await context.caption(index+1,'replacement caption');
+  await context.until(()=>context.text().at(-1)==='replacement caption','replacement caption delivered');
+  return {connections:index+1,answered:index,original,recovered:true};
+ }
  async function winnerScenario(context) {
   await context.until(async()=>(await context.state()).connections.length===2,'first recovery opens');
   await context.until(async()=>(await context.state()).connections[1].bytes===48000,'replay caught up');
@@ -267,6 +340,14 @@ try {
   if(context.mode==='pause-resume')await sleep(11000);
   return context.mode==='long-recovered'?longScenario(context):replacementScenario(context);
  }
+ const continuityScenarios={
+  'winner-bursts':shortBurstsScenario,'original-bursts':shortBurstsScenario,
+  'winner-boundary':replayBoundaryScenario,'original-boundary':replayBoundaryScenario,
+  'winner-tail':trailingPlaybackScenario,'original-tail':trailingPlaybackScenario,
+  'bounded-buffer':boundedBufferScenario,
+  'whitespace-original':whitespaceScenario,'whitespace-side':whitespaceScenario,
+  'original-stall':originalStallScenario,
+ };
  async function runContinuity(mode) {
   const id=randomUUID(),key=mode+'_'+id,events=[],audio=[],expected=[];let closed=false;
   const response=await mf.dispatchFetch(`http://proxy.test/v2/realtime?case=${mode}&app_session_id=${id}&target_language=es&analytics_enabled=true&playback_enabled=true`,{headers:{Upgrade:'websocket'}});
@@ -281,15 +362,17 @@ try {
   const feed=marker=>{ws.send(new Uint8Array(4800).fill(marker).buffer);expected.push(marker);};
   try {
    await until(()=>events.some(e=>e.kind==='session_opened'),'opened');await feedInput(ws,10,false,expected);
-   const context={mode,until,state,control,caption,text,feed};
-   const scenario=mode.startsWith('whitespace')?whitespaceScenario:mode==='original-stall'?originalStallScenario:winnerScenario;
+   const silence=()=>{ws.send(new ArrayBuffer(4800));expected.push(0);};
+   const playback=async marker=>{expected.push(marker);await control(1,{type:'session.output_audio.delta',delta:Buffer.alloc(4800,marker).toString('base64')});};
+   const context={mode,until,state,control,caption,text,feed,silence,playback};
+   const scenario=continuityScenarios[mode]??winnerScenario;
    const result=await scenario(context);
-   feed(32);await until(()=>audio.includes(32),'original audio continues');
+   feed(32);await until(()=>audio.length===expected.length,'original audio continues');
    assert.deepEqual(audio,expected,'all original audio exactly once');
    assert.equal(closed,false);assert.equal(events.filter(e=>e.kind==='session_opened').length,1);
    assert.equal(events.filter(e=>e.kind==='session_error'||e.kind==='session_closed').length,0);
    ws.send(JSON.stringify({kind:'close_session'}));await until(()=>closed,'client closes');
-   return await assertSettlement(id,expected.length-1,await state(),{mode,...result});
+   return await assertSettlement(id,expected.length-1-(result.syntheticOutputFrames??0),await state(),{mode,...result});
   } finally {try{ws.close();}catch{}}
  }
  const selected=process.env.CAPTION_PROOF_CASES?.split(',');

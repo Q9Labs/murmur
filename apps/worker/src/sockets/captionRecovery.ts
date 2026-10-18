@@ -5,7 +5,9 @@ export const captionStallTimeoutMs = 10_000;
 // Include replay time separately; healthy direct 4x replay answered in 1.25s.
 export const captionResponseTimeoutMs = 5_000;
 const maxCaptionReplacements = 2;
-const maxBufferedBytes = 60 * 24_000 * 2;
+const captionReplayWindowMs = 15_000;
+const inputBytesPerMs = 48;
+const maxBufferedBytes = captionReplayWindowMs * inputBytesPerMs;
 const replayFrameBytes = 4_800;
 const replaySpeed = 4;
 type Translation = Extract<Extract<OpenAITranslationOutput, { kind: "event" }>["event"], { kind: "translation_delta" | "source_delta" }>;
@@ -14,7 +16,13 @@ type CaptionConnection = AudioQueue & { socket: WorkerWebSocket; replaying: bool
 function appendFrames(queue: AudioQueue, frames: ArrayBuffer[], bytes: number): void {
   queue.frames.push(...frames);
   queue.bytes += bytes;
-  while (queue.bytes > maxBufferedBytes) queue.bytes -= queue.frames.shift()?.byteLength ?? 0;
+  while (queue.bytes > maxBufferedBytes) {
+    const first = queue.frames[0];
+    const excess = Math.min(queue.bytes - maxBufferedBytes, first.byteLength);
+    if (excess === first.byteLength) queue.frames.shift();
+    else queue.frames[0] = first.slice(excess);
+    queue.bytes -= excess;
+  }
 }
 
 export function createCaptionRecovery(params: {
@@ -39,8 +47,6 @@ export function createCaptionRecovery(params: {
   let source: "original" | "racing" | "recovery" | "original-only" | "ended" = "original";
   let stopped = false;
   let captionsStarted = false;
-  let lastAudioAt = Date.now() - captionStallTimeoutMs;
-  let audioWithoutCaptionSince: number | null = null;
   let connecting: AbortController | null = null;
   let deadline: ReturnType<typeof setTimeout> | null = null;
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -72,7 +78,6 @@ export function createCaptionRecovery(params: {
   function forward(event: Translation): void {
     if (event.delta.trim()) {
       captionsStarted = true;
-      audioWithoutCaptionSince = null;
       clearDeadline();
     }
     params.onCaption(event);
@@ -86,7 +91,6 @@ export function createCaptionRecovery(params: {
   function stalled(): void {
     if (recoveryDisabled()) return;
     clearDeadline();
-    audioWithoutCaptionSince = null;
     if (source === "original") source = "racing";
     void retry();
   }
@@ -108,7 +112,7 @@ export function createCaptionRecovery(params: {
     if (!frame) { connection.replaying = false; return; }
     connection.bytes -= frame.byteLength;
     if (sendFrame(connection, frame)) {
-      replayTimer = setTimeout(pumpReplay, frame.byteLength / 48 / replaySpeed);
+      replayTimer = setTimeout(pumpReplay, frame.byteLength / inputBytesPerMs / replaySpeed);
     }
   }
   function receiveEvent(connection: CaptionConnection, output: Extract<OpenAITranslationOutput, { kind: "event" }>): void {
@@ -159,10 +163,10 @@ export function createCaptionRecovery(params: {
     active = connection;
     params.onConnection();
     bind(connection);
-    // Replaying the whole recent window prefers a repeated line over lost speech.
+    // Every takeover replays at most 15 seconds, independent of caption timing or text.
     deadline = setTimeout(() => {
       if (active === connection && !connection.received) fail(connection);
-    }, captionResponseTimeoutMs + history.bytes / 48 / replaySpeed);
+    }, captionResponseTimeoutMs + history.bytes / inputBytesPerMs / replaySpeed);
     pumpReplay();
   }
   async function retry(): Promise<void> {
@@ -185,35 +189,36 @@ export function createCaptionRecovery(params: {
     if (socket) activate(socket);
     else void retry();
   }
-  function sendAudio(audio: ArrayBuffer): void {
+  function observeSpeech(): void {
+    if (!captionsStarted || deadline || connecting) return;
+    // A missing response to input speech is a stall even if that utterance ends.
+    // Playback tails and silent input never arm this timer.
+    deadline = setTimeout(() => {
+      if (active) fail(active);
+      else stalled();
+    }, captionStallTimeoutMs);
+  }
+  function fanOut(connection: CaptionConnection, frames: ArrayBuffer[], bytes: number): void {
+    if (connection.replaying) appendFrames(connection, frames, bytes);
+    else for (const frame of frames) { if (!sendFrame(connection, frame)) break; }
+  }
+  function sendAudio(audio: ArrayBuffer, hasSpeech: boolean): void {
     if (stopped) return;
     // Replay and fan-out never enter the usage meter again.
     params.initial.send(createInputAudioMessage(audio));
     if (source === "ended" || source === "original-only") return;
+    if (hasSpeech) observeSpeech();
     const frames: ArrayBuffer[] = [];
     for (let offset = 0; offset < audio.byteLength; offset += replayFrameBytes) frames.push(audio.slice(offset, offset + replayFrameBytes));
     appendFrames(history, frames, audio.byteLength);
-    const connection = active;
-    if (!connection) return;
-    if (connection.replaying) appendFrames(connection, frames, audio.byteLength);
-    else for (const frame of frames) { if (!sendFrame(connection, frame)) break; }
-  }
-  function observeAudio(now: number): number {
-    const afterPause = now - lastAudioAt >= captionStallTimeoutMs;
-    lastAudioAt = now;
-    if (afterPause || audioWithoutCaptionSince === null) audioWithoutCaptionSince = now;
-    return audioWithoutCaptionSince;
+    if (active) fanOut(active, frames, audio.byteLength);
   }
   return {
     sendAudio,
     outputAudio(): void {
       if (recoveryDisabled()) return;
-      const now = Date.now();
-      const since = observeAudio(now);
-      if (deadline || connecting) return;
-      if (!captionsStarted) deadline = setTimeout(stalled, captionStallTimeoutMs);
-      // Ongoing stalls require arriving audio, not a timer after speech has ended.
-      else if (now - since >= captionStallTimeoutMs) stalled();
+      if (captionsStarted || deadline || connecting) return;
+      deadline = setTimeout(stalled, captionStallTimeoutMs);
     },
     originalCaption(event: Translation): void {
       if (stopped || source === "recovery" || source === "ended") return;

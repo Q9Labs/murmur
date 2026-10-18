@@ -42,6 +42,8 @@ import {
   type WorkerTelemetryEvent,
 } from "../observability/posthog";
 
+import { reportFailure } from "../observability/outcomes";
+
 import { createCaptionRecovery } from "./captionRecovery";
 
 declare const WebSocketPair: {
@@ -458,10 +460,7 @@ export async function proxyRealtimeSession(
     );
   };
   const retryFailure = (): void => {
-    Sentry.captureMessage("worker_caption_retry_failed", {
-      level: "warning",
-      tags: { app_session_id: appSessionId, operation: "caption_retry" },
-    });
+    reportFailure({ code: "caption.retry_failed", env, duration_ms: 0, outcome: "degraded" });
   };
   captionRecovery = createCaptionRecovery({
     initial: upstream,
@@ -498,9 +497,7 @@ export async function proxyRealtimeSession(
     onReplacement: (count) => { telemetry.stats.captionReplacementCount = count; },
     onExhausted: () => {
       telemetry.stats.captionRecoveryExhausted = true;
-      Sentry.captureMessage("worker_caption_recovery_exhausted", {
-        level: "warning", tags: { app_session_id: appSessionId, operation: "caption_retry" },
-      });
+      reportFailure({ code: "caption.recovery_exhausted", env, duration_ms: 0, outcome: "degraded" });
     },
   });
   const recovery = captionRecovery;
@@ -682,13 +679,14 @@ function bindClientEvents(
   resetSilenceDeadline: () => void,
   isSessionFinished: () => boolean,
   setPlaybackEnabled: (enabled: boolean) => void,
-  sendAudio: (audio: ArrayBuffer) => void,
+  sendAudio: (audio: ArrayBuffer, hasSpeech: boolean) => void,
 ): void {
   const forwardAudio = (audio: ArrayBuffer): void => {
-    if (hasMeaningfulPcm16Audio(audio)) {
+    const hasSpeech = hasMeaningfulPcm16Audio(audio);
+    if (hasSpeech) {
       resetSilenceDeadline();
     }
-    sendAudio(audio);
+    sendAudio(audio, hasSpeech);
     usageMeter.recordAudio(audio.byteLength);
     telemetry.stats.inputAudioChunks += 1;
     telemetry.stats.inputAudioBytes += audio.byteLength;

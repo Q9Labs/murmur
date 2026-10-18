@@ -18,6 +18,15 @@ describe("Worker Sentry privacy controls", () => {
     });
   });
 
+  it.each(["caption.retry_failed", "caption.recovery_exhausted"])("preserves %s without retaining content", (code) => {
+    const event = sanitizeWorkerEvent({ type: undefined, message: "private caption", tags: { failure_code: code, transcript: "private caption" }, extra: { audio: "secret" } });
+    expect(event.tags?.failure_code).toBe(code);
+    expect(event.tags?.operation).toBe("caption_recovery");
+    expect(event.message).not.toBe("Worker request did not complete");
+    expect(JSON.stringify(event)).not.toContain("private");
+    expect(JSON.stringify(event)).not.toContain("secret");
+  });
+
   it("strips query strings, metadata, and exception messages", () => {
     const event = sanitizeWorkerEvent({
       breadcrumbs: [{ message: "private caption", timestamp: 1 }],
