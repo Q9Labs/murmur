@@ -76,6 +76,10 @@ export type WorkerTelemetryEvent =
       caption_recovery_with_transcript: number;
       caption_recovery_failed: number;
       caption_recovery_input_bytes: number;
+      caption_only_used: boolean;
+      caption_only_connected_seconds: number;
+      caption_replacement_count: number;
+      caption_recovery_exhausted: boolean;
       failure_code: string | null;
       input_audio_bytes: number;
       input_audio_chunks: number;

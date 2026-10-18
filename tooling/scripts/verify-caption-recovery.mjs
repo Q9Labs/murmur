@@ -18,6 +18,11 @@ const bundled = await build({
   entryPoints: [resolve(root, "apps/worker/caption-recovery-probe.ts")],
   bundle: true, write: false, format: "esm", platform: "neutral",
   conditions: ["workerd", "worker", "browser"], external: ["node:*", "cloudflare:*"],
+  plugins: process.env.CAPTION_PROOF_BASELINE_SOURCE ? [{name: "baseline-caption-recovery", setup(builder) {
+    builder.onLoad({filter: /sockets\/captionRecovery\.ts$/}, async () => ({
+      contents: await readFile(process.env.CAPTION_PROOF_BASELINE_SOURCE, "utf8"), loader: "ts",
+    }));
+  }}] : [],
 });
 const captionSentinel = "SYNTHETIC_PRIVATE_TRANSCRIPT_CAPTION_RETRY";
 const provider = `
@@ -90,8 +95,8 @@ try {
   {mode:"longer",connections:2,recovered:true,tags:["recovered"]},
   {mode:"mute",connections:2,recovered:true,tags:["recovered"],muted:true},
   {mode:"silent",connections:3,recovered:true,tags:["recovered"]},
-  {mode:"continuous",connections:3,recovered:false,tags:[],frames:310,waitMs:6000},
-  {mode:"cap",connections:3,recovered:false,tags:[],waitMs:25000},
+  {mode:"continuous",connections:4,recovered:false,tags:[],frames:310,waitMs:6000},
+  {mode:"cap",connections:4,recovered:false,tags:[],waitMs:28000},
   {mode:"original-wins",connections:2,recovered:false,tags:["original","continued"],original:true,afterCaptionMs:4000},
   {mode:"recovery-wins",connections:2,recovered:true,tags:["recovered"],original:true,afterCaptionMs:4000},
   {mode:"healthy",connections:1,recovered:false,tags:["original"],original:true},
@@ -121,6 +126,15 @@ try {
    await sleep(100);
   }
  }
+ function assertCostTelemetry(ended,spec) {
+  if (process.env.CAPTION_PROOF_BASELINE !== '1') {
+   assert.equal(ended.properties.caption_only_used,spec.recovered);
+   assert.equal(ended.properties.caption_replacement_count,Math.max(0,spec.connections-2));
+   assert.equal(ended.properties.caption_recovery_exhausted,spec.exhausted??spec.mode==='cap');
+   if(spec.connections>1)assert.ok(ended.properties.caption_only_connected_seconds>0);
+   else assert.equal(ended.properties.caption_only_connected_seconds,0);
+  }
+ }
  async function assertSettlement(id,frames,state,spec) {
   const usage=await settledUsage(id);
   assert.equal(usage.settled_ms,(frames+1)*100,"fan-out/replay billed only once");
@@ -133,6 +147,7 @@ try {
   assert.equal(ended.properties.caption_recovery_connections,spec.connections-1);
   assert.equal(ended.properties.caption_recovery_with_transcript,spec.answered??(spec.recovered?1:0));
   assert.equal(ended.properties.caption_recovery_input_bytes,state.connections.slice(1).reduce((sum,c)=>sum+c.bytes,0));
+  assertCostTelemetry(ended,spec);
   assert.equal(ended.properties.input_audio_bytes,(frames+1)*4800);assert.equal(ended.properties.transport_close_source,null);
   return{mode:spec.mode,passed:true,connections:spec.connections,billedMs:usage.settled_ms,retries:ended.properties.caption_retry_count,recovered:spec.recovered,markersExactlyOnce:true,privacySentinelMatches:0};
  }
@@ -163,6 +178,7 @@ try {
    assert.equal(events.filter(e=>e.kind==='session_opened').length,1);
    assert.equal(events.filter(e=>e.kind==='session_closed'||e.kind==='session_error').length,0);
    const state=await(await upstream.fetch(`http://fake/state?key=${key}`)).json();
+   if(mode==='original-wins')assert.equal(state.connections[1].closed,true,'original winner closes side');
    assert.equal(state.connections.length,spec.connections);
    for(const c of state.connections.slice(1))assert.deepEqual(c.config,state.connections[0].config);
    await enablePlayback(ws,spec.muted,audio);
@@ -177,11 +193,12 @@ try {
    return await assertSettlement(id,frames,finalState,spec);
   }finally{try{ws.close();}catch{}}
  }
- const continuityCases = ["winner-close", "winner-error", "winner-silent", "winner-retry", "original-stall", "winner-cap", "whitespace-original", "whitespace-side"];
+ const continuityCases = ["winner-close", "winner-error", "winner-silent", "winner-retry", "original-stall", "winner-cap", "whitespace-original", "whitespace-side", "long-recovered", "pause-resume"];
  async function whitespaceScenario(context) {
   const original=context.mode==='whitespace-original',index=original?1:2;
   if(!original)await context.until(async()=>(await context.state()).connections.length===2,'first recovery opens');
   for(const delta of ['hello',' ','world','\n','next'])await context.caption(index,delta);
+  await context.until(()=>context.text().length===5,'all active whitespace deltas arrive');
   assert.deepEqual(context.text(),['hello',' ','world','\n','next'],'active deltas preserve whitespace');
   return {connections:index,answered:index-1,original,recovered:!original};
  }
@@ -194,37 +211,61 @@ try {
   await context.caption(1,'first sentence.');context.feed(30);
   await audioUntil(context,async()=>(await context.state()).connections.length===2,'healthy original later stalls');
   await context.caption(2,'first ');await context.caption(2,'sentence.');await context.caption(2,' second sentence.');
-  assert.equal(context.text().join(''),'first sentence. second sentence.','replay prefix once, unique continuation retained');
+  await context.until(()=>context.text().join('').endsWith(' second sentence.'),'replayed captions arrive');
+  assert.equal(context.text().join(''),'first sentence.first sentence. second sentence.','independent replay forwarded unchanged');
   return {connections:2,answered:1,original:true,recovered:true};
  }
- async function fallbackScenario(context) {
-  if(context.mode==='winner-close')await context.control(2,null,1011);
-  if(context.mode==='winner-error')await context.control(2,{type:'error',error:{code:'server_error',message:'SYNTHETIC_PRIVATE_PROVIDER_ERROR'}});
-  await context.caption(1,'first ');await context.caption(1,'sentence.');await context.caption(1,' second sentence only original has.');context.feed(30);
-  if(context.mode==='winner-silent')await audioUntil(context,()=>context.text().join('').includes('second sentence'),'silent winner falls back');
-  await context.caption(1,' third sentence only original has.');
-  await context.until(()=>context.text().join('').endsWith('third sentence only original has.'),'original unique captions survive');
-  assert.equal(context.text().join(''),'first sentence. second sentence only original has. third sentence only original has.');
-  return {connections:(await context.state()).connections.length,answered:1,original:true,recovered:true};
- }
- async function secondRetryScenario(context) {
+ async function replacementScenario(context) {
+  const failure={
+   'winner-close':{event:null,close:1011},
+   'winner-error':{event:{type:'error',error:{code:'server_error',message:'SYNTHETIC_PRIVATE_PROVIDER_ERROR'}}},
+  }[context.mode];
+  if(failure)await context.control(2,failure.event,failure.close);
+  await context.caption(1,'original translation must never appear');
   context.feed(30);
-  await audioUntil(context,async()=>(await context.state()).connections.length===3,'silent winner opens second recovery');
+  await audioUntil(context,async()=>(await context.state()).connections.length===3,'winner replaced without original fallback');
+  await context.until(async()=>(await context.state()).connections[2].bytes>=4800,'replacement replays speech');
   for(const delta of ['first ','sentence.',' ','second','\n','next'])await context.caption(3,delta);
-  assert.equal(context.text().join(''),'first sentence. second\nnext','switch suppresses replay prefix, preserves unique whitespace');
+  await context.until(()=>context.text().length>=7,'all replacement deltas arrive');
+  assert.deepEqual(context.text(),['first sentence.','first ','sentence.',' ','second','\n','next'],'all replacement deltas unchanged; no original captions');
   const capped=context.mode==='winner-cap';
   if(capped) {
-   await context.control(3,null,1011);await sleep(250);assert.equal((await context.state()).connections.length,3,'two-attempt lifetime cap');
-   await context.caption(1,' unique after cap.');
-   assert.equal(context.text().join(''),'first sentence. second\nnext unique after cap.','original remains available after cap');
+   await context.control(3,null,1011);
+   await context.until(async()=>(await context.state()).connections.length===4,'second replacement opens');
+   await context.caption(4,' final side.');
+   await context.until(()=>context.text().at(-1)===' final side.','last side caption arrives');
+   await context.control(4,null,1011);
+   await context.until(async()=>(await context.state()).connections[3].closed,'cap retires last side');
+   await context.caption(1,' no fallback after cap.');context.feed(33);await sleep(300);
+   assert.equal((await context.state()).connections.length,4,'two replacement lifetime cap');
+   assert.equal(context.text().join(''),'first sentence.first sentence. second\nnext final side.');
   }
-  return {connections:3,answered:2,original:capped,recovered:true};
+  await context.caption(1,' still no original.');
+  assert.ok(!context.text().join('').includes('original'));
+  const connections=3+Number(capped);
+  return {connections,answered:connections-1,original:true,recovered:true,exhausted:capped};
+ }
+ async function longScenario(context) {
+  // Audio duration, not wall time: 160 seconds exceeds the removed 120-second input cap.
+  for(let i=0;i<1600;i++) {
+   context.feed(50+i%50);
+   if(i%100===0) {await context.caption(2,' continued');await sleep(25);}
+  }
+  await context.until(async()=>(await context.state()).connections[1].bytes>150*48000,'caption input continues past two minutes');
+  await context.caption(2,' after 160 seconds');
+  await context.until(()=>context.text().at(-1)===' after 160 seconds','late side caption arrives');
+  await context.caption(1,'original must be ignored after two minutes');
+  assert.equal(context.text().at(-1),' after 160 seconds');
+  assert.ok(!context.text().join('').includes('original'));
+  assert.equal((await context.state()).connections.length,2,'healthy side never replaced');
+  return {connections:2,answered:1,original:true,recovered:true};
  }
  async function winnerScenario(context) {
   await context.until(async()=>(await context.state()).connections.length===2,'first recovery opens');
   await context.until(async()=>(await context.state()).connections[1].bytes===48000,'replay caught up');
   await context.caption(2,'first sentence.');
-  return ['winner-close','winner-error','winner-silent'].includes(context.mode)?fallbackScenario(context):secondRetryScenario(context);
+  if(context.mode==='pause-resume')await sleep(11000);
+  return context.mode==='long-recovered'?longScenario(context):replacementScenario(context);
  }
  async function runContinuity(mode) {
   const id=randomUUID(),key=mode+'_'+id,events=[],audio=[],expected=[];let closed=false;

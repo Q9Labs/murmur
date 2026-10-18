@@ -13,7 +13,7 @@ export default {
     const now = Date.now();
     for (const command of [
       { action: "bootstrap_guest", customerId: id, principalId: id, principalProvider: "anonymous",
-        providerSubject: id, grantFreeAllowance: true, freeAllowanceMs: 60_000,
+        providerSubject: id, grantFreeAllowance: true, freeAllowanceMs: 600_000,
         periodKey: id, periodStartsAtMs: now, periodExpiresAtMs: now + 3_600_000, nowMs: now },
       { action: "open_usage_session", customerId: id, usageSessionId: id, nowMs: now },
     ] as const) {

@@ -186,6 +186,9 @@ export async function proxyRealtimeSession(
       captionConnectionsWithTranscript: 0,
       captionConnectionsFailed: 0,
       captionInputBytes: 0,
+      captionConnectedSeconds: 0,
+      captionReplacementCount: 0,
+      captionRecoveryExhausted: false,
       closeReason: null,
       failureCode: null,
       inputAudioBytes: 0,
@@ -491,6 +494,14 @@ export async function proxyRealtimeSession(
     onConnectionCaption: () => { telemetry.stats.captionConnectionsWithTranscript += 1; },
     onConnectionFailure: () => { telemetry.stats.captionConnectionsFailed += 1; },
     onInput: (bytes) => { telemetry.stats.captionInputBytes += bytes; },
+    onConnectedSeconds: (seconds) => { telemetry.stats.captionConnectedSeconds += seconds; },
+    onReplacement: (count) => { telemetry.stats.captionReplacementCount = count; },
+    onExhausted: () => {
+      telemetry.stats.captionRecoveryExhausted = true;
+      Sentry.captureMessage("worker_caption_recovery_exhausted", {
+        level: "warning", tags: { app_session_id: appSessionId, operation: "caption_retry" },
+      });
+    },
   });
   const recovery = captionRecovery;
   bindClientEvents(
@@ -931,6 +942,9 @@ type RealtimeTelemetry = {
     captionConnectionsWithTranscript: number;
     captionConnectionsFailed: number;
     captionInputBytes: number;
+    captionConnectedSeconds: number;
+    captionReplacementCount: number;
+    captionRecoveryExhausted: boolean;
     closeReason: string | null;
     failureCode: string | null;
     inputAudioBytes: number;
@@ -986,6 +1000,10 @@ function createSessionEndedEvent(
     caption_recovery_with_transcript: telemetry.stats.captionConnectionsWithTranscript,
     caption_recovery_failed: telemetry.stats.captionConnectionsFailed,
     caption_recovery_input_bytes: telemetry.stats.captionInputBytes,
+    caption_only_used: telemetry.stats.captionsRecovered,
+    caption_only_connected_seconds: telemetry.stats.captionConnectedSeconds,
+    caption_replacement_count: telemetry.stats.captionReplacementCount,
+    caption_recovery_exhausted: telemetry.stats.captionRecoveryExhausted,
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,
     input_audio_chunks: telemetry.stats.inputAudioChunks,
