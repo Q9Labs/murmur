@@ -11,10 +11,13 @@ import {
 } from "react-native";
 import { PostHogMaskView } from "posthog-react-native";
 
+import type { AudioCaptureSource } from "../../../modules/murmur-audio";
 import type { TranslationSpan } from "@murmur/protocol/session";
 import type { UiDirection } from "../../i18n/types";
 import { uiTextDirectionStyle, useUiLocale, type Translate } from "../../i18n/runtime";
 import { formatLiveError, formatReportError } from "../errorCopy";
+import { translationStartingState } from "../../lib/live-translation/startingState";
+import { TranslationStarting } from "./bloom/translationStarting";
 import { styles as homeStyles } from "../styles";
 import {
   hasVisibleTimeline,
@@ -104,6 +107,7 @@ export type TimelineTextStyles = {
 
 export function SpanTimeline({
   contentStyle,
+  captureSource = "microphone",
   live,
   style,
   textStyles,
@@ -111,6 +115,7 @@ export function SpanTimeline({
   ...refs
 }: TimelineScrollRefs & {
   contentStyle?: StyleProp<ViewStyle>;
+  captureSource?: AudioCaptureSource;
   live: VariantShellProps["live"];
   style?: StyleProp<ViewStyle>;
   textStyles: TimelineTextStyles;
@@ -123,6 +128,7 @@ export function SpanTimeline({
     : "auto";
   const visibleSpans = live.spans.filter((span) => !shouldHideSpan(span));
   const hasTimeline = hasVisibleTimeline(visibleSpans, live.tentative_source_caption);
+  const starting = translationStartingState(viewModel.isLive, hasTimeline, live.starting_slow);
 
   return (
     <PostHogMaskView style={style}>
@@ -134,7 +140,8 @@ export function SpanTimeline({
         style={style}
         {...timelineScrollHandlers(refs)}
       >
-        {!hasTimeline ? (
+        {starting ? <TranslationStarting slow={starting === "slow"} phoneAudio={captureSource === "device_playback"} /> : null}
+        {!hasTimeline && !starting ? (
           <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
             {timelineEmptyText(
               viewModel.isLive,

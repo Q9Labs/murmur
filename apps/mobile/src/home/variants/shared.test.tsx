@@ -8,7 +8,7 @@ import type { HomeViewModel } from "../viewModel";
 import { SpanTimeline } from "./shared";
 
 vi.mock("react-native", () =>
-  import("../../screens/__tests__/reactNativePrimitives").then((module) => module.reactNativePrimitives),
+  import("../../screens/__tests__/reactNativePrimitives").then((module) => ({ ...module.reactNativePrimitives, Animated: { View: module.reactNativePrimitives.View } })),
 );
 vi.mock("posthog-react-native", () => ({
   PostHogMaskView: ({ children }: { children?: ReactNode }) => children ?? null,
@@ -46,3 +46,8 @@ describe("SpanTimeline empty state", () => {
     });
   });
 });
+
+vi.mock("./hooks", () => ({
+  useReducedMotion: () => true,
+  usePulse: () => ({ interpolate: () => 1 }),
+}));

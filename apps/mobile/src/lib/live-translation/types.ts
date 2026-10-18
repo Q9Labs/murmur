@@ -71,6 +71,7 @@ export type LiveTranslationState = {
   spans: TranslationSpan[];
   status: SessionState;
   tentative_source_caption: string;
+  starting_slow: boolean;
 };
 
 export type LiveTranslationController = LiveTranslationState & {

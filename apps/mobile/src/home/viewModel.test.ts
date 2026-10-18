@@ -49,6 +49,7 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
     start: async () => undefined,
     status: "idle",
     stop: async () => undefined,
+    starting_slow: false,
     tentative_source_caption: "",
     ...overrides,
   };

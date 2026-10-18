@@ -102,6 +102,8 @@ const uiPreviewScreens = [
   "translation-muted",
   "translation-only",
   "translation-phone-audio",
+  "translation-starting",
+  "translation-starting-slow",
   "update-required",
   "welcome",
 ] as const;

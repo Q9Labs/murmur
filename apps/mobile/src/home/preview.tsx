@@ -26,7 +26,7 @@ import { BloomOnboarding } from "./variants/bloom/onboarding";
 import { BloomShell } from "./variants/bloom";
 import type { VariantOnboardingProps, VariantShellProps } from "./variants/types";
 
-type PreviewLiveVariant = "app-version-unsupported" | "exhausted" | "idle" | "live" | "translation-only";
+type PreviewLiveVariant = "app-version-unsupported" | "exhausted" | "idle" | "live" | "translation-only" | "starting" | "starting-slow";
 
 function createPreviewLive(conversation: PreviewConversation): LiveTranslationController {
   const live: LiveTranslationController = {
@@ -91,12 +91,16 @@ function createPreviewLive(conversation: PreviewConversation): LiveTranslationCo
     status: "live",
     stop: async () => undefined,
     tentative_source_caption: "",
+    starting_slow: false,
   };
   return live;
 }
 
 function previewLiveFor(conversation: PreviewConversation, variant: PreviewLiveVariant): LiveTranslationController {
   const live = createPreviewLive(conversation);
+  if (variant === "starting" || variant === "starting-slow") {
+    return { ...live, spans: [], starting_slow: variant === "starting-slow" };
+  }
   if (variant === "live") {
     return live;
   }
@@ -147,6 +151,8 @@ const previewRenderers: Readonly<Record<PreviewScreen, () => ReactNode>> = {
   rating: () => <RatingPreview />,
   "rating-answered": () => <RatingPreview answered />,
   translation: () => <TranslationPreview />,
+  "translation-starting": () => <TranslationPreview live="starting" />,
+  "translation-starting-slow": () => <TranslationPreview live="starting-slow" />,
   "translation-background": () => <TranslationPreview listeningInBackground />,
   "translation-muted": () => <TranslationPreview audioPlaybackEnabled={false} />,
   "translation-only": () => <TranslationPreview live="translation-only" />,

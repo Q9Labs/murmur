@@ -62,6 +62,7 @@ vi.mock("react-native", () => {
   }
 
   return {
+    Animated: { View: Primitive },
     Platform: { OS: "ios", select: <T,>(values: { default?: T; ios?: T }): T | undefined => values.ios ?? values.default },
     Pressable,
     ScrollView: Primitive,
@@ -89,6 +90,8 @@ vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn()
 
 vi.mock("./hooks", () => ({
   useMicLevelValue: () => 0.75,
+  useReducedMotion: () => true,
+  usePulse: () => ({ interpolate: () => 1 }),
 }));
 
 const onboardingTheme: OnboardingTheme = {
@@ -159,6 +162,7 @@ function shellProps(params: {
     report_receipt_id: "receipt-123456",
     spans: params.hasTimeline ? [committed, partial] : [],
     status: params.isLive ? "live" as const : "ended" as const,
+    starting_slow: false,
     tentative_source_caption: params.hasTimeline ? "tentative caption" : "",
   };
   const viewModel = buildHomeViewModel({
@@ -331,7 +335,7 @@ describe("translation-only timeline", () => {
     expect(harness.maskedContentViews).toBe(1);
   });
 
-  it("invites the listener in the target language before anything is heard", () => {
-    expect(renderTimeline(false, false)).toContain("Listening. Arabic will appear here as people speak.");
+  it("shows translation starting before anything is heard", () => {
+    expect(renderTimeline(false, false)).toContain("Translation is starting…");
   });
 });
