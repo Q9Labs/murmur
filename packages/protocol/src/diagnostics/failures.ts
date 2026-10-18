@@ -9,6 +9,14 @@ type FailureDefinition = {
 };
 
 export const failures = {
+  "caption.retry_failed": {
+    class: "unknown", operation: "caption_recovery", description: "Caption connection did not respond",
+    retryable: true, main_action_affected: true,
+  },
+  "caption.recovery_exhausted": {
+    class: "unknown", operation: "caption_recovery", description: "Caption recovery attempts were exhausted",
+    retryable: false, main_action_affected: true,
+  },
   "worker.request_failed": {
     class: "unknown", operation: "http_request", description: "Worker request did not complete",
     retryable: false, main_action_affected: true,

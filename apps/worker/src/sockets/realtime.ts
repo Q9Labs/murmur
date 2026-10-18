@@ -27,7 +27,6 @@ import {
   type WorkerWebSocket,
 } from "../http/response";
 import {
-  createInputAudioMessage,
   createSessionUpdate,
   openTranslationSocket,
   parseTranslationOutput,
@@ -42,6 +41,10 @@ import {
   type TelemetryExecutionContext,
   type WorkerTelemetryEvent,
 } from "../observability/posthog";
+
+import { reportFailure } from "../observability/outcomes";
+
+import { createCaptionRecovery } from "./captionRecovery";
 
 declare const WebSocketPair: {
   new (): { 0: WorkerWebSocket; 1: WorkerWebSocket };
@@ -178,6 +181,16 @@ export async function proxyRealtimeSession(
     env,
     startedAtMs: realtimeStartedAtMs,
     stats: {
+      captionRetryCount: 0,
+      captionsRecovered: false,
+      originalCaptionReceived: false,
+      captionConnections: 0,
+      captionConnectionsWithTranscript: 0,
+      captionConnectionsFailed: 0,
+      captionInputBytes: 0,
+      captionConnectedSeconds: 0,
+      captionReplacementCount: 0,
+      captionRecoveryExhausted: false,
       closeReason: null,
       failureCode: null,
       inputAudioBytes: 0,
@@ -194,6 +207,7 @@ export async function proxyRealtimeSession(
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let sessionFinished = false;
   let upstream: WorkerWebSocket | null = null;
+  let captionRecovery: ReturnType<typeof createCaptionRecovery> | null = null;
 
   const terminate = (termination: RealtimeTermination): void => {
     if (sessionFinished) {
@@ -211,6 +225,7 @@ export async function proxyRealtimeSession(
       });
     }
     providerAbort.abort();
+    captionRecovery?.stop();
     clearRealtimeTimers();
     if (termination.errorCode) {
       safelySendSessionError(
@@ -425,26 +440,79 @@ export async function proxyRealtimeSession(
     });
   }, 5_000);
   resetSilenceDeadline();
+  const bindUpstream = (socket: WorkerWebSocket): void => {
+    bindProviderEvents(
+      client,
+      socket,
+      telemetry,
+      terminate,
+      () => sessionFinished || upstream !== socket,
+      config.source_transcript,
+      (delta, event) => {
+        if (delta.trim()) telemetry.stats.originalCaptionReceived = true;
+        captionRecovery?.originalCaption(event);
+        return false;
+      },
+      (audio) => {
+        captionRecovery?.outputAudio();
+        if (playback.enabled && config.output_audio_enabled && client.readyState === WebSocket.OPEN) client.send(audio);
+      },
+    );
+  };
+  const retryFailure = (): void => {
+    reportFailure({ code: "caption.retry_failed", env, duration_ms: 0, outcome: "degraded" });
+  };
+  captionRecovery = createCaptionRecovery({
+    initial: upstream,
+    open: async (signal) => {
+      const socket = await openTranslationSocket({
+        apiKey: validated.apiKey,
+        model: config.realtime_model,
+        safetyIdentifier: validated.safetyIdentifier,
+        signal: AbortSignal.any([signal, providerAbort.signal]),
+      });
+      try {
+        socket.send(createSessionUpdate(
+          validated.targetLanguage, validated.captureSource, config.source_transcript,
+        ));
+      } catch (failure) {
+        safelyCloseSocket(socket, 1000, "caption_retry_discarded", appSessionId);
+        throw failure;
+      }
+      return socket;
+    },
+    onCaption: (event) => forwardProviderEvent(
+      { kind: "event", event }, client, telemetry, terminate,
+      (delta) => { insightCollector?.add(delta); return true; },
+    ),
+    retire: (socket) => safelyCloseSocket(socket, 1000, "caption_retry_replaced", appSessionId),
+    onRetry: (count) => { telemetry.stats.captionRetryCount = count; },
+    onRecovered: () => { telemetry.stats.captionsRecovered = true; },
+    onRetryFailure: retryFailure,
+    onConnection: () => { telemetry.stats.captionConnections += 1; },
+    onConnectionCaption: () => { telemetry.stats.captionConnectionsWithTranscript += 1; },
+    onConnectionFailure: () => { telemetry.stats.captionConnectionsFailed += 1; },
+    onInput: (bytes) => { telemetry.stats.captionInputBytes += bytes; },
+    onConnectedSeconds: (seconds) => { telemetry.stats.captionConnectedSeconds += seconds; },
+    onReplacement: (count) => { telemetry.stats.captionReplacementCount = count; },
+    onExhausted: () => {
+      telemetry.stats.captionRecoveryExhausted = true;
+      reportFailure({ code: "caption.recovery_exhausted", env, duration_ms: 0, outcome: "degraded" });
+    },
+  });
+  const recovery = captionRecovery;
   bindClientEvents(
     client,
-    upstream,
+    () => upstream,
     telemetry,
     terminate,
     usageMeter,
     resetSilenceDeadline,
     () => sessionFinished,
     (enabled) => { playback.enabled = enabled; },
+    recovery.sendAudio,
   );
-  bindProviderEvents(
-    client,
-    upstream,
-    telemetry,
-    terminate,
-    () => sessionFinished,
-    () => playback.enabled && config.output_audio_enabled,
-    config.source_transcript,
-    (delta) => insightCollector?.add(delta),
-  );
+  bindUpstream(upstream);
   try {
     upstream.send(createSessionUpdate(
       validated.targetLanguage,
@@ -604,19 +672,21 @@ async function closeRejectedUsageSession(
 
 function bindClientEvents(
   client: WorkerWebSocket,
-  upstream: WorkerWebSocket,
+  getUpstream: () => WorkerWebSocket | null,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
   usageMeter: RealtimeUsageMeter,
   resetSilenceDeadline: () => void,
   isSessionFinished: () => boolean,
   setPlaybackEnabled: (enabled: boolean) => void,
+  sendAudio: (audio: ArrayBuffer, hasSpeech: boolean) => void,
 ): void {
   const forwardAudio = (audio: ArrayBuffer): void => {
-    if (hasMeaningfulPcm16Audio(audio)) {
+    const hasSpeech = hasMeaningfulPcm16Audio(audio);
+    if (hasSpeech) {
       resetSilenceDeadline();
     }
-    upstream.send(createInputAudioMessage(audio));
+    sendAudio(audio, hasSpeech);
     usageMeter.recordAudio(audio.byteLength);
     telemetry.stats.inputAudioChunks += 1;
     telemetry.stats.inputAudioBytes += audio.byteLength;
@@ -642,7 +712,7 @@ function bindClientEvents(
   const queueAudio = (audio: ArrayBuffer): void => {
     // fallow-ignore-next-line complexity
     audioQueue = audioQueue.then(async () => {
-      if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
+      if (isSessionFinished() || getUpstream()?.readyState !== WebSocket.OPEN) {
         return;
       }
       let acceptance = usageMeter.checkAudio(audio.byteLength);
@@ -658,7 +728,7 @@ function bindClientEvents(
         stopForBilling(acceptance === "phone_audio_gift_exhausted" ? acceptance : "allowance_exhausted");
         return;
       }
-      if (isSessionFinished() || upstream.readyState !== WebSocket.OPEN) {
+      if (isSessionFinished() || getUpstream()?.readyState !== WebSocket.OPEN) {
         return;
       }
       forwardAudio(audio);
@@ -684,7 +754,7 @@ function bindClientEvents(
         return;
       }
       void event.data.arrayBuffer().then((audio) => {
-        if (upstream.readyState === WebSocket.OPEN) {
+        if (getUpstream()?.readyState === WebSocket.OPEN) {
           queueAudio(audio);
         }
       }).catch((failure: unknown) => {
@@ -717,27 +787,23 @@ function bindProviderEvents(
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
   isFinished: () => boolean,
-  isPlaybackEnabled: () => boolean,
   sourceTranscript: boolean,
-  onTranslation: (delta: string) => void,
+  onTranslation: (delta: string, event: Extract<RealtimeServerEvent, { kind: "translation_delta" | "source_delta" }>) => boolean,
+  onOutputAudio: (audio: ArrayBuffer) => void,
 ): void {
   upstream.addEventListener("message", (event: MessageEvent) => {
+    if (isFinished()) return;
     try {
       const output = parseTranslationOutput(event.data);
       if (output.kind === "audio") {
-        if (isPlaybackEnabled() && client.readyState === WebSocket.OPEN) {
-          client.send(output.pcm16);
-        }
+        onOutputAudio(output.pcm16);
         return;
       }
       if (output.kind === "event") {
-        if (output.event.kind === "translation_delta") {
-          onTranslation(output.event.delta);
-        }
         if (output.event.kind === "source_delta" && !sourceTranscript) {
           return;
         }
-        forwardProviderEvent(output, client, telemetry, terminate);
+        forwardProviderEvent(output, client, telemetry, terminate, onTranslation);
       }
     } catch (failure) {
       Sentry.captureException(failure, {
@@ -766,6 +832,7 @@ function bindProviderEvents(
     });
   });
   upstream.addEventListener("error", () => {
+    if (isFinished()) return;
     Sentry.captureMessage("worker_provider_websocket_error", {
       fingerprint: ["worker_provider_websocket_error"],
       level: "error",
@@ -790,7 +857,9 @@ function forwardProviderEvent(
   client: WorkerWebSocket,
   telemetry: RealtimeTelemetry,
   terminate: (termination: RealtimeTermination) => void,
+  onTranslation: (delta: string, event: Extract<RealtimeServerEvent, { kind: "translation_delta" | "source_delta" }>) => boolean,
 ): void {
+  if (output.event.kind === "translation_delta" && !onTranslation(output.event.delta, output.event)) return;
   captureFirstProviderSignal(output.event, telemetry);
   if (output.event.kind === "session_error") {
     telemetry.stats.failureCode = normalizeFailureCode(output.event.code);
@@ -864,6 +933,16 @@ type RealtimeTelemetry = {
   env: Env;
   startedAtMs: number;
   stats: {
+    captionRetryCount: number;
+    captionsRecovered: boolean;
+    originalCaptionReceived: boolean;
+    captionConnections: number;
+    captionConnectionsWithTranscript: number;
+    captionConnectionsFailed: number;
+    captionInputBytes: number;
+    captionConnectedSeconds: number;
+    captionReplacementCount: number;
+    captionRecoveryExhausted: boolean;
     closeReason: string | null;
     failureCode: string | null;
     inputAudioBytes: number;
@@ -892,7 +971,7 @@ function captureFirstProviderSignal(
       worker_elapsed_ms: Math.max(0, Date.now() - telemetry.startedAtMs),
     });
   }
-  if (event.kind === "translation_delta" && !telemetry.stats.translationReceived) {
+  if (event.kind === "translation_delta" && event.delta.trim() && !telemetry.stats.translationReceived) {
     telemetry.stats.translationReceived = true;
     queueRealtimeTelemetry(telemetry, {
       app_session_id: telemetry.appSessionId,
@@ -912,6 +991,17 @@ function createSessionEndedEvent(
     app_session_id: telemetry.appSessionId,
     close_reason: telemetry.stats.closeReason,
     event: "worker_session_ended",
+    caption_retry_count: telemetry.stats.captionRetryCount,
+    captions_recovered: telemetry.stats.captionsRecovered,
+    caption_original_received: telemetry.stats.originalCaptionReceived,
+    caption_recovery_connections: telemetry.stats.captionConnections,
+    caption_recovery_with_transcript: telemetry.stats.captionConnectionsWithTranscript,
+    caption_recovery_failed: telemetry.stats.captionConnectionsFailed,
+    caption_recovery_input_bytes: telemetry.stats.captionInputBytes,
+    caption_only_used: telemetry.stats.captionsRecovered,
+    caption_only_connected_seconds: telemetry.stats.captionConnectedSeconds,
+    caption_replacement_count: telemetry.stats.captionReplacementCount,
+    caption_recovery_exhausted: telemetry.stats.captionRecoveryExhausted,
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,
     input_audio_chunks: telemetry.stats.inputAudioChunks,

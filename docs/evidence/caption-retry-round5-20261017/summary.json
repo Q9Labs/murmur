@@ -1,0 +1,214 @@
+{
+  "baseHead": "59673c3",
+  "unitTests": 956,
+  "workerdCases": 18,
+  "newCasesFailingBefore": 8,
+  "gateExitCode": 0,
+  "sourceSha256": {
+    "apps/worker/src/sockets/captionRecovery.ts": "58696c61ce76d5a5f09ddd49c1c2d34bd073c9d022079c5965061efb4041c2f5",
+    "apps/worker/src/sockets/captionRecovery.test.ts": "877ebeb2852cd6571304cb3bb33fb756b67ed33747e7a5be9860e045e7fec006",
+    "apps/worker/src/sockets/realtime.ts": "e13faa7ffd6d8da0fdaa90ee377e4920afe4ec9b6eafa25154135fc019a46d9a",
+    "tooling/scripts/verify-caption-recovery.mjs": "4127724c797ee9978deec5551b83ba6508de897e4b169e0c3210faa991e8bee7"
+  },
+  "live": {
+    "sessions": 10,
+    "noCaption": 0,
+    "medianMs": 1195.5,
+    "p95Ms": 17740,
+    "maxMs": 17740,
+    "retryCounts": {
+      "0": 7,
+      "1": 2,
+      "2": 1
+    },
+    "originalWithoutCaption": 3,
+    "captionConnections": 4,
+    "captionWithTranscript": 3,
+    "captionFailedDeadlineOrTransport": 1,
+    "protocolErrors": 0
+  },
+  "liveRows": [
+    {
+      "run": 1,
+      "firstCaptionMs": 769,
+      "audioToFirstCaptionMs": -5342,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 2,
+      "firstCaptionMs": 12041,
+      "audioToFirstCaptionMs": 10920,
+      "retries": 1,
+      "captionsRecovered": true,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 3,
+      "firstCaptionMs": 1161,
+      "audioToFirstCaptionMs": 0,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 4,
+      "firstCaptionMs": 17740,
+      "audioToFirstCaptionMs": 16899,
+      "retries": 2,
+      "captionsRecovered": true,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 5,
+      "firstCaptionMs": 960,
+      "audioToFirstCaptionMs": 19,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 6,
+      "firstCaptionMs": 760,
+      "audioToFirstCaptionMs": -281,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 7,
+      "firstCaptionMs": 5760,
+      "audioToFirstCaptionMs": -2162,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 8,
+      "firstCaptionMs": 951,
+      "audioToFirstCaptionMs": 0,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 9,
+      "firstCaptionMs": 1230,
+      "audioToFirstCaptionMs": 99,
+      "retries": 0,
+      "captionsRecovered": false,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    },
+    {
+      "run": 10,
+      "firstCaptionMs": 12170,
+      "audioToFirstCaptionMs": 11050,
+      "retries": 1,
+      "captionsRecovered": true,
+      "captionHasSpaces": true,
+      "whitespaceOnlyDeltas": 0,
+      "cleanClose": true
+    }
+  ],
+  "rawCaptionJoinsExact": true,
+  "spend": {
+    "pilotReservedAudioSeconds": 5.569625,
+    "audioSeconds": 31.56120833333333,
+    "estimatedUsd": 0.01788468472222222,
+    "ceilingAudioSeconds": 176,
+    "hardCapUsd": 0.1,
+    "rateUsdPerMinute": 0.034,
+    "source": "https://developers.openai.com/api/docs/models/gpt-realtime-translate"
+  },
+  "restored": {
+    "versions": [
+      {
+        "version_id": "2ca27398-d8d2-432e-9a4e-17cd99edd209",
+        "percentage": 100
+      }
+    ],
+    "observability": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "redact_query_string": false,
+      "logs": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "persist": true,
+        "invocation_logs": false
+      },
+      "traces": {
+        "enabled": false,
+        "persist": true,
+        "head_sampling_rate": 1
+      }
+    }
+  },
+  "independentRestoration": {
+    "at": "2026-10-17T18:52:28.409Z",
+    "sandboxVersionExact": true,
+    "observabilityExact": true,
+    "current": {
+      "versions": [
+        {
+          "version_id": "2ca27398-d8d2-432e-9a4e-17cd99edd209",
+          "percentage": 100
+        }
+      ],
+      "observability": {
+        "enabled": false,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": false
+        },
+        "traces": {
+          "enabled": false,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    },
+    "databases": [
+      {
+        "status": 404
+      },
+      {
+        "status": 404
+      }
+    ],
+    "productionAccessed": false
+  },
+  "privacy": {
+    "workerdSentinelMatches": 0,
+    "fullCloudflareProofPassed": false,
+    "gap": "Earlier retained log proof lacks required current-run synthetic-error control; not rerun in round five."
+  },
+  "limits": [
+    "Exact text overlap only; semantic deduplication of independent paraphrases is not guaranteed.",
+    "Fresh independent review is owned by the lead.",
+    "One earlier candidate preflight received captions then closed 1006 without ended telemetry; cause unproven, outside final cohort and conservatively reserved at three input copies."
+  ]
+}

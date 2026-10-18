@@ -1,0 +1,748 @@
+{
+  "scope": {
+    "priorHead": "832cc4ba74f670e0af1227bbd3c8c0605c7efde8",
+    "productionAccessed": false,
+    "machine": "agents-macmini",
+    "allAudioSynthetic": true,
+    "sourceSha256": {
+      "apps/worker/src/sockets/captionRecovery.ts": "f0fc2fe37b59de3a81d380ed4226a663145412592cc3fb8e3e47ad7f6e358dfc",
+      "apps/worker/src/sockets/realtime.ts": "83b96c5076d668da4544580b606d91ba8fb8149794b828dec63c2b9c86599631",
+      "apps/worker/src/observability/posthog.ts": "bd74febe02dd7ac5cc406de16eb034030c9963901ce9988a1f9e575761d3cb6b",
+      "apps/worker/src/sockets/captionRecovery.test.ts": "f19714ea5246abb1f40f43344e123a79fff99330e08d4ee73a7e0b8b32346557",
+      "apps/worker/src/sockets/realtime.test.ts": "f676a715eb0f4c692941b754ab0602e8f3794b0c6eed5ea971d27f11ae38d73e",
+      "tooling/scripts/verify-caption-recovery.mjs": "e38c47fc9a1a772a85986539525c3625eb0f638943cbaebb0d436176f27fa512"
+    }
+  },
+  "fixtures": {
+    "short": {
+      "bytes": 89114,
+      "seconds": 1.8565416666666668,
+      "sha256": "8367b2effbee45c55c563ce3954d809b5bb914f0b9ae93975eedcdffd9a5b0fb"
+    },
+    "long": {
+      "bytes": 960000,
+      "seconds": 20,
+      "sha256": "471ec1c6a15d5f396b836574cc7d3d77e1b38af2114f5e16dc7b9197194b1177"
+    }
+  },
+  "fullInputCohort": {
+    "short": {
+      "sessions": 10,
+      "noCaptionWithin25s": 0,
+      "firstCaptionMs": {
+        "median": 1185.5,
+        "p95": 12360,
+        "max": 12360
+      },
+      "signedAudioToCaptionMs": {
+        "min": -4931,
+        "median": 98.5,
+        "p95": 11401,
+        "max": 11401
+      },
+      "retryHistogram": {
+        "1": 2,
+        "0": 8
+      },
+      "originalWithoutCaption": 2,
+      "sideConnections": 2,
+      "sideWithTranscript": 2,
+      "sideFailedDeadlineOrTransport": 0,
+      "sideCensored": 0,
+      "telemetryInferred": 1,
+      "abnormalCloses": [
+        4
+      ]
+    },
+    "long": {
+      "sessions": 10,
+      "noCaptionWithin25s": 0,
+      "firstCaptionMs": {
+        "median": 2769.5,
+        "p95": 6869,
+        "max": 6869
+      },
+      "signedAudioToCaptionMs": {
+        "min": -451,
+        "median": 1559.0,
+        "p95": 5868,
+        "max": 5868
+      },
+      "retryHistogram": {
+        "0": 10
+      },
+      "originalWithoutCaption": 0,
+      "sideConnections": 0,
+      "sideWithTranscript": 0,
+      "sideFailedDeadlineOrTransport": 0,
+      "sideCensored": 0,
+      "telemetryInferred": 0,
+      "abnormalCloses": []
+    }
+  },
+  "allAttempts": {
+    "short": {
+      "sessions": 10,
+      "noCaptionWithin25s": 0,
+      "firstCaptionMs": {
+        "median": 1185.5,
+        "p95": 12360,
+        "max": 12360
+      },
+      "signedAudioToCaptionMs": {
+        "min": -4931,
+        "median": 98.5,
+        "p95": 11401,
+        "max": 11401
+      },
+      "retryHistogram": {
+        "1": 2,
+        "0": 8
+      },
+      "originalWithoutCaption": 2,
+      "sideConnections": 2,
+      "sideWithTranscript": 2,
+      "sideFailedDeadlineOrTransport": 0,
+      "sideCensored": 0,
+      "telemetryInferred": 1,
+      "abnormalCloses": [
+        4
+      ]
+    },
+    "long": {
+      "sessions": 11,
+      "noCaptionWithin25s": 0,
+      "firstCaptionMs": {
+        "median": 2740,
+        "p95": 6869,
+        "max": 6869
+      },
+      "signedAudioToCaptionMs": {
+        "min": -451,
+        "median": 1339,
+        "p95": 5868,
+        "max": 5868
+      },
+      "retryHistogram": {
+        "0": 11
+      },
+      "originalWithoutCaption": 0,
+      "sideConnections": 0,
+      "sideWithTranscript": 0,
+      "sideFailedDeadlineOrTransport": 0,
+      "sideCensored": 0,
+      "telemetryInferred": 0,
+      "abnormalCloses": []
+    }
+  },
+  "trials": [
+    {
+      "run": 1,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 12360,
+      "firstAudioMs": 959,
+      "audioToCaptionMs": 11401,
+      "retryCount": 1,
+      "telemetry": {
+        "caption_retry_count": 1,
+        "captions_recovered": true,
+        "caption_original_received": false,
+        "caption_recovery_connections": 1,
+        "caption_recovery_with_transcript": 1,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 89114,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25035,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 1,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 2799,
+      "firstAudioMs": 1511,
+      "audioToCaptionMs": 1288,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25049,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    },
+    {
+      "run": 2,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 12100,
+      "firstAudioMs": 841,
+      "audioToCaptionMs": 11259,
+      "retryCount": 1,
+      "telemetry": {
+        "caption_retry_count": 1,
+        "captions_recovered": true,
+        "caption_original_received": false,
+        "caption_recovery_connections": 1,
+        "caption_recovery_with_transcript": 1,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 89114,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25039,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 2,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 2990,
+      "firstAudioMs": 1100,
+      "audioToCaptionMs": 1890,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25039,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 3,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 870,
+      "firstAudioMs": 842,
+      "audioToCaptionMs": 28,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25022,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25190
+      }
+    },
+    {
+      "run": 3,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 1111,
+      "firstAudioMs": 1111,
+      "audioToCaptionMs": 0,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25036,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    },
+    {
+      "run": 4,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1221,
+      "firstAudioMs": 1221,
+      "audioToCaptionMs": 0,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": "Original captions before startup deadline; ended event absent after abnormal client close",
+      "streamMs": 18672,
+      "close": {
+        "code": 1006,
+        "clean": false,
+        "ms": 18650
+      }
+    },
+    {
+      "run": 4,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 3000,
+      "firstAudioMs": 1070,
+      "audioToCaptionMs": 1930,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25050,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    },
+    {
+      "run": 5,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 770,
+      "firstAudioMs": 2642,
+      "audioToCaptionMs": -1872,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25044,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25220
+      }
+    },
+    {
+      "run": 5,
+      "clip": "long",
+      "inputBytes": 240000,
+      "inputChunks": 50,
+      "firstTranslationMs": 2450,
+      "firstAudioMs": 1111,
+      "audioToCaptionMs": 1339,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 240000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25021,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 6,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1150,
+      "firstAudioMs": 981,
+      "audioToCaptionMs": 169,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25035,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 6,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 530,
+      "firstAudioMs": 981,
+      "audioToCaptionMs": -451,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25043,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    },
+    {
+      "run": 7,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1340,
+      "firstAudioMs": 6271,
+      "audioToCaptionMs": -4931,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25001,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25160
+      }
+    },
+    {
+      "run": 7,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 1661,
+      "firstAudioMs": 1131,
+      "audioToCaptionMs": 530,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25037,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 8,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1070,
+      "firstAudioMs": 836,
+      "audioToCaptionMs": 234,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25019,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25190
+      }
+    },
+    {
+      "run": 8,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 2740,
+      "firstAudioMs": 942,
+      "audioToCaptionMs": 1798,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25034,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25190
+      }
+    },
+    {
+      "run": 9,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1610,
+      "firstAudioMs": 1120,
+      "audioToCaptionMs": 490,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25033,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 9,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 2451,
+      "firstAudioMs": 1131,
+      "audioToCaptionMs": 1320,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25040,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25200
+      }
+    },
+    {
+      "run": 10,
+      "clip": "short",
+      "inputBytes": 89114,
+      "inputChunks": 19,
+      "firstTranslationMs": 1071,
+      "firstAudioMs": 1071,
+      "audioToCaptionMs": 0,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 89114
+      },
+      "telemetryInferred": null,
+      "streamMs": 25035,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25190
+      }
+    },
+    {
+      "run": 10,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 3690,
+      "firstAudioMs": 1161,
+      "audioToCaptionMs": 2529,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25027,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    },
+    {
+      "run": 11,
+      "clip": "long",
+      "inputBytes": 960000,
+      "inputChunks": 200,
+      "firstTranslationMs": 6869,
+      "firstAudioMs": 1001,
+      "audioToCaptionMs": 5868,
+      "retryCount": 0,
+      "telemetry": {
+        "caption_retry_count": 0,
+        "captions_recovered": false,
+        "caption_original_received": true,
+        "caption_recovery_connections": 0,
+        "caption_recovery_with_transcript": 0,
+        "caption_recovery_failed": 0,
+        "caption_recovery_input_bytes": 0,
+        "input_audio_bytes": 960000
+      },
+      "telemetryInferred": null,
+      "streamMs": 25043,
+      "close": {
+        "code": 1000,
+        "clean": true,
+        "ms": 25210
+      }
+    }
+  ],
+  "playback": {
+    "duplicateVoicedPcmFrames": 0,
+    "pcmDuplicateThresholdRms": 100,
+    "repeatedCaptionLandmarks": 0,
+    "workerdExactOnceCases": 9,
+    "limits": "Exact frame hashes and landmark checks cannot prove semantic fidelity. The two recovered short original streams were near-silent; side audio is intentionally discarded."
+  },
+  "tests": {
+    "gate": "PASS",
+    "protocolUnit": 96,
+    "workerUnit": 356,
+    "mobileUnit": 497,
+    "workerdCases": 9,
+    "postHogCompletePayloadSentinelMatches": 0,
+    "independentReview": "Lead-owned; not performed in the implementation lane"
+  },
+  "spend": {
+    "priorAudioSeconds": 52.88270833333333,
+    "unconfirmedReserveSeconds": 3.7130833333333335,
+    "audioSeconds": 283.8742916666667,
+    "estimatedUsd": 0.16086209861111114,
+    "ceilingAudioSeconds": 500,
+    "hardCapUsd": 0.3,
+    "rateUsdPerMinute": 0.034,
+    "source": "https://developers.openai.com/api/docs/models/gpt-realtime-translate",
+    "estimatedWithoutUnconfirmedReserveUsd": 0.1587580180555556,
+    "invoiceVerified": false
+  },
+  "restoration": {
+    "checkedAt": "2026-10-17T17:56:12.583Z",
+    "sandboxVersionRestored": true,
+    "fullObservabilityRestored": true,
+    "disposableDatabaseStatus": 404,
+    "productionAccessed": false
+  },
+  "limits": [
+    "Short4: abnormal1006close18.650s; ended telemetry absent; zero retry/original captions inferred from1.221s caption before watchdog.",
+    "Long5: client sent20s; only5s accepted. Outcome client_close_session, no failure code. Additional long11 provides tenth full-input long trial. Cause unproven.",
+    "Side connection failure rate uses only2 live connections; failure independence and the earlier3/7 replay success cause remain unproven.",
+    "Earlier retained-Cloudflare privacy scan found0sentinels but lacked its synthetic-error control; not a passing retained-log proof."
+  ]
+}
