@@ -330,6 +330,23 @@ function createBloomStyles(theme: MurmurTheme) {
       fontWeight: "700",
       textAlign: "center",
     },
+    startingContent: {
+      gap: 12,
+    },
+    startingTitleRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 10,
+    },
+    startingTitle: {
+      flexShrink: 1,
+    },
+    startingDot: {
+      backgroundColor: theme.teal,
+      borderRadius: 4,
+      height: 8,
+      width: 8,
+    },
     sourceText: {
       color: theme.secondaryText,
       fontSize: 18,

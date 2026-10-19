@@ -76,8 +76,11 @@ import {
   type StopTimingStep,
 } from "./sessionTiming";
 
+import { createStartingAudioTracker } from "./startingState";
+
 const maxDebugEntries = 200;
 const meaningfulAudioRmsThreshold = 0.01;
+
 const sessionCloseTimeoutMs = 5_000;
 const silenceTimeoutMs = 120_000;
 
@@ -89,6 +92,8 @@ type LocalStopCleanup = {
 export function useLiveTranslation(
   params: LiveTranslationParams,
 ): LiveTranslationController {
+  const [startingSlow, setStartingSlow] = useState(false);
+  const startingAudioRef = useRef(createStartingAudioTracker());
   const [session, setSession] = useState(() => createSession(params));
   const [ratingDecision, setRatingDecision] = useState<SessionRatingDecision | null>(null);
   const [spans, setSpans] = useState<TranslationSpan[]>([]);
@@ -179,6 +184,9 @@ export function useLiveTranslation(
             resetSilenceDeadline();
           }
           clientRef.current?.sendAudio(frame.data);
+          if (startingAudioRef.current.recordAudio(frame.duration_ms)) {
+            setStartingSlow(true);
+          }
         }
       },
     );
@@ -454,6 +462,8 @@ export function useLiveTranslation(
     firstSourceReceivedRef.current = false;
     firstTranslationReceivedRef.current = false;
     captureDiagnosticsRef.current.reset();
+    startingAudioRef.current.reset();
+    setStartingSlow(false);
     lastTransportDiagnosticsRef.current = createEmptyRealtimeTransportDiagnostics();
     playbackActiveRef.current = false;
     playbackSuppressedRef.current = false;
@@ -1108,6 +1118,7 @@ export function useLiveTranslation(
     status: session.state,
     stop,
     tentative_source_caption: "",
+    starting_slow: startingSlow,
   };
 }
 

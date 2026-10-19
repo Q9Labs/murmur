@@ -12,6 +12,9 @@ vi.mock("posthog-react-native", () => ({
 }));
 
 vi.mock("react-native", () => ({
+  Animated: { View: ({ children }: { children?: ReactNode }) => createElement("div", null, children) },
+  StyleSheet: { create: <T,>(styles: T) => styles },
+  useColorScheme: () => "light",
   ScrollView: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
   Text: ({ children, style }: { children?: ReactNode; style?: unknown }) => {
     capturedText.push({ children, style });
@@ -64,6 +67,27 @@ function renderTimeline(live: unknown, viewModel: unknown): string {
 }
 
 describe("Arabic UI rendering", () => {
+  it.each([false, true])("replaces the starting state immediately on a first caption (source enabled: %s)", (showSource) => {
+    const live = { source_transcript_enabled: showSource, spans: [], tentative_source_caption: "", starting_slow: false };
+    const model = { isLive: true, sourceLanguage: { rtl: false }, targetLanguage: { rtl: true } };
+    expect(renderTimeline(live, model)).toContain(arabicTranslate("home.translationStarting"));
+    const caption = { ...createSpan(""), translated_caption: "مرحبًا", partial_translated_caption: "مرحبًا" };
+    const markup = renderTimeline({ ...live, spans: [caption] }, model);
+    expect(markup).toContain("مرحبًا");
+    expect(markup).not.toContain(arabicTranslate("home.translationStarting"));
+  });
+
+  it("changes only the waiting hint once enough audio has arrived", () => {
+    const live = { source_transcript_enabled: false, spans: [], tentative_source_caption: "", starting_slow: true };
+    const model = { isLive: true, sourceLanguage: null, targetLanguage: { rtl: true } };
+    const markup = renderTimeline(live, model);
+    expect(markup).toContain(arabicTranslate("home.translationStarting"));
+    expect(markup).toContain(arabicTranslate("home.translationStartingSlow"));
+    expect(markup).not.toContain(arabicTranslate("home.translationStartingHint"));
+    expect(capturedText.find(({ children }) => children === arabicTranslate("home.translationStarting"))?.style)
+      .toContainEqual(expect.objectContaining({ writingDirection: "rtl", textAlign: "right" }));
+  });
+
   it("keeps English source text LTR and Arabic translation text RTL", () => {
     const span = {
       ...createSpan("Hello"),
@@ -108,3 +132,8 @@ describe("Arabic UI rendering", () => {
     );
   });
 });
+
+vi.mock("./variants/hooks", () => ({
+  useReducedMotion: () => true,
+  usePulse: () => ({ interpolate: () => 1 }),
+}));

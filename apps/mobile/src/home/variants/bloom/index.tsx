@@ -229,6 +229,7 @@ function TranslationStage(props: VariantShellProps): ReactNode {
   return (
     <View style={styles.flexFill}>
       <SpanTimeline
+        captureSource={props.captureSource}
         contentStyle={[styles.timelineContent, translationOnly && styles.timelineContentTranslationOnly]}
         autoScrollRef={props.autoScrollRef}
         live={props.live}

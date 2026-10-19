@@ -2339,6 +2339,22 @@ words:
 overrides:
   - filename: apps/mobile/src/i18n/catalogs/{de,es,fr,id,pt-BR,tr}.ts
     words:
+      - Halte
+      - sprechende
+      - empezando
+      - cerca
+      - marre
+      - personne
+      - parle
+      - prendre
+      - Dekatkan
+      - berbicara
+      - memakan
+      - ando
+      - perto
+      - levar
+      - Telefonu
+      - tutun
       - bersetzte
       - bersetzten
       - bersetzter
