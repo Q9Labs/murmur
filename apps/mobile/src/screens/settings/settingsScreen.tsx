@@ -1,27 +1,14 @@
-import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 
 import { useUiLocale } from "../../i18n/runtime";
 import { uiLocaleNames } from "../../i18n/types";
 import { useMurmurBilling } from "../../lib/billing/context";
-import { captureMobileFailure } from "../../lib/observability/sentry";
+import { openLegalLink } from "../../lib/legalLinks";
 import { LinkRow, RowGroup, SwitchRow } from "../rowGroup";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
 import { useScreenServices } from "../screenServices";
 import { useSettingsControls } from "./settingsControls";
-
-const legalUrls = {
-  privacy: "https://murmur.q9labs.ai/privacy",
-  support: "https://murmur.q9labs.ai/support",
-  terms: "https://murmur.q9labs.ai/terms",
-} as const;
-
-function openLink(url: string): void {
-  Linking.openURL(url).catch((failure: unknown) => {
-    captureMobileFailure(failure, { operation: "open_settings_link", stage: "settings" });
-  });
-}
 
 export function SettingsScreen(): ReactNode {
   const router = useRouter();
@@ -73,9 +60,9 @@ export function SettingsScreen(): ReactNode {
             onPress={controls.openReport}
           />
         ) : null}
-        <LinkRow label={t("settings.support")} onPress={() => openLink(legalUrls.support)} />
-        <LinkRow label={t("settings.privacyPolicy")} onPress={() => openLink(legalUrls.privacy)} />
-        <LinkRow label={t("settings.termsOfUse")} onPress={() => openLink(legalUrls.terms)} />
+        <LinkRow label={t("settings.support")} onPress={() => void openLegalLink("support", "settings")} />
+        <LinkRow label={t("settings.privacyPolicy")} onPress={() => void openLegalLink("privacy", "settings")} />
+        <LinkRow label={t("settings.termsOfUse")} onPress={() => void openLegalLink("terms", "settings")} />
       </RowGroup>
       {controls ? (
         <RowGroup>

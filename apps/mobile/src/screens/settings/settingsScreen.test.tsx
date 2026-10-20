@@ -1,3 +1,4 @@
+// cspell:ignore EUNSPECIFIED
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,13 +17,15 @@ vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.exp
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("expo-linking", () => linking);
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => fixtureBilling() }));
-vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
+vi.mock("@sentry/react-native", () => sentry);
 vi.mock("./settingsControls", () => ({ useSettingsControls: () => controlsRef.current }));
 vi.mock("../screenServices", () => ({ useScreenServices: () => servicesRef.current }));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 
 import { SettingsScreen } from "./settingsScreen";
+import { sanitizeMobileEvent } from "../../lib/observability/sentry";
 
 function controls(overrides: Partial<SettingsControls> = {}): SettingsControls {
   return {
@@ -93,3 +96,29 @@ describe("settings screen", () => {
     expect(findControl("Delete local data")).toBeUndefined();
   });
 });
+
+  it.each([["Support", "support"], ["Privacy policy", "privacy"], ["Terms of use", "terms"]])("retains safe diagnostics when %s cannot open", async (label, target) => {
+    controlsRef.current = controls();
+    const url = `https://murmur.q9labs.ai/${target}`;
+    const failure = Object.assign(new Error(`Unable to open URL: ${url}`), { code: "EUNSPECIFIED" });
+    linking.openURL.mockRejectedValueOnce(failure);
+    renderToStaticMarkup(<SettingsScreen />);
+
+    findControl(label)?.onPress?.();
+
+    await vi.waitFor(() => expect(sentry.captureException).toHaveBeenCalledOnce());
+    expect(linking.openURL).toHaveBeenCalledWith(url);
+    const hint = sentry.captureException.mock.calls[0]?.[1];
+    const event = sanitizeMobileEvent({
+      ...hint,
+      exception: { values: [{ value: failure.message }] },
+      type: undefined,
+    });
+    expect(event.tags).toMatchObject({
+      operation: "open_settings_link", stage: "settings", error_code: "EUNSPECIFIED",
+      link_target: target, link_step: "open_url", link_failure: "native_open_rejected",
+    });
+    expect(event.fingerprint).toEqual(["open_settings_link", "settings", "EUNSPECIFIED"]);
+    expect(JSON.stringify(event)).not.toContain(url);
+    expect(JSON.stringify(event)).not.toContain("Unable to open URL");
+  });
