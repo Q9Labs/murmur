@@ -22,6 +22,6 @@ describe("insights Worker transport", () => {
       answer: "other",
       other_text: "At a conference",
       stars: 3,
-    })).rejects.toThrow("rating_survey_http_503");
+    })).rejects.toMatchObject({ code: "rating_survey_http_503", message: "rating_survey_http_503" });
   });
 });

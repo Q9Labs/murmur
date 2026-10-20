@@ -1,10 +1,10 @@
-import * as Sentry from "@sentry/react-native";
 import * as Application from "expo-application";
 import { Platform } from "react-native";
 
 import MurmurAudioModule from "../../modules/murmur-audio";
 import { getOrCreateInstallId } from "./installIdentity";
 import { getLocalValue, setLocalValue } from "./localStorage";
+import { captureMobileFailure } from "./observability/sentry";
 import { deliverInstallAttribution } from "./providers/insightsWorker";
 
 const attributionRecordedKey = "murmur_install_attribution_recorded_v1";
@@ -22,6 +22,6 @@ export async function captureInstallAttribution(isAnalyticsEnabled: () => boolea
     await deliverInstallAttribution({ app_install_id: appInstallId, ...attribution });
     await setLocalValue(attributionRecordedKey, "true");
   } catch (failure) {
-    Sentry.captureException(failure, { tags: { operation: "capture_install_attribution" } });
+    captureMobileFailure(failure, { operation: "capture_install_attribution" });
   }
 }

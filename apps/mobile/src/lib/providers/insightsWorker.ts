@@ -33,7 +33,7 @@ export async function deliverRatingSurvey(body: {
 async function postInsights(
   path: string,
   body: object,
-  operation: string,
+  operation: "install_attribution" | "rating_survey",
   headers: HeadersInit = { "Content-Type": "application/json" },
 ): Promise<void> {
   const response = await fetch(`${getWorkerBaseUrl()}${path}`, {
@@ -41,5 +41,8 @@ async function postInsights(
     headers,
     method: "POST",
   });
-  if (!response.ok) throw new Error(`${operation}_http_${response.status}`);
+  if (!response.ok) {
+    const code = `${operation}_http_${response.status}`;
+    throw Object.assign(new Error(code), { code });
+  }
 }
