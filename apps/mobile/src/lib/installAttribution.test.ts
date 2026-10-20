@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => {
@@ -28,6 +29,7 @@ vi.mock("./localStorage", () => ({
 }));
 
 import { captureInstallAttribution } from "./installAttribution";
+import { sanitizeMobileEvent } from "./observability/sentry";
 
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -50,6 +52,50 @@ describe("install attribution", () => {
       platform: "android",
       referrer: "utm_source=google",
     });
+  });
+
+  it.each([400, 429, 503])("keeps HTTP %i in the sanitized failure without attribution content", async (status) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private-response-body", { status })));
+
+    await captureInstallAttribution(() => true);
+
+    const [failure, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+    const event = sanitizeMobileEvent({
+      ...context,
+      exception: { values: [{ value: failure instanceof Error ? failure.message : String(failure) }] },
+      type: undefined,
+    });
+    expect(event.tags).toMatchObject({
+      error_code: `install_attribution_http_${status}`,
+      operation: "capture_install_attribution",
+    });
+    expect(event.fingerprint).toEqual([
+      "capture_install_attribution", "unknown", `install_attribution_http_${status}`,
+    ]);
+    expect(event.exception?.values?.[0]?.value).toBe("mobile_operation_failed");
+    const serialized = JSON.stringify(event);
+    for (const privateValue of ["private-response-body", "utm_source=google", "install_12345678", "https://murmur.test"]) {
+      expect(serialized).not.toContain(privateValue);
+    }
+    expect(state.setLocalValue).not.toHaveBeenCalled();
+  });
+
+  it("does not classify arbitrary failure messages as HTTP diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error(
+      "install_attribution_http_503 private-attribution-token https://private.test",
+    )));
+
+    await captureInstallAttribution(() => true);
+
+    const [failure, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+    const event = sanitizeMobileEvent({
+      ...context,
+      exception: { values: [{ value: failure instanceof Error ? failure.message : String(failure) }] },
+      type: undefined,
+    });
+    expect(event.tags).toMatchObject({ error_code: "none" });
+    expect(JSON.stringify(event)).not.toContain("private");
+    expect(state.setLocalValue).not.toHaveBeenCalled();
   });
 
   it("does not deliver attribution when analytics is disabled during token collection", async () => {
