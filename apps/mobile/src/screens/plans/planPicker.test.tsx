@@ -60,7 +60,7 @@ describe("plan picker", () => {
 
     expect(markup).toContain("Trip Pass");
     expect(markup).toContain("60 minutes");
-    expect(markup).toContain("Valid 3 months");
+    expect(markup).toContain("Never expires");
     expect(seen.picker?.selected).toBe(fixturePack);
   });
 

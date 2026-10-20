@@ -37,7 +37,8 @@ describe("account screen", () => {
     expect(markup).toContain("left on Free");
     expect(markup).toContain("Keep your minutes and plans on any phone.");
     expect(findControl("Sign in")?.accessibilityHint).toBe("Keep your minutes and plans on any phone.");
-    expect(findControl("Restore purchases")).toBeUndefined();
+    findControl("Restore purchases")?.onPress?.();
+    expect(billingRef.current.restorePurchases).toHaveBeenCalledOnce();
     findControl("Sign in")?.onPress?.();
     expect(router.push).toHaveBeenCalledWith("/sign-in");
     findControl("Get more time")?.onPress?.();
@@ -92,7 +93,7 @@ describe("account screen", () => {
     expect(hasUnsavedPurchase(fixtureCustomer)).toBe(false);
   });
 
-  it("shows how long pack minutes stay valid", () => {
+  it("shows that purchased minutes never expire", () => {
     billingRef.current = fixtureBilling({
       availableMs: 60 * 60_000,
       creditMs: 90 * 60_000,
@@ -108,9 +109,7 @@ describe("account screen", () => {
     const lines = packValidity(billingRef.current.customer, en);
 
     expect(markup).toContain("left on Pro Max");
-    expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatch(/^1 hr pack\. Valid until /);
-    expect(lines[1]).toMatch(/^30 min pack\. Valid until /);
+    expect(lines).toEqual(["Credit packs: 1 hr 30 min · Never expires"]);
     expect(markup).toContain(lines[0]);
     expect(packValidity(null, en)).toEqual([]);
   });

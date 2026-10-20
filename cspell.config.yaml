@@ -17,6 +17,11 @@ ignorePaths:
 ignoreRegExpList:
   - "[^\\x00-\\x7F]+"
 words:
+  - Ablaufdatum
+  - caduca
+  - expira
+  - dolmaz
+  - nonexpiring
   - Miniflare
   - traceparent
   - AGENTS

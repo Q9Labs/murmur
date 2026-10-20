@@ -30,7 +30,7 @@
     },
     "ios": {
       "appStoreUrl": "https://apps.apple.com/app/id6756962206",
-      "buildNumber": "20",
+      "buildNumber": "21",
       "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Murmur needs microphone access to stream speech for live translation.",

@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { MessageKey } from "../../i18n/catalogs/en";
-import { formatUiDate, uiMirrorStyle, useUiLocale, type Translate, type UiText } from "../../i18n/runtime";
+import { uiMirrorStyle, useUiLocale, type Translate, type UiText } from "../../i18n/runtime";
 import { useMurmurBilling } from "../../lib/billing/context";
 import type { MurmurCustomer } from "../../lib/billing/customerResponse";
 import { darkMurmurTheme, lightMurmurTheme, type MurmurTheme, useMurmurTheme } from "../../home/theme";
@@ -46,13 +46,15 @@ export function AccountScreen(): ReactNode {
         />
       ) : null}
       <StatusLine error={null} notice={locked ? t("account.locked") : null} />
+      <RowGroup>
+        <LinkRow
+          disabled={storeUnavailable}
+          label={t("account.restorePurchases")}
+          onPress={() => void billing.restorePurchases()}
+        />
+      </RowGroup>
       {registered ? (
         <RowGroup>
-          <LinkRow
-            disabled={storeUnavailable}
-            label={t("account.restorePurchases")}
-            onPress={() => void billing.restorePurchases()}
-          />
           {customer !== null && customer.plan !== "free" ? (
             <LinkRow
               disabled={storeUnavailable}
@@ -105,15 +107,10 @@ export function hasUnsavedPurchase(customer: MurmurCustomer): boolean {
   return !customer.isRegistered && (customer.plan !== "free" || customer.creditMs > 0);
 }
 
-// One line per credit pack still holding minutes, soonest to expire first.
 export function packValidity(customer: MurmurCustomer | null, ui: UiText): string[] {
-  const packs = customer?.creditPacks.filter((pack) => pack.remainingMs > 0) ?? [];
-  return packs
-    .sort((first, second) => first.expiresAtMs - second.expiresAtMs)
-    .map((pack) => ui.t("account.packValidity", {
-      date: formatUiDate(pack.expiresAtMs, ui.locale, { dateStyle: "medium" }),
-      minutes: formatMinutes(pack.remainingMs, ui),
-    }));
+  return customer && customer.creditMs > 0
+    ? [`${ui.t("plans.tabPacks")}: ${formatMinutes(customer.creditMs, ui)} · ${ui.t("plans.packValidity")}`]
+    : [];
 }
 
 function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNode {

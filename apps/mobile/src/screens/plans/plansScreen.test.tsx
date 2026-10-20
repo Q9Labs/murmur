@@ -5,7 +5,10 @@ import type { MurmurBillingContext } from "../../lib/billing/context";
 import type { MurmurPlan } from "../../lib/billing/planCatalog";
 import { fixtureBilling, fixtureMonthly, fixturePlans } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
-import { resetRecorded } from "../__tests__/reactNativePrimitives";
+import { findControl, resetRecorded } from "../__tests__/reactNativePrimitives";
+
+const linking = vi.hoisted(() => ({ openURL: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("expo-linking", () => linking);
 
 const state = vi.hoisted(() => ({
   billing: null as MurmurBillingContext | null,
@@ -14,7 +17,8 @@ const state = vi.hoisted(() => ({
   plans: { status: "loading" } as { plans?: MurmurPlan[]; status: string },
 }));
 
-vi.mock("lucide-react-native", () => ({ Check: () => null }));
+vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
@@ -67,9 +71,19 @@ describe("plans screen", () => {
     const buy = markup.indexOf("Subscribe for");
     expect(buy).toBeGreaterThan(markup.indexOf("Pro Max"));
     const { recorded } = await import("../__tests__/reactNativePrimitives");
-    recorded.controls.find((control) => control.accessibilityRole === "button")?.onPress?.();
+    recorded.controls.find((control) => control.accessibilityRole === "button" && control.accessibilityLabel === undefined)?.onPress?.();
     expect(state.billing?.purchasePlan).toHaveBeenCalledWith(fixtureMonthly.id);
     await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith("/save-purchase"));
+  });
+
+  it("lets a guest restore purchases and open the purchase terms and privacy policy", () => {
+    renderToStaticMarkup(<PlansScreen />);
+    findControl("Restore purchases")?.onPress?.();
+    expect(state.billing?.restorePurchases).toHaveBeenCalledOnce();
+    findControl("Terms of use")?.onPress?.();
+    expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/terms");
+    findControl("Privacy policy")?.onPress?.();
+    expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
   });
 
   it("passes the personal offer's real expiry and discount to the banner", () => {
