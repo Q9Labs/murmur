@@ -15,7 +15,7 @@ export function createDatabase() {
           return {
             first: async () => statement.get(...values) ?? null,
             all: async () => ({ results: statement.all(...values) }),
-            run: async () => statement.run(...values),
+            run: async () => ({ meta: { changes: Number(statement.run(...values).changes) } }),
           };
         },
       };
@@ -23,15 +23,15 @@ export function createDatabase() {
     async batch(statements) {
       sqlite.exec("BEGIN");
       try {
-        for (const statement of statements) await statement.run();
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
         sqlite.exec("COMMIT");
+        return results;
       } catch (error) {
         sqlite.exec("ROLLBACK");
         throw error;
       }
-      return [];
     },
   };
   return { database, sqlite };
 }
-

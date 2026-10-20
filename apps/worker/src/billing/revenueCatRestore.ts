@@ -32,6 +32,12 @@ export async function restoreVerifiedResourceOwnership(params: {
     ...(direction === 1 ? [customerId] : []),
     direction, `${transferId}:${direction}:`, nowMs, ...grantBindings, customerId,
   ));
+  statements.unshift(database.prepare(
+    `UPDATE usage_sessions SET state = 'failed', ended_at_ms = ?, updated_at_ms = ?
+     WHERE state = 'open' AND customer_id IN (
+       SELECT customer_id FROM balance_grants WHERE ${grants} AND customer_id != ?
+     )`,
+  ).bind(nowMs, nowMs, ...grantBindings, customerId));
   statements.push(database.prepare(
     `INSERT INTO projection_versions (customer_id, version, updated_at_ms)
      SELECT customer_id, 1, ? FROM balance_grants

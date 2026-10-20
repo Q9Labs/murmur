@@ -560,7 +560,19 @@ export class LedgerRepository {
             (ledger_entry_id, customer_id, entry_kind, amount_ms, idempotency_key, grant_id,
              usage_session_id, store_transaction_row_id, store_event_row_id,
              reverses_ledger_entry_id, metadata_json, created_at_ms)
-           VALUES (?, ?, 'debit', ?, ?, NULL, ?, NULL, NULL, NULL, ?, ?)`,
+           SELECT ?, ?, 'debit', ?, ?, NULL, ?, NULL, NULL, NULL, ?, ?
+           WHERE EXISTS (
+             SELECT 1 FROM usage_sessions
+             WHERE usage_session_id = ? AND customer_id = ? AND state = 'open'
+               AND next_settlement_sequence = ?
+           ) AND NOT EXISTS (
+             SELECT 1 FROM json_each(?) allocation WHERE NOT EXISTS (
+               SELECT 1 FROM balance_grants
+               WHERE grant_id = json_extract(allocation.value, '$.grantId')
+                 AND customer_id = ? AND state = 'available'
+                 AND remaining_ms >= json_extract(allocation.value, '$.amountMs')
+             )
+           )`,
         )
         .bind(
           ledgerEntryId,
@@ -570,6 +582,11 @@ export class LedgerRepository {
           command.usageSessionId,
           JSON.stringify({ allocations: allocation.allocations }),
           command.nowMs,
+          command.usageSessionId,
+          command.customerId,
+          command.settlementSequence,
+          JSON.stringify(allocation.allocations),
+          command.customerId,
         ),
     ];
     for (const debit of allocation.allocations) {
@@ -580,9 +597,11 @@ export class LedgerRepository {
              SET remaining_ms = remaining_ms - ?,
                  state = CASE WHEN remaining_ms - ? = 0 THEN 'exhausted' ELSE state END,
                  updated_at_ms = ?
-             WHERE grant_id = ? AND remaining_ms >= ? AND state = 'available'`,
+             WHERE grant_id = ? AND remaining_ms >= ? AND state = 'available'
+               AND customer_id = ?
+               AND EXISTS (SELECT 1 FROM ledger_entries WHERE ledger_entry_id = ?)`,
           )
-          .bind(debit.amountMs, debit.amountMs, command.nowMs, debit.grantId, debit.amountMs),
+          .bind(debit.amountMs, debit.amountMs, command.nowMs, debit.grantId, debit.amountMs, command.customerId, ledgerEntryId),
       );
     }
     statements.push(
@@ -590,7 +609,7 @@ export class LedgerRepository {
         .prepare(
           `INSERT INTO usage_settlements
             (usage_session_id, settlement_sequence, amount_ms, ledger_entry_id, created_at_ms)
-           VALUES (?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, (SELECT ledger_entry_id FROM ledger_entries WHERE ledger_entry_id = ?), ?)`,
         )
         .bind(
           command.usageSessionId,

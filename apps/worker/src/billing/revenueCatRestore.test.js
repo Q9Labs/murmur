@@ -5,6 +5,38 @@ import { LedgerRepository } from "./ledgerRepository";
 import { restoreVerifiedResourceOwnership } from "./revenueCatRestore";
 
 describe.each(["purchase", "subscription"])("restored %s ownership", (kind) => {
+  it("rejects a source settlement selected before a concurrent restore", async () => {
+    const { database, sqlite } = createDatabase();
+    try {
+      const resource = seedRestore(sqlite, kind, 1_800_000, "available");
+      startPaidUsage(sqlite);
+      const restore = () => restoreVerifiedResourceOwnership({
+        customerId: "new-guest", database, nowMs: 2000, resource, resourceKey: "resource-1",
+      });
+      const repository = new LedgerRepository(restoreAfterSelection(database, restore));
+      await expect(repository.settleUsage(settlement)).rejects.toThrow();
+      expect((await new LedgerRepository(database).getBalance("new-guest", 2000)).availableMs).toBe(1_800_000);
+      expect(sqlite.prepare("SELECT state FROM usage_sessions").get()).toMatchObject({ state: "failed" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM usage_settlements").get()).toMatchObject({ count: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM ledger_entries WHERE entry_kind='debit'").get()).toMatchObject({ count: 0 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps legitimately settled usage deducted when restoring", async () => {
+    const { database, sqlite } = createDatabase();
+    try {
+      const resource = seedRestore(sqlite, kind, 1_800_000, "available");
+      startPaidUsage(sqlite);
+      await new LedgerRepository(database).settleUsage(settlement);
+      await restoreVerifiedResourceOwnership({ customerId: "new-guest", database, nowMs: 2000, resource, resourceKey: "resource-1" });
+      expect((await new LedgerRepository(database).getBalance("new-guest", 2000)).availableMs).toBe(1_740_000);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it.each([
     { remaining: 1_800_000, state: "available" },
     { remaining: 0, state: "exhausted" },
@@ -40,6 +72,35 @@ describe.each(["purchase", "subscription"])("restored %s ownership", (kind) => {
     }
   });
 });
+
+const settlement = {
+  action: "settle_usage", amountMs: 60000, customerId: "old-guest", nowMs: 3000,
+  settlementSequence: 1, usageSessionId: "old-session",
+};
+
+function startPaidUsage(sqlite) {
+  sqlite.exec(`UPDATE balance_grants SET remaining_ms=0, state='exhausted' WHERE grant_id='free';
+    INSERT INTO projection_versions (customer_id, version, updated_at_ms) VALUES ('old-guest', 0, 1000);
+    INSERT INTO usage_sessions (usage_session_id, customer_id, generation, state, started_at_ms, updated_at_ms)
+    VALUES ('old-session', 'old-guest', 1, 'open', 1000, 1000)`);
+}
+
+function restoreAfterSelection(database, restore) {
+  return {
+    ...database,
+    prepare(sql) {
+      if (!sql.includes("SELECT grant_id, remaining_ms, expires_at_ms")) return database.prepare(sql);
+      return { bind(...values) {
+        const statement = database.prepare(sql).bind(...values);
+        return { ...statement, all: async () => {
+          const selected = await statement.all();
+          await restore();
+          return selected;
+        } };
+      } };
+    },
+  };
+}
 
 function seedRestore(sqlite, kind, remaining, state) {
   sqlite.exec(`
