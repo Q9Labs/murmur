@@ -5,6 +5,11 @@ import { getMurmurEnvironment, getSentryDsn } from "../config";
 export type MobileFailureContext = {
   app_session_id?: string;
   error_code?: string;
+  external_link?: {
+    target: "privacy" | "support" | "terms";
+    step: "open_url";
+    failure: "native_open_rejected" | "unspecified" | "unknown";
+  };
   operation: string;
   stage?: string;
 };
@@ -49,6 +54,11 @@ export function captureMobileFailure(
     error_code: errorCode,
     operation: context.operation,
     stage: context.stage ?? "unknown",
+    ...(context.external_link ? {
+      link_target: context.external_link.target,
+      link_step: context.external_link.step,
+      link_failure: context.external_link.failure,
+    } : {}),
   };
   const fingerprint = [context.operation, tags.stage, errorCode];
   if (failure instanceof Error) {
