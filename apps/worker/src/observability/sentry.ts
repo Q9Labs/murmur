@@ -45,6 +45,7 @@ export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
   const code = isFailureCode(event.tags?.failure_code) ? event.tags.failure_code : "worker.request_failed";
   const definition = failureDefinition(code);
   const trace = event.tags?.trace_id;
+  const upstreamStatus = event.tags?.upstream_status;
   return {
     type: undefined,
     event_id: event.event_id,
@@ -63,6 +64,8 @@ export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
     } : undefined,
     tags: {
       failure_code: code, operation: definition.operation,
+      ...(code === "attribution.apple_http_failed" && typeof upstreamStatus === "string" &&
+        /^[1-5][0-9]{2}$/.test(upstreamStatus) ? { upstream_status: upstreamStatus } : {}),
       ...(typeof trace === "string" && /^(?!0{32}$)[a-f0-9]{32}$/.test(trace) ? { trace_id: trace } : {}),
     },
     ...(event.message ? { message: definition.description } : {}),

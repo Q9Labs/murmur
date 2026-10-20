@@ -56,3 +56,21 @@ describe("Worker Sentry privacy controls", () => {
     expect(JSON.stringify(event)).not.toContain("secret");
   });
 });
+
+
+it.each(["PRIVATE_TOKEN", "503 PRIVATE_BODY", "099", "600", "503.0", 503, null])(
+  "drops untrusted attribution status %s and all extra tags", (status) => {
+    const event = sanitizeWorkerEvent({ type: undefined, tags: {
+      failure_code: "attribution.apple_http_failed", upstream_status: status,
+      operation: "PRIVATE_OPERATION", token: "PRIVATE_TOKEN", failure_step: "PRIVATE_STEP",
+    } });
+    expect(event.tags).toEqual({ failure_code: "attribution.apple_http_failed", operation: "apple_attribution_request" });
+    expect(JSON.stringify(event)).not.toContain("PRIVATE");
+  },
+);
+
+it("does not attach an Apple status to unrelated failures", () => {
+  expect(sanitizeWorkerEvent({ type: undefined, tags: {
+    failure_code: "worker.request_failed", upstream_status: "503", operation: "capture_install_attribution",
+  } }).tags).toEqual({ failure_code: "worker.request_failed", operation: "http_request" });
+});

@@ -17,6 +17,30 @@ export const failures = {
     class: "unknown", operation: "caption_recovery", description: "Caption recovery attempts were exhausted",
     retryable: false, main_action_affected: true,
   },
+  "attribution.apple_http_failed": {
+    class: "dependency", operation: "apple_attribution_request", description: "Apple attribution request returned an HTTP error",
+    retryable: true, main_action_affected: false,
+  },
+  "attribution.apple_timeout": {
+    class: "dependency", operation: "apple_attribution_request", description: "Apple attribution request timed out",
+    retryable: true, main_action_affected: false,
+  },
+  "attribution.apple_network_failed": {
+    class: "dependency", operation: "apple_attribution_request", description: "Apple attribution request could not reach the service",
+    retryable: true, main_action_affected: false,
+  },
+  "attribution.apple_invalid_response": {
+    class: "dependency", operation: "apple_attribution_response", description: "Apple attribution response was invalid",
+    retryable: true, main_action_affected: false,
+  },
+  "attribution.rate_limiter_unavailable": {
+    class: "dependency", operation: "attribution_rate_limit", description: "Install attribution rate limiter was unavailable",
+    retryable: true, main_action_affected: false,
+  },
+  "attribution.failed": {
+    class: "unknown", operation: "capture_install_attribution", description: "Install attribution did not complete",
+    retryable: true, main_action_affected: false,
+  },
   "worker.request_failed": {
     class: "unknown", operation: "http_request", description: "Worker request did not complete",
     retryable: false, main_action_affected: true,

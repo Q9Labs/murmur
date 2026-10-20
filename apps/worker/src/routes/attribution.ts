@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
+import { OperationFailure } from "@murmur/protocol/diagnostics/failures";
 
 import type { Env } from "../env";
 import { json } from "../http/response";
@@ -28,6 +29,10 @@ export async function captureInstallAttribution(
     now_ms: Date.now(),
   });
   if (!limit.ok) {
+    if (isRateLimiterUnavailable(limit)) {
+      const failure = new OperationFailure("attribution.rate_limiter_unavailable");
+      Sentry.captureException(failure, { tags: { failure_code: failure.code } });
+    }
     return json({ error: limit.code }, isRateLimiterUnavailable(limit) ? 503 : 429);
   }
   try {
@@ -50,7 +55,10 @@ export async function captureInstallAttribution(
     });
     return json({ ok: true });
   } catch (failure) {
-    Sentry.captureException(failure, { tags: { operation: "capture_install_attribution" } });
+    Sentry.captureException(failure, { tags: {
+      failure_code: failure instanceof OperationFailure ? failure.code : "attribution.failed",
+      ...(failure instanceof AppleAttributionHttpFailure ? { upstream_status: String(failure.status) } : {}),
+    } });
     return json({ error: "attribution_unavailable" }, 503);
   }
 }
@@ -104,12 +112,23 @@ async function resolveAppleAttribution(token: string): Promise<{ campaignId: str
     headers: { "Content-Type": "text/plain" },
     method: "POST",
     signal: AbortSignal.timeout(10_000),
+  }).catch((failure: unknown) => {
+    throw new OperationFailure(failure instanceof DOMException && failure.name === "TimeoutError"
+      ? "attribution.apple_timeout" : "attribution.apple_network_failed");
   });
-  if (!response.ok) throw new Error(`apple_attribution_http_${response.status}`);
-  const value: unknown = await response.json();
+  if (!response.ok) throw new AppleAttributionHttpFailure(response.status);
+  const value: unknown = await response.json().catch(() => {
+    throw new OperationFailure("attribution.apple_invalid_response");
+  });
   if (typeof value !== "object" || value === null || !("attribution" in value) ||
-      typeof value.attribution !== "boolean") throw new Error("apple_attribution_invalid_response");
+      typeof value.attribution !== "boolean") throw new OperationFailure("attribution.apple_invalid_response");
   const campaignId = "campaignId" in value && typeof value.campaignId === "number"
     ? String(value.campaignId) : null;
   return { campaignId, source: value.attribution ? "apple_ads" : "app_store" };
+}
+
+class AppleAttributionHttpFailure extends OperationFailure {
+  constructor(readonly status: number) {
+    super("attribution.apple_http_failed");
+  }
 }
