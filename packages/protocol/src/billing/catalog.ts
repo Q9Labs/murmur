@@ -20,7 +20,6 @@ export const freeAllowanceMs = 5 * 60_000;
 export const proAllowanceMs = 120 * 60_000;
 export const proMaxAllowanceMs = 400 * 60_000;
 export const liteProAllowanceMs = 90 * 60_000;
-export const creditPackValidityMs = 90 * 24 * 60 * 60_000;
 
 export const billingProducts: readonly BillingProduct[] = [
   {

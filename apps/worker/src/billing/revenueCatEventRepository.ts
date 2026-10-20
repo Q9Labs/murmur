@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { creditPackValidityMs, type BillingProduct, type StoreProvider } from "./catalog";
+import { type BillingProduct, type StoreProvider } from "./catalog";
 import type { RevenueCatSubscription } from "./revenueCatApi";
 import type { RevenueCatEvent } from "./revenueCatEvent";
 import {
@@ -172,7 +172,7 @@ export class RevenueCatEventRepository {
         params.status,
         params.event.purchasedAtMs,
         params.product.kind === "credit_pack"
-          ? params.event.purchasedAtMs + creditPackValidityMs
+          ? null
           : params.event.expirationAtMs,
         params.eventRowId,
         params.event.eventTimestampMs,

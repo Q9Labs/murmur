@@ -1,8 +1,11 @@
 import type { MobileTelemetryEvent } from "@murmur/protocol/telemetry";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useEffect, type ReactNode } from "react";
 
 import { useUiLocale } from "../../i18n/runtime";
+import { captureMobileFailure } from "../../lib/observability/sentry";
+import { LinkRow, RowGroup } from "../rowGroup";
 import { useMurmurBilling } from "../../lib/billing/context";
 import { introDiscountPercent, type PlanTerm } from "../../lib/billing/planCatalog";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
@@ -63,6 +66,15 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
         expiresAtMs={offerExpiresAtMs}
       />
       {picker.activeTab ? <PlanPicker picker={picker} /> : <PlanListStatus onRetry={refresh} plans={plans} />}
+      <RowGroup>
+        <LinkRow
+          disabled={billing.busy || !billing.purchasesAvailable}
+          label={t("account.restorePurchases")}
+          onPress={() => void billing.restorePurchases()}
+        />
+        <LinkRow label={t("settings.termsOfUse")} onPress={() => openLegalLink("https://murmur.q9labs.ai/terms")} />
+        <LinkRow label={t("settings.privacyPolicy")} onPress={() => openLegalLink("https://murmur.q9labs.ai/privacy")} />
+      </RowGroup>
       <StatusLine error={billing.error} notice={billing.notice} />
     </ScreenScaffold>
   );
@@ -70,4 +82,10 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
 
 function captureFunnelEvent(payload: MobileTelemetryEvent): void {
   void import("../../lib/telemetry").then((telemetry) => telemetry.captureMobileTelemetry(payload));
+}
+
+function openLegalLink(url: string): void {
+  Linking.openURL(url).catch((failure: unknown) => {
+    captureMobileFailure(failure, { operation: "open_paywall_legal_link", stage: "billing" });
+  });
 }

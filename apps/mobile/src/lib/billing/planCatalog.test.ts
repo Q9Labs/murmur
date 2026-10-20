@@ -109,13 +109,13 @@ describe("plan catalog", () => {
     expect(planBenefits(monthly, ios, en)).toEqual(["2 hours a month", "Conversation history", "Sessions up to an hour"]);
     expect(planBenefits(yearly, ios, en)[0]).toBe("$8.33 a month");
     expect(planBenefits(maxMonthly, ios, en)).toEqual(["400 minutes a month", "Everything in Pro"]);
-    expect(planBenefits(pack, ios, en)).toEqual(["60 minutes", "Valid 3 months"]);
+    expect(planBenefits(pack, ios, en)).toEqual(["60 minutes", "Never expires"]);
   });
 
   it("falls back to the store description when the catalog does not know the product", () => {
     expect(planBenefits({ ...monthly, description: "90 minutes of live translation a month", minutes: null }, ios, en)[0])
       .toBe("90 minutes of live translation a month");
-    expect(planBenefits({ ...pack, description: "30 minutes", minutes: null }, ios, en)).toEqual(["30 minutes", "Valid 3 months"]);
+    expect(planBenefits({ ...pack, description: "30 minutes", minutes: null }, ios, en)).toEqual(["30 minutes", "Never expires"]);
   });
 
   it("shows an introductory price honestly, with the renewal price", () => {
@@ -133,7 +133,7 @@ describe("plan catalog", () => {
     expect(planDisplayPrice(pack, en)).toEqual({ price: "$7.99", suffix: null });
     expect(planPurchaseLabel(yearly, en)).toBe("Subscribe for $99.99 / year");
     expect(planPurchaseLabel(pack, en)).toBe("Buy for $7.99");
-    expect(planAccessibilityLabel(pack, ios, en)).toBe("Trip Pass, $7.99, 60 minutes, Valid 3 months");
+    expect(planAccessibilityLabel(pack, ios, en)).toBe("Trip Pass, $7.99, 60 minutes, Never expires");
   });
 
   it("formats allowances in hours when they are whole", () => {

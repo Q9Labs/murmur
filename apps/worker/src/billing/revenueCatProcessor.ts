@@ -2,7 +2,7 @@
 
 import type { Env } from "../env";
 import { ensureCurrentAllowance } from "./allowanceService";
-import { creditPackValidityMs, type BillingProduct } from "./catalog";
+import { type BillingProduct } from "./catalog";
 import { callCustomerLedger } from "./customerLedgerDurableObject";
 import { redeemPersonalOffer } from "./personalOffer";
 import {
@@ -462,7 +462,7 @@ async function synchronizeCreditPack(params: {
       action: "grant_value",
       amountMs: params.product.grantMs,
       customerId: params.customerId,
-      expiresAtMs: purchase.purchasedAtMs + creditPackValidityMs,
+      expiresAtMs: null,
       grantKey: `store:${params.event.provider}:${params.event.environment}:${params.event.transactionId}`,
       grantKind: "credit_pack",
       nowMs: params.nowMs,
