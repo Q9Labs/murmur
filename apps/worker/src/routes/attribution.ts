@@ -7,6 +7,9 @@ import { queuePostHogEvent, type TelemetryExecutionContext } from "../observabil
 import { hashInstallId } from "../privacy";
 import { canAcceptTelemetryDurable, isRateLimiterUnavailable } from "../rateLimitDurableObject";
 
+const limiterFailureReportWindowMs = 60_000;
+let limiterFailureReportAt = Number.NEGATIVE_INFINITY;
+
 type AttributionRequest =
   | { app_install_id: string; platform: "android"; referrer: string }
   | { app_install_id: string; platform: "ios"; token: string };
@@ -30,8 +33,7 @@ export async function captureInstallAttribution(
   });
   if (!limit.ok) {
     if (isRateLimiterUnavailable(limit)) {
-      const failure = new OperationFailure("attribution.rate_limiter_unavailable");
-      Sentry.captureException(failure, { tags: { failure_code: failure.code } });
+      reportLimiterFailure();
     }
     return json({ error: limit.code }, isRateLimiterUnavailable(limit) ? 503 : 429);
   }
@@ -61,6 +63,15 @@ export async function captureInstallAttribution(
     } });
     return json({ error: "attribution_unavailable" }, 503);
   }
+}
+
+function reportLimiterFailure(): void {
+  const now = Date.now();
+  // This interval is per isolate and does not depend on the unavailable limiter.
+  if (now - limiterFailureReportAt < limiterFailureReportWindowMs) return;
+  limiterFailureReportAt = now;
+  const failure = new OperationFailure("attribution.rate_limiter_unavailable");
+  Sentry.captureException(failure, { tags: { failure_code: failure.code } });
 }
 
 function parseAttributionRequest(value: unknown): AttributionRequest | null {
@@ -107,24 +118,31 @@ export function parsePlayReferrer(referrer: string): { campaignId: string | null
 }
 
 async function resolveAppleAttribution(token: string): Promise<{ campaignId: string | null; source: string }> {
+  const signal = AbortSignal.timeout(10_000);
   const response = await fetch("https://api-adservices.apple.com/api/v1/", {
     body: token,
     headers: { "Content-Type": "text/plain" },
     method: "POST",
-    signal: AbortSignal.timeout(10_000),
+    signal,
   }).catch((failure: unknown) => {
-    throw new OperationFailure(failure instanceof DOMException && failure.name === "TimeoutError"
-      ? "attribution.apple_timeout" : "attribution.apple_network_failed");
+    throw appleTransportFailure(failure, signal);
   });
   if (!response.ok) throw new AppleAttributionHttpFailure(response.status);
-  const value: unknown = await response.json().catch(() => {
-    throw new OperationFailure("attribution.apple_invalid_response");
+  const value: unknown = await response.json().catch((failure: unknown) => {
+    throw failure instanceof SyntaxError
+      ? new OperationFailure("attribution.apple_invalid_response")
+      : appleTransportFailure(failure, signal);
   });
   if (typeof value !== "object" || value === null || !("attribution" in value) ||
       typeof value.attribution !== "boolean") throw new OperationFailure("attribution.apple_invalid_response");
   const campaignId = "campaignId" in value && typeof value.campaignId === "number"
     ? String(value.campaignId) : null;
   return { campaignId, source: value.attribution ? "apple_ads" : "app_store" };
+}
+
+function appleTransportFailure(failure: unknown, signal: AbortSignal): OperationFailure {
+  return new OperationFailure(signal.aborted || failure instanceof DOMException && failure.name === "TimeoutError"
+    ? "attribution.apple_timeout" : "attribution.apple_network_failed");
 }
 
 class AppleAttributionHttpFailure extends OperationFailure {

@@ -7,7 +7,7 @@ vi.mock("@sentry/cloudflare", () => sentry);
 
 import { captureInstallAttribution, parsePlayReferrer } from "./attribution";
 
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("install attribution", () => {
   it("allows only normalized Play campaign values", () => {
@@ -58,6 +58,8 @@ describe("attribution failure diagnostics through the route and Sentry sanitizer
     { upstream: () => new Response("PRIVATE_BODY", { status: 401 }), code: "attribution.apple_http_failed", operation: "apple_attribution_request", status: "401" },
     { upstream: () => Promise.reject(new DOMException("PRIVATE_TIMEOUT", "TimeoutError")), code: "attribution.apple_timeout", operation: "apple_attribution_request" },
     { upstream: () => Promise.reject(new TypeError("PRIVATE_NETWORK")), code: "attribution.apple_network_failed", operation: "apple_attribution_request" },
+    { upstream: () => failedAppleBody(new DOMException("PRIVATE_BODY_TIMEOUT", "TimeoutError")), code: "attribution.apple_timeout", operation: "apple_attribution_request" },
+    { upstream: () => failedAppleBody(new TypeError("PRIVATE_BODY_NETWORK")), code: "attribution.apple_network_failed", operation: "apple_attribution_request" },
     { upstream: () => new Response("PRIVATE_JSON"), code: "attribution.apple_invalid_response", operation: "apple_attribution_response" },
     { upstream: () => Response.json({ attribution: "PRIVATE_SCHEMA" }), code: "attribution.apple_invalid_response", operation: "apple_attribution_response" },
   ])("keeps $code with status $status but no content", async ({ upstream, code, operation, status }) => {
@@ -90,7 +92,7 @@ describe("attribution failure diagnostics through the route and Sentry sanitizer
       expect(await response.json()).toEqual({ error: code });
     }
     expect(fetchProvider).not.toHaveBeenCalled();
-    expect(sentry.captureException).toHaveBeenCalledTimes(2);
+    expect(sentry.captureException).toHaveBeenCalledOnce();
     const [, hint] = sentry.captureException.mock.calls[0];
     expect(sanitizeWorkerEvent({ type: undefined, tags: hint.tags }).tags).toEqual({
       failure_code: "attribution.rate_limiter_unavailable", operation: "attribution_rate_limit",
@@ -119,4 +121,44 @@ it("rejects malformed attribution before contacting any provider or reporting a 
   expect(response.status).toBe(400);
   expect(provider).not.toHaveBeenCalled();
   expect(sentry.captureException).not.toHaveBeenCalled();
+});
+
+function failedAppleBody(failure: Error): Response {
+  return new Response(new ReadableStream({ start: (controller) => controller.error(failure) }));
+}
+
+it("bounds limiter outage reports independently of the failed limiter", async () => {
+  const clock = vi.spyOn(Date, "now").mockReturnValue(3_000_000_000_000);
+  const namespace = {
+    idFromName: () => ({ equals: () => true, toString: () => "fixture" }),
+    get: () => ({ fetch: async () => Response.json({ ok: false, code: "rate_limiter_unavailable" }) }),
+  };
+  const request = () => captureInstallAttribution(iosRequest(), {
+    // The fixture implements only the Durable Object methods used by this route.
+    RATE_LIMITER: namespace as unknown as DurableObjectNamespace,
+  });
+  const responses = await Promise.all(Array.from({ length: 20 }, request));
+  expect(responses.every((response) => response.status === 503)).toBe(true);
+  expect(sentry.captureException).toHaveBeenCalledOnce();
+  clock.mockReturnValue(3_000_000_059_999);
+  expect((await request()).status).toBe(503);
+  expect(sentry.captureException).toHaveBeenCalledOnce();
+  clock.mockReturnValue(3_000_000_060_000);
+  expect((await request()).status).toBe(503);
+  expect(sentry.captureException).toHaveBeenCalledTimes(2);
+});
+
+it("recognizes a deadline that aborts Apple's response body", async () => {
+  const deadline = new AbortController();
+  vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
+  const response = new Response(new ReadableStream({ start: (controller) => {
+    deadline.abort(new DOMException("PRIVATE_DEADLINE", "TimeoutError"));
+    controller.error(new DOMException("PRIVATE_BODY_ABORT", "AbortError"));
+  } }));
+  vi.stubGlobal("fetch", vi.fn(async () => response));
+  expect((await captureInstallAttribution(iosRequest(), {})).status).toBe(503);
+  const [error, hint] = sentry.captureException.mock.calls[0];
+  const event = sanitizeWorkerEvent({ type: undefined, tags: hint.tags, exception: { values: [{ value: String(error) }] } });
+  expect(event.tags).toEqual({ failure_code: "attribution.apple_timeout", operation: "apple_attribution_request" });
+  expect(JSON.stringify(event)).not.toContain("PRIVATE");
 });
