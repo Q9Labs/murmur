@@ -99,7 +99,7 @@ echo "Building the signed Murmur Android bundle."
   --init-script "$temp_dir/release-output.init.gradle" \
   -Pq9ReleaseOutputDir="$output_dir" \
   -Pq9ReleaseArtifactName="$artifact_name" \
-  testDebugUnitTest bundleRelease
+  :app:testDebugUnitTest :murmur-audio:testDebugUnitTest :app:bundleRelease
 
 built_bundle="$output_dir/$artifact_name"
 if [[ ! -f "$built_bundle" ]]; then
