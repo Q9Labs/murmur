@@ -13,6 +13,7 @@ import {
 } from "./revenueCatApi";
 import type { RevenueCatEvent } from "./revenueCatEvent";
 import { processRevenueCatEvent } from "./revenueCatProcessor";
+import { restoreVerifiedResourceOwnership } from "./revenueCatRestore";
 
 export type ReconciliationTrigger = "daily" | "login" | "purchase" | "restore";
 
@@ -32,6 +33,7 @@ type ReconciliationContext = {
   customerId: string;
   env: Env;
   nowMs: number;
+  trigger: ReconciliationTrigger;
 };
 
 export async function reconcileRevenueCatCustomer(params: {
@@ -162,6 +164,9 @@ async function applyReconciledResource(
   const database = params.env.BILLING_DB;
   if (!database) {
     throw new Error("billing database is unavailable for reconciliation");
+  }
+  if (params.trigger === "restore") {
+    await restoreVerifiedResourceOwnership({ ...params, database, resource, resourceKey: revenueCatResourceKey(resource) });
   }
   const transition = await prepareResourceTransition(database, params, resource);
   if (!transition) {
