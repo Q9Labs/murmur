@@ -14,6 +14,7 @@ import { queuePersonalOfferStart } from "../billing/personalOffer";
 import { getSessionPhoneAudioGift, settlePhoneAudioGift } from "../billing/phoneAudioGift";
 import {
   createRealtimeUsageMeter,
+  RealtimeBillingError,
   type RealtimeUsageMeter,
 } from "../billing/realtimeUsageMeter";
 import { findOpenUsageSession } from "../billing/usageSessionStore";
@@ -426,9 +427,7 @@ export async function proxyRealtimeSession(
         socketCode: 1008,
       });
     }).catch((failure: unknown) => {
-      Sentry.captureException(failure, {
-        tags: { app_session_id: appSessionId, operation: "settle_realtime_usage" },
-      });
+      recordBillingFailure(telemetry, "periodic_settlement", failure);
       terminate({
         errorCode: "billing_unavailable",
         failureCode: "billing_unavailable",
@@ -733,9 +732,7 @@ function bindClientEvents(
       }
       forwardAudio(audio);
     }).catch((failure: unknown) => {
-      Sentry.captureException(failure, {
-        tags: { app_session_id: telemetry.appSessionId, operation: "meter_realtime_audio" },
-      });
+      recordBillingFailure(telemetry, "audio_metering", failure);
       stopForBilling("billing_unavailable");
     });
   };
@@ -758,9 +755,7 @@ function bindClientEvents(
           queueAudio(audio);
         }
       }).catch((failure: unknown) => {
-        Sentry.captureException(failure, {
-          tags: { app_session_id: telemetry.appSessionId, operation: "decode_realtime_audio" },
-        });
+        recordBillingFailure(telemetry, "audio_decode", failure);
         stopForBilling("billing_unavailable");
       });
       return;
@@ -932,6 +927,12 @@ type RealtimeTelemetry = {
   distinctId: string;
   env: Env;
   startedAtMs: number;
+  billingFailure?: {
+    billing_failure_operation: "periodic_settlement" | "audio_metering" | "audio_decode";
+    billing_failure_stage: "periodic_settlement" | "audio_metering" | "audio_decode" | RealtimeBillingError["diagnostic"]["stage"];
+    billing_failure_code: "unexpected_error" | RealtimeBillingError["diagnostic"]["code"];
+    billing_failure_status: number | null;
+  };
   stats: {
     captionRetryCount: number;
     captionsRecovered: boolean;
@@ -982,6 +983,27 @@ function captureFirstProviderSignal(
   }
 }
 
+function recordBillingFailure(
+  telemetry: RealtimeTelemetry,
+  operation: NonNullable<RealtimeTelemetry["billingFailure"]>["billing_failure_operation"],
+  failure: unknown,
+): void {
+  const diagnostic = failure instanceof RealtimeBillingError ? failure.diagnostic : null;
+  telemetry.billingFailure = {
+    billing_failure_operation: operation,
+    billing_failure_stage: diagnostic?.stage ?? operation,
+    billing_failure_code: diagnostic?.code ?? "unexpected_error",
+    billing_failure_status: diagnostic?.status ?? null,
+  };
+  Sentry.captureException(new Error("realtime billing unavailable"), {
+    tags: { failure_code: "billing.realtime_unavailable", ...telemetry.billingFailure,
+      billing_failure_status: telemetry.billingFailure.billing_failure_status?.toString(),
+    },
+  });
+  // The Cloudflare transport buffers late WebSocket errors until explicitly flushed.
+  telemetry.context?.waitUntil(Sentry.flush(2_000));
+}
+
 function createSessionEndedEvent(
   telemetry: RealtimeTelemetry,
   outcome: "completed" | "failed",
@@ -1002,6 +1024,7 @@ function createSessionEndedEvent(
     caption_only_connected_seconds: telemetry.stats.captionConnectedSeconds,
     caption_replacement_count: telemetry.stats.captionReplacementCount,
     caption_recovery_exhausted: telemetry.stats.captionRecoveryExhausted,
+    ...telemetry.billingFailure,
     failure_code: failureCode,
     input_audio_bytes: telemetry.stats.inputAudioBytes,
     input_audio_chunks: telemetry.stats.inputAudioChunks,

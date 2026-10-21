@@ -74,3 +74,28 @@ it("does not attach an Apple status to unrelated failures", () => {
     failure_code: "worker.request_failed", upstream_status: "503", operation: "capture_install_attribution",
   } }).tags).toEqual({ failure_code: "worker.request_failed", operation: "http_request" });
 });
+
+
+it("keeps only bounded realtime billing cause fields after Sentry scrubbing", () => {
+  const event = sanitizeWorkerEvent({ type: undefined, message: "PRIVATE_ERROR", tags: {
+    failure_code: "billing.realtime_unavailable", billing_failure_operation: "periodic_settlement",
+    billing_failure_stage: "ledger_result", billing_failure_code: "usage_session_closed", billing_failure_status: "409",
+    account: "PRIVATE_ACCOUNT", balance: "PRIVATE_BALANCE",
+  } });
+  expect(event.tags).toEqual({ failure_code: "billing.realtime_unavailable", operation: "realtime_billing",
+    billing_failure_operation: "periodic_settlement", billing_failure_stage: "ledger_result",
+    billing_failure_code: "usage_session_closed", billing_failure_status: "409" });
+  expect(JSON.stringify(event)).not.toContain("PRIVATE");
+});
+
+it.each(["PRIVATE", "503 PRIVATE", "099", "600", "503.0", 503, null])("drops untrusted billing fields %s", (value) => {
+  const event = sanitizeWorkerEvent({ type: undefined, tags: { failure_code: "billing.realtime_unavailable",
+    billing_failure_operation: value, billing_failure_stage: value, billing_failure_code: value, billing_failure_status: value } });
+  expect(event.tags).toEqual({ failure_code: "billing.realtime_unavailable", operation: "realtime_billing" });
+});
+
+it("does not attach billing fields to other failures", () => {
+  expect(sanitizeWorkerEvent({ type: undefined, tags: { failure_code: "worker.request_failed",
+    billing_failure_operation: "audio_decode", billing_failure_status: "503" } }).tags)
+    .toEqual({ failure_code: "worker.request_failed", operation: "http_request" });
+});

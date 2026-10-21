@@ -64,14 +64,22 @@ export class CustomerLedgerDurableObject {
   }
 }
 
+export type LedgerFailureDiagnostic = {
+  stage: "ledger_binding" | "ledger_request" | "ledger_decode" | "ledger_result";
+  code: "binding_missing" | "request_failed" | "decode_failed" | "billing_unavailable" | "customer_deleted" | "customer_mismatch" | "invalid_ledger_command" | "usage_session_closed" | "allowance_exhausted" | "unexpected_result";
+  status: number | null;
+};
+
 export async function callCustomerLedger(
   namespace: CustomerLedgerNamespace | undefined,
   customerId: string,
   command: CustomerLedgerCommand,
-): Promise<{ response: Response; result: LedgerCommandResult }> {
+): Promise<{ response: Response; result: LedgerCommandResult; diagnostic?: LedgerFailureDiagnostic }> {
   if (!namespace) {
-    return billingUnavailable();
+    return billingUnavailable({ stage: "ledger_binding", code: "binding_missing", status: null });
   }
+  let stage: "ledger_request" | "ledger_decode" = "ledger_request";
+  let status: number | null = null;
   try {
     const stub = namespace.get(namespace.idFromName(customerId));
     const ledgerResponse = await stub.fetch("https://customer-ledger.internal/", {
@@ -79,16 +87,18 @@ export async function callCustomerLedger(
       headers: { [internalHeader]: "1", "content-type": "application/json" },
       method: "POST",
     });
+    stage = "ledger_decode";
+    status = ledgerResponse.status;
     const result: LedgerCommandResult = await ledgerResponse.json();
     return { response: ledgerResponse, result };
   } catch {
-    return billingUnavailable();
+    return billingUnavailable({ stage, code: stage === "ledger_decode" ? "decode_failed" : "request_failed", status });
   }
 }
 
-function billingUnavailable(): { response: Response; result: LedgerCommandResult } {
+function billingUnavailable(diagnostic: LedgerFailureDiagnostic): { response: Response; result: LedgerCommandResult; diagnostic: LedgerFailureDiagnostic } {
   const result: LedgerCommandResult = { code: "billing_unavailable", ok: false };
-  return { response: response(result, 503), result };
+  return { response: response(result, 503), result, diagnostic };
 }
 
 function response(result: LedgerCommandResult, status = 200): Response {

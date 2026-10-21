@@ -80,6 +80,10 @@ export type WorkerTelemetryEvent =
       caption_only_connected_seconds: number;
       caption_replacement_count: number;
       caption_recovery_exhausted: boolean;
+      billing_failure_operation?: "periodic_settlement" | "audio_metering" | "audio_decode";
+      billing_failure_stage?: string;
+      billing_failure_code?: string;
+      billing_failure_status?: number | null;
       failure_code: string | null;
       input_audio_bytes: number;
       input_audio_chunks: number;

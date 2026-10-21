@@ -41,6 +41,10 @@ export const failures = {
     class: "unknown", operation: "capture_install_attribution", description: "Install attribution did not complete",
     retryable: true, main_action_affected: false,
   },
+  "billing.realtime_unavailable": {
+    class: "unknown", operation: "realtime_billing", description: "Realtime billing did not complete",
+    retryable: true, main_action_affected: true,
+  },
   "worker.request_failed": {
     class: "unknown", operation: "http_request", description: "Worker request did not complete",
     retryable: false, main_action_affected: true,

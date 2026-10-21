@@ -1,7 +1,25 @@
-import { callCustomerLedger } from "./customerLedgerDurableObject";
+import { callCustomerLedger, type LedgerFailureDiagnostic } from "./customerLedgerDurableObject";
 
 const pcm16BytesPerMillisecond = 48;
 const maxUnsettledMs = 5_000;
+
+export class RealtimeBillingError extends Error {
+  constructor(readonly diagnostic: LedgerFailureDiagnostic | { stage: "gift_settlement"; code: "request_failed"; status: null }) {
+    super("usage settlement failed");
+    this.name = "RealtimeBillingError";
+  }
+}
+
+function settlementFailure(ledger: Awaited<ReturnType<typeof callCustomerLedger>>): RealtimeBillingError {
+  const code = !ledger.result.ok ? ledger.result.code : "unexpected_result";
+  const knownCodes: LedgerFailureDiagnostic["code"][] = [
+    "billing_unavailable", "customer_deleted", "customer_mismatch", "invalid_ledger_command",
+    "usage_session_closed", "allowance_exhausted",
+  ];
+  return new RealtimeBillingError(ledger.diagnostic ?? {
+    stage: "ledger_result", code: knownCodes.includes(code) ? code : "unexpected_result", status: ledger.response.status,
+  });
+}
 
 export type AudioAcceptance = "accepted" | "allowance_exhausted" | "phone_audio_gift_exhausted" | "settlement_required";
 
@@ -86,14 +104,19 @@ export function createRealtimeUsageMeter(params: {
         availableMs = ledger.result.availableMs;
         return { availableMs, exhausted: true, giftExhausted };
       }
-      throw new Error(`usage settlement failed: ${ledger.result.code}`);
+      throw settlementFailure(ledger);
     }
     if (!("balance" in ledger.result)) {
-      throw new Error("usage settlement returned no balance");
+      throw settlementFailure(ledger);
     }
     availableMs = ledger.result.balance.availableMs;
     if (params.gift) {
-      const remainingMs = await params.gift.settle(targetSettledMs);
+      let remainingMs: number;
+      try {
+        remainingMs = await params.gift.settle(targetSettledMs);
+      } catch {
+        throw new RealtimeBillingError({ stage: "gift_settlement", code: "request_failed", status: null });
+      }
       giftExhausted = remainingMs <= 0;
     }
     settledMs = targetSettledMs;

@@ -30,6 +30,26 @@ describe("customer ledger Durable Object client", () => {
     expect(runtimeFailures[0]).toEqual(new Error("customer_ledger_request_failed"));
   });
 
+  it.each([
+    { kind: "missing", stage: "ledger_binding", code: "binding_missing", status: null },
+    { kind: "request", stage: "ledger_request", code: "request_failed", status: null },
+    { kind: "decode", stage: "ledger_decode", code: "decode_failed", status: 502 },
+  ])("retains the safe $kind failure boundary", async ({ kind, stage, code, status }) => {
+    const namespace: CustomerLedgerNamespace | undefined = kind === "missing" ? undefined : {
+      idFromName: () => ({ equals: () => true, toString: () => "fixture" }),
+      get: () => ({ fetch: async () => {
+        if (kind === "request") throw new Error("private account secret");
+        return new Response("private account secret", { status: 502 });
+      } }),
+    };
+    const result = await callCustomerLedger(namespace, "fixture", {
+      action: "get_balance", customerId: "fixture", nowMs: 1,
+    });
+    expect(result.diagnostic).toEqual({ stage, code, status });
+    expect(result.result).toEqual({ ok: false, code: "billing_unavailable" });
+    expect(JSON.stringify(result)).not.toContain("private account secret");
+  });
+
   it("returns a typed unavailable result when the Durable Object request fails", async () => {
     const durableObjectId: DurableObjectId = {
       equals: () => true,
