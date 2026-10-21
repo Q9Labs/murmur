@@ -1,4 +1,3 @@
-import * as Linking from "expo-linking";
 import { AudioLines, ChartNoAxesColumn, ShieldCheck } from "lucide-react-native";
 import type { ComponentType, ReactNode } from "react";
 import {
@@ -12,7 +11,7 @@ import {
 
 import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import type { MessageKey } from "../../i18n/catalogs/en";
-import { captureMobileFailure } from "../../lib/observability/sentry";
+import { openLegalLink } from "../../lib/legalLinks";
 import type { VariantOnboardingProps } from "./types";
 
 export type OnboardingTheme = {
@@ -85,8 +84,6 @@ function WelcomeStep({ artwork, onContinue, text, theme }: FlowProps): ReactNode
   );
 }
 
-const privacyPolicyUrl = "https://murmur.q9labs.ai/privacy";
-
 const privacyPoints: ReadonlyArray<{ icon: ComponentType<{ color?: string; size?: number }>; text: MessageKey }> = [
   { icon: AudioLines, text: "onboarding.privacySentToAi" },
   { icon: ShieldCheck, text: "onboarding.privacyNotKept" },
@@ -122,9 +119,7 @@ function PrivacyStep({
           accessibilityRole="link"
           hitSlop={10}
           onPress={() => {
-            Linking.openURL(privacyPolicyUrl).catch((failure: unknown) => {
-              captureMobileFailure(failure, { operation: "open_privacy_policy", stage: "onboarding" });
-            });
+            void openLegalLink("privacy", "onboarding");
           }}
           style={({ pressed }) => [pressed && theme.pressed]}
         >

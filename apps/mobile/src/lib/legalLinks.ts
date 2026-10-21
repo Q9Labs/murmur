@@ -9,7 +9,13 @@ const legalUrls = {
   terms: "https://murmur.q9labs.ai/terms",
 } as const;
 
-type LegalLinkSource = "settings" | "billing";
+const legalLinkOperations = {
+  settings: "open_settings_link",
+  billing: "open_paywall_legal_link",
+  onboarding: "open_privacy_policy",
+} as const;
+
+type LegalLinkSource = keyof typeof legalLinkOperations;
 
 export async function openLegalLink(target: keyof typeof legalUrls, source: LegalLinkSource): Promise<void> {
   const url = legalUrls[target];
@@ -24,7 +30,7 @@ export async function openLegalLink(target: keyof typeof legalUrls, source: Lega
     captureMobileFailure(failure, {
       error_code: unspecified ? "EUNSPECIFIED" : "external_link_unknown",
       external_link: { target, step: "open_url", failure: classification },
-      operation: source === "settings" ? "open_settings_link" : "open_paywall_legal_link",
+      operation: legalLinkOperations[source],
       stage: source,
     });
   }
