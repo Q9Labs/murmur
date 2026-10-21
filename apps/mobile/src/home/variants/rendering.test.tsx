@@ -1,9 +1,11 @@
+// cspell:ignore EUNSPECIFIED
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "../viewModel";
+import { sanitizeMobileEvent } from "../../lib/observability/sentry";
 import { OnboardingFlow, type OnboardingText, type OnboardingTheme } from "./onboardingFlow";
 import { SpanTimeline, timelineScrollHandlers } from "./shared";
 import type { VariantOnboardingProps, VariantShellProps } from "./types";
@@ -86,7 +88,8 @@ vi.mock("lucide-react-native", () => ({
   ChartNoAxesColumn: () => null,
   ShieldCheck: () => null,
 }));
-vi.mock("../../lib/observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
+vi.mock("@sentry/react-native", () => sentry);
 
 vi.mock("./hooks", () => ({
   useMicLevelValue: () => 0.75,
@@ -224,12 +227,44 @@ function onboardingProps(step: VariantOnboardingProps["step"]): VariantOnboardin
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   harness.controls.length = 0;
   harness.maskedContentViews = 0;
   harness.scheme = "dark";
 });
 
 describe("shared variant onboarding flow", () => {
+  it.each([
+    { message: "Unable to open URL: https://murmur.q9labs.ai/privacy", classification: "native_open_rejected" },
+    { message: "private-native-detail", classification: "unspecified" },
+  ])("keeps safe diagnostics from the privacy link press for $classification", async ({ message, classification }) => {
+    const failure = Object.assign(new Error(message), { code: "EUNSPECIFIED" });
+    openURL.mockRejectedValueOnce(failure);
+    const privacy = onboardingProps("privacy");
+    render(<OnboardingFlow {...privacy} text={onboardingText} theme={onboardingTheme} />);
+    harness.controls.find((control) => control.accessibilityRole === "link")?.onPress?.();
+    await vi.waitFor(() => expect(sentry.captureException).toHaveBeenCalledOnce());
+    expect(openURL).toHaveBeenCalledExactlyOnceWith("https://murmur.q9labs.ai/privacy");
+    const event = sanitizeMobileEvent({
+      ...sentry.captureException.mock.calls[0]?.[1],
+      exception: { values: [{ type: "Error", value: message }] },
+      extra: { content: "private-user-content" },
+      user: { email: "private-user-content" },
+      request: { url: "https://private-user-content" },
+      breadcrumbs: [{ message: "private-user-content" }],
+      type: undefined,
+    });
+    expect(event.tags).toMatchObject({
+      operation: "open_privacy_policy", stage: "onboarding", error_code: "EUNSPECIFIED",
+      link_target: "privacy", link_step: "open_url", link_failure: classification,
+    });
+    expect(event.fingerprint).toEqual(["open_privacy_policy", "onboarding", "EUNSPECIFIED"]);
+    expect(event.exception?.values?.[0]?.value).toBe("mobile_operation_failed");
+    expect(JSON.stringify(event)).not.toMatch(/https:|private-|Unable to open URL/);
+    expect(privacy.onPrivacyAgree).not.toHaveBeenCalled();
+    expect(privacy.onTogglePrivacyConsent).not.toHaveBeenCalled();
+  });
+
   it("renders each step and wires its primary actions", () => {
     const welcome = onboardingProps("welcome");
     expect(render(<OnboardingFlow {...welcome} text={onboardingText} theme={onboardingTheme} />)).toContain("Start a conversation.");
