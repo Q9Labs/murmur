@@ -13,6 +13,32 @@ afterEach(() => {
 });
 
 describe("realtime usage meter", () => {
+  it.each([
+    { stage: "ledger_request", code: "request_failed", status: null },
+    { stage: "ledger_decode", code: "decode_failed", status: 502 },
+    { stage: "ledger_result", code: "usage_session_closed", status: 409 },
+  ] as const)("preserves $stage when settlement stops audio", async (diagnostic) => {
+    vi.mocked(callCustomerLedger).mockResolvedValue({
+      response: Response.json({ ok: false }, { status: 503 }),
+      result: { ok: false, code: "billing_unavailable" }, diagnostic,
+    });
+    const meter = createBilledMeter();
+    meter.recordAudio(48_000);
+    await expect(meter.settle()).rejects.toMatchObject({ diagnostic });
+  });
+
+  it("retains a bounded returned ledger code and status", async () => {
+    vi.mocked(callCustomerLedger).mockResolvedValue({
+      response: Response.json({ ok: false }, { status: 409 }),
+      result: { ok: false, code: "usage_session_closed" },
+    });
+    const meter = createBilledMeter();
+    meter.recordAudio(48_000);
+    await expect(meter.settle()).rejects.toMatchObject({
+      diagnostic: { stage: "ledger_result", code: "usage_session_closed", status: 409 },
+    });
+  });
+
   it("meters and freezes audio when billing enforcement is disabled", async () => {
     const meter = createRealtimeUsageMeter({
       availableMs: Number.POSITIVE_INFINITY,

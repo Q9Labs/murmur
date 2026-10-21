@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/cloudflare";
 
 import type { Env } from "../env";
 import type { InsightSessionContext } from "../insights/sessionInsights";
+
+vi.mock("@sentry/cloudflare", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@sentry/cloudflare")>(),
+  flush: vi.fn(),
+}));
 
 type InsightCollector = ReturnType<typeof import("../insights/sessionInsights").createInsightCollector>;
 
@@ -75,6 +81,7 @@ class FakeSocket extends EventTarget {
 }
 
 async function openTestRealtimeSession(params: {
+  context?: Parameters<typeof proxyRealtimeSession>[3];
   env?: Parameters<typeof proxyRealtimeSession>[2];
   hashedInstallId?: string;
   name: string;
@@ -98,6 +105,7 @@ async function openTestRealtimeSession(params: {
     ),
     client as unknown as WorkerWebSocket,
     params.env ?? { OPENAI_API_KEY: "test_key" },
+    params.context,
   );
   return { appSessionId, client, upstream };
 }
@@ -114,6 +122,28 @@ describe("app-facing realtime socket", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("retains a safe decode cause on a billing failure without leaking the error", async () => {
+    const delivery = Promise.resolve(true);
+    const flush = vi.mocked(Sentry.flush).mockReturnValue(delivery);
+    const waitUntil = vi.fn();
+    const { client } = await openTestRealtimeSession({ name: "billing-decode", context: { waitUntil } });
+    const audio = new Blob([new Uint8Array(48)]);
+    audio.arrayBuffer = async () => { throw new Error("private audio account balance secret"); };
+    client.dispatchEvent(new MessageEvent("message", { data: audio }));
+    await vi.waitFor(() => expect(client.closeCalls).toContainEqual({ code: 1011, reason: "billing_unavailable" }));
+    const ended = telemetryMocks.queuePostHogEvent.mock.calls.map(([params]) => params.payload)
+      .find((payload) => payload.event === "worker_session_ended");
+    expect(ended).toMatchObject({
+      outcome: "failed", failure_code: "billing_unavailable",
+      billing_failure_operation: "audio_decode", billing_failure_stage: "audio_decode",
+      billing_failure_code: "unexpected_error", billing_failure_status: null,
+    });
+    expect(JSON.stringify(ended)).not.toContain("private audio account balance secret");
+    expect(flush).toHaveBeenCalledWith(2_000);
+    expect(waitUntil).toHaveBeenCalledWith(delivery);
+    flush.mockReset();
   });
 
   it("accepts close and typed playback commands", () => {

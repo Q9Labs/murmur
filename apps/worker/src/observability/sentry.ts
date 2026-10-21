@@ -41,6 +41,22 @@ function safeFrame(frame: StackFrame): StackFrame | undefined {
   };
 }
 
+function safeBillingTags(tags: ErrorEvent["tags"]) {
+  const allowed = {
+    billing_failure_operation: ["periodic_settlement", "audio_metering", "audio_decode"],
+    billing_failure_stage: ["periodic_settlement", "audio_metering", "audio_decode", "ledger_binding", "ledger_request", "ledger_decode", "ledger_result", "gift_settlement"],
+    billing_failure_code: ["binding_missing", "request_failed", "decode_failed", "billing_unavailable", "customer_deleted", "customer_mismatch", "invalid_ledger_command", "usage_session_closed", "allowance_exhausted", "unexpected_result", "unexpected_error"],
+  };
+  const status = tags?.billing_failure_status;
+  return {
+    ...Object.fromEntries(Object.entries(allowed).flatMap(([key, values]) => {
+      const value = tags?.[key];
+      return typeof value === "string" && values.includes(value) ? [[key, value]] : [];
+    })),
+    ...(typeof status === "string" && /^[1-5][0-9]{2}$/.test(status) ? { billing_failure_status: status } : {}),
+  };
+}
+
 export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
   const code = isFailureCode(event.tags?.failure_code) ? event.tags.failure_code : "worker.request_failed";
   const definition = failureDefinition(code);
@@ -64,6 +80,7 @@ export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
     } : undefined,
     tags: {
       failure_code: code, operation: definition.operation,
+      ...(code === "billing.realtime_unavailable" ? safeBillingTags(event.tags) : {}),
       ...(code === "attribution.apple_http_failed" && typeof upstreamStatus === "string" &&
         /^[1-5][0-9]{2}$/.test(upstreamStatus) ? { upstream_status: upstreamStatus } : {}),
       ...(typeof trace === "string" && /^(?!0{32}$)[a-f0-9]{32}$/.test(trace) ? { trace_id: trace } : {}),
