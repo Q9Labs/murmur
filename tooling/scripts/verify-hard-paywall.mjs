@@ -198,11 +198,13 @@ try {
   assert.equal(preserved.balance.available_ms, 180_000);
   assert.equal(preserved.balance.credit_ms, 0);
   const transferredFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedAfterFlip.id).all();
-  assert.deepEqual(transferredFree.results, [originalFree]);
-  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(beforeFlip.id).first("count"), 0);
+  const canonicalFree = { ...originalFree, grant_id: `grant:${linkedAfterFlip.id}:${originalFree.grant_key}` };
+  assert.deepEqual(transferredFree.results, [canonicalFree]);
+  assert.equal(await database.prepare("SELECT allowance_period_id FROM allowance_periods WHERE customer_id = ? AND period_key = ?").bind(linkedAfterFlip.id, originalFree.grant_key).first("allowance_period_id"), `period:${linkedAfterFlip.id}:${originalFree.grant_key}`);
+  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(beforeFlip.id).first("count"), 1);
   assert.equal(await rows("free_allowance_claims", beforeFlip.id), 0);
   assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
-  pass("pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and the original Free grant");
+  pass("pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and a destination-canonical Free grant");
   for (let retry = 0; retry < 2; retry += 1) {
     const rolledBack = await customer(linkedAfterFlip, "1.4.1");
     assert.equal(rolledBack.free_allowance_ms, 300_000);
@@ -211,9 +213,9 @@ try {
   }
   await session(linkedAfterFlip, "1.4.1", 200);
   const afterRollbackFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedAfterFlip.id).all();
-  assert.deepEqual(afterRollbackFree.results, [originalFree]);
+  assert.deepEqual(afterRollbackFree.results, [canonicalFree]);
   assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
-  pass("same-month rollback after hard-mode OTP linking reuses the moved Free grant and starts a session without adding minutes");
+  pass("same-month rollback after hard-mode OTP linking reuses the canonical Free grant and starts a session without adding minutes");
   const exhausted = await guest("1.4.1");
   const exhaustedSessionId = randomUUID();
   await ledgerCommand({ customerId: exhausted.id, action: "open_usage_session", usageSessionId: exhaustedSessionId });
@@ -230,8 +232,9 @@ try {
     assert.equal(rolledBack.balance.available_ms, 0);
   }
   const afterExhaustedRollback = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedExhausted.id).all();
-  assert.deepEqual(afterExhaustedRollback.results, [exhaustedFree]);
-  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(exhausted.id).first("count"), 0);
+  assert.deepEqual(afterExhaustedRollback.results, [{ ...exhaustedFree, grant_id: `grant:${linkedExhausted.id}:${exhaustedFree.grant_key}` }]);
+  assert.equal(await database.prepare("SELECT allowance_period_id FROM allowance_periods WHERE customer_id = ? AND period_key = ?").bind(linkedExhausted.id, exhaustedFree.grant_key).first("allowance_period_id"), `period:${linkedExhausted.id}:${exhaustedFree.grant_key}`);
+  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(exhausted.id).first("count"), 1);
   assert.equal(await rows("free_allowance_claims", exhausted.id), 0);
   assert.equal(await rows("free_allowance_claims", linkedExhausted.id), 1);
   assert.equal(await rows("ledger_entries", exhausted.id) + await rows("ledger_entries", linkedExhausted.id), exhaustedEntryCount);
