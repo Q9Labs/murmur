@@ -342,4 +342,22 @@ describe("home billing effects", () => {
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
   });
 
+  it("waits for billing before preparing the microphone", async () => {
+    state.billing = { ...fixtureBilling(), customer: null };
+    const renderer = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling();
+    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("does not prepare while hard locked, but prepares when balance arrives", async () => {
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+    const renderer = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000 });
+    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
 });

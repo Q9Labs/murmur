@@ -375,8 +375,10 @@ export default function HomeScreen(): ReactNode {
     }
   }, [acquisition, live.status]);
 
+  const customerLoaded = billing.customer !== null;
   useEffect(() => {
     if (
+      customerLoaded &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
       onboardingStep === "done" &&
@@ -384,7 +386,7 @@ export default function HomeScreen(): ReactNode {
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, billing.customer, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, billing.customer, customerLoaded, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
