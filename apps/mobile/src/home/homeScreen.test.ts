@@ -239,14 +239,14 @@ describe("audio playback preference controller", () => {
 });
 
 describe("Start allowance gate", () => {
-  it("opens Plans without starting translation when hard-mode balance stays empty", async () => {
+  it("opens the paywall without starting translation when hard-mode balance stays empty", async () => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
     const start = vi.fn(async () => undefined);
     const push = vi.fn();
     const refresh = vi.fn(async () => customer);
-    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/plans") });
+    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/paywall") });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(push).toHaveBeenCalledWith("/plans");
+    expect(push).toHaveBeenCalledWith("/paywall");
     expect(start).not.toHaveBeenCalled();
   });
 

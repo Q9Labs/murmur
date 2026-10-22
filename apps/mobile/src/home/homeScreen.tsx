@@ -358,7 +358,7 @@ export default function HomeScreen(): ReactNode {
       handledExhaustionRef.current = live.error;
       void refreshBilling().then((fresh) => {
         if (lockedSurface(fresh) === "paywall") {
-          router.push("/plans");
+          router.push("/paywall");
         } else {
           setOutOfMinutesOpen(true);
         }
@@ -548,7 +548,7 @@ export default function HomeScreen(): ReactNode {
     await startWithAllowance({
       customer: billing.customer,
       refresh: billing.refresh,
-      openPlans: () => router.push("/plans"),
+      openPlans: () => router.push("/paywall"),
       start: async () => {
         await audioPreferenceController.waitForRestore();
         await live.start();

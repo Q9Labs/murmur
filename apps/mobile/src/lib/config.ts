@@ -58,6 +58,8 @@ export function getGoogleOAuthClientIds(): { web?: string; ios?: string } {
 }
 
 const uiPreviewScreens = [
+  "paywall",
+  "paywall-monthly",
   "auth-code",
   "auth-code-error",
   "auth-code-expired",

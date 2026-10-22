@@ -9,6 +9,7 @@ import { ConversationScreen } from "./history/conversationScreen";
 import { HistoryScreen } from "./history/historyScreen";
 import { InsightsConsentScreen } from "./insights/insightsConsentScreen";
 import { PhoneAudioScreen } from "./phoneAudio/phoneAudioScreen";
+import { PaywallScreen } from "./paywall/paywallScreen";
 import { PlansScreen } from "./plans/plansScreen";
 import {
   type AuthPreviewScreen,
@@ -46,6 +47,8 @@ export type ScreenPreview =
   | "phone-audio-claimed"
   | "phone-audio-gate"
   | "phone-audio-gift"
+  | "paywall"
+  | "paywall-monthly"
   | "plans-monthly"
   | "plans-offer"
   | "plans-packs"
@@ -91,6 +94,8 @@ function PhoneAudioPreview({ services }: { services: ScreenServices }): ReactNod
 }
 
 export const screenPreviews: Readonly<Record<ScreenPreview, () => ReactNode>> = {
+  paywall: () => <WithFixtures><PaywallScreen /></WithFixtures>,
+  "paywall-monthly": () => <WithFixtures><PaywallScreen initialKey="monthly" /></WithFixtures>,
   "account-guest": () => <WithFixtures><AccountScreen /></WithFixtures>,
   "account-pack": () => <WithFixtures billing={previewPackBilling}><AccountScreen /></WithFixtures>,
   "account-pro-max": () => <WithFixtures billing={previewProMaxBilling}><AccountScreen /></WithFixtures>,

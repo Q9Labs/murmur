@@ -77,7 +77,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         ) : null}
         {props.listeningInBackground ? <BackgroundListeningPill /> : (
           <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-            {hardPaywallLocked && isAllowanceExhaustedError(live.error) ? "" : viewModel.statusText}
+            {hardPaywallLocked && !viewModel.isLive ? "" : viewModel.statusText}
           </Text>
         )}
         <CaptureSourceControl
@@ -229,6 +229,11 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
 function TranslationStage(props: VariantShellProps): ReactNode {
   const { styles } = useBloomStyles();
   const translationOnly = !props.live.source_transcript_enabled;
+  const billing = useMurmurBilling();
+  const { t } = useUiLocale();
+  if (isHardPaywallLocked(billing.customer) && !props.viewModel.isLive && props.live.spans.length === 0) {
+    return <View style={[styles.flexFill, styles.timelineContent]}><Text style={styles.sourceText}>{t("paywall.lockedHome")}</Text></View>;
+  }
   return (
     <View style={styles.flexFill}>
       <SpanTimeline
