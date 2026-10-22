@@ -201,7 +201,7 @@ export const jaCatalog: Catalog = {
   "plans.offerEnds": "終了まで{countdown}",
 
   "paywall.heading": "次の会話を翻訳しましょう",
-  "paywall.example": "翻訳例：{source}から{target}へ",
+  "paywall.example": "翻訳例：英語から日本語へ",
   "paywall.packDetail": "有効期限のない{minutes}。",
   "paywall.proDetail": "毎月{allowance}の翻訳。",
   "paywall.onePayment": "お支払いは1回のみ。定期購入ではありません。",

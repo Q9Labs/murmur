@@ -201,7 +201,7 @@ export const frCatalog: Catalog = {
   "plans.offerEnds": "Se termine dans {countdown}",
 
   "paywall.heading": "Traduisez votre prochaine conversation",
-  "paywall.example": "Exemple : {source} vers {target}",
+  "paywall.example": "Exemple : de l’anglais au français",
   "paywall.packDetail": "{minutes} sans date d’expiration.",
   "paywall.proDetail": "{allowance} de traduction chaque mois.",
   "paywall.onePayment": "Paiement unique. Sans abonnement.",

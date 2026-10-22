@@ -216,7 +216,7 @@ export const enCatalog = {
   "plans.offerEnds": "Ends in {countdown}",
 
   "paywall.heading": "Translate your next conversation",
-  "paywall.example": "Example: {source} to {target}",
+  "paywall.example": "Example: Arabic to English",
   "paywall.packDetail": "{minutes} that never expire.",
   "paywall.proDetail": "{allowance} of translation every month.",
   "paywall.onePayment": "One payment. No subscription.",

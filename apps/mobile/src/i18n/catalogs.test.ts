@@ -50,6 +50,11 @@ describe("UI catalogs", () => {
     }
   });
 
+  it.each(["ar", "ur"] as const)("isolates store-supplied subscription title and price in %s", (locale) => {
+    expect(interpolate(catalogMessage(catalogs[locale], "paywall.subscriptionPrice"), "paywall.subscriptionPrice", { title: "Pro", price: "$7.99 first month" }))
+      .toBe("\u2068Pro\u2069، \u2068$7.99 first month\u2069");
+  });
+
   it("interpolates named values and rejects missing ones", () => {
     const key: MessageKey = "home.reportReceived";
     expect(interpolate(enCatalog[key], key, { receiptId: "x" })).toBe("Report received: x");

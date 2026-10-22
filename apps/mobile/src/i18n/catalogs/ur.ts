@@ -201,14 +201,14 @@ export const urCatalog: Catalog = {
   "plans.offerEnds": "{countdown} میں ختم",
 
   "paywall.heading": "اپنی اگلی گفتگو کا ترجمہ کریں",
-  "paywall.example": "ترجمے کی مثال: {source} سے {target} میں",
+  "paywall.example": "مثال: عربی سے انگریزی",
   "paywall.packDetail": "{minutes} جن کی میعاد کبھی ختم نہیں ہوتی۔",
   "paywall.proDetail": "ہر ماہ {allowance} ترجمہ۔",
   "paywall.onePayment": "ایک بار ادائیگی۔ کوئی سبسکرپشن نہیں۔",
   "paywall.allPlans": "تمام پلان",
   "paywall.lockedHome": "ترجمہ شروع کرنے کے لیے ایک پلان منتخب کریں۔",
   "paywall.once": "{price} ایک بار",
-  "paywall.subscriptionPrice": "{title}، {price}",
+  "paywall.subscriptionPrice": "⁨{title}⁩، ⁨{price}⁩",
 
   "history.languagePair": "{source} سے {target}",
   "account.title": "اکاؤنٹ",

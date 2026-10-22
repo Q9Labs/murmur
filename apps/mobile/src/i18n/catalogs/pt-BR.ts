@@ -201,7 +201,7 @@ export const ptBRCatalog: Catalog = {
   "plans.offerEnds": "Termina em {countdown}",
 
   "paywall.heading": "Traduza sua próxima conversa",
-  "paywall.example": "Exemplo: de {source} para {target}",
+  "paywall.example": "Exemplo: de inglês para português",
   "paywall.packDetail": "{minutes} que nunca expiram.",
   "paywall.proDetail": "{allowance} de tradução por mês.",
   "paywall.onePayment": "Pagamento único. Sem assinatura.",

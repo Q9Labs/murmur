@@ -201,7 +201,7 @@ export const idCatalog: Catalog = {
   "plans.offerEnds": "Berakhir dalam {countdown}",
 
   "paywall.heading": "Terjemahkan percakapan Anda berikutnya",
-  "paywall.example": "Contoh: {source} ke {target}",
+  "paywall.example": "Contoh: bahasa Arab ke bahasa Inggris",
   "paywall.packDetail": "{minutes} yang tidak pernah kedaluwarsa.",
   "paywall.proDetail": "{allowance} penerjemahan setiap bulan.",
   "paywall.onePayment": "Sekali bayar. Tanpa langganan.",

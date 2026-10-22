@@ -201,7 +201,7 @@ export const hiCatalog: Catalog = {
   "plans.offerEnds": "{countdown} में खत्म",
 
   "paywall.heading": "अपनी अगली बातचीत का अनुवाद करें",
-  "paywall.example": "उदाहरण: {source} से {target} में",
+  "paywall.example": "उदाहरण: अंग्रेज़ी से हिन्दी",
   "paywall.packDetail": "{minutes} जो कभी समाप्त नहीं होते।",
   "paywall.proDetail": "हर महीने {allowance} अनुवाद।",
   "paywall.onePayment": "एक बार भुगतान। कोई सदस्यता नहीं।",

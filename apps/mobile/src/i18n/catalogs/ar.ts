@@ -201,14 +201,14 @@ export const arCatalog: Catalog = {
   "plans.offerEnds": "ينتهي خلال {countdown}",
 
   "paywall.heading": "ترجِم محادثتك القادمة",
-  "paywall.example": "مثال: من {source} إلى {target}",
+  "paywall.example": "مثال: من الإنجليزية إلى العربية",
   "paywall.packDetail": "{minutes} لا تنتهي صلاحيتها.",
   "paywall.proDetail": "رصيد الترجمة الشهري: {allowance}.",
   "paywall.onePayment": "دفعة واحدة. دون اشتراك.",
   "paywall.allPlans": "جميع الخطط",
   "paywall.lockedHome": "اختر خطة لبدء الترجمة.",
   "paywall.once": "{price} لمرة واحدة",
-  "paywall.subscriptionPrice": "{title}، {price}",
+  "paywall.subscriptionPrice": "⁨{title}⁩، ⁨{price}⁩",
 
   "history.languagePair": "من {source} إلى {target}",
   "account.title": "الحساب",

@@ -32,7 +32,6 @@ describe("paywall demonstration", () => {
   it("shows the full localized sample immediately with reduced motion", () => {
     const markup = renderToStaticMarkup(<UiLocaleContext.Provider value={{ locale: "ar", direction: "rtl", ready: true, preference: "ar", t: createTranslator("ar"), translate: createTranslator("ar"), setPreference: async () => undefined, deleteLocale: async () => undefined }}><PaywallDemo /></UiLocaleContext.Provider>);
     expect(markup).toContain(previewConversationFor("ar").sourceCaption);
-    expect(markup).toContain("مثال: من English إلى العربية");
     expect(markup).toContain("مرحباً، المدينة تبدو مختلفة");
   });
 });

@@ -54,9 +54,15 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(ui.direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Pressable accessibilityLabel={t("accessibility.close")} accessibilityRole="button" onPress={() => router.back()} style={styles.close}>
-          <X color={colors.primary} size={22} />
-        </Pressable>
+        <View style={styles.header}>
+          <Pressable accessibilityLabel={t("accessibility.close")} accessibilityRole="button" onPress={() => router.back()} style={styles.close}>
+            <X color={colors.primary} size={22} />
+          </Pressable>
+          <View style={styles.example}>
+            <View style={styles.dot} />
+            <Text style={styles.exampleText}>{t("paywall.example")}</Text>
+          </View>
+        </View>
         <PaywallDemo />
         <View style={styles.purchase}>
           <Text accessibilityRole="header" style={styles.heading}>{t("paywall.heading")}</Text>

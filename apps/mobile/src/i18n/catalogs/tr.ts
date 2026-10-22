@@ -201,7 +201,7 @@ export const trCatalog: Catalog = {
   "plans.offerEnds": "{countdown} sonra bitiyor",
 
   "paywall.heading": "Bir sonraki konuşmanızı çevirin",
-  "paywall.example": "Örnek çeviri: {source} → {target}",
+  "paywall.example": "Örnek: Arapçadan İngilizceye",
   "paywall.packDetail": "Süresi dolmayan {minutes}.",
   "paywall.proDetail": "Her ay {allowance} çeviri.",
   "paywall.onePayment": "Tek ödeme. Abonelik yok.",
