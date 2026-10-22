@@ -15,6 +15,8 @@ vi.mock("react-native", () => ({
   Animated: { View: ({ children }: { children?: ReactNode }) => createElement("div", null, children) },
   StyleSheet: { create: <T,>(styles: T) => styles },
   useColorScheme: () => "light",
+  // Keep this isolated text/style capture mock local to the rendering suite.
+  // fallow-ignore-next-line code-duplication
   ScrollView: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
   Text: ({ children, style }: { children?: ReactNode; style?: unknown }) => {
     capturedText.push({ children, style });

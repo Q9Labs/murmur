@@ -99,7 +99,6 @@ vi.mock("lucide-react-native", () => import("../../screens/__tests__/navigation"
 vi.mock("@sentry/react-native", () => harness.sentry);
 
 vi.mock("./hooks", () => ({
-  useMicLevelValue: () => 0.75,
   useReducedMotion: () => true,
   usePulse: () => ({ interpolate: () => 1 }),
 }));
@@ -387,8 +386,9 @@ describe("locked Bloom home", () => {
     const props = shellProps({ hasTimeline: false, isLive: false });
     props.live.status = "idle";
     props.live.error = null;
-    props.viewModel = buildHomeViewModel({ live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
-    expect(render(<BloomShell {...props} />)).not.toContain(props.viewModel.statusText);
+    props.viewModel = buildHomeViewModel({ hardPaywallLocked: true, live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
+    expect(props.viewModel.statusText).toBe("");
+    expect(render(<BloomShell {...props} />)).not.toContain("Ready to translate");
   });
   it.each([false, true])("uses the timeline empty state even with hidden spans (%s)", (hiddenSpan) => {
     const props = shellProps({ hasTimeline: false, isLive: false });
@@ -403,7 +403,7 @@ describe("locked Bloom home", () => {
     const props = shellProps({ hasTimeline: false, isLive: false });
     props.live.error = error;
     props.live.status = "idle";
-    props.viewModel = buildHomeViewModel({ captureSource: "microphone", live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
+    props.viewModel = buildHomeViewModel({ hardPaywallLocked: true, captureSource: "microphone", live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
     const markup = render(<BloomShell {...props} />);
     if (error === "app_version_unsupported") expect(markup).toContain("Update Murmur");
     expect(markup).toContain(props.viewModel.statusText);

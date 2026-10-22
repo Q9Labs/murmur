@@ -42,6 +42,7 @@ export type HomeViewModel = {
 
 export function buildHomeViewModel(params: {
   captureSource?: AudioCaptureSource;
+  hardPaywallLocked?: boolean;
   languagePairEnabled?: boolean;
   live: Pick<
     LiveTranslationController,
@@ -103,6 +104,7 @@ export function buildHomeViewModel(params: {
       params.live.error,
       params.live.preparation_status,
       translate,
+      params.hardPaywallLocked,
     ),
     targetLanguage,
     targetLanguageDisplayName: languageLabel(targetLanguage, uiLocale),

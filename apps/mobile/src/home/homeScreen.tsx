@@ -289,6 +289,7 @@ export default function HomeScreen(): ReactNode {
   const [acquisition, setAcquisition] = useState(incomingAcquisition);
 
   const billing = useMurmurBilling();
+  const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   const { enabledLanguages } = billing.config;
   const languagesReady = isLanguagePairReady({
     configLoaded: billing.configLoaded,
@@ -311,6 +312,7 @@ export default function HomeScreen(): ReactNode {
   const viewModel = useMemo(
     () => buildHomeViewModel({
       captureSource,
+      hardPaywallLocked,
       languagePairEnabled: languagesReady,
       live,
       sourceLanguageCode,
@@ -318,7 +320,7 @@ export default function HomeScreen(): ReactNode {
       translate: t,
       uiLocale,
     }),
-    [captureSource, languagesReady, live, sourceLanguageCode, t, targetLanguageCode, uiLocale],
+    [captureSource, hardPaywallLocked, languagesReady, live, sourceLanguageCode, t, targetLanguageCode, uiLocale],
   );
   const autoScrollKey = useMemo(
     () => live.spans

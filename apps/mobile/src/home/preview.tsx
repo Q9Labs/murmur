@@ -8,6 +8,7 @@ import { Platform, type ScrollView } from "react-native";
 import { UiLocaleOverride } from "../i18n/provider";
 import { useUiLocale } from "../i18n/runtime";
 import type { UiLocale } from "../i18n/types";
+import { isHardPaywallLocked } from "../lib/billing/allowance";
 import { type MurmurBillingContext, MurmurBillingFixtureProvider } from "../lib/billing/context";
 import type { UiPreviewScreen } from "../lib/config";
 import type { LiveTranslationController } from "../lib/live-translation/types";
@@ -216,7 +217,7 @@ function PickerPreview({ mode }: { mode: "source" | "target" }): ReactNode {
 }
 
 function OnboardingPreview({ step }: { step: VariantOnboardingProps["step"] }): ReactNode {
-  const { viewModel } = usePreviewHome({ captureSource: "microphone", variant: "idle" });
+  const { viewModel } = usePreviewHome({ captureSource: "microphone", hardPaywallLocked: false, variant: "idle" });
   const props: VariantOnboardingProps = {
     canStart: true,
     captureSource: "microphone",
@@ -238,9 +239,11 @@ function OnboardingPreview({ step }: { step: VariantOnboardingProps["step"] }): 
 
 function usePreviewHome({
   captureSource,
+  hardPaywallLocked,
   variant,
 }: {
   captureSource: AudioCaptureSource;
+  hardPaywallLocked: boolean;
   variant: PreviewLiveVariant;
 }): { live: LiveTranslationController; viewModel: HomeViewModel } {
   const conversation = usePreviewConversation();
@@ -249,6 +252,7 @@ function usePreviewHome({
     const live = previewLiveFor(conversation, variant);
     const viewModel = buildHomeViewModel({
       captureSource,
+      hardPaywallLocked,
       live,
       sourceLanguageCode: conversation.sourceLanguage,
       targetLanguageCode: conversation.targetLanguage,
@@ -256,7 +260,7 @@ function usePreviewHome({
       uiLocale: locale,
     });
     return { live, viewModel };
-  }, [captureSource, conversation, locale, t, variant]);
+  }, [captureSource, conversation, hardPaywallLocked, locale, t, variant]);
 }
 
 function TranslationPreview({
@@ -275,7 +279,7 @@ function TranslationPreview({
   const timelineRef = useRef<ScrollView | null>(null);
   const autoScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
-  const { live: liveController, viewModel } = usePreviewHome({ captureSource, variant: live });
+  const { live: liveController, viewModel } = usePreviewHome({ captureSource, hardPaywallLocked: isHardPaywallLocked(billing.customer), variant: live });
   const props: VariantShellProps = {
     audioPlaybackAvailable: true,
     audioPlaybackEnabled,

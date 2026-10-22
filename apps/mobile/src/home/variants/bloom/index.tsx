@@ -33,10 +33,6 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const { colors, styles } = useBloomStyles();
   const billing = useMurmurBilling();
   const hardPaywallLocked = isHardPaywallLocked(billing.customer);
-  const paywallIsOnlyBlocker = hardPaywallLocked &&
-    (live.status === "idle" || live.status === "ended") &&
-    (live.preparation_status === "idle" || live.preparation_status === "ready") &&
-    (!live.error || isAllowanceExhaustedError(live.error));
   const wasLive = useRef(viewModel.isLive);
   const lowBalance = viewModel.isLive
     ? null
@@ -81,7 +77,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         ) : null}
         {props.listeningInBackground ? <BackgroundListeningPill /> : (
           <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-            {paywallIsOnlyBlocker ? "" : viewModel.statusText}
+            {viewModel.statusText}
           </Text>
         )}
         <CaptureSourceControl
