@@ -5,6 +5,7 @@
     "apps/worker/legacy-ios-proxy/index.ts",
     "apps/worker/src/billing/allowanceService.test.mjs",
     "apps/worker/src/billing/creditPackExpiry.test.mjs",
+    "apps/worker/src/billing/freeAllowanceClaims.test.mjs",
     "apps/worker/src/insights/deleteCustomerData.test.mjs",
     "apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs",
     "apps/worker/src/routes/customer.test.mjs",

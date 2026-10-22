@@ -105,7 +105,7 @@ export async function transferFreeAllowanceClaim(params: {
     )
     .bind(params.claimHash, params.periodKey)
     .first<FreeAllowanceClaimRow>();
-  if (existing?.customer_id !== params.destinationCustomerId) {
+  if (existing && existing.customer_id !== params.destinationCustomerId) {
     throw new Error("Free allowance claim does not belong to the guest customer");
   }
 }
