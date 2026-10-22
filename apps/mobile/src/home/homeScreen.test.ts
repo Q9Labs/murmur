@@ -360,4 +360,13 @@ describe("home billing effects", () => {
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });
 
+  it("does not request the microphone again on same-policy customer refreshes", async () => {
+    const renderer = await renderHome();
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+    for (const availableMs of [0, 60_000]) {
+      state.billing = fixtureBilling({ availableMs });
+      await act(async () => { renderer.update(createElement(HomeScreen)); });
+    }
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
 });

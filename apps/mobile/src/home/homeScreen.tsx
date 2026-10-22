@@ -376,17 +376,18 @@ export default function HomeScreen(): ReactNode {
   }, [acquisition, live.status]);
 
   const customerLoaded = billing.customer !== null;
+  const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   useEffect(() => {
     if (
       customerLoaded &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
       onboardingStep === "done" &&
-      !isHardPaywallLocked(billing.customer)
+      !hardPaywallLocked
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, billing.customer, customerLoaded, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, customerLoaded, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
