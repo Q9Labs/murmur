@@ -31,6 +31,7 @@ describe("customer ledger command decoder", () => {
       action: "bootstrap_guest",
       customerId: "customer-1",
       grantFreeAllowance: true,
+      freeAllowanceMs: 300_000,
       nowMs: 1,
       periodExpiresAtMs: 3,
       periodKey: "free:2026-08",
@@ -87,7 +88,12 @@ describe("customer ledger command decoder", () => {
       providerSubject: "install-1",
     };
     expect(decodeCustomerLedgerCommand(command)).toEqual(command);
-    expect(decodeCustomerLedgerCommand({ ...command, freeAllowanceMs: -1 })).toBeNull();
+    for (const freeAllowanceMs of [-1, 0, 2.5, undefined]) {
+      expect(decodeCustomerLedgerCommand({ ...command, freeAllowanceMs })).toBeNull();
+    }
+    const { freeAllowanceMs: _amount, ...withoutAmount } = command;
+    expect(decodeCustomerLedgerCommand({ ...withoutAmount, grantFreeAllowance: false }))
+      .toEqual({ ...withoutAmount, grantFreeAllowance: false });
   });
 
   it.each([

@@ -1,7 +1,8 @@
 import { getMurmurSession } from "../auth/auth";
-import { claimPhoneAudioGift } from "../billing/phoneAudioGift";
+import { claimPhoneAudioGift, getPhoneAudioGift } from "../billing/phoneAudioGift";
 import type { Env } from "../env";
 import { json } from "../http/response";
+import { freeAllowanceMs, getCustomerBillingPolicy } from "../serverConfig";
 
 export async function claimPhoneAudioGiftRoute(
   request: Request,
@@ -15,6 +16,11 @@ export async function claimPhoneAudioGiftRoute(
   if (!env.BILLING_DB) {
     return json({ error: "billing_unavailable" }, 503);
   }
-  const gift = await claimPhoneAudioGift(env.BILLING_DB, session.user.id, Date.now());
+  const { nowMs, config } = await getCustomerBillingPolicy(env, request, session.user.id);
+  if (freeAllowanceMs(config) === 0) {
+    const gift = await getPhoneAudioGift(env.BILLING_DB, session.user.id);
+    return json({ phone_audio: { ...gift, claimable: false } });
+  }
+  const gift = await claimPhoneAudioGift(env.BILLING_DB, session.user.id, nowMs);
   return json({ phone_audio: gift });
 }

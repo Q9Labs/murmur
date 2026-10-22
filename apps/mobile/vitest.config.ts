@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    server: { deps: { inline: ["@better-auth/expo"] } },
     coverage: {
       exclude: ["**/*.test.{js,mjs,ts,tsx}", "**/*.d.ts"],
       include: [

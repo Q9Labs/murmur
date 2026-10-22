@@ -5,7 +5,6 @@ import { currentProAllowancePeriod, freeAllowancePeriod } from "./allowancePerio
 import { firstProGrantMs } from "./allowanceUpgrade";
 import {
   findBillingProduct,
-  freeAllowanceMs,
   proMaxAllowanceMs,
   type BillingProduct,
   type StoreProvider,
@@ -43,7 +42,7 @@ export async function currentCustomerPlan(
 export async function ensureCurrentAllowance(params: {
   customerId: string;
   env: Env;
-  freeAllowanceMinutes?: number;
+  freeAllowanceMs: number;
   freeClaimHash?: string | null;
   nowMs: number;
   principalProvider: "anonymous" | "email";
@@ -57,7 +56,7 @@ export async function ensureCurrentAllowance(params: {
   );
   if (!subscription) {
     const period = freeAllowancePeriod(params.nowMs);
-    const grantFreeAllowance = await claimFreeAllowance({
+    const grantFreeAllowance = params.freeAllowanceMs > 0 && await claimFreeAllowance({
       claimHash: params.freeClaimHash,
       customerId: params.customerId,
       database: params.env.BILLING_DB,
@@ -68,10 +67,9 @@ export async function ensureCurrentAllowance(params: {
     return callCustomerLedger(params.env.CUSTOMER_LEDGER, params.customerId, {
       action: "bootstrap_guest",
       customerId: params.customerId,
-      freeAllowanceMs: params.freeAllowanceMinutes === undefined
-        ? freeAllowanceMs
-        : params.freeAllowanceMinutes * 60_000,
-      grantFreeAllowance,
+      ...(grantFreeAllowance
+        ? { grantFreeAllowance: true, freeAllowanceMs: params.freeAllowanceMs }
+        : { grantFreeAllowance: false }),
       nowMs: params.nowMs,
       periodExpiresAtMs: period.expiresAtMs,
       periodKey: period.periodKey,

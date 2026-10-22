@@ -1,29 +1,22 @@
 import assert from "node:assert/strict";
-import { realpathSync } from "node:fs";
-import { createRequire } from "node:module";
 import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { randomUUID } from "node:crypto";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const require = createRequire(realpathSync(resolve(root, "apps/worker/node_modules/wrangler/package.json")));
-import { build } from "esbuild";
-const { unstable_splitSqlQuery: splitSqlQuery } = require("wrangler");
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
-const output = resolve(root, "artifacts/caption-recovery");
-await mkdir(output, { recursive: true });
-const bundled = await build({
-  entryPoints: [resolve(root, "apps/worker/caption-recovery-probe.ts")],
-  bundle: true, write: false, format: "esm", platform: "neutral",
-  conditions: ["workerd", "worker", "browser"], external: ["node:*", "cloudflare:*"],
+import { bundleWorkerProof } from "./worker-proof-runtime.mjs";
+
+const { root, script, splitSqlQuery } = await bundleWorkerProof({
+  entryPoint: "apps/worker/caption-recovery-probe.ts",
   plugins: process.env.CAPTION_PROOF_BASELINE_SOURCE ? [{name: "baseline-caption-recovery", setup(builder) {
     builder.onLoad({filter: /sockets\/captionRecovery\.ts$/}, async () => ({
       contents: await readFile(process.env.CAPTION_PROOF_BASELINE_SOURCE, "utf8"), loader: "ts",
     }));
   }}] : [],
 });
+const output = resolve(root, "artifacts/caption-recovery");
+await mkdir(output, { recursive: true });
 const captionSentinel = "SYNTHETIC_PRIVATE_TRANSCRIPT_CAPTION_RETRY";
 const provider = `
 const states = new Map(), controls = new Map();
@@ -76,7 +69,7 @@ export default { async fetch(request) {
 `;
 const mf = new Miniflare(convertV4MiniflareOptions({
   workers: [{
-    name: "proxy", modules: true, script: bundled.outputFiles[0].text,
+    name: "proxy", modules: true, script,
     compatibilityDate: "2026-05-16", compatibilityFlags: ["nodejs_compat"],
     outboundService: "provider", d1Databases: ["BILLING_DB"],
     durableObjects: { CUSTOMER_LEDGER: { className: "CustomerLedgerDurableObject", useSQLite: true } },

@@ -1,3 +1,4 @@
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dependencies = vi.hoisted(() => ({
@@ -27,6 +28,27 @@ beforeEach(() => {
 });
 
 describe("session exhaustion offer", () => {
+  it.each([minimumSessionBalanceMs - 1, minimumSessionBalanceMs])("enforces the shared session minimum at %s ms", async (availableMs) => {
+    dependencies.ledger.mockResolvedValueOnce({
+      response: new Response(),
+      result: { balance: { availableMs }, ok: true },
+    });
+    const result = await prepareBillingUsage(
+      new Request("https://worker.example/v2/session"),
+      { BILLING_ENFORCEMENT_ENABLED: "true" },
+      "session-boundary",
+      1_000,
+      defaultServerConfig({}),
+      "free",
+      300,
+    );
+    expect(result.ok).toBe(availableMs >= minimumSessionBalanceMs);
+    if (!result.ok) {
+      expect(result.response.status).toBe(402);
+      await expect(result.response.json()).resolves.toEqual({ error: "allowance_exhausted" });
+    }
+  });
+
   it("returns 402 and schedules the offer without waiting for D1", async () => {
     const pendingWrite = new Promise<void>(() => {});
     dependencies.queueOffer.mockReturnValueOnce(pendingWrite);

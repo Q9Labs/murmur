@@ -91,9 +91,13 @@ export function primaryStartLabel(
   error: string | null,
   timeAvailable: boolean,
   translate: Translate = englishTranslate,
+  hardPaywallLocked = false,
 ): string {
   if (isUpdateRequiredError(error)) {
     return translate("home.updateMurmur");
+  }
+  if (hardPaywallLocked) {
+    return translate("outOfMinutes.seePlans");
   }
   if (isAllowanceExhaustedError(error) && !timeAvailable) {
     return translate("home.getMoreTime");

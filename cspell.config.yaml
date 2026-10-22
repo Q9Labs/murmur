@@ -17,6 +17,8 @@ ignorePaths:
 ignoreRegExpList:
   - "[^\\x00-\\x7F]+"
 words:
+  - NSOS
+  - osstatus
   - Ablaufdatum
   - caduca
   - expira

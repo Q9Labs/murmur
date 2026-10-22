@@ -8,6 +8,8 @@ const sentry = vi.hoisted(() => ({
 
 vi.mock("@sentry/react-native", () => sentry);
 
+import nativeState from "../../../../../tooling/ios-capture/tests/capture-failure.json";
+
 import { captureMobileFailure, sanitizeMobileEvent } from "./sentry";
 
 beforeEach(() => {
@@ -77,4 +79,22 @@ describe("mobile Sentry privacy sanitizer", () => {
     expect(JSON.stringify(event)).not.toContain("private");
     expect(JSON.stringify(event)).not.toContain("raw-install-id");
   });
+});
+
+it("drops untrusted capture context fields while retaining only validated diagnostics", () => {
+  const event = sanitizeMobileEvent({ type: undefined, contexts: { audio_capture: {
+    step: "private speech", hardware_rate: 0, hardware_channels: 0, output_rate: 0,
+    output_channels: 0, route: "private device", voice_processing: false,
+    error_domain: "private URL", error_code: 2,
+  } } });
+  expect(event.contexts?.audio_capture).toBeUndefined();
+  expect(JSON.stringify(event)).not.toContain("private");
+});
+
+it("strips extra fields from an otherwise valid capture context", () => {
+  const event = sanitizeMobileEvent({ type: undefined, contexts: { audio_capture: {
+    ...nativeState.capture_failure, transcript: "private speech", port_name: "private device",
+  } } });
+  expect(event.contexts?.audio_capture).toEqual(nativeState.capture_failure);
+  expect(JSON.stringify(event)).not.toContain("private");
 });

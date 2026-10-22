@@ -1,4 +1,4 @@
-import { freeAllowanceMs } from "./catalog";
+import { defaultFreeAllowanceMs } from "./catalog";
 
 export function mergedFreeRemainingMs(params: {
   destinationOriginalMs: number;
@@ -11,5 +11,5 @@ export function mergedFreeRemainingMs(params: {
     0,
     params.destinationOriginalMs - params.destinationRemainingMs,
   );
-  return Math.max(0, freeAllowanceMs - sourceUsedMs - destinationUsedMs);
+  return Math.max(0, defaultFreeAllowanceMs - sourceUsedMs - destinationUsedMs);
 }

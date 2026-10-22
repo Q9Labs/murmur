@@ -46,6 +46,7 @@ export type RecordedAlert = {
 };
 
 export const recorded = {
+  accessibilityLabels: [] as string[],
   alerts: [] as RecordedAlert[],
   controls: [] as RecordedControl[],
   keyboardAvoidingViews: [] as RecordedKeyboardAvoidingView[],
@@ -57,6 +58,7 @@ export const recorded = {
 };
 
 export function resetRecorded(): void {
+  recorded.accessibilityLabels.length = 0;
   recorded.alerts.length = 0;
   recorded.controls.length = 0;
   recorded.keyboardAvoidingViews.length = 0;
@@ -89,7 +91,8 @@ function Text({ children, numberOfLines }: { children?: ReactNode; numberOfLines
   return createElement("span", null, children);
 }
 
-function View(props: { accessibilityRole?: string; children?: ReactNode }): ReactNode {
+function View(props: { accessibilityRole?: string; accessibilityLabel?: string; children?: ReactNode }): ReactNode {
+  if (props.accessibilityLabel) recorded.accessibilityLabels.push(props.accessibilityLabel);
   if (props.accessibilityRole) {
     recorded.roles.push(props.accessibilityRole);
   }

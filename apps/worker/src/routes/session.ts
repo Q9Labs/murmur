@@ -2,6 +2,7 @@ import {
   normalizeAcquisitionContext,
   type AcquisitionContext,
 } from "@murmur/protocol/acquisition";
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
 import { getMurmurSession } from "../auth/auth";
@@ -31,7 +32,7 @@ import {
   isRateLimiterUnavailable,
 } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
-import { getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
+import { freeAllowanceMs, getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
 
 export async function createSession(
   request: Request,
@@ -306,7 +307,7 @@ export async function prepareBillingUsage(
   const bootstrap = await ensureCurrentAllowance({
     customerId: customerSession.user.id,
     env,
-    freeAllowanceMinutes: config.free_allowance_minutes,
+    freeAllowanceMs: freeAllowanceMs(config),
     freeClaimHash,
     nowMs,
     principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",
@@ -333,7 +334,7 @@ export async function prepareBillingUsage(
       ),
     };
   }
-  if (usage.result.balance.availableMs < 1_000) {
+  if (usage.result.balance.availableMs < minimumSessionBalanceMs) {
     if (plan === "free") {
       queuePersonalOfferStart({
         config,
