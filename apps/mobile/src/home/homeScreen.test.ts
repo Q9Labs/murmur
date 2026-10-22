@@ -274,6 +274,42 @@ describe("audio playback preference controller", () => {
 });
 
 describe("Start allowance gate", () => {
+  it("waits for an unknown customer and opens Plans without starting capture", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    const refresh = vi.fn(() => pending.promise);
+    const starting = startWithAllowance({ customer: null, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+    expect(openPlans).not.toHaveBeenCalled();
+    pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 });
+    await starting;
+    expect(openPlans).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("starts when an unknown customer's refresh fails", async () => {
+    const refresh = vi.fn(async () => null);
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({ customer: null, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
+  });
+
+  it("starts a known paid customer without refreshing", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 };
+    const refresh = vi.fn(async () => customer);
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({ customer, refresh, start, openPlans });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
+  });
+
   it("opens Plans without starting translation when hard-mode balance stays empty", async () => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
     const start = vi.fn(async () => undefined);

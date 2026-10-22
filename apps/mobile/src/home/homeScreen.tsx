@@ -213,7 +213,7 @@ export async function startWithAllowance(params: {
   openPlans: () => void;
   start: () => Promise<void>;
 }): Promise<void> {
-  if (isHardPaywallLocked(params.customer)) {
+  if (!params.customer || isHardPaywallLocked(params.customer)) {
     const fresh = await params.refresh();
     if (isHardPaywallLocked(fresh ?? params.customer)) {
       params.openPlans();
