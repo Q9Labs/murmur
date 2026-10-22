@@ -28,7 +28,7 @@ export type MobileBillingTelemetryEventName =
 
 export type MobileTelemetryEvent =
   | { event: "onboarding_step_viewed" | "onboarding_step_completed"; step: string }
-  | { event: "plan_tab_viewed"; tab: "monthly" | "yearly" | "credit_packs" }
+  | { event: "plan_tab_viewed"; surface?: "plan_picker" | "hard_paywall"; tab: "monthly" | "yearly" | "credit_packs" }
   | { event: "offer_shown" | "offer_redeemed"; offering_id: string }
   | { event: "account_saved"; method: "apple" | "google" | "email" }
   | { event: "store_review_prompted"; platform: "ios" | "android" }
@@ -140,6 +140,7 @@ type TelemetryEventCandidate = {
   offering_id?: unknown;
   stars?: unknown;
   step?: unknown;
+  surface?: unknown;
   tab?: unknown;
   app_session_id?: unknown;
   app_version?: unknown;
@@ -194,8 +195,9 @@ const telemetryEventParsers = new Map<string, TelemetryEventParser>([
   ["onboarding_step_viewed", (value) => parseStepEvent(value, "onboarding_step_viewed")],
   ["onboarding_step_completed", (value) => parseStepEvent(value, "onboarding_step_completed")],
   ["plan_tab_viewed", (value) =>
-    value.tab === "monthly" || value.tab === "yearly" || value.tab === "credit_packs"
-      ? { event: "plan_tab_viewed", tab: value.tab } : null],
+    (value.tab === "monthly" || value.tab === "yearly" || value.tab === "credit_packs") &&
+    (value.surface === undefined || value.surface === "plan_picker" || value.surface === "hard_paywall")
+      ? { event: "plan_tab_viewed", tab: value.tab, ...(value.surface ? { surface: value.surface } : {}) } : null],
   ["offer_shown", (value) => parseOfferEvent(value, "offer_shown")],
   ["offer_redeemed", (value) => parseOfferEvent(value, "offer_redeemed")],
   ["account_saved", (value) =>

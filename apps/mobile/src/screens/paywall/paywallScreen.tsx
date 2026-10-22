@@ -1,6 +1,6 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { X } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -32,23 +32,18 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
   const choices = paywallChoices(plans.status === "ready" ? plans.plans : []);
   const [selectedKey, setSelectedKey] = useState<PaywallKey | null>(initialKey ?? null);
   const activeKey = selectedKey && choices[selectedKey] ? selectedKey : choices.defaultKey;
-  const registeredAtOpen = useRef<boolean | null>(null);
   useEffect(() => {
     if (activeKey) {
       captureMobileTelemetry({
-        event: "plan_tab_viewed", tab: activeKey === "pack" ? "credit_packs" : activeKey,
+        event: "plan_tab_viewed", surface: "hard_paywall", tab: activeKey === "pack" ? "credit_packs" : activeKey,
       });
     }
   }, [activeKey]);
-  useEffect(() => {
-    if (!billing.customer) {
-      return;
-    }
-    registeredAtOpen.current ??= billing.customer.isRegistered;
-    if (registeredAtOpen.current && billing.customer.isRegistered && !isHardPaywallLocked(billing.customer)) {
+  useFocusEffect(useCallback(() => {
+    if (billing.customer && !isHardPaywallLocked(billing.customer)) {
       router.dismissTo("/");
     }
-  }, [billing.customer, router]);
+  }, [billing.customer, router]));
   const mode = purchaseMode(billing, () => router.replace("/save-purchase"));
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(ui.direction)]}>

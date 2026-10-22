@@ -8,6 +8,10 @@ import { fixtureBilling, fixtureMonthly, fixturePlans } from "../__tests__/billi
 import { router } from "../__tests__/navigation";
 import { findControl, resetRecorded } from "../__tests__/reactNativePrimitives";
 
+const effects = vi.hoisted(() => [] as Array<() => void>);
+const telemetry = vi.hoisted(() => ({ captureMobileTelemetry: vi.fn() }));
+vi.mock("react", async (importOriginal) => ({ ...await importOriginal<typeof import("react")>(), useEffect: (effect: () => void) => effects.push(effect) }));
+vi.mock("../../lib/telemetry", () => telemetry);
 const linking = vi.hoisted(() => ({ openURL: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("expo-linking", () => linking);
 
@@ -46,11 +50,19 @@ import { sanitizeMobileEvent } from "../../lib/observability/sentry";
 beforeEach(() => {
   vi.clearAllMocks();
   resetRecorded();
+  effects.length = 0;
   state.billing = fixtureBilling();
   state.plans = { status: "loading" };
 });
 
 describe("plans screen", () => {
+  it("identifies Plans as the tab-view surface", async () => {
+    state.plans = { plans: fixturePlans, status: "ready" };
+    renderToStaticMarkup(<PlansScreen initialTerm="monthly" />);
+    effects.splice(0).forEach((effect) => effect());
+    await vi.waitFor(() => expect(telemetry.captureMobileTelemetry).toHaveBeenCalledWith({ event: "plan_tab_viewed", surface: "plan_picker", tab: "monthly" }));
+  });
+
   it("reads the tab from the deep link", () => {
     expect(planTermFromParam("monthly")).toBe("monthly");
     expect(planTermFromParam(["yearly"])).toBe("yearly");
@@ -124,6 +136,8 @@ describe("plans screen", () => {
     await vi.waitFor(() => expect(sentry.captureException).toHaveBeenCalledOnce());
     expect(linking.openURL).toHaveBeenCalledWith(url);
     const hint = sentry.captureException.mock.calls[0]?.[1];
+    // Keep the legal-link sanitization assertion local to this screen's failure path.
+    // fallow-ignore-next-line code-duplication
     const event = sanitizeMobileEvent({
       ...hint,
       exception: { values: [{ value: failure.message }] },

@@ -45,7 +45,7 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
 
   useEffect(() => {
     if (activeTerm) {
-      captureFunnelEvent({ event: "plan_tab_viewed", tab: activeTerm === "pack" ? "credit_packs" : activeTerm });
+      captureFunnelEvent({ event: "plan_tab_viewed", surface: "plan_picker", tab: activeTerm === "pack" ? "credit_packs" : activeTerm });
     }
   }, [activeTerm]);
 
