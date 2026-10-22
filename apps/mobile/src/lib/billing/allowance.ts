@@ -1,3 +1,5 @@
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
+
 import type { MurmurCustomer } from "./customerResponse";
 
 export const defaultLowBalanceThresholdMinutes = 15;
@@ -24,7 +26,7 @@ export function lowBalanceMinutes(
 }
 
 export function hasTimeAvailable(customer: MurmurCustomer | null): boolean {
-  return customer !== null && customer.availableMs > 0;
+  return customer !== null && customer.availableMs >= minimumSessionBalanceMs;
 }
 
 export function lockedSurface(customer: MurmurCustomer | null): "out_of_minutes" | "paywall" {
@@ -32,5 +34,5 @@ export function lockedSurface(customer: MurmurCustomer | null): "out_of_minutes"
 }
 
 export function isHardPaywallLocked(customer: MurmurCustomer | null): boolean {
-  return customer !== null && customer.freeAllowanceMs === 0 && customer.availableMs <= 0;
+  return customer !== null && customer.freeAllowanceMs === 0 && !hasTimeAvailable(customer);
 }

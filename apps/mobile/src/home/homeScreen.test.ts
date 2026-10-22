@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -321,6 +322,17 @@ describe("Start allowance gate", () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  it("opens Plans instead of starting with a sub-second hard-mode balance", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: minimumSessionBalanceMs - 1 };
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    const refresh = vi.fn(async () => customer);
+    await startWithAllowance({ customer, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(openPlans).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+
   it("keeps freemium Start unchanged even at zero balance", async () => {
     const start = vi.fn(async () => undefined);
     const refresh = vi.fn(async () => fixtureCustomer);
@@ -331,7 +343,7 @@ describe("Start allowance gate", () => {
     expect(start).toHaveBeenCalledOnce();
   });
 
-  it.each([1, 7_200_000])("starts when a stale empty cache refreshes to %s ms", async (availableMs) => {
+  it.each([minimumSessionBalanceMs, 7_200_000])("starts when a stale empty cache refreshes to %s ms", async (availableMs) => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
@@ -370,14 +382,14 @@ describe("home billing effects", () => {
     await act(async () => { pending.resolve(fixtureCustomer); });
   });
 
-  it("closes the freemium sheet and opens Plans when refresh returns a hard lock", async () => {
+  it.each([0, 500])("closes the freemium sheet and opens Plans when refresh returns %s ms in hard mode", async (availableMs) => {
     const pending = deferred<typeof fixtureCustomer | null>();
     state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
     state.live.error = "allowance_exhausted";
     await renderHome();
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
     expect(state.push).not.toHaveBeenCalled();
-    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs }); });
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
   });

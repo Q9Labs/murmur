@@ -2,6 +2,7 @@ import {
   normalizeAcquisitionContext,
   type AcquisitionContext,
 } from "@murmur/protocol/acquisition";
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
 
 import { getMurmurSession } from "../auth/auth";
@@ -333,7 +334,7 @@ export async function prepareBillingUsage(
       ),
     };
   }
-  if (usage.result.balance.availableMs < 1_000) {
+  if (usage.result.balance.availableMs < minimumSessionBalanceMs) {
     if (plan === "free") {
       queuePersonalOfferStart({
         config,
