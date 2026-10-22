@@ -60,7 +60,7 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
         </View>
         <PaywallDemo />
         <View style={styles.purchase}>
-          <Text accessibilityRole="header" style={styles.heading}>{t("paywall.heading")}</Text>
+          <Text accessibilityRole="header" style={[styles.heading, uiTextDirectionStyle(ui.direction)]}>{t("paywall.heading")}</Text>
           {activeKey ? (
             <PaywallOffer choices={choices} activeKey={activeKey} mode={mode} onSelect={setSelectedKey} />
           ) : <PlanListStatus onRetry={refresh} plans={plans} />}
@@ -121,10 +121,10 @@ function PaywallOffer(props: {
       </View>
       <View accessibilityLiveRegion="polite" style={styles.details}>
         <Text style={[styles.price, uiTextDirectionStyle(ui.direction)]}>{plan.term === "pack" ? t("paywall.once", { price: priceText }) : t("paywall.subscriptionPrice", { title: plan.title, price: priceText })}</Text>
-        <Text style={styles.detail}>{plan.term === "pack"
+        <Text style={[styles.detail, uiTextDirectionStyle(ui.direction)]}>{plan.term === "pack"
           ? t("paywall.packDetail", { minutes: t("plans.minutes", { count: formatUiNumber(plan.minutes ?? 0, ui.locale) }) })
           : t("paywall.proDetail", { allowance: plan.minutes === null ? plan.description : formatAllowance(plan.minutes, ui) })}</Text>
-        {renewal ? <Text style={styles.detail}>{renewal}</Text> : null}
+        {renewal ? <Text style={[styles.detail, uiTextDirectionStyle(ui.direction)]}>{renewal}</Text> : null}
       </View>
       <PlanCheckout mode={mode} plan={plan} />
       {plan.term === "pack" ? <Text style={planStyles.caption}>{t("paywall.onePayment")}</Text> : null}
