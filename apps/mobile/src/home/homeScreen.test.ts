@@ -8,7 +8,7 @@ import type { MurmurBillingContext } from "../lib/billing/context";
 const state = vi.hoisted(() => ({
   billing: null as MurmurBillingContext | null,
   push: vi.fn(),
-  experience: vi.fn((_props: { outOfMinutesOpen: boolean; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
+  experience: vi.fn((_props: { outOfMinutesOpen: boolean; onCloseOutOfMinutes: () => void; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
   live: {
     cancel: vi.fn(async () => undefined),
     start: vi.fn(async () => undefined),
@@ -380,6 +380,20 @@ describe("home billing effects", () => {
     await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
+  });
+
+  it("keeps the freemium sheet dismissed when its pending refresh returns no time", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseOutOfMinutes(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
   });
 
   it("opens the freemium sheet when a cached hard lock refreshes to freemium", async () => {

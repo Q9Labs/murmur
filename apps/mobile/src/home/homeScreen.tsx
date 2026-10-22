@@ -367,7 +367,7 @@ export default function HomeScreen(): ReactNode {
         if (lockedSurface(customer) === "paywall") {
           setOutOfMinutesOpen(false);
           router.push("/plans");
-        } else {
+        } else if (lockedSurface(billing.customer) === "paywall") {
           setOutOfMinutesOpen(true);
         }
       });
