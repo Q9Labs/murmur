@@ -1,0 +1,26 @@
+$ node tooling/scripts/verify-hard-paywall.mjs
+PASS hard-mode sign-up and customer bootstrap create no Free balance or claim
+PASS POST /v2/session returns 402 and mints nothing
+PASS hard-mode gift claims are idempotent no-ops
+PASS same-month rollback grants Free because hard mode did not burn the claim
+{"event":"session_created","app_session_id":"4301ad3e-0f1f-493c-bb23-532bf2b57116","hashed_install_id":"4eeb7dfdec66ef766aaab98c5a97ff5c29550a2b639ff99a9a1e98b84a1969f2","at_ms":1792697606586}
+PASS pre-flip Free and Phone audio gift survive; existing balance starts a session
+{"event":"session_created","app_session_id":"fe97624f-49b1-492f-9bde-a8b8803fd3b1","hashed_install_id":"124863c7c29fe8b3a1e20c1cfa48871eb17d723a248b646b4e0e19bc50c44f1d","at_ms":1792697606651}
+PASS paid credit through the ledger command path unlocks hard mode without Free
+PASS hard-mode buyer saves paid credit through email OTP account linking without a Free grant
+PASS pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and the original Free grant
+{"event":"session_created","app_session_id":"c4d643f1-f89e-4a2a-a9f3-ecd4ccc78460","hashed_install_id":"846304b56d65269276949b509f00dc4c5a7b690033ec6e654d2cebd6880ea6f5","at_ms":1792697606941}
+PASS same-month rollback after hard-mode OTP linking reuses the moved Free grant and starts a session without adding minutes
+PASS exhausted pre-flip Free grant survives hard-mode OTP linking and repeated same-month rollback without new minutes or ledger entries
+PASS hard-mode guest linking after rollback creates and transfers the same-month Free claim
+{"event":"session_created","app_session_id":"799bc64b-3000-4fe6-b64e-64a156f212ba","hashed_install_id":"45649964caedf29c18147cd8d0bbc87f171de0b87b4a6371dce8b7ee11114d1a","at_ms":1792697607976}
+PASS no flag preserves new and existing freemium customers
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:33:28.193Z","trace_id":"625524a760c34a679aa67474a5aaa6e4","span_id":"99d5a49e990d4288","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:33:28.448Z","trace_id":"79c37427c58d45dd816d16e5371c4828","span_id":"505adda66b8f446c","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:33:28.497Z","trace_id":"9fde58d2a68e442d9942fb9d10f23e6b","span_id":"fb4194067d584141","deployment.environment":"development"}
+{"event":"session_created","app_session_id":"e41596f6-9a26-422f-b103-c861c5c8191e","hashed_install_id":"b001103b2512e23e119f57b089a15addb09f6ec8e94f1b85f37175dcdf34f8eb","at_ms":1792697608492}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":1},"synthetic":false,"_time":"2026-10-22T19:33:28.671Z","trace_id":"7a18b7ba1240439a8d21e9884db5409b","span_id":"50a95ff22f694617","deployment.environment":"development"}
+PASS PostHog 503 preserves new and existing freemium customers
+PASS sign-up without install identity still evaluates hard-mode policy
+PASS legacy gift claim without release or install headers stays freemium under a version-targeted flag
+Hard paywall proof passed (15 scenarios).

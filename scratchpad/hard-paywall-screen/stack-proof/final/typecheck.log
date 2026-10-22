@@ -1,0 +1,8 @@
+$ pnpm --filter "@murmur/*" run typecheck
+Scope: 3 of 4 workspace projects
+packages/protocol typecheck$ tsc-rs --noEmit --project tsconfig.json
+packages/protocol typecheck: Done
+apps/mobile typecheck$ tsc-rs --noEmit
+apps/worker typecheck$ tsc-rs --noEmit --project tsconfig.json
+apps/worker typecheck: Done
+apps/mobile typecheck: Done

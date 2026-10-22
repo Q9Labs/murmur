@@ -1,0 +1,2385 @@
+$ bash tooling/gates/commit.sh
+$ node tooling/gates/hygiene.mjs
+Gate hygiene passed.
+$ fallow audit
+loaded config: /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/.fallowrc.json
+[2m   0.393219458s[0m [33m WARN[0m Skipped 4 package.json entry points outside project root or containing parent directory traversal: ../../tooling/scripts/deploy-worker-release.mjs (3x), ../../tooling/scripts/link-mobile-sentry-release.mjs
+Comparing against baseline: /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/tooling/gates/fallow-baselines/dead-code.json
+Warning: baseline has 4 entries but matched 0 current issues. Your paths may have changed, or the baseline was saved on a different machine. Re-save with: --save-baseline /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/tooling/gates/fallow-baselines/dead-code.json
+Comparing against duplication baseline: /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/tooling/gates/fallow-baselines/dupes.json
+Warning: duplication baseline has 4 entries but matched 0 current clone groups. Your paths may have changed, or the baseline was saved on a different machine. Re-save with: --save-baseline /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/tooling/gates/fallow-baselines/dupes.json
+Comparing against health baseline: /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/tooling/gates/fallow-baselines/health.json
+
+Audit scope: 131 changed files vs fa8e7a71236e (merge-base with origin/master) (b63b2a9..HEAD)
+■ Metrics: dead code 0 · complexity 0 · duplication 4
+
+── Duplication ────────────────────────────────────
+note: import declarations excluded from clone detection (--no-ignore-imports to include them)
+
+● Duplicates (4 clone groups)
+
+      8 lines  2 instances  dup:63428a24
+    apps/worker/src/billing/guestAccountMerge.test.js:133-140
+    apps/worker/src/billing/guestAccountMerge.test.js:153-159
+
+      6 lines  2 instances  dup:a443b235
+    apps/mobile/src/home/homeScreen.test.ts:385-390
+    apps/mobile/src/home/homeScreen.test.ts:397-401
+
+      5 lines  2 instances  dup:368379db
+    apps/mobile/src/home/homeScreen.test.ts:396-400
+    apps/mobile/src/home/homeScreen.test.ts:408-412
+
+      5 lines  2 instances  dup:2c2659fd
+    apps/mobile/src/home/homeScreen.test.ts:493-497
+    apps/mobile/src/home/homeScreen.test.ts:508-512
+
+  Identical code blocks detected via suffix-array analysis — https://docs.fallow.tools/explanations/duplication#clone-groups
+
+● Clone families (1 with multiple groups)
+
+  3 groups, 16 lines across apps/mobile/src/home/homeScreen.test.ts
+    → Extract shared function (6 lines) from homeScreen.test.ts, homeScreen.test.ts
+    → Extract shared function (5 lines) from homeScreen.test.ts, homeScreen.test.ts
+    → Extract shared function (5 lines) from homeScreen.test.ts, homeScreen.test.ts
+
+  Groups of related clones across the same files — https://docs.fallow.tools/explanations/duplication#clone-families
+
+✗ 42 lines (0.1%) duplicated across 2 files (0.06s)
+✓ duplication: 4 clone groups (warn) · 131 changed files (0.60s)
+  audit gate excluded 1 inherited finding (run with --gate all to enforce)
+$ fallow health --score --hotspots --targets --min-score ${FALLOW_MIN_SCORE:-45}
+loaded config: /private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/.fallowrc.json
+[2m   0.092414041s[0m [33m WARN[0m Skipped 4 package.json entry points outside project root or containing parent directory traversal: ../../tooling/scripts/deploy-worker-release.mjs (3x), ../../tooling/scripts/link-mobile-sentry-release.mjs
+
+● Health score: 76 B
+  Deductions: hotspots -10.0 · unit size -10.0 · coupling -2.5 · maintainability -0.9 · dead files -0.3
+
+■ Metrics: 61,721 LOC · dead files 1.6% · dead exports 0.2% · avg cyclomatic 1.9 · p90 cyclomatic 4 · maintainability 90.3 (good) · 0 churn hotspots (since 6 months) · duplication 0.3%
+
+  Parameters:    96% low · 3% medium · 0% high · 0% very high  (0-2 / 3-4 / 5-6 / >=7 params)
+
+● File health scores (468 files) · sorted by triage concern
+
+   89.8    tooling/scripts/verify-diagnostic-delivery.mjs  risk
+            154 LOC    0 fan-in    0 fan-out    0% dead  0.34 density  >999 risk
+
+   79.5    apps/worker/privacy-probe.ts                    risk
+            172 LOC    0 fan-in    4 fan-out    0% dead  0.47 density  650.0 risk
+
+   79.2    apps/worker/src/index.ts                        risk
+            279 LOC    3 fan-in   29 fan-out    0% dead  0.24 density  482.4 risk
+
+   85.5    apps/worker/src/playIntegrity.ts                risk
+            497 LOC    3 fan-in    3 fan-out    0% dead  0.30 density  442.4 risk
+
+   88.6    tooling/scripts/rollback-worker-logs.mjs        risk
+             63 LOC    1 fan-in    0 fan-out    0% dead  0.38 density  272.0 risk
+
+   69.8    apps/worker/src/routes/diagnostics.ts           risk
+             73 LOC    2 fan-in    7 fan-out    0% dead  0.73 density  238.6 risk
+
+   77.1    apps/worker/src/privacy.ts                      risk
+            128 LOC   17 fan-in    1 fan-out    0% dead  0.67 density  197.3 risk
+
+   81.9    apps/mobile/src/lib/live-translation/useLiveTranslation.ts  risk
+           1145 LOC    1 fan-in   23 fan-out    0% dead  0.18 density  137.3 risk
+
+   89.8    tooling/scripts/verify-workers-log-boundaries.mjs  risk
+            106 LOC    0 fan-in    0 fan-out    0% dead  0.34 density  72.0 risk
+
+   97.0    tooling/gates/test-presence.mjs                 risk
+            295 LOC    0 fan-in    0 fan-out    0% dead  0.10 density  72.0 risk
+
+  ... and 458 more files (--format json for full list)
+
+  Sorted by triage concern: the larger of low-MI concern and CRAP risk. The risk / structure tag marks which one placed each file. MI reflects complexity, coupling, and dead code; risk reflects untested complexity (CRAP) and can diverge from MI. Risk: low <15, moderate 15-30, high >=30. CRAP estimated from export references (85% direct, 40% indirect, 0% untested). Run `fallow health --coverage <coverage-final.json>` for exact scores. https://docs.fallow.tools/explanations/health#file-health-scores
+
+● Hotspots (197 files, since 6 months)
+
+   37.3 ▲  apps/mobile/src/home/homeScreen.tsx
+          20 commits   1497 churn  0.25 density   2 fan-in  ▲ accelerating
+
+   27.6 ▲  apps/mobile/src/home/homeScreen.test.ts [test]
+          11 commits    381 churn  0.31 density   0 fan-in  ▲ accelerating
+
+   23.7 ▲  apps/worker/src/index.ts
+          13 commits    398 churn  0.24 density   3 fan-in  ▲ accelerating
+
+   23.4 ▼  apps/mobile/src/screens/__tests__/navigation.tsx [test]
+           5 commits     44 churn  0.56 density  18 fan-in  ▼ cooling
+
+   23.1 ▲  apps/mobile/src/home/variants/rendering.test.tsx [test]
+          15 commits    590 churn  0.20 density   0 fan-in  ▲ accelerating
+
+   22.9 ▲  apps/mobile/src/lib/config.ts
+          15 commits    200 churn  0.20 density  26 fan-in  ▲ accelerating
+
+   21.9 ▲  apps/worker/src/sockets/realtime.ts
+          14 commits   1874 churn  0.20 density   3 fan-in  ▲ accelerating
+
+   20.4 ▲  apps/worker/src/observability/sentry.ts
+           5 commits    191 churn  0.45 density   4 fan-in  ▲ accelerating
+
+   18.9 ▼  apps/worker/src/serverConfig.ts
+           7 commits    430 churn  0.32 density  11 fan-in  ▼ cooling
+
+   18.5 ▲  apps/mobile/src/lib/live-translation/useLiveTranslation.ts
+          14 commits   5496 churn  0.18 density   1 fan-in  ▲ accelerating
+
+   18.4 ▲  apps/mobile/src/lib/billing/revenueCat.ts
+           8 commits    436 churn  0.30 density   5 fan-in  ▲ accelerating
+
+   17.9 ▼  apps/mobile/src/lib/billing/planCatalog.ts
+           7 commits    479 churn  0.30 density  17 fan-in  ▼ cooling
+
+   17.7 ▼  packages/protocol/src/billing/catalog.test.ts [test]
+           5 commits    115 churn  0.41 density   0 fan-in  ▼ cooling
+
+   17.4 ▲  apps/mobile/src/home/variants/bloom/index.tsx
+          17 commits    513 churn  0.13 density   6 fan-in  ▲ accelerating
+
+   17.3 ▼  apps/mobile/src/screens/settings/settingsScreen.test.tsx [test]
+           6 commits    136 churn  0.35 density   0 fan-in  ▼ cooling
+
+   17.1 ▼  apps/mobile/src/lib/billing/customerResponse.ts
+           5 commits    328 churn  0.43 density  10 fan-in  ▼ cooling
+
+   17.1 ─  apps/mobile/src/screens/plans/plansScreen.tsx
+           6 commits    132 churn  0.32 density   5 fan-in  ─ stable
+
+   17.1 ─  apps/mobile/src/screens/plans/plansScreen.test.tsx [test]
+           6 commits    223 churn  0.32 density   0 fan-in  ─ stable
+
+   16.4 ▲  apps/mobile/src/screens/paywall/paywallScreen.test.tsx [test]
+           3 commits    169 churn  0.55 density   0 fan-in  ▲ accelerating
+
+   16.4 ▲  apps/mobile/src/lib/live-translation/workerApi.ts
+           9 commits    477 churn  0.26 density   3 fan-in  ▲ accelerating
+
+   16.3 ▼  apps/mobile/src/lib/billing/context.tsx
+          10 commits    851 churn  0.20 density  31 fan-in  ▼ cooling
+
+   16.0 ─  apps/mobile/src/home/statusLabels.ts
+           7 commits    237 churn  0.32 density   2 fan-in  ─ stable
+
+   15.8 ▲  apps/worker/src/privacy.ts
+           3 commits    233 churn  0.67 density  17 fan-in  ▲ accelerating
+
+   15.4 ▲  apps/mobile/src/screens/paywall/paywallScreen.tsx
+           5 commits    200 churn  0.31 density   4 fan-in  ▲ accelerating
+
+   15.3 ▲  apps/mobile/src/home/preview.tsx
+          13 commits    891 churn  0.15 density   4 fan-in  ▲ accelerating
+
+   15.3 ▼  apps/mobile/src/screens/screenPreviews.test.tsx [test]
+           5 commits    134 churn  0.35 density   0 fan-in  ▼ cooling
+
+   15.0 ▼  apps/mobile/src/screens/history/conversationScreen.test.tsx [test]
+           4 commits     76 churn  0.47 density   0 fan-in  ▼ cooling
+
+   14.9 ▲  apps/mobile/src/screens/paywall/paywallDemo.test.tsx [test]
+           3 commits     45 churn  0.50 density   0 fan-in  ▲ accelerating
+
+   14.7 ─  apps/mobile/src/lib/providers/realtimeTranslation.ts
+           7 commits    575 churn  0.29 density   3 fan-in  ─ stable
+
+   14.6 ▲  apps/worker/src/routes/session.ts
+          11 commits   1211 churn  0.18 density   3 fan-in  ▲ accelerating
+
+   14.4 ▲  apps/mobile/src/home/errorCopy.ts
+           9 commits    252 churn  0.23 density   8 fan-in  ▲ accelerating
+
+   13.9 ▼  apps/mobile/src/screens/account/accountScreen.test.tsx [test]
+           6 commits    154 churn  0.27 density   0 fan-in  ▼ cooling
+
+   13.9 ▲  apps/mobile/modules/murmur-audio/src/MurmurAudioModule.ts
+           4 commits     31 churn  0.50 density   0 fan-in  ▲ accelerating
+
+   13.0 ▲  apps/worker/src/providers/openaiRealtime.ts
+           7 commits    285 churn  0.26 density   5 fan-in  ▲ accelerating
+
+   12.3 ▼  apps/mobile/src/home/outOfMinutesSheet.test.tsx [test]
+           6 commits    375 churn  0.24 density   0 fan-in  ▼ cooling
+
+   12.0 ─  apps/mobile/src/home/variants/logic.ts
+           6 commits    136 churn  0.29 density   5 fan-in  ─ stable
+
+   11.9 ▼  apps/mobile/src/screens/plans/purchaseMode.ts
+           3 commits     41 churn  0.50 density   3 fan-in  ▼ cooling
+
+   11.4 ▼  apps/mobile/src/screens/screenPreviews.tsx
+           5 commits    189 churn  0.26 density   3 fan-in  ▼ cooling
+
+   11.3 ▲  apps/mobile/src/home/preview.test.tsx [test]
+           9 commits    440 churn  0.16 density   0 fan-in  ▲ accelerating
+
+   11.1 ▼  apps/mobile/src/screens/history/historyScreen.test.tsx [test]
+           4 commits     89 churn  0.35 density   0 fan-in  ▼ cooling
+
+   11.0 ─  apps/mobile/src/home/viewModel.ts
+           7 commits    259 churn  0.22 density   9 fan-in  ─ stable
+
+   10.9 ─  apps/mobile/src/home/i18nRendering.test.tsx [test]
+           5 commits    152 churn  0.24 density   0 fan-in  ─ stable
+
+   10.6 ▼  apps/mobile/src/lib/billing/allowance.ts
+           3 commits     50 churn  0.41 density   8 fan-in  ▼ cooling
+
+   10.5 ▲  apps/mobile/src/lib/auth/client.ts
+           7 commits    165 churn  0.19 density  11 fan-in  ▲ accelerating
+
+   10.2 ─  apps/mobile/src/screens/auth/signInScreen.test.tsx [test]
+           4 commits    159 churn  0.32 density   0 fan-in  ─ stable
+
+   10.1 ▼  apps/mobile/src/screens/plans/planPicker.test.tsx [test]
+           4 commits    177 churn  0.30 density   0 fan-in  ▼ cooling
+
+   10.0 ▼  packages/protocol/src/telemetry.ts
+           5 commits    602 churn  0.25 density  10 fan-in  ▼ cooling
+
+    9.9 ▼  apps/mobile/src/screens/insights/insightsConsentScreen.test.tsx [test]
+           3 commits     84 churn  0.39 density   0 fan-in  ▼ cooling
+
+    9.5 ▼  apps/mobile/src/screens/account/accountScreen.tsx
+           7 commits    599 churn  0.16 density   5 fan-in  ▼ cooling
+
+    9.5 ▲  apps/mobile/src/lib/billing/customerApi.ts
+           4 commits     74 churn  0.32 density   5 fan-in  ▲ accelerating
+
+    9.2 ▼  apps/mobile/src/screens/settings/settingsScreen.tsx
+           5 commits    144 churn  0.22 density   5 fan-in  ▼ cooling
+
+    9.1 ▲  apps/worker/src/playIntegrity.ts
+           4 commits    626 churn  0.30 density   3 fan-in  ▲ accelerating
+
+    9.1 ▲  apps/mobile/src/home/variants/shared.tsx
+           7 commits    510 churn  0.17 density   5 fan-in  ▲ accelerating
+
+    8.8 ▲  apps/worker/src/rateLimitDurableObject.ts
+           7 commits    647 churn  0.18 density  16 fan-in  ▲ accelerating
+
+    8.7 ▲  apps/mobile/src/home/languagePicker.tsx
+           8 commits    357 churn  0.16 density   6 fan-in  ▲ accelerating
+
+    8.6 ─  apps/mobile/src/lib/providers/realtimeTranslation.test.ts [test]
+           7 commits    647 churn  0.17 density   0 fan-in  ─ stable
+
+    8.6 ▼  apps/mobile/src/lib/ratings/ratings.test.ts [test]
+           3 commits    101 churn  0.36 density   0 fan-in  ▼ cooling
+
+    8.5 ▼  apps/mobile/src/lib/installAttribution.test.ts [test]
+           3 commits    154 churn  0.33 density   0 fan-in  ▼ cooling
+
+    8.5 ▼  apps/worker/src/auth/auth.ts
+           8 commits    277 churn  0.13 density  19 fan-in  ▼ cooling
+
+    8.4 ─  apps/mobile/src/lib/telemetry.ts
+           5 commits    143 churn  0.23 density  16 fan-in  ─ stable
+
+    8.4 ▲  apps/worker/src/env.ts
+           7 commits    251 churn  0.17 density  36 fan-in  ▲ accelerating
+
+    8.2 ▲  apps/mobile/src/home/experience.test.tsx [test]
+           5 commits    127 churn  0.22 density   0 fan-in  ▲ accelerating
+
+    8.1 ▼  apps/worker/src/billing/customerLedgerDurableObject.ts
+           5 commits    239 churn  0.20 density  17 fan-in  ▼ cooling
+
+    8.1 ─  apps/mobile/src/lib/live-translation/workerApi.test.ts [test]
+           5 commits    326 churn  0.21 density   0 fan-in  ─ stable
+
+    8.1 ▲  apps/mobile/app/preview.tsx
+           4 commits     61 churn  0.28 density   1 fan-in  ▲ accelerating
+
+    7.9 ▼  apps/mobile/src/screens/plans/planPicker.tsx
+           4 commits    342 churn  0.25 density   4 fan-in  ▼ cooling
+
+    7.9 ▲  apps/worker/src/billing/customerLedgerDurableObject.test.ts [test]
+           3 commits     78 churn  0.30 density   0 fan-in  ▲ accelerating
+
+    7.7 ▲  apps/worker/src/sockets/realtime.test.ts [test]
+          11 commits   1003 churn  0.09 density   0 fan-in  ▲ accelerating
+
+    7.6 ▼  apps/mobile/src/screens/screenScaffold.tsx
+           5 commits    194 churn  0.19 density  24 fan-in  ▼ cooling
+
+    7.4 ▼  apps/worker/src/routes/telemetry.ts
+           5 commits    150 churn  0.19 density   3 fan-in  ▼ cooling
+
+    7.4 ▼  apps/mobile/src/lib/installAttribution.ts
+           3 commits     33 churn  0.29 density   3 fan-in  ▼ cooling
+
+    7.3 ▼  apps/worker/src/billing/customerLedgerCommandDecoder.ts
+           3 commits    337 churn  0.30 density   2 fan-in  ▼ cooling
+
+    7.3 ▼  apps/worker/src/billing/realtimeUsageMeter.ts
+           4 commits    276 churn  0.23 density   2 fan-in  ▼ cooling
+
+    7.3 ─  apps/mobile/src/home/viewModel.test.ts [test]
+          10 commits    247 churn  0.10 density   0 fan-in  ─ stable
+
+    7.2 ▼  apps/worker/src/billing/revenueCatProcessor.ts
+           5 commits    625 churn  0.17 density   3 fan-in  ▼ cooling
+
+    7.2 ▼  apps/mobile/src/lib/billing/customerApi.test.ts [test]
+           7 commits    179 churn  0.13 density   0 fan-in  ▼ cooling
+
+    7.2 ▼  apps/mobile/src/screens/previewFixtures.ts
+           8 commits    296 churn  0.11 density   5 fan-in  ▼ cooling
+
+    7.1 ▲  apps/mobile/src/lib/billing/appConfig.ts
+           3 commits     72 churn  0.30 density   4 fan-in  ▲ accelerating
+
+    7.0 ─  apps/mobile/src/screens/history/conversationScreen.tsx
+           4 commits    160 churn  0.22 density   5 fan-in  ─ stable
+
+    7.0 ─  apps/mobile/src/lib/telemetry.test.ts [test]
+           4 commits    144 churn  0.24 density   0 fan-in  ─ stable
+
+    6.8 ▼  tooling/scripts/smoke-latency.mjs
+           5 commits   1150 churn  0.22 density   1 fan-in  ▼ cooling
+
+    6.8 ▲  apps/mobile/src/screens/paywall/paywallDemo.tsx
+           3 commits     80 churn  0.23 density   2 fan-in  ▲ accelerating
+
+    6.7 ▲  apps/mobile/src/screens/auth/signInScreen.tsx
+           3 commits    135 churn  0.28 density   5 fan-in  ▲ accelerating
+
+    6.6 ─  apps/mobile/src/home/variants/logic.test.ts [test]
+           6 commits    183 churn  0.16 density   0 fan-in  ─ stable
+
+    6.4 ─  apps/worker/src/rateLimiter/stateAdapter.ts
+           4 commits    368 churn  0.26 density   4 fan-in  ─ stable
+
+    6.4 ▲  apps/worker/src/routes/config.ts
+           3 commits     60 churn  0.27 density   2 fan-in  ▲ accelerating
+
+    6.4 ▼  apps/mobile/src/screens/history/historyScreen.tsx
+           5 commits    264 churn  0.16 density   6 fan-in  ▼ cooling
+
+    6.3 ─  apps/mobile/modules/murmur-audio/src/MurmurAudioModule.web.ts
+           5 commits    536 churn  0.19 density   2 fan-in  ─ stable
+
+    6.3 ─  apps/mobile/src/screens/settings/settingsControls.tsx
+           4 commits     60 churn  0.20 density  11 fan-in  ─ stable
+
+    6.1 ▲  apps/mobile/src/home/experience.tsx
+          13 commits    629 churn  0.07 density   3 fan-in  ▲ accelerating
+
+    6.1 ▲  apps/mobile/src/lib/billing/revenueCat.test.ts [test]
+           8 commits    385 churn  0.10 density   0 fan-in  ▲ accelerating
+
+    6.1 ▲  apps/mobile/src/home/variants/bloom/audioControl.tsx
+           4 commits     65 churn  0.21 density   2 fan-in  ▲ accelerating
+
+    6.0 ▲  apps/mobile/src/lib/billing/appConfig.test.ts [test]
+           4 commits     61 churn  0.19 density   0 fan-in  ▲ accelerating
+
+    6.0 ▲  apps/mobile/app/preview.test.tsx [test]
+           4 commits     43 churn  0.19 density   0 fan-in  ▲ accelerating
+
+    5.9 ▲  apps/mobile/src/screens/previewFixtures.test.ts [test]
+           3 commits     87 churn  0.25 density   0 fan-in  ▲ accelerating
+
+    5.9 ▼  apps/mobile/src/screens/__tests__/billingFixture.ts [test]
+           6 commits    129 churn  0.12 density  15 fan-in  ▼ cooling
+
+    5.8 ▼  apps/mobile/src/lib/observability/sentry.ts
+           4 commits    109 churn  0.19 density  30 fan-in  ▼ cooling
+
+    5.7 ▲  apps/mobile/src/i18n/catalogs.test.ts [test]
+           3 commits     71 churn  0.21 density   0 fan-in  ▲ accelerating
+
+    5.7 ▲  apps/mobile/src/screens/auth/emailSignIn.test.tsx [test]
+           3 commits    171 churn  0.24 density   0 fan-in  ▲ accelerating
+
+    5.7 ▼  apps/mobile/src/home/outOfMinutesSheet.tsx
+           4 commits    791 churn  0.17 density   5 fan-in  ▼ cooling
+
+    5.7 ─  apps/worker/src/rateLimitDurableObject.test.ts [test]
+           6 commits    362 churn  0.13 density   0 fan-in  ─ stable
+
+    5.7 ▲  apps/mobile/src/lib/auth/client.test.ts [test]
+           4 commits    199 churn  0.18 density   0 fan-in  ▲ accelerating
+
+    5.7 ▲  apps/worker/src/privacy.test.ts [test]
+           3 commits    205 churn  0.24 density   0 fan-in  ▲ accelerating
+
+    5.7 ▲  apps/worker/src/billing/catalog.test.ts [test]
+           5 commits    122 churn  0.15 density   0 fan-in  ▲ accelerating
+
+    5.6 ▼  apps/worker/src/billing/allowanceService.ts
+           5 commits    240 churn  0.14 density  14 fan-in  ▼ cooling
+
+    5.6 ▲  apps/mobile/src/home/variants/hooks.ts
+           3 commits    127 churn  0.23 density   9 fan-in  ▲ accelerating
+
+    5.5 ▼  apps/mobile/src/lib/ratings/ratings.ts
+           3 commits    164 churn  0.23 density   8 fan-in  ▼ cooling
+
+    5.4 ─  apps/worker/src/rateLimiter/memoryFallback.ts
+           4 commits    221 churn  0.22 density   2 fan-in  ─ stable
+
+    5.4 ▲  apps/worker/src/observability/sentry.test.ts [test]
+           5 commits    107 churn  0.12 density   0 fan-in  ▲ accelerating
+
+    5.4 ─  apps/mobile/src/lib/installIdentity.ts
+           5 commits    191 churn  0.16 density  15 fan-in  ─ stable
+
+    5.3 ▼  apps/worker/src/serverConfig.test.ts [test]
+           8 commits    224 churn  0.08 density   0 fan-in  ▼ cooling
+
+    5.3 ▼  apps/mobile/src/lib/billing/planCatalog.test.ts [test]
+           7 commits    498 churn  0.09 density   0 fan-in  ▼ cooling
+
+    5.3 ─  apps/mobile/src/lib/config.test.ts [test]
+           6 commits    143 churn  0.14 density   0 fan-in  ─ stable
+
+    5.1 ▼  apps/mobile/src/screens/auth/emailSignIn.tsx
+           4 commits    413 churn  0.16 density   2 fan-in  ▼ cooling
+
+    5.1 ─  apps/mobile/src/screens/__tests__/scaffoldMock.tsx [test]
+           4 commits     61 churn  0.16 density  11 fan-in  ─ stable
+
+    5.0 ─  apps/mobile/src/home/variants/onboardingFlow.tsx
+           7 commits    379 churn  0.10 density   2 fan-in  ─ stable
+
+    5.0 ▲  apps/mobile/src/screens/plans/planList.test.tsx [test]
+           3 commits     58 churn  0.21 density   0 fan-in  ▲ accelerating
+
+    4.8 ▲  apps/worker/src/routes/reconcileBilling.ts
+           4 commits    101 churn  0.16 density   3 fan-in  ▲ accelerating
+
+    4.8 ▼  apps/mobile/src/screens/rating/ratingSheet.tsx
+           3 commits    207 churn  0.20 density   5 fan-in  ▼ cooling
+
+    4.8 ▼  apps/worker/src/routes/customer.ts
+           5 commits    132 churn  0.12 density   3 fan-in  ▼ cooling
+
+    4.8 ─  apps/mobile/src/screens/insights/insightsConsentScreen.tsx
+           4 commits    146 churn  0.15 density   5 fan-in  ─ stable
+
+    4.8 ▲  apps/mobile/src/lib/installIdentity.test.ts [test]
+           4 commits    108 churn  0.17 density   0 fan-in  ▲ accelerating
+
+    4.8 ▲  apps/worker/src/billing/accountMerge.test.ts [test]
+           5 commits     65 churn  0.12 density   0 fan-in  ▲ accelerating
+
+    4.7 ▲  apps/mobile/src/lib/providers/murmurBillingApi.test.ts [test]
+           3 commits     89 churn  0.21 density   0 fan-in  ▲ accelerating
+
+    4.7 ▼  apps/mobile/src/screens/phoneAudio/phoneAudioScreen.tsx
+           4 commits    141 churn  0.14 density   5 fan-in  ▼ cooling
+
+    4.7 ─  apps/mobile/src/home/modalSheet.tsx
+           7 commits    178 churn  0.10 density  11 fan-in  ─ stable
+
+    4.6 ─  apps/worker/src/observability/posthog.ts
+           9 commits    216 churn  0.06 density  11 fan-in  ─ stable
+
+    4.5 ▼  apps/mobile/src/screens/plans/purchaseMode.test.ts [test]
+           3 commits     76 churn  0.19 density   0 fan-in  ▼ cooling
+
+    4.4 ▼  apps/mobile/src/home/diagnostics.ts
+           4 commits    192 churn  0.19 density   2 fan-in  ▼ cooling
+
+    4.4 ▼  apps/worker/src/billing/revenueCatReconciliation.ts
+           4 commits    349 churn  0.14 density   4 fan-in  ▼ cooling
+
+    4.4 ▲  apps/mobile/src/home/variants/bloom/captureSourceControl.tsx
+           4 commits    109 churn  0.14 density   2 fan-in  ▲ accelerating
+
+    4.2 ▲  apps/worker/src/routes/report.ts
+           3 commits    154 churn  0.18 density   2 fan-in  ▲ accelerating
+
+    4.2 ─  packages/protocol/src/billing/catalog.ts
+           6 commits    333 churn  0.08 density  11 fan-in  ─ stable
+
+    4.2 ─  apps/mobile/src/screens/auth/savePurchaseScreen.tsx
+           4 commits    123 churn  0.13 density   5 fan-in  ─ stable
+
+    4.1 ▲  tooling/scripts/validate-app-config.mjs
+          14 commits    259 churn  0.04 density   0 fan-in  ▲ accelerating
+
+    4.1 ▲  apps/mobile/src/lib/providers/murmurBillingApi.ts
+           5 commits     49 churn  0.11 density   3 fan-in  ▲ accelerating
+
+    4.1 ─  apps/mobile/src/screens/settings/settingsControls.test.tsx [test]
+           4 commits     47 churn  0.13 density   0 fan-in  ─ stable
+
+    4.0 ▲  apps/mobile/src/screens/plans/planList.tsx
+           3 commits    110 churn  0.17 density   7 fan-in  ▲ accelerating
+
+    3.9 ─  apps/mobile/src/home/variants/sharedControls.tsx
+           4 commits    254 churn  0.15 density   2 fan-in  ─ stable
+
+    3.7 ▼  apps/mobile/src/home/variants/preference.test.ts [test]
+           3 commits     98 churn  0.21 density   0 fan-in  ▼ cooling
+
+    3.6 ▼  apps/mobile/src/home/diagnosticsModal.tsx
+           5 commits    614 churn  0.12 density   3 fan-in  ▼ cooling
+
+    3.6 ▼  apps/worker/src/rateLimiter/sessionStore.ts
+           3 commits    420 churn  0.20 density   3 fan-in  ▼ cooling
+
+    3.6 ─  apps/worker/src/legalPages.test.ts [test]
+           4 commits     74 churn  0.14 density   0 fan-in  ─ stable
+
+    3.6 ▲  apps/worker/src/routes/config.test.ts [test]
+           3 commits     41 churn  0.15 density   0 fan-in  ▲ accelerating
+
+    3.5 ▼  apps/worker/src/billing/realtimeUsageMeter.test.ts [test]
+           4 commits    262 churn  0.11 density   0 fan-in  ▼ cooling
+
+    3.4 ▼  apps/mobile/src/lib/billing/allowance.test.ts [test]
+           5 commits     79 churn  0.08 density   0 fan-in  ▼ cooling
+
+    3.4 ▲  apps/worker/src/index.test.ts [test]
+           8 commits   3602 churn  0.06 density   0 fan-in  ▲ accelerating
+
+    3.2 ▲  tooling/scripts/validate-no-secrets.mjs
+           3 commits    142 churn  0.19 density   0 fan-in  ▲ accelerating
+
+    3.2 ▼  apps/worker/src/billing/revenueCatEventRepository.ts
+           4 commits    491 churn  0.10 density   4 fan-in  ▼ cooling
+
+    3.2 ─  apps/mobile/src/lib/live-translation/types.ts
+           9 commits    144 churn  0.05 density   4 fan-in  ─ stable
+
+    3.1 ▼  apps/mobile/src/screens/__tests__/reactNativePrimitives.tsx [test]
+           3 commits    176 churn  0.13 density  31 fan-in  ▼ cooling
+
+    3.1 ▼  apps/mobile/src/lib/providers/insightsWorker.ts
+           3 commits     58 churn  0.12 density   4 fan-in  ▼ cooling
+
+    3.0 ▲  apps/worker/src/billing/guestAccountMerge.test.js [test]
+           3 commits    168 churn  0.11 density   0 fan-in  ▲ accelerating
+
+    2.9 ▼  apps/worker/src/billing/ledgerRepository.ts
+           5 commits    917 churn  0.07 density   5 fan-in  ▼ cooling
+
+    2.9 ▲  apps/mobile/app/_layout.tsx
+           7 commits     94 churn  0.06 density   0 fan-in  ▲ accelerating
+
+    2.9 ▼  apps/mobile/src/screens/proGate.tsx
+           4 commits     68 churn  0.09 density   6 fan-in  ▼ cooling
+
+    2.9 ▼  apps/mobile/src/screens/history/conversationFormat.test.ts [test]
+           3 commits     43 churn  0.12 density   0 fan-in  ▼ cooling
+
+    2.8 ─  apps/mobile/app/index.tsx
+           4 commits     29 churn  0.11 density   0 fan-in  ─ stable
+
+    2.7 ─  tooling/gates/test-presence.mjs
+           5 commits    320 churn  0.10 density   0 fan-in  ─ stable
+
+    2.7 ─  tooling/scripts/validate-production-worker.mjs
+           7 commits     92 churn  0.06 density   0 fan-in  ─ stable
+
+    2.5 ▼  tooling/scripts/build-store-screenshots.mjs
+           4 commits    968 churn  0.10 density   2 fan-in  ▼ cooling
+
+    2.5 ▼  apps/mobile/src/home/languageControls.tsx
+           3 commits    201 churn  0.17 density   0 fan-in  ▼ cooling
+
+    2.4 ▼  packages/protocol/src/telemetry.test.ts [test]
+           5 commits    357 churn  0.06 density   0 fan-in  ▼ cooling
+
+    2.4 ─  packages/protocol/src/session.test.ts [test]
+           4 commits    251 churn  0.10 density   0 fan-in  ─ stable
+
+    2.3 ▲  apps/mobile/src/home/status.test.ts [test]
+           7 commits    121 churn  0.05 density   0 fan-in  ▲ accelerating
+
+    2.2 ▲  apps/worker/src/billing/usageSessionStore.ts
+           3 commits     63 churn  0.10 density   4 fan-in  ▲ accelerating
+
+    2.1 ▼  apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs [test]
+           3 commits    156 churn  0.09 density   0 fan-in  ▼ cooling
+
+    2.1 ▲  apps/worker/src/legalPages.ts
+          14 commits   2635 churn  0.02 density   2 fan-in  ▲ accelerating
+
+    2.1 ▼  apps/worker/src/limits.ts
+           5 commits    201 churn  0.07 density   8 fan-in  ▼ cooling
+
+    2.0 ─  apps/worker/src/rateLimiter/sessionStore.test.ts [test]
+           4 commits    679 churn  0.08 density   0 fan-in  ─ stable
+
+    2.0 ▼  apps/mobile/app.config.js
+           4 commits     31 churn  0.06 density   1 fan-in  ▼ cooling
+
+    2.0 ▼  apps/mobile/plugins/withHistoryBackupExclusion.test.ts [test]
+           3 commits     45 churn  0.08 density   0 fan-in  ▼ cooling
+
+    1.9 ▼  apps/mobile/modules/murmur-audio/src/MurmurAudioModule.web.test.ts [test]
+           3 commits     80 churn  0.11 density   0 fan-in  ▼ cooling
+
+    1.9 ─  packages/protocol/src/diagnostics/failures.ts
+           4 commits    107 churn  0.05 density   7 fan-in  ─ stable
+
+    1.8 ▲  tooling/scripts/deploy-worker-release.mjs
+           3 commits    150 churn  0.08 density   0 fan-in  ▲ accelerating
+
+    1.8 ─  apps/mobile/src/home/variants/bloom/onboarding.tsx
+           4 commits    175 churn  0.07 density   3 fan-in  ─ stable
+
+    1.8 ▼  apps/mobile/src/lib/latency.test.ts [test]
+           3 commits    113 churn  0.10 density   0 fan-in  ▼ cooling
+
+    1.7 ▼  apps/worker/src/billing/services.test.ts [test]
+           3 commits    109 churn  0.07 density   0 fan-in  ▼ cooling
+
+    1.7 ─  packages/protocol/src/session.ts
+           4 commits    325 churn  0.07 density  19 fan-in  ─ stable
+
+    1.7 ─  apps/worker/src/billing/customerLedgerCommandDecoder.test.ts [test]
+           4 commits    113 churn  0.05 density   0 fan-in  ─ stable
+
+    1.7 ▲  apps/worker/src/providers/openaiRealtime.test.ts [test]
+           6 commits    186 churn  0.04 density   0 fan-in  ▲ accelerating
+
+    1.6 ▲  apps/mobile/src/home/theme.ts
+           5 commits     98 churn  0.04 density  13 fan-in  ▲ accelerating
+
+    1.5 ─  apps/mobile/plugins/iosPrivacyManifestConfig.test.ts [test]
+           4 commits     84 churn  0.06 density   0 fan-in  ─ stable
+
+    1.4 ▲  apps/mobile/src/home/sheetStyles.ts
+           6 commits    202 churn  0.03 density   3 fan-in  ▲ accelerating
+
+    1.4 ─  apps/worker/src/playIntegrity.test.ts [test]
+           5 commits    391 churn  0.04 density   0 fan-in  ─ stable
+
+    1.3 ▲  apps/mobile/plugins/withAndroidReleaseSigning.js
+           3 commits     98 churn  0.08 density   1 fan-in  ▲ accelerating
+
+    1.3 ▲  apps/worker/src/billing/guestAccountMerge.ts
+           3 commits    468 churn  0.06 density   3 fan-in  ▲ accelerating
+
+    1.2 ─  apps/worker/src/env.test.ts [test]
+           4 commits    226 churn  0.05 density   0 fan-in  ─ stable
+
+    1.0 ─  tooling/scripts/validate-android-metadata.mjs
+           7 commits    222 churn  0.02 density   0 fan-in  ─ stable
+
+    1.0 ▲  tooling/scripts/validate-ios-metadata.mjs
+           7 commits    146 churn  0.02 density   0 fan-in  ▲ accelerating
+
+    0.9 ▲  apps/mobile/src/screens/paywall/styles.ts
+           3 commits     41 churn  0.03 density   2 fan-in  ▲ accelerating
+
+    0.8 ▲  apps/mobile/plugins/withAndroidReleaseSigning.test.mjs [test]
+           3 commits     59 churn  0.05 density   0 fan-in  ▲ accelerating
+
+    0.7 ▲  apps/mobile/src/home/variants/bloom/styles.ts
+          10 commits   1028 churn  0.01 density   9 fan-in  ▲ accelerating
+
+    0.6 ▼  tooling/scripts/validate-store-assets.mjs
+           5 commits    305 churn  0.02 density   0 fan-in  ▼ cooling
+
+    0.5 ─  apps/mobile/src/screens/styles.ts
+           6 commits    387 churn  0.01 density   7 fan-in  ─ stable
+
+    0.2 ▼  apps/mobile/src/home/onboardingScreen.tsx
+           4 commits    120 churn  0.01 density   2 fan-in  ▼ cooling
+
+    0.2 ▼  apps/mobile/src/screens/plans/styles.ts
+           3 commits    255 churn  0.01 density   4 fan-in  ▼ cooling
+
+  265 files excluded (< 3 commits)
+
+  Files with high churn and high complexity: https://docs.fallow.tools/explanations/health#hotspot-metrics
+
+● Refactoring targets (22)
+  1 low effort · 18 medium · 3 high
+    score = quick-win ROI (higher = better) · pri = absolute priority
+
+   17.2  pri:34.3    apps/worker/src/serverConfig.ts
+         high impact · effort:medium · confidence:medium  Split high-impact file (306 LOC) — 11 dependents amplify every change
+         importers: apps/worker/src/auth/auth.ts (freeAllowanceMs, getRequestServerConfig); apps/worker/src/billing/personalOffer.test.ts (defaultServerConfig); apps/worker/src/billing/personalOffer.ts (ServerConfig); apps/worker/src/observability/outcomes.test.ts (getServerConfig); apps/worker/src/routes/config.ts (appConfig, defaultServerConfig, getServerConfig)
+
+   14.6  pri:29.2    apps/mobile/src/screens/plans/plansScreen.tsx
+         high impact · effort:medium · confidence:medium  Split high-impact file (85 LOC) — 5 dependents amplify every change
+         importers: apps/mobile/app/plans.test.tsx (side effect); apps/mobile/app/plans.tsx (PlansScreen, planTermFromParam); apps/mobile/src/screens/plans/plansScreen.test.tsx (PlansScreen, planTermFromParam); apps/mobile/src/screens/screenPreviews.test.tsx (side effect); apps/mobile/src/screens/screenPreviews.tsx (PlansScreen)
+
+   14.0  pri:27.9    apps/mobile/src/lib/billing/customerResponse.ts
+         high impact · effort:medium · confidence:medium  Split high-impact file (225 LOC) — 10 dependents amplify every change
+         importers: apps/mobile/src/home/homeScreen.tsx (MurmurCustomer); apps/mobile/src/home/outOfMinutesSheet.tsx (MurmurCustomer); apps/mobile/src/lib/billing/allowance.test.ts (MurmurCustomer); apps/mobile/src/lib/billing/allowance.ts (MurmurCustomer); apps/mobile/src/lib/billing/context.tsx (MurmurCustomer)
+
+   13.7  pri:27.4    apps/mobile/src/screens/paywall/paywallScreen.tsx
+         high impact · effort:medium · confidence:medium  Split high-impact file (143 LOC) — 4 dependents amplify every change
+         importers: apps/mobile/app/paywall.tsx (side effect); apps/mobile/src/screens/paywall/paywallScreen.test.tsx (PaywallScreen); apps/mobile/src/screens/screenPreviews.test.tsx (side effect); apps/mobile/src/screens/screenPreviews.tsx (PaywallScreen)
+
+   13.3  pri:40.0    apps/worker/src/privacy.ts
+         high impact · effort:high · confidence:medium  Split high-impact file (128 LOC) — 17 dependents amplify every change
+         importers: apps/worker/src/billing/freeAllowanceClaims.ts (hashInstallId); apps/worker/src/entrypoint.ts (withRequestLogPrivacy); apps/worker/src/index.ts (logWorkerEvent); apps/worker/src/observability/consoleBoundary.ts (installConsolePrivacyBoundary); apps/worker/src/observability/outcomes.test.ts (hashInstallId, installConsolePrivacyBoundary, logWorkerEvent)
+
+   13.2  pri:26.3    apps/worker/src/index.ts
+         complexity · effort:medium · confidence:high  Extract fetch (cognitive: 45) in 279-LOC file into smaller functions
+         importers: apps/worker/src/entrypoint.ts (default as worker, side effect); apps/worker/src/index.test.ts (default as worker); apps/worker/src/observability/outcomes.test.ts (default as worker)
+
+   12.7  pri:25.3    apps/mobile/src/lib/billing/allowance.ts
+         high impact · effort:medium · confidence:medium  Split high-impact file (39 LOC) — 8 dependents amplify every change
+         importers: apps/mobile/src/home/homeScreen.tsx (hasTimeAvailable, isHardPaywallLocked, lockedSurface); apps/mobile/src/home/outOfMinutesSheet.tsx (isPaidCustomer); apps/mobile/src/home/preview.tsx (isHardPaywallLocked); apps/mobile/src/home/variants/bloom/index.tsx (hasTimeAvailable, isHardPaywallLocked, lowBalanceMinutes); apps/mobile/src/home/variants/logic.test.ts (hasTimeAvailable, isHardPaywallLocked)
+
+   12.6  pri:37.7    apps/mobile/src/screens/__tests__/navigation.tsx
+         high impact · effort:high · confidence:medium  Split high-impact file (45 LOC) — 18 dependents amplify every change
+         importers: apps/mobile/src/home/variants/rendering.test.tsx (lucideMock); apps/mobile/src/screens/account/accountScreen.test.tsx (expoRouterMock, lucideMock, router); apps/mobile/src/screens/auth/savePurchaseScreen.test.tsx (expoRouterMock, lucideMock, router); apps/mobile/src/screens/auth/signInScreen.test.tsx (expoRouterMock, lucideMock, router); apps/mobile/src/screens/auth/socialButtons.test.tsx (lucideMock)
+
+   12.5  pri:12.5    tooling/scripts/rollback-worker-logs.mjs
+         untested risk · effort:low · confidence:high  2 complex functions lack test coverage path, add tests before modifying
+         importers: tooling/scripts/rollback-worker-logs.test.mjs (rollbackWorkerLogs)
+
+   12.4  pri:24.7    apps/worker/src/observability/sentry.ts
+         high impact · effort:medium · confidence:medium  Split high-impact file (102 LOC) — 4 dependents amplify every change
+         importers: apps/worker/src/index.ts (getSentryOptions); apps/worker/src/observability/outcomes.test.ts (getSentryOptions); apps/worker/src/observability/sentry.test.ts (getSentryOptions, sanitizeWorkerEvent); apps/worker/src/routes/attribution.test.ts (sanitizeWorkerEvent)
+
+  ... and 12 more targets (--format json for full list)
+
+  Prioritized refactoring recommendations based on complexity, churn, and coupling signals: https://docs.fallow.tools/explanations/health#refactoring-targets
+
+✗ 12 above threshold · 5339 analyzed · maintainability 90.3 (good) (0.25s)
+$ node tooling/gates/require-tool.mjs semgrep "Install the official Semgrep CLI, then rerun pnpm run static:semgrep." && semgrep scan --config .semgrep --error
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 840 files tracked by git with 12 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin   Rules                                                                   
+ ─────────────────────────────        ────────────────                                                                  
+  <multilang>       5     839          Custom      12                                                                   
+  ts                7     450                                                                                           
+  js                3      52                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 12
+ • Targets scanned: 839
+ • Parsed lines: ~99.9%
+ • Scan skipped: 
+   ◦ Files larger than  files 1.0 MB: 112
+   ◦ Files matching .semgrepignore patterns: 1
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 12 rules on 839 files: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+$ node tooling/gates/require-tool.mjs gitleaks "Install the official Gitleaks CLI, then rerun pnpm run security:secrets." && gitleaks detect --source . --redact --verbose
+
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+[90m12:33AM[0m [32mINF[0m [1mUnknown SCM platform. Use --platform to include links in findings.[0m [36mhost=[0m
+[90m12:33AM[0m [32mINF[0m [1m160 commits scanned.[0m
+[90m12:33AM[0m [32mINF[0m [1mscanned ~7357789 bytes (7.36 MB) in 5.73s[0m
+[90m12:33AM[0m [32mINF[0m [1mno leaks found[0m
+$ node tooling/gates/require-tool.mjs osv-scanner "Install the official OSV-Scanner CLI, then rerun pnpm run security:osv." && osv-scanner scan source -r --experimental-exclude scratchpad --experimental-exclude .worktrees .
+Scanning dir .
+Starting filesystem walk for root: /
+Scanned /tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/pnpm-lock.yaml file and found 1191 packages
+End status: 273 dirs visited, 1588 inodes visited, 1 Extract calls, 68.458625ms elapsed, 68.459ms wall time
+Loaded filter from: /tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/osv-scanner.toml
+GHSA-vfj7-8cjw-p6xm and 1 alias have been filtered out because: No fixed braces release exists as of 2026-10-17. Only micromatch in local build/test tooling consumes it; Murmur does not accept user-supplied glob patterns or bundle this package into its mobile or Worker runtime. Reassess within seven days.
+GHSA-86w9-cpqp-85rv and 3 aliases have been filtered out because: No fixed node-forge release exists as of 2026-10-17. It is used by Expo CLI and its build-time code-signing-certificate tooling, not Murmur's mobile or Worker signature verification. Release signing uses OpenSSL and platform tools. Reassess within seven days.
+Filtered 2 vulnerabilities from output
+
+No issues found
+$ syncpack lint --specifier-types missing,unsupported
+✓ No issues found
+$ cspell apps/mobile/app apps/mobile/src apps/worker/src packages/protocol/src tooling package.json README.md AGENTS.md CONTRIBUTING.md docs/*.md docs/legal/*.md
+  1/514 AGENTS.md 344.44ms
+  2/514 apps/mobile/app/_layout.tsx 50.27ms
+  3/514 apps/mobile/app/account.test.tsx 1.25ms
+  4/514 apps/mobile/app/account.tsx 0.83ms
+  5/514 apps/mobile/app/history/[id].test.tsx 0.98ms
+  6/514 apps/mobile/app/history/[id].tsx 1.81ms
+  7/514 apps/mobile/app/history/index.test.tsx 0.94ms
+  8/514 apps/mobile/app/history/index.tsx 0.64ms
+  9/514 apps/mobile/app/index.tsx 0.99ms
+ 10/514 apps/mobile/app/insights-consent.test.tsx 1.26ms
+ 11/514 apps/mobile/app/insights-consent.tsx 0.79ms
+ 12/514 apps/mobile/app/language.test.tsx 1.62ms
+ 13/514 apps/mobile/app/language.tsx 0.83ms
+ 14/514 apps/mobile/app/paywall.tsx 0.41ms
+ 15/514 apps/mobile/app/phone-audio.test.tsx 0.62ms
+ 16/514 apps/mobile/app/phone-audio.tsx 1.49ms
+ 17/514 apps/mobile/app/plans.test.tsx 2.37ms
+ 18/514 apps/mobile/app/plans.tsx 1.04ms
+ 19/514 apps/mobile/app/preview.test.tsx 1.48ms
+ 20/514 apps/mobile/app/preview.tsx 1.46ms
+ 21/514 apps/mobile/app/save-purchase.test.tsx 0.83ms
+ 22/514 apps/mobile/app/save-purchase.tsx 0.52ms
+ 23/514 apps/mobile/app/settings.test.tsx 2.26ms
+ 24/514 apps/mobile/app/settings.tsx 0.70ms
+ 25/514 apps/mobile/app/sign-in.test.tsx 1.23ms
+ 26/514 apps/mobile/app/sign-in.tsx 0.84ms
+ 27/514 apps/mobile/src/home/__tests__/modalSheetMock.tsx 0.96ms
+ 28/514 apps/mobile/src/home/appChrome.tsx 1.83ms
+ 29/514 apps/mobile/src/home/audioPlaybackPreference.test.ts 3.80ms
+ 30/514 apps/mobile/src/home/audioPlaybackPreference.ts 1.50ms
+ 31/514 apps/mobile/src/home/bottomDock.tsx 1.88ms
+ 32/514 apps/mobile/src/home/components.tsx 0.72ms
+ 33/514 apps/mobile/src/home/diagnostics.ts 3.14ms
+ 34/514 apps/mobile/src/home/diagnosticsModal.test.tsx 9.30ms
+ 35/514 apps/mobile/src/home/diagnosticsModal.tsx 5.52ms
+ 36/514 apps/mobile/src/home/errorCopy.ts 2.19ms
+ 37/514 apps/mobile/src/home/experience.test.tsx 3.74ms
+ 38/514 apps/mobile/src/home/experience.tsx 4.47ms
+ 39/514 apps/mobile/src/home/homeScreen.test.ts 7.54ms
+ 40/514 apps/mobile/src/home/homeScreen.tsx 11.18ms
+ 41/514 apps/mobile/src/home/i18nRendering.test.tsx 3.43ms
+ 42/514 apps/mobile/src/home/illustrations/index.ts 0.79ms
+ 43/514 apps/mobile/src/home/languageAvailability.test.ts 1.15ms
+ 44/514 apps/mobile/src/home/languageAvailability.ts 1.40ms
+ 45/514 apps/mobile/src/home/languageControls.tsx 1.50ms
+ 46/514 apps/mobile/src/home/languagePicker.test.tsx 1.66ms
+ 47/514 apps/mobile/src/home/languagePicker.tsx 6.25ms
+ 48/514 apps/mobile/src/home/modalSheet.tsx 2.69ms
+ 49/514 apps/mobile/src/home/onboarding.tsx 3.55ms
+ 50/514 apps/mobile/src/home/onboardingNavigation.test.ts 1.18ms
+ 51/514 apps/mobile/src/home/onboardingNavigation.ts 0.67ms
+ 52/514 apps/mobile/src/home/onboardingScreen.tsx 2.18ms
+ 53/514 apps/mobile/src/home/outOfMinutesSheet.test.tsx 1.40ms
+ 54/514 apps/mobile/src/home/outOfMinutesSheet.tsx 2.24ms
+ 55/514 apps/mobile/src/home/preview.test.tsx 3.30ms
+ 56/514 apps/mobile/src/home/preview.tsx 4.59ms
+ 57/514 apps/mobile/src/home/previewConversation.test.ts 1.10ms
+ 58/514 apps/mobile/src/home/previewConversation.ts 2.70ms
+ 59/514 apps/mobile/src/home/providerRoute.ts 0.55ms
+ 60/514 apps/mobile/src/home/reactNativeTestHarness.tsx 0.57ms
+ 61/514 apps/mobile/src/home/reportTranslation.test.tsx 1.41ms
+ 62/514 apps/mobile/src/home/reportTranslation.tsx 1.04ms
+ 63/514 apps/mobile/src/home/sheetStyles.test.tsx 0.82ms
+ 64/514 apps/mobile/src/home/sheetStyles.ts 2.03ms
+ 65/514 apps/mobile/src/home/status.test.ts 1.22ms
+ 66/514 apps/mobile/src/home/statusLabels.ts 1.45ms
+ 67/514 apps/mobile/src/home/styles.ts 7.24ms
+ 68/514 apps/mobile/src/home/theme.test.ts 0.75ms
+ 69/514 apps/mobile/src/home/theme.ts 1.02ms
+ 70/514 apps/mobile/src/home/translationSurface.tsx 1.11ms
+ 71/514 apps/mobile/src/home/types.ts 0.40ms
+ 72/514 apps/mobile/src/home/updateRequiredSheet.test.tsx 1.64ms
+ 73/514 apps/mobile/src/home/updateRequiredSheet.tsx 2.28ms
+ 74/514 apps/mobile/src/home/variants/bloom/audioControl.test.tsx 1.42ms
+ 75/514 apps/mobile/src/home/variants/bloom/audioControl.tsx 0.94ms
+ 76/514 apps/mobile/src/home/variants/bloom/backgroundListening.test.tsx 0.78ms
+ 77/514 apps/mobile/src/home/variants/bloom/backgroundListening.tsx 0.96ms
+ 78/514 apps/mobile/src/home/variants/bloom/captureSourceControl.test.tsx 1.16ms
+ 79/514 apps/mobile/src/home/variants/bloom/captureSourceControl.tsx 1.44ms
+ 80/514 apps/mobile/src/home/variants/bloom/index.tsx 6.88ms
+ 81/514 apps/mobile/src/home/variants/bloom/onboarding.tsx 2.38ms
+ 82/514 apps/mobile/src/home/variants/bloom/styles.ts 3.86ms
+ 83/514 apps/mobile/src/home/variants/bloom/translationStarting.test.tsx 1.40ms
+ 84/514 apps/mobile/src/home/variants/bloom/translationStarting.tsx 2.29ms
+ 85/514 apps/mobile/src/home/variants/hooks.ts 1.51ms
+ 86/514 apps/mobile/src/home/variants/logic.test.ts 3.40ms
+ 87/514 apps/mobile/src/home/variants/logic.ts 2.18ms
+ 88/514 apps/mobile/src/home/variants/onboardingFlow.tsx 3.81ms
+ 89/514 apps/mobile/src/home/variants/preference.test.ts 1.30ms
+ 90/514 apps/mobile/src/home/variants/preference.ts 0.64ms
+ 91/514 apps/mobile/src/home/variants/rendering.test.tsx 7.87ms
+ 92/514 apps/mobile/src/home/variants/shared.test.tsx 1.77ms
+ 93/514 apps/mobile/src/home/variants/shared.tsx 3.80ms
+ 94/514 apps/mobile/src/home/variants/sharedControls.test.tsx 1.69ms
+ 95/514 apps/mobile/src/home/variants/sharedControls.tsx 1.90ms
+ 96/514 apps/mobile/src/home/variants/types.ts 3.03ms
+ 97/514 apps/mobile/src/home/viewModel.test.ts 2.73ms
+ 98/514 apps/mobile/src/home/viewModel.ts 4.55ms
+ 99/514 apps/mobile/src/i18n/catalogs.test.ts 2.70ms
+100/514 apps/mobile/src/i18n/catalogs.ts 1.23ms
+101/514 apps/mobile/src/i18n/catalogs/ar.ts 9.20ms
+102/514 apps/mobile/src/i18n/catalogs/de.ts 25.76ms
+103/514 apps/mobile/src/i18n/catalogs/en.ts 9.50ms
+104/514 apps/mobile/src/i18n/catalogs/es.ts 13.29ms
+105/514 apps/mobile/src/i18n/catalogs/fr.ts 12.48ms
+106/514 apps/mobile/src/i18n/catalogs/hi.ts 12.10ms
+107/514 apps/mobile/src/i18n/catalogs/id.ts 13.75ms
+108/514 apps/mobile/src/i18n/catalogs/ja.ts 9.09ms
+109/514 apps/mobile/src/i18n/catalogs/pt-BR.ts 12.58ms
+110/514 apps/mobile/src/i18n/catalogs/tr.ts 25.08ms
+111/514 apps/mobile/src/i18n/catalogs/ur.ts 24.13ms
+112/514 apps/mobile/src/i18n/localizedError.test.ts 1.14ms
+113/514 apps/mobile/src/i18n/localizedError.ts 1.39ms
+114/514 apps/mobile/src/i18n/provider.test.tsx 2.39ms
+115/514 apps/mobile/src/i18n/provider.tsx 2.35ms
+116/514 apps/mobile/src/i18n/runtime.test.ts 2.09ms
+117/514 apps/mobile/src/i18n/runtime.tsx 1.97ms
+118/514 apps/mobile/src/i18n/storage.test.ts 0.98ms
+119/514 apps/mobile/src/i18n/storage.ts 0.63ms
+120/514 apps/mobile/src/i18n/types.test.ts 0.83ms
+121/514 apps/mobile/src/i18n/types.ts 1.14ms
+122/514 apps/mobile/src/lib/__tests__/workerClientMocks.ts 0.58ms
+123/514 apps/mobile/src/lib/acquisition.test.ts 1.26ms
+124/514 apps/mobile/src/lib/acquisition.ts 0.94ms
+125/514 apps/mobile/src/lib/anonymousAnalytics.test.ts 1.10ms
+126/514 apps/mobile/src/lib/anonymousAnalytics.ts 0.56ms
+127/514 apps/mobile/src/lib/appRelease.test.ts 0.88ms
+128/514 apps/mobile/src/lib/appRelease.ts 0.93ms
+129/514 apps/mobile/src/lib/auth/authErrors.test.ts 0.87ms
+130/514 apps/mobile/src/lib/auth/authErrors.ts 0.76ms
+131/514 apps/mobile/src/lib/auth/client.test.ts 2.02ms
+132/514 apps/mobile/src/lib/auth/client.ts 1.62ms
+133/514 apps/mobile/src/lib/auth/nativeProviders.test.ts 1.26ms
+134/514 apps/mobile/src/lib/auth/nativeProviders.ts 1.10ms
+135/514 apps/mobile/src/lib/billing/allowance.test.ts 1.28ms
+136/514 apps/mobile/src/lib/billing/allowance.ts 1.03ms
+137/514 apps/mobile/src/lib/billing/appConfig.test.ts 0.94ms
+138/514 apps/mobile/src/lib/billing/appConfig.ts 0.97ms
+139/514 apps/mobile/src/lib/billing/context.test.tsx 1.42ms
+140/514 apps/mobile/src/lib/billing/context.tsx 4.65ms
+141/514 apps/mobile/src/lib/billing/customerApi.test.ts 2.17ms
+142/514 apps/mobile/src/lib/billing/customerApi.ts 1.03ms
+143/514 apps/mobile/src/lib/billing/customerResponse.ts 1.88ms
+144/514 apps/mobile/src/lib/billing/paywallChoices.test.ts 0.82ms
+145/514 apps/mobile/src/lib/billing/paywallChoices.ts 0.58ms
+146/514 apps/mobile/src/lib/billing/planCatalog.test.ts 1.85ms
+147/514 apps/mobile/src/lib/billing/planCatalog.ts 2.39ms
+148/514 apps/mobile/src/lib/billing/planLoading.test.ts 1.12ms
+149/514 apps/mobile/src/lib/billing/planLoading.ts 0.56ms
+150/514 apps/mobile/src/lib/billing/reconciliation.test.ts 0.61ms
+151/514 apps/mobile/src/lib/billing/reconciliation.ts 0.40ms
+152/514 apps/mobile/src/lib/billing/revenueCat.test.ts 2.69ms
+153/514 apps/mobile/src/lib/billing/revenueCat.ts 3.44ms
+154/514 apps/mobile/src/lib/config.test.ts 1.24ms
+155/514 apps/mobile/src/lib/config.ts 1.46ms
+156/514 apps/mobile/src/lib/conversationHistory.test.ts 1.16ms
+157/514 apps/mobile/src/lib/conversationHistory.ts 1.25ms
+158/514 apps/mobile/src/lib/engagement.test.ts 1.36ms
+159/514 apps/mobile/src/lib/engagement.ts 1.09ms
+160/514 apps/mobile/src/lib/insightsConsent.test.ts 0.96ms
+161/514 apps/mobile/src/lib/insightsConsent.ts 1.14ms
+162/514 apps/mobile/src/lib/installAttribution.test.ts 1.70ms
+163/514 apps/mobile/src/lib/installAttribution.ts 0.97ms
+164/514 apps/mobile/src/lib/installIdentity.test.ts 1.66ms
+165/514 apps/mobile/src/lib/installIdentity.ts 1.08ms
+166/514 apps/mobile/src/lib/latency.test.ts 1.27ms
+167/514 apps/mobile/src/lib/latency.ts 2.14ms
+168/514 apps/mobile/src/lib/legalLinks.test.ts 1.71ms
+169/514 apps/mobile/src/lib/legalLinks.ts 0.81ms
+170/514 apps/mobile/src/lib/live-translation/audioDiagnostics.test.ts 1.01ms
+171/514 apps/mobile/src/lib/live-translation/audioDiagnostics.ts 1.66ms
+172/514 apps/mobile/src/lib/live-translation/captureLifecycle.test.ts 0.89ms
+173/514 apps/mobile/src/lib/live-translation/captureLifecycle.ts 0.55ms
+174/514 apps/mobile/src/lib/live-translation/errorState.test.ts 0.95ms
+175/514 apps/mobile/src/lib/live-translation/errorState.ts 0.56ms
+176/514 apps/mobile/src/lib/live-translation/realtimeConnectionDeadline.test.ts 0.67ms
+177/514 apps/mobile/src/lib/live-translation/realtimeConnectionDeadline.ts 0.47ms
+178/514 apps/mobile/src/lib/live-translation/sessionPreparation.test.ts 0.95ms
+179/514 apps/mobile/src/lib/live-translation/sessionPreparation.ts 0.93ms
+180/514 apps/mobile/src/lib/live-translation/sessionTiming.test.ts 1.38ms
+181/514 apps/mobile/src/lib/live-translation/sessionTiming.ts 0.73ms
+182/514 apps/mobile/src/lib/live-translation/startingState.test.ts 0.58ms
+183/514 apps/mobile/src/lib/live-translation/startingState.ts 0.48ms
+184/514 apps/mobile/src/lib/live-translation/types.ts 1.50ms
+185/514 apps/mobile/src/lib/live-translation/useLiveTranslation.ts 8.36ms
+186/514 apps/mobile/src/lib/live-translation/workerApi.test.ts 2.96ms
+187/514 apps/mobile/src/lib/live-translation/workerApi.ts 2.09ms
+188/514 apps/mobile/src/lib/localStorage.test.ts 1.89ms
+189/514 apps/mobile/src/lib/localStorage.ts 0.79ms
+190/514 apps/mobile/src/lib/observability/sentry.test.ts 1.11ms
+191/514 apps/mobile/src/lib/observability/sentry.ts 1.33ms
+192/514 apps/mobile/src/lib/phoneAudioGiftOffer.test.ts 1.12ms
+193/514 apps/mobile/src/lib/phoneAudioGiftOffer.ts 1.28ms
+194/514 apps/mobile/src/lib/providers/insightsWorker.test.ts 0.79ms
+195/514 apps/mobile/src/lib/providers/insightsWorker.ts 0.71ms
+196/514 apps/mobile/src/lib/providers/mobileTelemetry.test.ts 0.77ms
+197/514 apps/mobile/src/lib/providers/mobileTelemetry.ts 0.41ms
+198/514 apps/mobile/src/lib/providers/murmurBillingApi.test.ts 1.47ms
+199/514 apps/mobile/src/lib/providers/murmurBillingApi.ts 1.11ms
+200/514 apps/mobile/src/lib/providers/realtimeTranslation.test.ts 3.71ms
+201/514 apps/mobile/src/lib/providers/realtimeTranslation.ts 3.86ms
+202/514 apps/mobile/src/lib/providers/realtimeTranslationDiagnostics.ts 1.48ms
+203/514 apps/mobile/src/lib/providers/reportTranslation.test.ts 0.98ms
+204/514 apps/mobile/src/lib/providers/reportTranslation.ts 0.65ms
+205/514 apps/mobile/src/lib/ratings/ratings.test.ts 1.97ms
+206/514 apps/mobile/src/lib/ratings/ratings.ts 2.43ms
+207/514 apps/mobile/src/lib/ratings/ratingSchedule.test.ts 0.94ms
+208/514 apps/mobile/src/lib/ratings/ratingSchedule.ts 0.77ms
+209/514 apps/mobile/src/lib/replay.test.ts 2.04ms
+210/514 apps/mobile/src/lib/replay.ts 1.17ms
+211/514 apps/mobile/src/lib/replayProvider.test.tsx 0.85ms
+212/514 apps/mobile/src/lib/replayProvider.tsx 0.66ms
+213/514 apps/mobile/src/lib/requestReview.test.ts 1.09ms
+214/514 apps/mobile/src/lib/requestReview.ts 0.65ms
+215/514 apps/mobile/src/lib/secureStorage.test.ts 2.95ms
+216/514 apps/mobile/src/lib/secureStorage.ts 0.91ms
+217/514 apps/mobile/src/lib/shareMurmur.test.ts 0.59ms
+218/514 apps/mobile/src/lib/shareMurmur.ts 0.37ms
+219/514 apps/mobile/src/lib/storageDiagnostics.test.ts 1.26ms
+220/514 apps/mobile/src/lib/storageDiagnostics.ts 1.02ms
+221/514 apps/mobile/src/lib/telemetry.test.ts 2.44ms
+222/514 apps/mobile/src/lib/telemetry.ts 3.75ms
+223/514 apps/mobile/src/lib/useLiveTranslation.ts 0.71ms
+224/514 apps/mobile/src/screens/__tests__/billingFixture.ts 2.23ms
+225/514 apps/mobile/src/screens/__tests__/navigation.tsx 1.05ms
+226/514 apps/mobile/src/screens/__tests__/reactNativePrimitives.tsx 1.72ms
+227/514 apps/mobile/src/screens/__tests__/scaffoldMock.tsx 0.87ms
+228/514 apps/mobile/src/screens/__tests__/servicesFixture.ts 0.88ms
+229/514 apps/mobile/src/screens/__tests__/uiText.ts 0.36ms
+230/514 apps/mobile/src/screens/account/accountScreen.test.tsx 2.82ms
+231/514 apps/mobile/src/screens/account/accountScreen.tsx 4.47ms
+232/514 apps/mobile/src/screens/auth/emailSignIn.test.tsx 3.47ms
+233/514 apps/mobile/src/screens/auth/emailSignIn.tsx 3.88ms
+234/514 apps/mobile/src/screens/auth/emailSignInState.test.ts 1.19ms
+235/514 apps/mobile/src/screens/auth/emailSignInState.ts 0.80ms
+236/514 apps/mobile/src/screens/auth/savePurchaseScreen.test.tsx 1.54ms
+237/514 apps/mobile/src/screens/auth/savePurchaseScreen.tsx 2.15ms
+238/514 apps/mobile/src/screens/auth/signInScreen.test.tsx 3.31ms
+239/514 apps/mobile/src/screens/auth/signInScreen.tsx 2.10ms
+240/514 apps/mobile/src/screens/auth/socialButtons.test.tsx 1.38ms
+241/514 apps/mobile/src/screens/auth/socialButtons.tsx 3.30ms
+242/514 apps/mobile/src/screens/auth/styles.ts 1.63ms
+243/514 apps/mobile/src/screens/formatMinutes.test.ts 0.82ms
+244/514 apps/mobile/src/screens/formatMinutes.ts 1.06ms
+245/514 apps/mobile/src/screens/heroPoints.test.tsx 0.65ms
+246/514 apps/mobile/src/screens/heroPoints.tsx 0.87ms
+247/514 apps/mobile/src/screens/history/conversationFormat.test.ts 1.08ms
+248/514 apps/mobile/src/screens/history/conversationFormat.ts 0.85ms
+249/514 apps/mobile/src/screens/history/conversationScreen.test.tsx 1.73ms
+250/514 apps/mobile/src/screens/history/conversationScreen.tsx 1.71ms
+251/514 apps/mobile/src/screens/history/historyScreen.test.tsx 2.09ms
+252/514 apps/mobile/src/screens/history/historyScreen.tsx 2.60ms
+253/514 apps/mobile/src/screens/insights/insightsConsentScreen.test.tsx 1.46ms
+254/514 apps/mobile/src/screens/insights/insightsConsentScreen.tsx 1.54ms
+255/514 apps/mobile/src/screens/paywall/paywallDemo.test.tsx 1.19ms
+256/514 apps/mobile/src/screens/paywall/paywallDemo.tsx 1.93ms
+257/514 apps/mobile/src/screens/paywall/paywallScreen.test.tsx 2.85ms
+258/514 apps/mobile/src/screens/paywall/paywallScreen.tsx 3.29ms
+259/514 apps/mobile/src/screens/paywall/styles.ts 1.15ms
+260/514 apps/mobile/src/screens/phoneAudio/phoneAudioAccess.test.ts 0.97ms
+261/514 apps/mobile/src/screens/phoneAudio/phoneAudioAccess.ts 0.65ms
+262/514 apps/mobile/src/screens/phoneAudio/phoneAudioScreen.test.tsx 1.34ms
+263/514 apps/mobile/src/screens/phoneAudio/phoneAudioScreen.tsx 2.44ms
+264/514 apps/mobile/src/screens/plans/offerBanner.test.tsx 1.24ms
+265/514 apps/mobile/src/screens/plans/offerBanner.tsx 1.56ms
+266/514 apps/mobile/src/screens/plans/planList.test.tsx 1.01ms
+267/514 apps/mobile/src/screens/plans/planList.tsx 2.07ms
+268/514 apps/mobile/src/screens/plans/planPicker.test.tsx 1.70ms
+269/514 apps/mobile/src/screens/plans/planPicker.tsx 2.28ms
+270/514 apps/mobile/src/screens/plans/plansScreen.test.tsx 3.37ms
+271/514 apps/mobile/src/screens/plans/plansScreen.tsx 1.83ms
+272/514 apps/mobile/src/screens/plans/purchaseMode.test.ts 0.80ms
+273/514 apps/mobile/src/screens/plans/purchaseMode.ts 0.55ms
+274/514 apps/mobile/src/screens/plans/styles.ts 1.83ms
+275/514 apps/mobile/src/screens/postSessionPrompt.test.ts 0.89ms
+276/514 apps/mobile/src/screens/postSessionPrompt.ts 0.55ms
+277/514 apps/mobile/src/screens/previewFixtures.test.ts 1.69ms
+278/514 apps/mobile/src/screens/previewFixtures.ts 4.00ms
+279/514 apps/mobile/src/screens/proGate.test.tsx 1.90ms
+280/514 apps/mobile/src/screens/proGate.tsx 1.00ms
+281/514 apps/mobile/src/screens/rating/ratingSheet.test.tsx 1.48ms
+282/514 apps/mobile/src/screens/rating/ratingSheet.tsx 2.95ms
+283/514 apps/mobile/src/screens/rating/usageChoices.test.ts 0.65ms
+284/514 apps/mobile/src/screens/rating/usageChoices.ts 0.74ms
+285/514 apps/mobile/src/screens/rowGroup.test.tsx 0.89ms
+286/514 apps/mobile/src/screens/rowGroup.tsx 2.10ms
+287/514 apps/mobile/src/screens/screenPreviews.test.tsx 1.83ms
+288/514 apps/mobile/src/screens/screenPreviews.tsx 2.31ms
+289/514 apps/mobile/src/screens/screenScaffold.test.tsx 1.44ms
+290/514 apps/mobile/src/screens/screenScaffold.tsx 2.87ms
+291/514 apps/mobile/src/screens/screenServices.test.tsx 2.91ms
+292/514 apps/mobile/src/screens/screenServices.tsx 3.55ms
+293/514 apps/mobile/src/screens/settings/languageScreen.test.tsx 2.31ms
+294/514 apps/mobile/src/screens/settings/languageScreen.tsx 2.06ms
+295/514 apps/mobile/src/screens/settings/settingsControls.test.tsx 1.12ms
+296/514 apps/mobile/src/screens/settings/settingsControls.tsx 0.97ms
+297/514 apps/mobile/src/screens/settings/settingsScreen.test.tsx 3.24ms
+298/514 apps/mobile/src/screens/settings/settingsScreen.tsx 1.82ms
+299/514 apps/mobile/src/screens/styles.ts 2.76ms
+300/514 apps/worker/src/auth/auth.test.ts 0.73ms
+301/514 apps/worker/src/auth/auth.ts 5.07ms
+302/514 apps/worker/src/auth/deleteExpiredSessions.ts 0.79ms
+303/514 apps/worker/src/auth/socialProviders.test.ts 1.36ms
+304/514 apps/worker/src/auth/socialProviders.ts 1.40ms
+305/514 apps/worker/src/billing/__tests__/billingDatabase.mjs 0.75ms
+306/514 apps/worker/src/billing/accountMerge.test.ts 0.64ms
+307/514 apps/worker/src/billing/accountMerge.ts 0.55ms
+308/514 apps/worker/src/billing/allocation.test.ts 0.72ms
+309/514 apps/worker/src/billing/allocation.ts 0.83ms
+310/514 apps/worker/src/billing/allowanceMerge.test.js 2.36ms
+311/514 apps/worker/src/billing/allowancePeriods.test.ts 1.15ms
+312/514 apps/worker/src/billing/allowancePeriods.ts 1.03ms
+313/514 apps/worker/src/billing/allowanceService.test.mjs 1.85ms
+314/514 apps/worker/src/billing/allowanceService.ts 1.90ms
+315/514 apps/worker/src/billing/allowanceUpgrade.test.ts 0.55ms
+316/514 apps/worker/src/billing/allowanceUpgrade.ts 1.00ms
+317/514 apps/worker/src/billing/catalog.test.ts 0.90ms
+318/514 apps/worker/src/billing/catalog.ts 0.30ms
+319/514 apps/worker/src/billing/contracts.ts 1.34ms
+320/514 apps/worker/src/billing/creditPackExpiry.test.mjs 1.62ms
+321/514 apps/worker/src/billing/customerLedgerCommandDecoder.test.ts 1.22ms
+322/514 apps/worker/src/billing/customerLedgerCommandDecoder.ts 4.21ms
+323/514 apps/worker/src/billing/customerLedgerDurableObject.test.ts 2.74ms
+324/514 apps/worker/src/billing/customerLedgerDurableObject.ts 2.96ms
+325/514 apps/worker/src/billing/freeAllowanceClaims.test.mjs 1.01ms
+326/514 apps/worker/src/billing/freeAllowanceClaims.test.ts 0.57ms
+327/514 apps/worker/src/billing/freeAllowanceClaims.ts 2.79ms
+328/514 apps/worker/src/billing/guestAccountMerge.test.js 3.73ms
+329/514 apps/worker/src/billing/guestAccountMerge.ts 2.32ms
+330/514 apps/worker/src/billing/ledgerRepository.ts 4.57ms
+331/514 apps/worker/src/billing/personalOffer.test.ts 2.17ms
+332/514 apps/worker/src/billing/personalOffer.ts 2.30ms
+333/514 apps/worker/src/billing/phoneAudioGift.test.ts 1.12ms
+334/514 apps/worker/src/billing/phoneAudioGift.ts 1.10ms
+335/514 apps/worker/src/billing/realtimeUsageMeter.test.ts 2.17ms
+336/514 apps/worker/src/billing/realtimeUsageMeter.ts 2.49ms
+337/514 apps/worker/src/billing/revenueCatAlias.test.js 0.59ms
+338/514 apps/worker/src/billing/revenueCatApi.test.ts 2.26ms
+339/514 apps/worker/src/billing/revenueCatApi.ts 2.82ms
+340/514 apps/worker/src/billing/revenueCatEvent.test.ts 1.41ms
+341/514 apps/worker/src/billing/revenueCatEvent.ts 1.74ms
+342/514 apps/worker/src/billing/revenueCatEventRepository.ts 3.91ms
+343/514 apps/worker/src/billing/revenueCatIdentity.test.ts 1.32ms
+344/514 apps/worker/src/billing/revenueCatIdentity.ts 0.96ms
+345/514 apps/worker/src/billing/revenueCatProcessor.ts 3.87ms
+346/514 apps/worker/src/billing/revenueCatReconciliation.test.ts 1.51ms
+347/514 apps/worker/src/billing/revenueCatReconciliation.ts 3.30ms
+348/514 apps/worker/src/billing/revenueCatRestore.test.js 2.20ms
+349/514 apps/worker/src/billing/revenueCatRestore.ts 1.61ms
+350/514 apps/worker/src/billing/revenueCatWebhookVerification.test.ts 0.81ms
+351/514 apps/worker/src/billing/revenueCatWebhookVerification.ts 1.02ms
+352/514 apps/worker/src/billing/services.test.ts 1.72ms
+353/514 apps/worker/src/billing/subscriptionCursor.test.ts 0.92ms
+354/514 apps/worker/src/billing/subscriptionCursor.ts 0.46ms
+355/514 apps/worker/src/billing/usageSessionStore.test.ts 0.66ms
+356/514 apps/worker/src/billing/usageSessionStore.ts 1.09ms
+357/514 apps/worker/src/entrypoint.test.ts 1.05ms
+358/514 apps/worker/src/entrypoint.ts 0.55ms
+359/514 apps/worker/src/env.test.ts 0.91ms
+360/514 apps/worker/src/env.ts 1.90ms
+361/514 apps/worker/src/http/response.test.ts 0.92ms
+362/514 apps/worker/src/http/response.ts 1.18ms
+363/514 apps/worker/src/index.test.ts 3.42ms
+364/514 apps/worker/src/index.ts 3.03ms
+365/514 apps/worker/src/insights/deleteCustomerData.test.mjs 1.74ms
+366/514 apps/worker/src/insights/deleteCustomerData.ts 1.19ms
+367/514 apps/worker/src/insights/deleteExpiredRatingSurveys.ts 0.50ms
+368/514 apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs 1.67ms
+369/514 apps/worker/src/insights/deleteExpiredSessionInsights.ts 0.73ms
+370/514 apps/worker/src/insights/sessionInsights.test.ts 1.31ms
+371/514 apps/worker/src/insights/sessionInsights.ts 3.01ms
+372/514 apps/worker/src/legalPages.test.ts 1.64ms
+373/514 apps/worker/src/legalPages.ts 16.48ms
+374/514 apps/worker/src/limits.test.ts 0.85ms
+375/514 apps/worker/src/limits.ts 0.95ms
+376/514 apps/worker/src/observability/consoleBoundary.test.ts 0.66ms
+377/514 apps/worker/src/observability/consoleBoundary.ts 0.48ms
+378/514 apps/worker/src/observability/outcomes.test.ts 7.51ms
+379/514 apps/worker/src/observability/outcomes.ts 1.89ms
+380/514 apps/worker/src/observability/posthog.test.ts 1.09ms
+381/514 apps/worker/src/observability/posthog.ts 1.42ms
+382/514 apps/worker/src/observability/sentry.test.ts 1.32ms
+383/514 apps/worker/src/observability/sentry.ts 2.07ms
+384/514 apps/worker/src/playIntegrity.test.ts 2.40ms
+385/514 apps/worker/src/playIntegrity.ts 5.21ms
+386/514 apps/worker/src/posthogFlagsFixture.ts 0.70ms
+387/514 apps/worker/src/privacy.test.ts 1.37ms
+388/514 apps/worker/src/privacy.ts 2.36ms
+389/514 apps/worker/src/providers/openaiRealtime.test.ts 1.58ms
+390/514 apps/worker/src/providers/openaiRealtime.ts 3.26ms
+391/514 apps/worker/src/rateLimitDurableObject.test.ts 2.17ms
+392/514 apps/worker/src/rateLimitDurableObject.ts 2.87ms
+393/514 apps/worker/src/rateLimiter/memoryFallback.ts 1.67ms
+394/514 apps/worker/src/rateLimiter/sessionStore.test.ts 1.58ms
+395/514 apps/worker/src/rateLimiter/sessionStore.ts 1.42ms
+396/514 apps/worker/src/rateLimiter/stateAdapter.test.ts 1.68ms
+397/514 apps/worker/src/rateLimiter/stateAdapter.ts 3.47ms
+398/514 apps/worker/src/rateLimiter/types.ts 0.92ms
+399/514 apps/worker/src/report.test.ts 0.99ms
+400/514 apps/worker/src/report.ts 1.12ms
+401/514 apps/worker/src/routes/attribution.test.ts 2.64ms
+402/514 apps/worker/src/routes/attribution.ts 2.01ms
+403/514 apps/worker/src/routes/billingRoutes.test.ts 1.11ms
+404/514 apps/worker/src/routes/config.test.ts 0.78ms
+405/514 apps/worker/src/routes/config.ts 1.17ms
+406/514 apps/worker/src/routes/customer.test.mjs 1.09ms
+407/514 apps/worker/src/routes/customer.ts 1.77ms
+408/514 apps/worker/src/routes/diagnostics.test.ts 1.74ms
+409/514 apps/worker/src/routes/diagnostics.ts 1.47ms
+410/514 apps/worker/src/routes/insightsConsent.test.ts 0.75ms
+411/514 apps/worker/src/routes/insightsConsent.ts 0.74ms
+412/514 apps/worker/src/routes/phoneAudioGift.test.ts 0.71ms
+413/514 apps/worker/src/routes/phoneAudioGift.ts 0.76ms
+414/514 apps/worker/src/routes/phoneAudioSession.test.ts 0.91ms
+415/514 apps/worker/src/routes/ratings.test.ts 0.50ms
+416/514 apps/worker/src/routes/ratings.ts 0.98ms
+417/514 apps/worker/src/routes/reconcileBilling.test.ts 1.31ms
+418/514 apps/worker/src/routes/reconcileBilling.ts 1.69ms
+419/514 apps/worker/src/routes/report.ts 1.66ms
+420/514 apps/worker/src/routes/revenueCatWebhook.ts 1.74ms
+421/514 apps/worker/src/routes/session.ts 4.76ms
+422/514 apps/worker/src/routes/sessionOffer.test.ts 1.55ms
+423/514 apps/worker/src/routes/telemetry.test.ts 1.43ms
+424/514 apps/worker/src/routes/telemetry.ts 1.46ms
+425/514 apps/worker/src/serverConfig.test.ts 1.89ms
+426/514 apps/worker/src/serverConfig.ts 3.04ms
+427/514 apps/worker/src/sockets/captionRecovery.test.ts 3.21ms
+428/514 apps/worker/src/sockets/captionRecovery.ts 2.89ms
+429/514 apps/worker/src/sockets/realtime.test.ts 5.87ms
+430/514 apps/worker/src/sockets/realtime.ts 8.94ms
+431/514 apps/worker/src/translation/validation.test.ts 0.70ms
+432/514 apps/worker/src/translation/validation.ts 0.50ms
+433/514 CONTRIBUTING.md 1.02ms
+434/514 docs/arabic-i18n-rtl-spec.md 4.26ms
+435/514 docs/billing-spec.md 9.94ms
+436/514 docs/code-standards.md 4.02ms
+437/514 docs/deployment-runbook.md 1.82ms
+438/514 docs/growth-and-aso-strategy.md 6.15ms
+439/514 docs/legal/observability-data-map.md 3.29ms
+440/514 docs/legal/privacy-policy.md 3.47ms
+441/514 docs/legal/support-and-deletion.md 1.76ms
+442/514 docs/legal/terms.md 1.96ms
+443/514 docs/product-brief-app-store.md 4.98ms
+444/514 docs/spec.md 2.20ms
+445/514 docs/store-listing.md 2.31ms
+446/514 docs/worker-diagnostics.md 2.29ms
+447/514 docs/worker-logs-privacy.md 3.84ms
+448/514 package.json 1.45ms
+449/514 packages/protocol/src/acquisition.test.ts 1.17ms
+450/514 packages/protocol/src/acquisition.ts 0.84ms
+451/514 packages/protocol/src/billing/catalog.test.ts 1.72ms
+452/514 packages/protocol/src/billing/catalog.ts 1.62ms
+453/514 packages/protocol/src/diagnostics/failures.test.ts 0.58ms
+454/514 packages/protocol/src/diagnostics/failures.ts 1.03ms
+455/514 packages/protocol/src/insights.test.ts 0.56ms
+456/514 packages/protocol/src/insights.ts 0.41ms
+457/514 packages/protocol/src/languages.test.ts 0.98ms
+458/514 packages/protocol/src/languages.ts 1.44ms
+459/514 packages/protocol/src/session.test.ts 1.30ms
+460/514 packages/protocol/src/session.ts 1.83ms
+461/514 packages/protocol/src/telemetry.test.ts 4.59ms
+462/514 packages/protocol/src/telemetry.ts 7.25ms
+463/514 packages/protocol/src/transport/types.test.ts 1.79ms
+464/514 packages/protocol/src/transport/types.ts 2.99ms
+465/514 README.md 2.95ms
+466/514 tooling/android-lifecycle/build.gradle 2.63ms
+467/514 tooling/android-lifecycle/gradle.properties 1.63ms
+468/514 tooling/android-lifecycle/README.md 1.32ms
+469/514 tooling/android-lifecycle/settings.gradle 0.78ms
+470/514 tooling/android-lifecycle/src/androidTest/java/expo/modules/murmuraudio/MurmurForegroundServiceTest.kt 38.94ms
+471/514 tooling/android-lifecycle/src/main/AndroidManifest.xml 0.84ms
+472/514 tooling/android-lifecycle/src/main/java/expo/modules/murmuraudio/CaptureLifecycleTestActivity.kt 0.71ms
+473/514 tooling/gates/commit.sh 3.33ms
+474/514 tooling/gates/fallow-baselines/dead-code.json 0.75ms
+475/514 tooling/gates/fallow-baselines/dupes.json 0.65ms
+476/514 tooling/gates/fallow-baselines/health.json 0.70ms
+477/514 tooling/gates/hygiene.mjs 1.03ms
+478/514 tooling/gates/post-commit-review.sh 0.61ms
+479/514 tooling/gates/README.md 1.16ms
+480/514 tooling/gates/require-tool.mjs 0.60ms
+481/514 tooling/gates/test-presence.mjs 3.07ms
+482/514 tooling/scripts/build-android-release-signed.sh 0.86ms
+483/514 tooling/scripts/build-store-screenshots.mjs 7.42ms
+484/514 tooling/scripts/build-store-screenshots.test.mjs 1.57ms
+485/514 tooling/scripts/check-android-release-signing.sh 0.84ms
+486/514 tooling/scripts/deploy-worker-release.mjs 1.31ms
+487/514 tooling/scripts/dev-hard-paywall.mjs 2.79ms
+488/514 tooling/scripts/dev-log.mjs 1.08ms
+489/514 tooling/scripts/link-mobile-sentry-release.mjs 1.22ms
+490/514 tooling/scripts/rollback-worker-logs.mjs 1.09ms
+491/514 tooling/scripts/rollback-worker-logs.test.mjs 0.94ms
+492/514 tooling/scripts/smoke-latency.mjs 5.97ms
+493/514 tooling/scripts/smoke-latency.test.mjs 0.99ms
+494/514 tooling/scripts/store-screenshot-headlines.mjs 3.48ms
+495/514 tooling/scripts/store-screenshot-validation.mjs 3.99ms
+496/514 tooling/scripts/store-screenshot-validation.test.mjs 1.03ms
+497/514 tooling/scripts/submission-blockers.mjs 0.98ms
+498/514 tooling/scripts/submission-blockers.test.mjs 0.78ms
+499/514 tooling/scripts/validate-android-metadata.mjs 3.16ms
+500/514 tooling/scripts/validate-app-config.mjs 3.56ms
+501/514 tooling/scripts/validate-ios-metadata.mjs 1.92ms
+502/514 tooling/scripts/validate-no-secrets.mjs 1.32ms
+503/514 tooling/scripts/validate-production-worker.mjs 1.24ms
+504/514 tooling/scripts/validate-store-assets.mjs 2.45ms
+505/514 tooling/scripts/validate-submission-blockers.mjs 2.56ms
+506/514 tooling/scripts/verify-caption-recovery.mjs 5.79ms
+507/514 tooling/scripts/verify-diagnostic-delivery.mjs 2.38ms
+508/514 tooling/scripts/verify-hard-paywall.mjs 4.38ms
+509/514 tooling/scripts/verify-workers-log-boundaries.mjs 2.09ms
+510/514 tooling/scripts/verify-workers-log-privacy.mjs 2.80ms
+511/514 tooling/scripts/verify-workers-log-runtime.mjs 2.98ms
+512/514 tooling/scripts/worker-proof-runtime.mjs 0.74ms
+513/514 tooling/sql/free-cut-5min-2026-09-23-apply.sql 14.15ms
+514/514 tooling/sql/free-cut-5min-2026-09-23-dry-run.sql 1.41ms
+CSpell: Files checked: 514, Issues found: 0 in 0 files.
+$ cd apps/mobile && pnpm dlx expo-doctor@1.20.0
+Running 20 checks on your project...
+20/20 checks passed. No issues detected!
+Done in 9.7s using pnpm v12.8.1
+$ node tooling/gates/test-presence.mjs
+Test presence passed.
+$ node tooling/scripts/validate-no-secrets.mjs
+Secret validation passed.
+$ pnpm --filter "@murmur/*" run typecheck
+Scope: 3 of 4 workspace projects
+packages/protocol typecheck$ tsc-rs --noEmit --project tsconfig.json
+packages/protocol typecheck: Done
+apps/mobile typecheck$ tsc-rs --noEmit
+apps/worker typecheck$ tsc-rs --noEmit --project tsconfig.json
+apps/worker typecheck: Done
+apps/mobile typecheck: Done
+$ pnpm --filter @murmur/worker typecheck
+$ tsc-rs --noEmit --project tsconfig.json
+$ pnpm --filter "@murmur/*" run unit && pnpm run store:screenshots:test && pnpm run tooling:test && pnpm run verify:caption-recovery && pnpm run verify:hard-paywall
+Scope: 3 of 4 workspace projects
+packages/protocol unit$ vitest run
+packages/protocol unit: 
+packages/protocol unit: [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/packages/protocol[39m
+packages/protocol unit: 
+packages/protocol unit:  [32m✓[39m src/diagnostics/failures.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/transport/types.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/insights.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/billing/catalog.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/languages.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/acquisition.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/session.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+packages/protocol unit:  [32m✓[39m src/telemetry.test.ts [2m([22m[2m68 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+packages/protocol unit: 
+packages/protocol unit: [2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+packages/protocol unit: [2m      Tests [22m [1m[32m97 passed[39m[22m[90m (97)[39m
+packages/protocol unit: [2m   Start at [22m 00:34:17
+packages/protocol unit: [2m   Duration [22m 409ms[2m (transform 177ms, setup 0ms, import 308ms, tests 64ms, environment 0ms)[22m
+packages/protocol unit: 
+packages/protocol unit: Done
+apps/mobile unit$ vitest run
+apps/worker unit$ vitest run
+apps/mobile unit: 
+apps/mobile unit: [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/apps/mobile[39m
+apps/mobile unit: 
+apps/worker unit: 
+apps/worker unit: [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/apps/worker[39m
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/http/response.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/attribution.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/diagnostics.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 327[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/sockets/realtime.test.ts[2m > [22m[2mapp-facing realtime socket[2m > [22m[2mkeeps original audio and ignores all retired caption-only callbacks
+apps/worker unit: [22m[39m{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:34.494Z","trace_id":"cb8fb1017fb4421f9ee325a2024178c9","span_id":"88d7c921be334135","sentry_event_id":"d785606c86d64b479df44dc228617ef6","deployment.environment":"development"}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/sockets/realtime.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatRestore.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 110[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/billingRoutes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/guestAccountMerge.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/reconcileBilling.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/auth/socialProviders.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/entrypoint.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1488[2mms[22m[39m
+apps/worker unit:    [33m[2m✓[22m[39m deploys the console guard before dependencies and protects full URL paths [33m 1486[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mcreates and closes an OpenAI realtime session
+apps/worker unit: [22m[39m{"event":"session_created","app_session_id":"810dde73-49f0-4099-8970-df38a1543f61","hashed_install_id":"6921e0162a7fa22c3fa8c54eeaba39a1763c454d811a0dc1f0f1e74093613ec7","at_ms":1792697660240}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/billing/services.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mcreates and closes an OpenAI realtime session
+apps/worker unit: [22m[39m{"event":"session_stop","app_session_id":"810dde73-49f0-4099-8970-df38a1543f61","at_ms":1792697660264}
+apps/worker unit: 
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mreturns the source-transcript capability selected by the server flag
+apps/worker unit: [22m[39m{"event":"session_created","app_session_id":"b82c1adc-d335-4cc3-9391-22f6427dd090","hashed_install_id":"719d681ce83cba49edfcd091a18a148ffb8c07228be4230858d001e54e2b5d73","at_ms":1792697660284}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/observability/sentry.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mpasses a disabled initial playback preference into the realtime URL
+apps/worker unit: [22m[39m{"event":"session_created","app_session_id":"5b2be6d5-d00f-40c5-a029-be2484231aea","hashed_install_id":"d99308efde4d7daaa00357ab930643d14cfcade50a65dd43b57b8e798d2468ce","at_ms":1792697660375}
+apps/worker unit: 
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mstores, lists, and deletes report receipts
+apps/worker unit: [22m[39m{"event":"session_created","app_session_id":"4e9131d6-7549-4735-8427-c31afe576425","hashed_install_id":"c59895ff3d9a1748afc2b2f0ff499565eb006afe9c0f46664d7e9f525e525b43","at_ms":1792697660381}
+apps/worker unit: 
+apps/worker unit: [90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mstores, lists, and deletes report receipts
+apps/worker unit: [22m[39m{"event":"translation_reported","app_session_id":"4e9131d6-7549-4735-8427-c31afe576425","report_id":"241aaec1-03d1-4418-a20f-f6b60d5c1354","translation_span_id":"[redacted]","revision":1,"error_category":"inaccurate","retained_text_snapshot":true,"at_ms":1792697660394}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/index.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 437[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/auth/auth.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 27[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/rateLimitDurableObject.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/sockets/captionRecovery.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 2047[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m does not let 31 seconds of input or buffer eviction cancel the second attempt [33m 365[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m replays exactly the last 15 seconds after a 70-second captioned winner [33m 388[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m keeps fan-out alive past 120 seconds of input [33m 869[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/routes/phoneAudioSession.test.ts[2m > [22m[2mPhone audio session gate[2m > [22m[2mincludes the phone audio capture source in the realtime URL
+apps/worker unit: [22m[39m{"event":"session_created","app_session_id":"de34a4f9-289f-4113-9819-eb3fb9326c8c","hashed_install_id":"9b75ea1b2e261c09c3292428ed96530285ce872b6b3243e966499d3070d38317","at_ms":1792697661133}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/routes/phoneAudioSession.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/realtimeUsageMeter.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 223[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/allowanceService.test.mjs [2m([22m[2m5 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/customer.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/telemetry.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 281[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/sessionOffer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/catalogs.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 383[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/account/accountScreen.test.tsx [2m([22m[2m20 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/settings/settingsScreen.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 192[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/history/conversationScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 132[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/plans/plansScreen.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 263[2mms[22m[39m
+apps/worker unit: [90mstdout[2m | src/playIntegrity.test.ts[2m > [22m[2mverifyPlayIntegrityIfRequired[2m > [22m[2mverifies available Android tokens without making optional integrity fail closed
+apps/worker unit: [22m[39m{"service.name":"murmur-worker","body":"Device check configuration was invalid","severity_text":"ERROR","attributes":{"action":"optional_play_integrity_verification","reason":"defect","error_code":"integrity.configuration_invalid","retryable":false,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:21.764Z","trace_id":"b4919460bfff43feb8e1ccc312dd4a82","span_id":"16edda88a7c74d29","sentry_event_id":"55f9ead5a68544e2bee20ed9a03b0297","deployment.environment":"development"}
+apps/worker unit: 
+apps/worker unit:  [32m✓[39m src/insights/sessionInsights.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/playIntegrity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/rendering.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/providers/realtimeTranslation.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 866[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/observability/posthog.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 143[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatWebhookVerification.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 114[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/allowanceMerge.test.js [2m([22m[2m1 test[22m[2m)[22m[32m 131[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/env.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/insightsConsent.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/privacy.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/phoneAudioGift.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/legalPages.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 192[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/installAttribution.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/settings/languageScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/auth/client.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/customerLedgerDurableObject.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 136[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/freeAllowanceClaims.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 244[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/homeScreen.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 131[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/plans/purchaseMode.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/planLoading.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/insights/insightsConsentScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+apps/mobile unit: [90mstderr[2m | src/lib/billing/context.test.tsx[2m > [22m[2mbilling refresh[2m > [22m[2mreturns a loaded customer even when the parallel config request fails
+apps/mobile unit: [22m[39mAn update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: 
+apps/worker unit:  [32m✓[39m src/serverConfig.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 174[2mms[22m[39m
+apps/mobile unit: [90mstderr[2m | src/lib/billing/context.test.tsx[2m > [22m[2mbilling refresh[2m > [22m[2mreturns null and preserves the last customer when the customer request fails
+apps/mobile unit: [22m[39mAn update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+apps/mobile unit: 
+apps/mobile unit: When testing, code that causes React state updates should be wrapped into act(...):
+apps/mobile unit: 
+apps/mobile unit: act(() => {
+apps/mobile unit:   /* fire events that update state */
+apps/mobile unit: });
+apps/mobile unit: /* assert on the output */
+apps/mobile unit: 
+apps/mobile unit: This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+apps/mobile unit: 
+apps/mobile unit:  [32m✓[39m src/screens/paywall/paywallScreen.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 172[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/context.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 484[2mms[22m[39m
+apps/mobile unit:      [33m[2m✓[22m[39m returns a loaded customer even when the parallel config request fails [33m 426[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 242[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/observability/consoleBoundary.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatAlias.test.js [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/freeAllowanceClaims.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/latency.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/insights/deleteExpiredSessionInsights.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/phoneAudio/phoneAudioScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 188[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/insights/deleteCustomerData.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/workerApi.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 265[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/customerApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/screenPreviews.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/plans/offerBanner.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/allocation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/phoneAudioGift.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/providers/reportTranslation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 123[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/ratings/ratings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/allowanceUpgrade.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/auth/emailSignIn.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/customerLedgerCommandDecoder.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/allowancePeriods.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/creditPackExpiry.test.mjs [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/observability/outcomes.test.ts [2m([22m[2m53 tests[22m[2m)[22m[33m 4142[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m reports a caught Better Auth database failure with one envelope and one outcome [33m 309[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m P3: OAuth status 503 preserves credentials, outages and unknown failures [33m 435[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m P4: a provider that never completes crosses the real 800ms deadline and becomes visible [33m 806[2mms[22m[39m
+apps/worker unit:      [33m[2m✓[22m[39m P6: Sentry timeout failure cannot replace the original result or recurse [33m 2004[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/runtime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 110[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/routes/ratings.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/personalOffer.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/providers/openaiRealtime.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/providers/mobileTelemetry.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/history/historyScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 102[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatReconciliation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/history/conversationFormat.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 188[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/rateLimiter/sessionStore.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/report.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/telemetry.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/insightsConsent.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 226[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/usageSessionStore.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/rateLimiter/stateAdapter.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatEvent.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/plans/planPicker.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/catalog.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 1[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/secureStorage.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/screenScaffold.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/providers/murmurBillingApi.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/subscriptionCursor.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/limits.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/translation/validation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/planCatalog.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/revenueCatIdentity.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/worker unit:  [32m✓[39m src/billing/accountMerge.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/worker unit: 
+apps/worker unit: [2m Test Files [22m [1m[32m64 passed[39m[22m[90m (64)[39m
+apps/worker unit: [2m      Tests [22m [1m[32m432 passed[39m[22m[90m (432)[39m
+apps/worker unit: [2m   Start at [22m 00:34:18
+apps/worker unit: [2m   Duration [22m 7.13s[2m (transform 2.58s, setup 0ms, import 14.37s, tests 12.56s, environment 15ms)[22m
+apps/worker unit: 
+apps/mobile unit:  [32m✓[39m src/screens/rating/ratingSheet.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+apps/worker unit: Done
+apps/mobile unit:  [32m✓[39m src/lib/providers/insightsWorker.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 29[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/languagePicker.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/conversationHistory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/auth/signInScreen.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/outOfMinutesSheet.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/paywall/paywallDemo.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/rowGroup.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/experience.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/auth/nativeProviders.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/plans/planList.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/i18nRendering.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/bloom/captureSourceControl.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/preview.test.tsx [2m([22m[2m42 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/save-purchase.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/bloom/backgroundListening.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/formatMinutes.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/provider.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/sheetStyles.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/insights-consent.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 30[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/screenServices.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/viewModel.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/logic.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/previewFixtures.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/replayProvider.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/bloom/audioControl.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/auth/socialButtons.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/settings/settingsControls.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/engagement.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/settings.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/theme.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/updateRequiredSheet.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/diagnosticsModal.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/sharedControls.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/config.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/sessionPreparation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/history/index.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 16[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/auth/savePurchaseScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/heroPoints.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/appConfig.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/plans.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/localStorage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/preference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/reportTranslation.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/installIdentity.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/bloom/translationStarting.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/rating/usageChoices.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/sign-in.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/requestReview.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/anonymousAnalytics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/postSessionPrompt.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/auth/emailSignInState.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/shareMurmur.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/proGate.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/ratings/ratingSchedule.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/variants/shared.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/history/[id].test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/legalLinks.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m modules/murmur-audio/src/MurmurAudioModule.web.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/account.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/revenueCat.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/screens/phoneAudio/phoneAudioAccess.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/allowance.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/phone-audio.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/realtimeConnectionDeadline.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/storage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/sessionTiming.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/acquisition.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/language.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/previewConversation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/onboardingNavigation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/observability/sentry.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/reconciliation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/storageDiagnostics.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/startingState.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/audioPlaybackPreference.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/auth/authErrors.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/replay.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/types.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/audioDiagnostics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m app/preview.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/billing/paywallChoices.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m plugins/withIosPodDeploymentTarget.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/errorState.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/languageAvailability.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/home/status.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m plugins/iosPrivacyManifestConfig.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/i18n/localizedError.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m plugins/withAndroidReleaseSigning.test.mjs [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m plugins/withHistoryBackupExclusion.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/appRelease.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 1[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/live-translation/captureLifecycle.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+apps/mobile unit:  [32m✓[39m src/lib/phoneAudioGiftOffer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+apps/mobile unit: 
+apps/mobile unit: [2m Test Files [22m [1m[32m129 passed[39m[22m[90m (129)[39m
+apps/mobile unit: [2m      Tests [22m [1m[32m634 passed[39m[22m[90m (634)[39m
+apps/mobile unit: [2m   Start at [22m 00:34:19
+apps/mobile unit: [2m   Duration [22m 9.32s[2m (transform 9.60s, setup 0ms, import 22.32s, tests 6.24s, environment 2.47s)[22m
+apps/mobile unit: 
+apps/mobile unit: Done
+$ node --test tooling/scripts/build-store-screenshots.test.mjs tooling/scripts/store-screenshot-validation.test.mjs
+✔ Option B screenshot lists pair each published name with a native capture (0.656833ms)
+✔ English screenshots publish to en-US on both stores and mirror to en-GB Play (0.078125ms)
+✔ every app language has a headline for every screenshot (0.234667ms)
+✔ Arabic and Urdu headlines render right to left (0.047542ms)
+✔ every screenshot has a verified capture in each app language (1.127292ms)
+✔ green placeholder detection handles every Option B composition (1547.945583ms)
+✔ validates PNG chunks and reads the IHDR metadata (1.291584ms)
+✔ rejects a truncated PNG even when its fixed IHDR offsets are readable (0.309375ms)
+✔ rejects a PNG with a corrupt chunk CRC (0.310084ms)
+✔ rejects a complete chunk stream with no IEND (0.803541ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1735.230917
+$ node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs tooling/scripts/rollback-worker-logs.test.mjs
+✔ rollback stops at a failed patch step (18.220958ms)
+✔ rollback stops at a failed read step (0.297708ms)
+✔ rollback stops at a failed verify step (0.200333ms)
+✔ rollback stops at a failed deploy step (0.272167ms)
+✔ rollback stops at a failed active step (0.343583ms)
+✔ rollback orders disable, verification, version restore and final read-back (0.531917ms)
+✔ rollback handles explicit null settings fail-closed (0.989166ms)
+✔ rollback handles missing field settings fail-closed (0.300958ms)
+✔ sessionCookieHeader carries every Better Auth cookie without attributes (14.577792ms)
+✔ sessionCookieHeader rejects an authentication response without a cookie (0.4795ms)
+✔ collectResult drains a pending Blob byte length before session_closed (3.444708ms)
+✔ accepts a valid ledger while reporting open blockers separately (1.459791ms)
+✔ reports malformed blocker records (0.201875ms)
+✔ reports a malformed blocker collection without throwing (0.653667ms)
+✔ rejects policy source counts without trusted Apple and Google authorities (0.205792ms)
+✔ reports no open blockers when every blocker is closed (0.161833ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 153.553833
+$ node tooling/scripts/verify-caption-recovery.mjs
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:43.243Z","trace_id":"125bf98ad77d4cefa8af1e2b82043e35","span_id":"729917a7ef864d86","sentry_event_id":"927e39d2902648b0b9b8b8b1ab054218","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:43.246Z","trace_id":"aa553e1e73144740874d27e193d91056","span_id":"1c29b7b1af3f4fa0","sentry_event_id":"3ad48d8ccd1b46798315a2249304f156","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:48.180Z","trace_id":"c1c8f76c5b9143a886937fc1a05c29fe","span_id":"4fb5914024ee4c61","sentry_event_id":"885657a76b1a4a78971d8c3cd0bded4b","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:48.180Z","trace_id":"97b4c47c4c5442d58898cf264e4f959e","span_id":"dfb42e0eea8f4328","sentry_event_id":"fc631da82dd24bebb30579e3c1e1209e","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:49.545Z","trace_id":"0aa6428a481c4ce6a7137d3f9f5b0684","span_id":"7619d637b79c4f62","sentry_event_id":"6a29d4fa55324d3b8f21d20fc8f077e5","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:50.430Z","trace_id":"116cd70d6fa6434bbf3abe413c974787","span_id":"8fa22551be1148d7","sentry_event_id":"e806c789d51c4d809b3f89a14d117351","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.293Z","trace_id":"f50c769c475a4007ac82c0b962547c71","span_id":"2714b3311be44e26","sentry_event_id":"271c24a9f700482ba0cc25e8d2d3e061","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.295Z","trace_id":"dfb2fce15455407dbcaab910725c8be5","span_id":"45280da28dc44829","sentry_event_id":"bfc49caa474948ad8dd62850dc884456","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.299Z","trace_id":"ba698c4d530548f08f14bc3c4d924393","span_id":"2d08e82e03d14443","sentry_event_id":"d9e1378c450a4276936991fab550710d","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.433Z","trace_id":"6b170713900840bea1fab43677a42c0b","span_id":"f00f5fe28f5c4f3c","sentry_event_id":"6f8b4e6e646b4388893e267a21cbdfc0","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.643Z","trace_id":"f16fd838e69445679b5aa81c02092735","span_id":"8e3cc02aa14047be","sentry_event_id":"b24ca1c3fe3a4a0a815f48f4c04461fd","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.755Z","trace_id":"646f9ae6628c4620852173ee683dc8d0","span_id":"15c99bd838a94985","sentry_event_id":"edf0cabacbef414a82c9628c41e18b87","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption recovery attempts were exhausted","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.recovery_exhausted","retryable":false,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:53.755Z","trace_id":"17cb9ecdd4a84228b29535136c756da2","span_id":"ef1ddcba8e4b46e5","sentry_event_id":"a9c89476adaf4419a0c7393d4e17a92c","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:58.686Z","trace_id":"93b34e7dc5644801a72f085fb0e10568","span_id":"bfccc208451044d5","sentry_event_id":"f6c8b478a91d4556a8688d0718b5235b","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption recovery attempts were exhausted","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.recovery_exhausted","retryable":false,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:58.686Z","trace_id":"0e13e9fb1b0145408066d4be1d225737","span_id":"e4f54401062a448a","sentry_event_id":"468af0aa566c445e801565ed4da52aa8","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:34:59.182Z","trace_id":"8e43ed816e1e45a0b1b7fb8259c0081d","span_id":"41b217d9db8746e2","sentry_event_id":"b0b38be25fc44facaedd691de3a9c79c","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:04.011Z","trace_id":"622738aa063c42ba8acbf41e48151c0e","span_id":"0a8579bba61343aa","sentry_event_id":"d258686112c042b98d3e718a1214a947","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:04.297Z","trace_id":"74e6c9584e55449ea6383ac91a951024","span_id":"c512afe8ae424752","sentry_event_id":"74dc5b66b47941a994d33a954787d2f5","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:07.933Z","trace_id":"58f4df017fa84ed5b53a32092f538f98","span_id":"4654a8bc43524f81","sentry_event_id":"29a0203099444982bc758c2e35a6f9f7","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption recovery attempts were exhausted","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.recovery_exhausted","retryable":false,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:07.933Z","trace_id":"f6c1212252894474937be27b6d41736e","span_id":"14a497ad04334216","sentry_event_id":"ddf230cea49e408b84bc421b71ab771e","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:16.132Z","trace_id":"05d43056e87648eea352baba7b57348c","span_id":"42d9d04380d2400a","sentry_event_id":"4f7eb61025a9432c9d50d825b3b96cc6","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:25.103Z","trace_id":"fb9ed1d89ed447439a85a02eb2ae8fff","span_id":"ec73c4f509d5430a","sentry_event_id":"c4680dc2e3a845d790e8670dfc704832","deployment.environment":"development"}
+[{"mode":"winner-close","passed":true,"connections":3,"billedMs":1200,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-error","passed":true,"connections":3,"billedMs":1200,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-silent","passed":true,"connections":3,"billedMs":3200,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-retry","passed":true,"connections":3,"billedMs":3200,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"original-stall","passed":true,"connections":2,"billedMs":3200,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-cap","passed":true,"connections":4,"billedMs":3300,"retries":3,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"whitespace-original","passed":true,"connections":1,"billedMs":1100,"retries":0,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"whitespace-side","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"long-recovered","passed":true,"connections":2,"billedMs":161100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"pause-resume","passed":true,"connections":3,"billedMs":3100,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-bursts","passed":true,"connections":4,"billedMs":2100,"retries":3,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"original-bursts","passed":true,"connections":3,"billedMs":2100,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-boundary","passed":true,"connections":3,"billedMs":73100,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"original-boundary","passed":true,"connections":2,"billedMs":73200,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"winner-tail","passed":true,"connections":2,"billedMs":1300,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"original-tail","passed":true,"connections":1,"billedMs":1300,"retries":0,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"bounded-buffer","passed":true,"connections":2,"billedMs":76100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"shorter","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"longer","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"mute","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"silent","passed":true,"connections":3,"billedMs":1100,"retries":2,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"continuous","passed":true,"connections":4,"billedMs":31100,"retries":3,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"cap","passed":true,"connections":4,"billedMs":1100,"retries":3,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"original-wins","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"recovery-wins","passed":true,"connections":2,"billedMs":1100,"retries":1,"recovered":true,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"healthy","passed":true,"connections":1,"billedMs":1100,"retries":0,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0},{"mode":"healthy-quiet","passed":true,"connections":1,"billedMs":1100,"retries":0,"recovered":false,"markersExactlyOnce":true,"privacySentinelMatches":0}]
+$ node tooling/scripts/verify-hard-paywall.mjs
+PASS hard-mode sign-up and customer bootstrap create no Free balance or claim
+PASS POST /v2/session returns 402 and mints nothing
+PASS hard-mode gift claims are idempotent no-ops
+PASS same-month rollback grants Free because hard mode did not burn the claim
+{"event":"session_created","app_session_id":"a4bc5605-9701-465e-b224-2b9a55696d64","hashed_install_id":"3f034163f6a0869a0b369df47a3159cf28ca3ae17be1478aadf85426de2d3558","at_ms":1792697737526}
+PASS pre-flip Free and Phone audio gift survive; existing balance starts a session
+{"event":"session_created","app_session_id":"29b625b3-41bf-49d2-b4ce-f7940b9bf96c","hashed_install_id":"30b70fb2b6d9b0c434447e9d0efc9ee18f889dd485a58997dff9a787cb23b975","at_ms":1792697737556}
+PASS paid credit through the ledger command path unlocks hard mode without Free
+PASS hard-mode buyer saves paid credit through email OTP account linking without a Free grant
+PASS pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and the original Free grant
+{"event":"session_created","app_session_id":"377dd389-b306-49db-a78f-3ab449b477ea","hashed_install_id":"fb640a90447b2b9caf63b26a1cd7a4f0815fcae1381ab943487cc614e32f6dbb","at_ms":1792697737857}
+PASS same-month rollback after hard-mode OTP linking reuses the moved Free grant and starts a session without adding minutes
+PASS exhausted pre-flip Free grant survives hard-mode OTP linking and repeated same-month rollback without new minutes or ledger entries
+PASS hard-mode guest linking after rollback creates and transfers the same-month Free claim
+{"event":"session_created","app_session_id":"8e7a3d17-71bb-4ee2-9c9e-17d5c854160c","hashed_install_id":"3d4afd7e9ed637ae3da371d792e88d316130e9ca03120e8dd31c8b330144308a","at_ms":1792697738102}
+PASS no flag preserves new and existing freemium customers
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:38.129Z","trace_id":"6c314ced2210436e9d244ab78646ee12","span_id":"fbc4412bca4d422f","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:38.139Z","trace_id":"1723d01f47294112843adbc4b0ac710e","span_id":"9e8e823104934f91","deployment.environment":"development"}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":1},"synthetic":false,"_time":"2026-10-22T19:35:38.146Z","trace_id":"034fd9c8097e419b952193ef4d4e5cdc","span_id":"bd51544bf6084a80","deployment.environment":"development"}
+{"event":"session_created","app_session_id":"6f559678-a8e4-4bac-95d4-eb59ac949495","hashed_install_id":"bb65a9218cc7d21ac30ec899f3cfc5fac13a02c440b943b664e2eaef6224eaec","at_ms":1792697738144}
+{"service.name":"murmur-worker","body":"Feature configuration service was unavailable","severity_text":"ERROR","attributes":{"action":"posthog_server_config","reason":"dependency","error_code":"config.flags_unavailable","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:38.159Z","trace_id":"4b969059929e41afb99afb30ac249ded","span_id":"9fca25b6085d4aee","deployment.environment":"development"}
+PASS PostHog 503 preserves new and existing freemium customers
+PASS sign-up without install identity still evaluates hard-mode policy
+PASS legacy gift claim without release or install headers stays freemium under a version-targeted flag
+Hard paywall proof passed (15 scenarios).
+$ pnpm --filter "@murmur/*" exec vitest run --coverage
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/packages/protocol[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/diagnostics/failures.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/transport/types.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/session.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/insights.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/languages.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/billing/catalog.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/acquisition.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/telemetry.test.ts [2m([22m[2m68 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+[2m      Tests [22m [1m[32m97 passed[39m[22m[90m (97)[39m
+[2m   Start at [22m 00:35:38
+[2m   Duration [22m 280ms[2m (transform 140ms, setup 0ms, import 238ms, tests 24ms, environment 0ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-----------------|---------|----------|---------|---------|-------------------
+File             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------|---------|----------|---------|---------|-------------------
+All files        |   96.37 |    97.59 |   98.52 |   96.21 |                   
+ src             |   98.33 |    97.89 |     100 |   98.27 |                   
+  acquisition.ts |   94.11 |    93.33 |     100 |   94.11 | 17                
+  insights.ts    |     100 |      100 |     100 |     100 |                   
+  languages.ts   |     100 |      100 |     100 |     100 |                   
+  session.ts     |     100 |      100 |     100 |     100 |                   
+  telemetry.ts   |   98.78 |    98.15 |     100 |   98.76 | 270               
+ src/billing     |     100 |      100 |     100 |     100 |                   
+  catalog.ts     |     100 |      100 |     100 |     100 |                   
+ src/diagnostics |      50 |       75 |   66.66 |      50 |                   
+  failures.ts    |      50 |       75 |   66.66 |      50 | 103-105           
+ src/transport   |       0 |        0 |       0 |       0 |                   
+  types.ts       |       0 |        0 |       0 |       0 |                   
+-----------------|---------|----------|---------|---------|-------------------
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/apps/worker[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/private/tmp/chalk-remote-queue-64e280d9bb94f4cb5a909025/repo/apps/mobile[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/billing/revenueCatApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m src/billing/freeAllowanceClaims.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/billing/realtimeUsageMeter.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m src/routes/telemetry.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 263[2mms[22m[39m
+ [32m✓[39m src/legalPages.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m src/routes/diagnostics.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 382[2mms[22m[39m
+     [33m[2m✓[22m[39m fails closed without production salt or limiter and enforces the real limiter [33m 316[2mms[22m[39m
+ [32m✓[39m src/routes/customer.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+[90mstdout[2m | src/sockets/realtime.test.ts[2m > [22m[2mapp-facing realtime socket[2m > [22m[2mkeeps original audio and ignores all retired caption-only callbacks
+[22m[39m{"service.name":"murmur-worker","body":"Caption connection did not respond","severity_text":"ERROR","attributes":{"action":"caption_recovery","reason":"unknown","error_code":"caption.retry_failed","retryable":true,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:55.937Z","trace_id":"7957b9f3011e43dfa24f53f6be0090af","span_id":"e4320ce2437543b1","sentry_event_id":"dc6ad1798778479189211348445ed19d","deployment.environment":"development"}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mcreates and closes an OpenAI realtime session
+[22m[39m{"event":"session_created","app_session_id":"4d7eab02-514c-4dee-a116-746ba0f4fbec","hashed_install_id":"8dcaa75f81c6b0e1b0435556c23327f7594be599f590bfbd4f6a5c7270cd2142","at_ms":1792697740933}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mcreates and closes an OpenAI realtime session
+[22m[39m{"event":"session_stop","app_session_id":"4d7eab02-514c-4dee-a116-746ba0f4fbec","at_ms":1792697740935}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mreturns the source-transcript capability selected by the server flag
+[22m[39m{"event":"session_created","app_session_id":"9c04b30b-1515-4fb9-9f65-65351773daae","hashed_install_id":"ab4882ebbfaee44be89f59608d3eb899a0ea0c1539fc2cf9a3805508607731af","at_ms":1792697740936}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mpasses a disabled initial playback preference into the realtime URL
+[22m[39m{"event":"session_created","app_session_id":"d2bcf3d9-27d0-4aad-9eda-b1ed183a00b1","hashed_install_id":"5f3a3b240abb26d19c3a510841fd6fbbfd9273188bf1b46bccbeccad55ebcbf0","at_ms":1792697740939}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mstores, lists, and deletes report receipts
+[22m[39m{"event":"session_created","app_session_id":"0b51eb3c-cd9e-4abc-8e7e-894601512f81","hashed_install_id":"30ff2adfc1455d765ff071d8a980fb58d92bb7fc9d5d11f63703e92c2afb0f5d","at_ms":1792697740942}
+
+[90mstdout[2m | src/index.test.ts[2m > [22m[2mworker routes[2m > [22m[2mstores, lists, and deletes report receipts
+[22m[39m{"event":"translation_reported","app_session_id":"0b51eb3c-cd9e-4abc-8e7e-894601512f81","report_id":"44522de1-3d4e-401c-9af0-4eb7a8b02260","translation_span_id":"[redacted]","revision":1,"error_category":"inaccurate","retained_text_snapshot":true,"at_ms":1792697740943}
+
+ [32m✓[39m src/sockets/realtime.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 216[2mms[22m[39m
+ [32m✓[39m src/index.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+ [32m✓[39m src/rateLimitDurableObject.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32m✓[39m src/entrypoint.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1297[2mms[22m[39m
+   [33m[2m✓[22m[39m deploys the console guard before dependencies and protects full URL paths [33m 1297[2mms[22m[39m
+[90mstdout[2m | src/routes/phoneAudioSession.test.ts[2m > [22m[2mPhone audio session gate[2m > [22m[2mincludes the phone audio capture source in the realtime URL
+[22m[39m{"event":"session_created","app_session_id":"199b61ba-22f6-4774-8be9-f45c2aacda48","hashed_install_id":"9b75ea1b2e261c09c3292428ed96530285ce872b6b3243e966499d3070d38317","at_ms":1792697741116}
+
+ [32m✓[39m src/routes/phoneAudioSession.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+ [32m✓[39m src/serverConfig.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m src/privacy.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/billing/customerLedgerDurableObject.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/observability/posthog.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m src/billing/allowanceService.test.mjs [2m([22m[2m5 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m src/billing/allowanceMerge.test.js [2m([22m[2m1 test[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatWebhookVerification.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m✓[39m src/routes/insightsConsent.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatRestore.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 207[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/workerApi.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/insights/sessionInsights.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m src/sockets/captionRecovery.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 2482[2mms[22m[39m
+     [33m[2m✓[22m[39m does not let 31 seconds of input or buffer eviction cancel the second attempt [33m 811[2mms[22m[39m
+     [33m[2m✓[22m[39m replays exactly the last 15 seconds after a 70-second captioned winner [33m 339[2mms[22m[39m
+     [33m[2m✓[22m[39m keeps fan-out alive past 120 seconds of input [33m 953[2mms[22m[39m
+ [32m✓[39m src/lib/insightsConsent.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/routes/sessionOffer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+[90mstdout[2m | src/playIntegrity.test.ts[2m > [22m[2mverifyPlayIntegrityIfRequired[2m > [22m[2mverifies available Android tokens without making optional integrity fail closed
+[22m[39m{"service.name":"murmur-worker","body":"Device check configuration was invalid","severity_text":"ERROR","attributes":{"action":"optional_play_integrity_verification","reason":"defect","error_code":"integrity.configuration_invalid","retryable":false,"outcome":"degraded","duration_ms":0},"synthetic":false,"_time":"2026-10-22T19:35:42.389Z","trace_id":"d7f763c4b8d2409c9f660fd5ecbb790a","span_id":"8c7d149390084b35","sentry_event_id":"c876fc9a397748e7852410fbcd6e3e79","deployment.environment":"development"}
+
+ [32m✓[39m src/screens/history/conversationFormat.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/i18n/catalogs.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32m✓[39m src/playIntegrity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m src/screens/phoneAudio/phoneAudioScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/rateLimiter/stateAdapter.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/billing/guestAccountMerge.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m✓[39m src/insights/deleteExpiredSessionInsights.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/screens/settings/settingsScreen.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+ [32m✓[39m src/lib/telemetry.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/routes/attribution.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 230[2mms[22m[39m
+ [32m✓[39m src/screens/paywall/paywallScreen.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m src/screens/rating/ratingSheet.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32m✓[39m src/screens/plans/plansScreen.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 249[2mms[22m[39m
+ [32m✓[39m src/lib/providers/realtimeTranslation.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 824[2mms[22m[39m
+ [32m✓[39m src/routes/reconcileBilling.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32m✓[39m src/billing/services.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32m✓[39m src/routes/ratings.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+ [32m✓[39m src/screens/history/conversationScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 185[2mms[22m[39m
+ [32m✓[39m src/routes/config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 120[2mms[22m[39m
+ [32m✓[39m src/lib/secureStorage.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32m✓[39m src/lib/providers/reportTranslation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 111[2mms[22m[39m
+ [32m✓[39m src/insights/deleteCustomerData.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m src/i18n/runtime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m src/routes/billingRoutes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [32m✓[39m src/screens/history/historyScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+ [32m✓[39m src/auth/socialProviders.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/screens/account/accountScreen.test.tsx [2m([22m[2m20 tests[22m[2m)[22m[32m 144[2mms[22m[39m
+ [32m✓[39m src/routes/phoneAudioGift.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 188[2mms[22m[39m
+ [32m✓[39m src/lib/ratings/ratings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m src/rateLimiter/sessionStore.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/home/variants/rendering.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32m✓[39m src/providers/openaiRealtime.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/observability/outcomes.test.ts [2m([22m[2m53 tests[22m[2m)[22m[33m 3224[2mms[22m[39m
+     [33m[2m✓[22m[39m P4: a provider that never completes crosses the real 800ms deadline and becomes visible [33m 808[2mms[22m[39m
+     [33m[2m✓[22m[39m P6: Sentry timeout failure cannot replace the original result or recurse [33m 2004[2mms[22m[39m
+ [32m✓[39m src/billing/usageSessionStore.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+ [32m✓[39m src/billing/creditPackExpiry.test.mjs [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/screens/settings/languageScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32m✓[39m src/observability/sentry.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/lib/auth/client.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 243[2mms[22m[39m
+ [32m✓[39m src/lib/installAttribution.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 132[2mms[22m[39m
+ [32m✓[39m src/billing/freeAllowanceClaims.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatReconciliation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/lib/billing/planLoading.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m src/observability/consoleBoundary.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/auth/auth.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m src/home/homeScreen.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+ [32m✓[39m src/lib/providers/murmurBillingApi.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32m✓[39m src/screens/screenScaffold.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatAlias.test.js [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/billing/customerLedgerCommandDecoder.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/billing/personalOffer.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/screens/insights/insightsConsentScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+ [32m✓[39m src/http/response.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m src/report.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatIdentity.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/screens/plans/purchaseMode.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m src/billing/revenueCatEvent.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m src/home/variants/bloom/translationStarting.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/billing/allowancePeriods.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/limits.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/billing/customerApi.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/billing/accountMerge.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/billing/phoneAudioGift.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/env.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/screens/auth/emailSignIn.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m src/home/outOfMinutesSheet.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+ [32m✓[39m src/screens/plans/offerBanner.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m src/home/experience.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/translation/validation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/billing/subscriptionCursor.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/screens/heroPoints.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/billing/allocation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/billing/allowanceUpgrade.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/latency.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/billing/catalog.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/providers/insightsWorker.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/screens/proGate.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m app/insights-consent.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/screens/plans/planPicker.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/screens/settings/settingsControls.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/screens/formatMinutes.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m src/screens/auth/signInScreen.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/home/i18nRendering.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m64 passed[39m[22m[90m (64)[39m
+[2m      Tests [22m [1m[32m432 passed[39m[22m[90m (432)[39m
+[2m   Start at [22m 00:35:39
+[2m   Duration [22m 7.01s[2m (transform 2.43s, setup 0ms, import 14.06s, tests 10.71s, environment 4ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   85.32 |    81.62 |    89.9 |   86.38 |                   
+ src               |   84.89 |    84.12 |   85.91 |    85.6 |                   
+  entrypoint.ts    |     100 |      100 |     100 |     100 |                   
+  env.ts           |     100 |    96.77 |     100 |     100 | 112               
+  index.ts         |   53.33 |    64.64 |   18.75 |   52.27 | ...26,130,171-268 
+  legalPages.ts    |   92.98 |    92.85 |    87.5 |   92.98 | 602,612,1127,1141 
+  limits.ts        |     100 |      100 |     100 |     100 |                   
+  playIntegrity.ts |   81.65 |    84.03 |   76.47 |   86.36 | ...06,409,433-435 
+  ...agsFixture.ts |     100 |       80 |     100 |     100 | 11                
+  privacy.ts       |    95.4 |    95.65 |     100 |   98.36 | 69                
+  ...ableObject.ts |   94.05 |    85.18 |   96.66 |   93.93 | ...98,204,213,222 
+  report.ts        |      80 |    78.94 |     100 |      80 | ...66,114-117,126 
+  serverConfig.ts  |   91.81 |    85.03 |     100 |   91.08 | ...61,268,272,302 
+ src/auth          |      95 |    88.23 |     100 |     100 |                   
+  ...edSessions.ts |      75 |       50 |     100 |     100 | 5                 
+  ...lProviders.ts |     100 |    93.33 |     100 |     100 | 34                
+ src/billing       |   88.73 |    81.88 |   96.63 |   89.73 |                   
+  accountMerge.ts  |     100 |      100 |     100 |     100 |                   
+  allocation.ts    |   80.76 |    66.66 |     100 |      80 | 23,42,53,59,64    
+  ...ncePeriods.ts |   91.66 |       90 |     100 |   91.66 | 58-59             
+  ...nceUpgrade.ts |      60 |    77.77 |     100 |      60 | 5,8               
+  catalog.ts       |     100 |      100 |     100 |     100 |                   
+  contracts.ts     |       0 |        0 |       0 |       0 |                   
+  ...andDecoder.ts |   94.79 |     89.9 |     100 |   94.79 | ...24,212,232,264 
+  ...anceClaims.ts |   65.21 |    71.42 |      75 |   65.21 | 33-69,81          
+  personalOffer.ts |   93.33 |    92.85 |     100 |   93.33 | 48                
+  ...eAudioGift.ts |   82.75 |    74.19 |     100 |     100 | 26-92             
+  ...UsageMeter.ts |   87.77 |    77.77 |     100 |   87.77 | ...29,165,188,193 
+  revenueCatApi.ts |    87.5 |    78.22 |   89.28 |    88.8 | ...32,256,266-276 
+  ...ueCatEvent.ts |   95.74 |    90.66 |     100 |   95.74 | 54,135            
+  ...atIdentity.ts |   95.23 |    94.44 |     100 |   95.23 | 45                
+  ...CatRestore.ts |     100 |      100 |     100 |     100 |                   
+  ...rification.ts |   84.09 |     62.5 |     100 |   83.72 | ...22,26,29,48,68 
+  ...tionCursor.ts |     100 |      100 |     100 |     100 |                   
+ src/http          |     100 |      100 |     100 |     100 |                   
+  response.ts      |     100 |      100 |     100 |     100 |                   
+ src/insights      |   79.09 |    77.11 |   90.62 |   88.17 |                   
+  ...stomerData.ts |     100 |      100 |     100 |     100 |                   
+  ...ingSurveys.ts |      75 |       50 |     100 |     100 | 7                 
+  ...onInsights.ts |   93.33 |       50 |     100 |   93.33 | 8                 
+  ...onInsights.ts |   75.58 |    78.07 |   88.46 |   85.71 | ...62-174,178,228 
+ src/observability |   92.68 |    88.07 |    91.3 |    93.5 |                   
+  ...leBoundary.ts |     100 |      100 |     100 |     100 |                   
+  outcomes.ts      |    97.5 |    92.85 |     100 |   97.36 | 68                
+  posthog.ts       |     100 |    91.66 |     100 |     100 | 117               
+  sentry.ts        |   81.48 |    83.63 |      80 |   83.33 | 12,76-78          
+ src/providers     |   82.27 |    88.88 |   94.44 |   82.05 |                   
+  ...aiRealtime.ts |   82.27 |    88.88 |   94.44 |   82.05 | ...85,189,205,215 
+ src/rateLimiter   |   97.24 |    88.02 |     100 |   97.19 |                   
+  ...ryFallback.ts |      94 |    90.62 |     100 |      94 | 74,93,111         
+  sessionStore.ts  |   95.23 |    91.17 |     100 |   95.23 | 69,72             
+  stateAdapter.ts  |    99.2 |    85.52 |     100 |   99.18 | 100               
+  types.ts         |       0 |        0 |       0 |       0 |                   
+ src/routes        |   79.41 |     76.6 |   83.92 |   79.94 |                   
+  attribution.ts   |   93.22 |    94.66 |    92.3 |   94.23 | 81,98,106         
+  config.ts        |   36.84 |       50 |     100 |   36.84 | 20-47             
+  diagnostics.ts   |   96.66 |    96.66 |     100 |     100 | 53,63             
+  ...htsConsent.ts |      50 |    58.33 |      50 |   55.55 | 14-23             
+  ...eAudioGift.ts |   72.72 |    66.66 |     100 |   72.72 | 17,21-22          
+  ratings.ts       |   57.14 |    60.97 |   83.33 |   56.25 | 13,17-33          
+  report.ts        |   87.23 |    73.68 |   85.71 |   88.88 | 20,30,66,115,118  
+  session.ts       |   76.56 |    68.75 |    87.5 |    76.8 | ...14,417,472-486 
+  telemetry.ts     |   86.53 |    76.92 |      40 |   86.27 | ...,86-87,106,120 
+ src/sockets       |   81.44 |    76.15 |    83.8 |   81.81 |                   
+  ...onRecovery.ts |   92.85 |    85.21 |   96.55 |   95.83 | ...04,129-130,140 
+  realtime.ts      |   75.87 |    72.04 |   78.94 |   76.24 | ...1127,1132,1168 
+ src/translation   |     100 |      100 |     100 |     100 |                   
+  validation.ts    |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
+[90mstderr[2m | src/lib/billing/context.test.tsx[2m > [22m[2mbilling refresh[2m > [22m[2mreturns a loaded customer even when the parallel config request fails
+[22m[39mAn update to MurmurBillingProvider inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to MurmurBillingProvider inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ [32m✓[39m src/lib/billing/planCatalog.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/lib/billing/context.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 221[2mms[22m[39m
+ [32m✓[39m src/screens/auth/savePurchaseScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/lib/providers/mobileTelemetry.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/home/preview.test.tsx [2m([22m[2m42 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/screens/auth/socialButtons.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m app/history/index.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/screens/previewFixtures.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m src/home/variants/bloom/captureSourceControl.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/i18n/provider.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/home/variants/bloom/audioControl.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/shareMurmur.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m app/language.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/replayProvider.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/auth/nativeProviders.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m app/phone-audio.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/home/variants/bloom/backgroundListening.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/i18n/storage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/home/diagnosticsModal.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/home/audioPlaybackPreference.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/home/languagePicker.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/screens/screenPreviews.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/home/variants/preference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/legalLinks.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/sessionPreparation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/screens/screenServices.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/screens/paywall/paywallDemo.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/localStorage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/home/viewModel.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m app/history/[id].test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m app/settings.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/conversationHistory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m app/plans.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/anonymousAnalytics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/sessionTiming.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m app/save-purchase.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/home/reportTranslation.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/lib/engagement.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/home/variants/logic.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/home/sheetStyles.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/home/updateRequiredSheet.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/realtimeConnectionDeadline.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/replay.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/screens/rowGroup.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/lib/acquisition.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/i18n/types.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m plugins/withIosPodDeploymentTarget.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m app/sign-in.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/home/variants/sharedControls.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m src/lib/installIdentity.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/screens/plans/planList.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m src/home/languageAvailability.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/billing/revenueCat.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/observability/sentry.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/home/variants/shared.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m plugins/iosPrivacyManifestConfig.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/billing/reconciliation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/home/previewConversation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/screens/auth/emailSignInState.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/audioDiagnostics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m modules/murmur-audio/src/MurmurAudioModule.web.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/billing/paywallChoices.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m app/account.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/errorState.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m app/preview.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/screens/rating/usageChoices.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/screens/phoneAudio/phoneAudioAccess.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/config.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/lib/storageDiagnostics.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/home/onboardingNavigation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/requestReview.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/billing/appConfig.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/i18n/localizedError.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/screens/postSessionPrompt.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/home/status.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m plugins/withAndroidReleaseSigning.test.mjs [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/phoneAudioGiftOffer.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/billing/allowance.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/ratings/ratingSchedule.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m plugins/withHistoryBackupExclusion.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/startingState.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/auth/authErrors.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/appRelease.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/live-translation/captureLifecycle.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/home/theme.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m129 passed[39m[22m[90m (129)[39m
+[2m      Tests [22m [1m[32m634 passed[39m[22m[90m (634)[39m
+[2m   Start at [22m 00:35:41
+[2m   Duration [22m 9.08s[2m (transform 8.21s, setup 0ms, import 19.20s, tests 5.00s, environment 2.31s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   64.88 |    66.08 |   67.26 |   65.27 |                   
+ app               |      50 |    44.44 |   66.66 |      50 |                   
+  _layout.tsx      |       0 |      100 |       0 |       0 | 15-32             
+  account.tsx      |     100 |      100 |     100 |     100 |                   
+  index.tsx        |       0 |        0 |       0 |       0 | 7-16              
+  ...s-consent.tsx |     100 |      100 |     100 |     100 |                   
+  language.tsx     |     100 |      100 |     100 |     100 |                   
+  paywall.tsx      |       0 |        0 |       0 |       0 |                   
+  phone-audio.tsx  |     100 |      100 |     100 |     100 |                   
+  plans.tsx        |     100 |      100 |     100 |     100 |                   
+  preview.tsx      |      50 |    66.66 |   66.66 |      50 | 14-20             
+  ...-purchase.tsx |     100 |      100 |     100 |     100 |                   
+  settings.tsx     |     100 |      100 |     100 |     100 |                   
+  sign-in.tsx      |     100 |      100 |     100 |     100 |                   
+ app/history       |     100 |       50 |     100 |     100 |                   
+  [id].tsx         |     100 |       50 |     100 |     100 | 8                 
+  index.tsx        |     100 |      100 |     100 |     100 |                   
+ ...s/murmur-audio |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...rmur-audio/src |    24.3 |    20.54 |   19.14 |   23.55 |                   
+  ...udio.types.ts |       0 |        0 |       0 |       0 |                   
+  ...udioModule.ts |       0 |        0 |       0 |       0 |                   
+  ...Module.web.ts |    24.3 |    20.54 |   19.14 |   23.55 | ...99-498,513-514 
+ plugins           |   74.13 |    66.66 |   45.45 |   74.07 |                   
+  ...aseSigning.js |   76.92 |     62.5 |      50 |   76.92 | 61,69,77,84-86    
+  ...pExclusion.js |   66.66 |       50 |   33.33 |    64.7 | 12,37-42          
+  ...mentTarget.js |   78.57 |      100 |      50 |   81.81 | 26-27             
+ src/home          |   60.11 |    55.34 |   52.63 |   60.37 |                   
+  appChrome.tsx    |       0 |        0 |       0 |       0 | 7-64              
+  ...Preference.ts |     100 |       50 |     100 |     100 | 10                
+  bottomDock.tsx   |       0 |        0 |       0 |       0 | 22-89             
+  components.tsx   |       0 |        0 |       0 |       0 |                   
+  diagnostics.ts   |       0 |        0 |       0 |       0 | 35-171            
+  ...ticsModal.tsx |    5.26 |        0 |     3.7 |     5.4 | 43-255,289-383    
+  errorCopy.ts     |   95.23 |    95.65 |     100 |   95.23 | 32                
+  experience.tsx   |   66.66 |     40.9 |      80 |   63.63 | 68-71             
+  homeScreen.tsx   |   57.97 |    51.13 |   49.57 |   58.22 | ...96-798,807-849 
+  ...ailability.ts |     100 |      100 |     100 |     100 |                   
+  ...eControls.tsx |       0 |        0 |       0 |       0 | 22-64             
+  ...agePicker.tsx |   69.44 |    57.69 |   66.66 |   69.44 | ...99,143,199,206 
+  modalSheet.tsx   |   59.09 |    44.44 |      50 |      65 | 88-95             
+  onboarding.tsx   |       0 |        0 |       0 |       0 | 7-226             
+  ...Navigation.ts |     100 |      100 |     100 |     100 |                   
+  ...ingScreen.tsx |       0 |      100 |       0 |       0 | 13-59             
+  ...utesSheet.tsx |    82.6 |    52.63 |      75 |    82.6 | 56-57,62-63       
+  preview.tsx      |   86.56 |    91.66 |   76.31 |   86.56 | 34-93,103,155-156 
+  ...nversation.ts |     100 |      100 |     100 |     100 |                   
+  providerRoute.ts |     100 |     87.5 |     100 |     100 | 9                 
+  ...stHarness.tsx |     100 |      100 |     100 |     100 |                   
+  ...anslation.tsx |     100 |      100 |     100 |     100 |                   
+  sheetStyles.ts   |     100 |      100 |     100 |     100 |                   
+  statusLabels.ts  |   86.48 |    89.65 |     100 |   86.48 | 23,41,53,56,110   
+  styles.ts        |     100 |      100 |     100 |     100 |                   
+  theme.ts         |     100 |      100 |     100 |     100 |                   
+  ...onSurface.tsx |       0 |      100 |       0 |       0 | 18                
+  types.ts         |       0 |        0 |       0 |       0 |                   
+  ...iredSheet.tsx |      90 |    77.77 |    87.5 |      90 | 48-49             
+  viewModel.ts     |      95 |    94.23 |     100 |      95 | 177,202           
+ ...home/__tests__ |     100 |       50 |     100 |     100 |                   
+  ...SheetMock.tsx |     100 |       50 |     100 |     100 | 12                
+ .../illustrations |       0 |      100 |     100 |       0 |                   
+  index.ts         |       0 |      100 |     100 |       0 | 1-7               
+ src/home/variants |   74.65 |    77.02 |   76.11 |   75.17 |                   
+  hooks.ts         |       0 |        0 |       0 |       0 | 8-72              
+  logic.ts         |     100 |      100 |     100 |     100 |                   
+  ...rdingFlow.tsx |     100 |    66.66 |     100 |     100 | 124-235           
+  preference.ts    |     100 |      100 |     100 |     100 |                   
+  shared.tsx       |     100 |    84.21 |     100 |     100 | ...29,150,221,244 
+  ...dControls.tsx |   69.23 |    56.25 |      60 |   69.23 | 27-33,67,87       
+  types.ts         |       0 |        0 |       0 |       0 |                   
+ ...variants/bloom |   60.37 |     57.5 |   56.75 |   61.16 |                   
+  audioControl.tsx |     100 |      100 |     100 |     100 |                   
+  ...Listening.tsx |   66.66 |      100 |   57.14 |   77.77 | 14-15             
+  ...ceControl.tsx |    90.9 |    84.61 |      80 |    90.9 | 34                
+  index.tsx        |      50 |    36.84 |   42.85 |      50 | ...25,171,195-210 
+  onboarding.tsx   |       0 |        0 |       0 |       0 | 12-86             
+  styles.ts        |     100 |      100 |     100 |     100 |                   
+  ...nStarting.tsx |   88.88 |      100 |      50 |   88.88 | 16                
+ src/i18n          |   69.17 |    69.41 |      70 |   69.28 |                   
+  catalogs.ts      |     100 |      100 |     100 |     100 |                   
+  ...lizedError.ts |     100 |      100 |     100 |     100 |                   
+  provider.tsx     |   39.13 |        4 |   31.57 |   38.46 | ...11,130-133,139 
+  runtime.tsx      |   90.32 |    96.66 |   84.61 |   90.32 | 44-45,110         
+  storage.ts       |     100 |      100 |     100 |     100 |                   
+  types.ts         |     100 |    93.33 |     100 |     100 | 63                
+ src/i18n/catalogs |     100 |      100 |     100 |     100 |                   
+  ar.ts            |     100 |      100 |     100 |     100 |                   
+  de.ts            |     100 |      100 |     100 |     100 |                   
+  en.ts            |     100 |      100 |     100 |     100 |                   
+  es.ts            |     100 |      100 |     100 |     100 |                   
+  fr.ts            |     100 |      100 |     100 |     100 |                   
+  hi.ts            |     100 |      100 |     100 |     100 |                   
+  id.ts            |     100 |      100 |     100 |     100 |                   
+  ja.ts            |     100 |      100 |     100 |     100 |                   
+  pt-BR.ts         |     100 |      100 |     100 |     100 |                   
+  tr.ts            |     100 |      100 |     100 |     100 |                   
+  ur.ts            |     100 |      100 |     100 |     100 |                   
+ src/lib           |   85.63 |    77.93 |   86.55 |   90.02 |                   
+  acquisition.ts   |   42.85 |    66.66 |   66.66 |   42.85 | 16-21             
+  ...sAnalytics.ts |     100 |      100 |     100 |     100 |                   
+  appRelease.ts    |     100 |       50 |     100 |     100 | 12                
+  config.ts        |     100 |     87.5 |     100 |     100 | 18,34,127         
+  ...ionHistory.ts |   87.27 |    82.69 |     100 |   97.56 | 89                
+  engagement.ts    |   93.33 |    82.75 |     100 |   93.33 | 92,107            
+  ...htsConsent.ts |     100 |       75 |     100 |     100 | 9                 
+  ...ttribution.ts |   86.66 |    83.33 |     100 |     100 | 13-14             
+  ...llIdentity.ts |     100 |       80 |     100 |     100 | 31-38             
+  latency.ts       |   92.85 |    71.42 |    90.9 |    92.5 | 54,142,156        
+  legalLinks.ts    |     100 |      100 |     100 |     100 |                   
+  localStorage.ts  |     100 |      100 |     100 |     100 |                   
+  ...oGiftOffer.ts |     100 |      100 |     100 |     100 |                   
+  replay.ts        |   53.57 |    66.66 |   42.85 |   68.18 | 39,45-53          
+  ...yProvider.tsx |   23.07 |    16.66 |      20 |   33.33 | 9-16              
+  requestReview.ts |     100 |      100 |     100 |     100 |                   
+  secureStorage.ts |   89.47 |      100 |   83.33 |   92.85 | 31                
+  shareMurmur.ts   |     100 |      100 |     100 |     100 |                   
+  ...iagnostics.ts |   95.83 |    96.29 |     100 |     100 | 36                
+  telemetry.ts     |   71.79 |    53.84 |   69.23 |   72.97 | ...0,61-68,99,122 
+  ...ranslation.ts |       0 |        0 |       0 |       0 |                   
+ src/lib/__tests__ |     100 |      100 |     100 |     100 |                   
+  ...lientMocks.ts |     100 |      100 |     100 |     100 |                   
+ src/lib/auth      |   83.15 |    66.66 |   92.85 |   83.15 |                   
+  authErrors.ts    |     100 |      100 |     100 |     100 |                   
+  client.ts        |   81.66 |    55.88 |    90.9 |   81.66 | ...16,131,139-148 
+  ...eProviders.ts |   82.14 |    70.37 |     100 |   82.14 | 16,20,33,51,58    
+ src/lib/billing   |   64.32 |    75.62 |   68.02 |   64.33 |                   
+  allowance.ts     |     100 |      100 |     100 |     100 |                   
+  appConfig.ts     |      96 |    96.96 |     100 |      96 | 46                
+  context.tsx      |   32.79 |     22.8 |   32.25 |   31.38 | ...66-396,436-480 
+  customerApi.ts   |   32.25 |       20 |   28.57 |   35.71 | 11-22,36-52,65    
+  ...erResponse.ts |   89.01 |    85.29 |     100 |   92.85 | ...70,179,186,201 
+  ...allChoices.ts |     100 |      100 |     100 |     100 |                   
+  planCatalog.ts   |     100 |    98.43 |     100 |     100 | 184               
+  planLoading.ts   |     100 |      100 |     100 |     100 |                   
+  ...nciliation.ts |     100 |      100 |     100 |     100 |                   
+  revenueCat.ts    |      90 |    80.21 |     100 |   89.89 | ...96,204,215,244 
+ ...ve-translation |   25.25 |    33.42 |   33.82 |   25.37 |                   
+  ...iagnostics.ts |     100 |      100 |     100 |     100 |                   
+  ...eLifecycle.ts |     100 |      100 |     100 |     100 |                   
+  errorState.ts    |     100 |      100 |     100 |     100 |                   
+  ...onDeadline.ts |     100 |      100 |     100 |     100 |                   
+  ...reparation.ts |   95.12 |     91.3 |   83.33 |   95.12 | 62,106            
+  sessionTiming.ts |   94.11 |     92.3 |     100 |   94.11 | 55                
+  startingState.ts |     100 |      100 |     100 |     100 |                   
+  types.ts         |     100 |     87.5 |     100 |     100 | 43                
+  ...ranslation.ts |       0 |        0 |       0 |       0 | 81-1143           
+  workerApi.ts     |    86.3 |     72.3 |   76.47 |   88.57 | ...61,163,166,187 
+ .../observability |      70 |    80.76 |   66.66 |      70 |                   
+  sentry.ts        |      70 |    80.76 |   66.66 |      70 | 22-31             
+ src/lib/providers |   87.86 |    77.17 |      92 |   88.14 |                   
+  ...ghtsWorker.ts |     100 |      100 |     100 |     100 |                   
+  ...eTelemetry.ts |     100 |      100 |     100 |     100 |                   
+  ...BillingApi.ts |     100 |      100 |     100 |     100 |                   
+  ...ranslation.ts |   86.97 |    75.15 |   91.42 |   86.97 | ...04,450,461,476 
+  ...iagnostics.ts |     100 |      100 |     100 |     100 |                   
+  ...ranslation.ts |   83.33 |    91.66 |      75 |    90.9 | 23                
+ src/lib/ratings   |   85.48 |    81.25 |   94.44 |   87.27 |                   
+  ...ngSchedule.ts |   85.71 |    93.75 |     100 |      80 | 28                
+  ratings.ts       |   85.45 |       75 |   93.33 |      88 | ...17,121,134,144 
+ src/screens       |   87.63 |    78.57 |   80.39 |   87.56 |                   
+  formatMinutes.ts |     100 |      100 |     100 |     100 |                   
+  heroPoints.tsx   |     100 |      100 |     100 |     100 |                   
+  ...sionPrompt.ts |     100 |      100 |     100 |     100 |                   
+  ...ewFixtures.ts |   73.17 |      100 |   45.45 |    72.5 | 103,107-119       
+  proGate.tsx      |     100 |       50 |     100 |     100 | 31                
+  rowGroup.tsx     |     100 |    93.75 |     100 |     100 | 38                
+  ...nPreviews.tsx |     100 |      100 |     100 |     100 |                   
+  ...nScaffold.tsx |     100 |    71.87 |     100 |     100 | 26,33-57,67,121   
+  ...nServices.tsx |   77.35 |    59.09 |      60 |   77.35 | ...04-106,160-170 
+  styles.ts        |     100 |       50 |     100 |     100 | 334               
+ ...eens/__tests__ |   91.74 |      100 |   87.67 |   91.66 |                   
+  ...ingFixture.ts |   94.73 |      100 |    92.3 |   94.73 | 40                
+  navigation.tsx   |    86.2 |      100 |      84 |    86.2 | 14,24,33,43       
+  ...rimitives.tsx |   97.56 |      100 |   94.44 |    97.5 | 145               
+  scaffoldMock.tsx |     100 |      100 |     100 |     100 |                   
+  ...cesFixture.ts |   72.72 |      100 |      70 |   72.72 | 18,24,29          
+  uiText.ts        |     100 |      100 |     100 |     100 |                   
+ ...creens/account |   98.03 |    86.79 |   95.83 |   98.03 |                   
+  ...untScreen.tsx |   98.03 |    86.79 |   95.83 |   98.03 | 70                
+ src/screens/auth  |   85.48 |    76.82 |      80 |   85.32 |                   
+  emailSignIn.tsx  |    86.3 |    87.93 |   85.71 |    86.3 | ...83,104-105,249 
+  ...ignInState.ts |     100 |      100 |     100 |     100 |                   
+  ...aseScreen.tsx |   86.66 |       50 |      75 |   85.71 | 25-26             
+  signInScreen.tsx |   90.24 |    88.37 |      80 |      90 | 93-95,107         
+  ...alButtons.tsx |    73.8 |    48.64 |    64.7 |    73.8 | 90,105,129-143    
+  styles.ts        |     100 |       50 |     100 |     100 | 110               
+ ...creens/history |   89.33 |    83.33 |      80 |   91.42 |                   
+  ...tionFormat.ts |     100 |       75 |     100 |     100 | 21                
+  ...ionScreen.tsx |    87.5 |    88.88 |   69.23 |   92.85 | 49,54             
+  ...oryScreen.tsx |   89.47 |    82.35 |   82.35 |   89.18 | 45-46,144-145     
+ ...reens/insights |     100 |       50 |     100 |     100 |                   
+  ...entScreen.tsx |     100 |       50 |     100 |     100 | 35                
+ ...creens/paywall |   97.26 |     85.5 |   95.23 |    97.1 |                   
+  paywallDemo.tsx  |     100 |    85.71 |     100 |     100 | 17-19             
+  ...allScreen.tsx |   95.83 |    85.45 |   93.75 |   95.65 | 93,112            
+  styles.ts        |     100 |      100 |     100 |     100 |                   
+ ...ens/phoneAudio |   96.96 |       85 |   88.88 |   96.87 |                   
+  ...udioAccess.ts |     100 |      100 |     100 |     100 |                   
+  ...dioScreen.tsx |   96.42 |    78.57 |    87.5 |   96.29 | 53                
+ src/screens/plans |   84.09 |    90.08 |   77.08 |   85.03 |                   
+  offerBanner.tsx  |   81.25 |    90.47 |      70 |    86.2 | 38-42             
+  planList.tsx     |   44.44 |     62.5 |   28.57 |   44.44 | 19-36             
+  planPicker.tsx   |   90.24 |    94.44 |   81.25 |   90.24 | 43-44,68,99       
+  plansScreen.tsx  |   96.77 |    89.65 |     100 |   96.55 | 54                
+  purchaseMode.ts  |     100 |      100 |     100 |     100 |                   
+  styles.ts        |     100 |       50 |     100 |     100 | 222               
+ ...screens/rating |    91.3 |    86.66 |      80 |    91.3 |                   
+  ratingSheet.tsx  |    90.9 |    86.66 |      80 |    90.9 | 37,60             
+  usageChoices.ts  |     100 |      100 |     100 |     100 |                   
+ ...reens/settings |   78.26 |    77.77 |   73.07 |   82.92 |                   
+  ...ageScreen.tsx |    92.3 |    66.66 |    87.5 |    92.3 | 30                
+  ...sControls.tsx |   52.94 |      100 |      50 |   58.33 | 27,45-49          
+  ...ngsScreen.tsx |   93.75 |    83.33 |    87.5 |   93.75 | 35                
+-------------------|---------|----------|---------|---------|-------------------
+$ node tooling/scripts/validate-app-config.mjs
+App config validation passed.
+$ node tooling/scripts/validate-ios-metadata.mjs && node tooling/scripts/validate-android-metadata.mjs && node tooling/scripts/validate-store-assets.mjs
+iOS metadata validation passed.
+Android metadata validation passed.
+Store asset validation passed.
+$ node tooling/scripts/validate-submission-blockers.mjs
+Murmur is not submission-ready: 4 open P0 blocker(s).
+- apple-paid-apps-agreement: Complete Apple legal entity and Paid Apps Agreement [open]
+- production-realtime-quota: Fund the OpenAI organization used by production Realtime translation [open]
+- billing-sandbox-evidence: Complete Apple and Google billing sandbox tests [open]
+- billing-production-rollout: Deploy and verify the staged production billing release [in_progress]
