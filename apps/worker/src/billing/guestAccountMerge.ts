@@ -203,15 +203,18 @@ function appendFreeGrantMergeStatements(params: {
   statements: D1PreparedStatement[];
 }): void {
   const { database, destinationGrant, sourceGrant, statements } = params;
-  const destinationRemainingMs = sourceGrant && destinationGrant
+  if (!sourceGrant) {
+    return;
+  }
+  const destinationRemainingMs = destinationGrant
     ? mergedFreeRemainingMs({
       destinationOriginalMs: destinationGrant.original_ms,
       destinationRemainingMs: destinationGrant.remaining_ms,
       sourceOriginalMs: sourceGrant.original_ms,
       sourceRemainingMs: sourceGrant.remaining_ms,
     })
-    : null;
-  if (sourceGrant && sourceGrant.remaining_ms > 0) {
+    : sourceGrant.remaining_ms;
+  if (sourceGrant.remaining_ms > 0) {
     statements.push(
       mergeLedgerEntry({
         amountMs: -sourceGrant.remaining_ms,
@@ -223,13 +226,6 @@ function appendFreeGrantMergeStatements(params: {
         nowMs: params.nowMs,
         sourceCustomerId: params.sourceCustomerId,
       }),
-      database
-        .prepare(
-          `UPDATE balance_grants
-           SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
-           WHERE grant_id = ? AND customer_id = ?`,
-        )
-        .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
       updateProjection(
         database,
         params.sourceCustomerId,
@@ -237,9 +233,40 @@ function appendFreeGrantMergeStatements(params: {
         params.nowMs,
       ),
     );
+    if (destinationGrant) {
+      statements.push(
+        database
+          .prepare(
+            `UPDATE balance_grants
+             SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
+             WHERE grant_id = ? AND customer_id = ?`,
+          )
+          .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+      );
+    } else {
+      statements.push(
+        database
+          .prepare(
+            `UPDATE balance_grants
+             SET customer_id = ?, updated_at_ms = ?
+             WHERE grant_id = ? AND customer_id = ?`,
+          )
+          .bind(params.destinationCustomerId, params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+        mergeLedgerEntry({
+          amountMs: sourceGrant.remaining_ms,
+          customerId: params.destinationCustomerId,
+          database,
+          grantId: sourceGrant.grant_id,
+          idempotencyKey: `${params.mergeId}:destination-free`,
+          ledgerEntryId: `ledger:${params.mergeId}:destination-free`,
+          nowMs: params.nowMs,
+          sourceCustomerId: params.sourceCustomerId,
+        }),
+        updateProjection(database, params.destinationCustomerId, `ledger:${params.mergeId}:destination-free`, params.nowMs),
+      );
+    }
   }
-  if (destinationGrant && destinationRemainingMs !== null &&
-    destinationRemainingMs !== destinationGrant.remaining_ms) {
+  if (destinationGrant && destinationRemainingMs !== destinationGrant.remaining_ms) {
     const destinationDeltaMs = destinationRemainingMs - destinationGrant.remaining_ms;
     statements.push(
       mergeLedgerEntry({

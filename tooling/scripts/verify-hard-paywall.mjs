@@ -180,10 +180,30 @@ try {
   assert.equal(await database.prepare("SELECT canonical_customer_id FROM customer_aliases WHERE alias_customer_id = ?").bind(buyer.id).first("canonical_customer_id"), registered.id);
   pass("hard-mode buyer saves paid credit through email OTP account linking without a Free grant");
   const beforeFlip = await guest("1.4.1");
+  const namespace = await mf.getDurableObjectNamespace("CUSTOMER_LEDGER", "murmur");
+  const ledger = namespace.get(namespace.idFromName(beforeFlip.id));
+  const usageSessionId = randomUUID();
+  const ledgerCommand = async (command) => jsonResponse(await ledger.fetch("https://ledger.internal/command", {
+    method: "POST", headers: { "Content-Type": "application/json", "x-murmur-ledger-internal": "1" },
+    body: JSON.stringify({ ...command, customerId: beforeFlip.id, nowMs: Date.now() }),
+  }));
+  await ledgerCommand({ action: "open_usage_session", usageSessionId });
+  await ledgerCommand({ action: "settle_usage", usageSessionId, settlementSequence: 1, amountMs: 120_000 });
+  await ledgerCommand({ action: "close_usage_session", usageSessionId, outcome: "closed" });
+  assert.equal((await customer(beforeFlip, "1.4.1")).balance.allowance_ms, 180_000);
+  const originalFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(beforeFlip.id).first();
   const linkedAfterFlip = await linkAccount(beforeFlip, "1.4.0");
+  const preserved = await customer(linkedAfterFlip, "1.4.0");
+  assert.equal(preserved.free_allowance_ms, 0);
+  assert.equal(preserved.balance.allowance_ms, 180_000);
+  assert.equal(preserved.balance.available_ms, 180_000);
+  assert.equal(preserved.balance.credit_ms, 0);
+  const transferredFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedAfterFlip.id).all();
+  assert.deepEqual(transferredFree.results, [originalFree]);
+  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(beforeFlip.id).first("count"), 0);
   assert.equal(await rows("free_allowance_claims", beforeFlip.id), 0);
   assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
-  pass("pre-flip Free claim transfers when the guest links in hard mode");
+  pass("pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and the original Free grant");
   const beforeRollback = await guest("1.4.0");
   const linkedAfterRollback = await linkAccount(beforeRollback, "1.4.1");
   assert.equal(await rows("free_allowance_claims", beforeRollback.id), 0);

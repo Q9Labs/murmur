@@ -42,6 +42,50 @@ function seedPaidGuest(sqlite, destinationHasFreeGrant = true) {
 }
 
 describe("guest merge with billing and runtime migrations", () => {
+  it.each([
+    ["source only", 180_000, null, 180_000],
+    ["both", 180_000, 240_000, 120_000],
+    ["destination only", null, 240_000, 240_000],
+    ["neither", null, null, 0],
+    ["exhausted source only", 0, null, 0],
+  ])("preserves Free balance for %s and makes retries a no-op", async (_kind, sourceMs, destinationMs, expectedMs) => {
+    const { database, sqlite } = createDatabase();
+    try {
+      seedPaidGuest(sqlite, destinationMs !== null);
+      if (sourceMs === null) {
+        sqlite.exec("DELETE FROM balance_grants WHERE grant_id = 'guest-free'");
+      } else {
+        sqlite.prepare("UPDATE balance_grants SET remaining_ms = ?, state = ? WHERE grant_id = 'guest-free'")
+          .run(sourceMs, sourceMs > 0 ? "available" : "exhausted");
+      }
+      if (destinationMs !== null) {
+        sqlite.prepare("UPDATE balance_grants SET remaining_ms = ? WHERE grant_id = 'registered-free'")
+          .run(destinationMs);
+      }
+      const params = { database, destinationCustomerId: "registered-1", nowMs, sourceCustomerId: "guest-1" };
+      await mergeGuestCustomer(params);
+
+      const repository = new LedgerRepository(database);
+      expect((await repository.getBalance("registered-1", nowMs)).allowanceMs).toBe(expectedMs);
+      expect((await repository.getBalance("guest-1", nowMs)).allowanceMs).toBe(0);
+      if (sourceMs > 0 && destinationMs === null) {
+        expect(sqlite.prepare("SELECT customer_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE grant_id = 'guest-free'").get())
+          .toEqual({ customer_id: "registered-1", grant_key: "free:2026-09", original_ms: 300_000, remaining_ms: sourceMs, expires_at_ms: Date.UTC(2026, 9, 1), state: "available" });
+        expect(sqlite.prepare("SELECT customer_id, amount_ms FROM ledger_entries WHERE entry_kind = 'merge' AND grant_id = 'guest-free' ORDER BY amount_ms").all())
+          .toEqual([{ customer_id: "guest-1", amount_ms: -sourceMs }, { customer_id: "registered-1", amount_ms: sourceMs }]);
+      }
+      const grants = sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all();
+      const entries = sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all();
+      const projections = sqlite.prepare("SELECT * FROM projection_versions ORDER BY customer_id").all();
+      await mergeGuestCustomer(params);
+      expect(sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all()).toEqual(grants);
+      expect(sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all()).toEqual(entries);
+      expect(sqlite.prepare("SELECT * FROM projection_versions ORDER BY customer_id").all()).toEqual(projections);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("keeps a guest purchase when the existing paid account has no current Free grant", async () => {
     const { database, sqlite } = createDatabase();
     try {
