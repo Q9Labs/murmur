@@ -902,6 +902,7 @@ function renderHtml(page: Page): string {
       }
 
       .steps, .values, .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+      .price-grid { grid-template-columns: repeat(2, 1fr); }
       @media (max-width: 800px) { .steps, .values, .price-grid { grid-template-columns: 1fr; } }
 
       .stage { aspect-ratio: 5 / 4; border-radius: 28px; display: grid; place-items: center; overflow: hidden; }
