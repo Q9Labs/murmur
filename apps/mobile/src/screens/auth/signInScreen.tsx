@@ -54,7 +54,7 @@ export function checkoutDoneAction(params: {
     disabled: params.availability === "busy",
     label: params.plan ? planPurchaseLabel(params.plan, params.ui) : t("auth.continueToCheckout"),
     onPress: () => {
-      void params.purchasePlan(planId, undefined, introDiscountPercent(params.plan ? [params.plan] : []) !== null);
+      void params.purchasePlan(planId, undefined, params.plan ? introDiscountPercent([params.plan]) !== null : undefined);
       params.leave();
     },
   };

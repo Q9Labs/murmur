@@ -88,6 +88,18 @@ describe("billing refresh", () => {
 });
 
 describe("checkout telemetry", () => {
+  it("keeps active-offer redemption for sign-in checkout without plan metadata", async () => {
+    const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() + 60_000).toISOString() };
+    api.fetchMurmurAppConfig.mockResolvedValue({ ...defaultAppConfig, paywallOfferingId: personalOffer.offeringId, personalOffer });
+    await act(async () => { expect(await billing.refresh()).toEqual(fixtureCustomer); });
+    telemetry.deliverMobileTelemetryRequest.mockClear();
+    store.purchaseMurmurPlan.mockResolvedValue("purchased");
+    api.reconcileMurmurCustomer.mockResolvedValue({ purchaseCount: 1, subscriptionCount: 0 });
+    await act(async () => { expect(await billing.purchasePlan(fixtureYearly.id, undefined, undefined)).toBe(true); });
+    await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalledWith(expect.objectContaining({
+      payload: { event: "offer_redeemed", offering_id: personalOffer.offeringId },
+    })));
+  }, 10_000);
   it("redeems an active personal offer only for a plan with an intro discount, not a pack", async () => {
     const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() + 60_000).toISOString() };
     api.fetchMurmurAppConfig.mockResolvedValue({ ...defaultAppConfig, paywallOfferingId: personalOffer.offeringId, personalOffer });

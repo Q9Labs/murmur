@@ -27,6 +27,7 @@ export type MurmurBillingContext = {
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
   // Resolves true only when the store completed a purchase, so the UI can offer to save it.
+  // An omitted intro-discount flag means the plan metadata is unknown.
   purchasePlan: (planId: string, surface?: PlanSurface, hasIntroDiscount?: boolean) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<MurmurCustomer | null>;
@@ -289,9 +290,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice: noticeText,
-    purchasePlan: async (planId, surface = "plan_picker", hasIntroDiscount = false) => {
+    purchasePlan: async (planId, surface = "plan_picker", hasIntroDiscount) => {
       let purchased = false;
-      const personalOffer = hasIntroDiscount && config.personalOffer && Date.parse(config.personalOffer.expiresAt) > Date.now()
+      const personalOffer = hasIntroDiscount !== false && config.personalOffer && Date.parse(config.personalOffer.expiresAt) > Date.now()
         ? config.personalOffer
         : null;
       await runStoreAction(async () => {
