@@ -15,6 +15,7 @@ public class MurmurAudioModule: Module {
   private let playerNode = AVAudioPlayerNode()
   private let audioQueue = DispatchQueue(label: "murmur.audio.native")
   private var converter: AVAudioConverter?
+  private var captureFailure: MurmurCaptureFailure?
   private var captureDeadline: DispatchWorkItem?
   private var captureBuffer = Data()
   private var captureActive = false
@@ -116,6 +117,7 @@ public class MurmurAudioModule: Module {
   }
 
   private func startCaptureSync(source: String, maxSessionSeconds: Int) throws {
+    captureFailure = nil
     if captureActive {
       return
     }
@@ -143,12 +145,14 @@ public class MurmurAudioModule: Module {
         throw error
       }
     }
+    captureFailure = nil
     captureActive = true
     scheduleCaptureDeadline(maxSessionSeconds: maxSessionSeconds)
     emitState(reason: "capture_started")
   }
 
   private func configureAndStartCaptureEngine() throws {
+    captureFailure = nil
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(
       .playAndRecord,
@@ -160,7 +164,8 @@ public class MurmurAudioModule: Module {
     try session.setActive(true)
 
     let inputNode = captureEngine.inputNode
-    var step = "voice_processing"
+    var step = MurmurCaptureStep.voice_processing
+    var hardwareFormat: AVAudioFormat?
     var inputFormat: AVAudioFormat?
     do {
       captureEngine.stop()
@@ -171,24 +176,41 @@ public class MurmurAudioModule: Module {
 
       // Voice processing reconfigures the I/O graph. Read its negotiated format
       // only after that transition, and use it for both conversion and the tap.
-      step = "input_format"
+      step = .hardware_input
+      let hardware = inputNode.inputFormat(forBus: 0)
+      hardwareFormat = hardware
+      try murmurRequireCaptureInput(hardware)
+
+      step = .input_format
       let format = inputNode.outputFormat(forBus: 0)
       inputFormat = format
       converter = try murmurCaptureConverter(from: format, to: pcmFormat)
 
-      step = "install_tap"
+      step = .install_tap
       inputNode.installTap(onBus: 0, bufferSize: 960, format: format) { [weak self] buffer, _ in
         self?.handleInput(buffer: buffer)
       }
 
-      step = "engine_start"
+      step = .engine_start
       captureEngine.prepare()
       try captureEngine.start()
     } catch {
-      let nativeError = error as NSError
-      let route = session.currentRoute.inputs.map { $0.portType.rawValue }.joined(separator: ",")
+      let route: MurmurCaptureRoute
+      switch session.currentRoute.inputs.first?.portType {
+      case nil: route = .none
+      case .builtInMic: route = .built_in
+      case .bluetoothHFP, .bluetoothLE: route = .bluetooth
+      case .headsetMic: route = .wired
+      case .usbAudio: route = .usb
+      default: route = .other
+      }
+      captureFailure = MurmurCaptureFailure(
+        step: step, hardware: hardwareFormat, output: inputFormat,
+        route: route,
+        voiceProcessing: inputNode.isVoiceProcessingEnabled, error: error as NSError
+      )
       throw NSError(domain: "MurmurAudio", code: 4, userInfo: [
-        NSLocalizedDescriptionKey: "Audio capture failed step=\(step) rate=\(inputFormat?.sampleRate ?? 0) channels=\(inputFormat?.channelCount ?? 0) input=\(route.isEmpty ? "none" : route) voice=\(inputNode.isVoiceProcessingEnabled) error=\(nativeError.domain)/\(nativeError.code)"
+        NSLocalizedDescriptionKey: "Audio capture failed"
       ])
     }
   }
@@ -497,7 +519,7 @@ public class MurmurAudioModule: Module {
   }
 
   private func statePayload(reason: String) -> [String: Any] {
-    return [
+    var payload: [String: Any] = [
       "audio_generation_id": audioGenerationId,
       "capture_active": captureActive,
       "capture_source": captureSource,
@@ -509,6 +531,10 @@ public class MurmurAudioModule: Module {
       "route": currentRoute(),
       "sample_rate": Int(murmurSampleRate)
     ]
+    if let captureFailure {
+      payload["capture_failure"] = captureFailure.payload
+    }
+    return payload
   }
 
   private func nextEventSeq() -> Int {

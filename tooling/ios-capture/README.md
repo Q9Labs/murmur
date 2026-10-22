@@ -4,21 +4,26 @@ Run on macOS with Xcode, under the machine's shared heavy-job admission lock:
 
 ```sh
 python3 tooling/ios-capture/tests/check.py
-python3 tooling/ios-capture/tests/check.py --baseline origin/master
+python3 tooling/ios-capture/tests/check.py --baseline e1cdeba3d2f2e7af9cec4b0793fd389efdf5f084
 ```
 
-The first command must pass. Against the parent of this fix, the second command
-must fail: capture continues after voice processing fails in a graph without
-hardware input. The fixed code must return a Swift error without starting capture.
+The first command must pass. The second must fail because the original setup
+installs a tap with populated output even though the hardware input is unavailable.
 
-The runner compiles the production capture graph method with real AVFoundation.
-It replaces only the iOS-only session activation with an empty route fixture and
-uses offline rendering, so it does not request microphone access. The actual session and graph method also passes an iOS SDK compile check.
-It runs the production format validator and real audio converter with zero-rate,
-zero-channel, mono, and stereo formats. Each executable has a 30-second deadline.
+The runner compiles the actual production setup, retry/reset, and state-payload
+methods. A real AVFoundation offline graph checks voice-processing failure without
+requesting microphone access. A separate hardware seam supplies unavailable input
+with populated output and voice processing already enabled. It checks both retries,
+no tap/converter/start on failure, invalid negotiated output, and clearing stale
+failure details after successful setup. Formats and converters are real AVFoundation;
+the seam's engine/node operations are fixtures, not physical hardware.
 
-This is not a physical reproduction of the production iPhone crash. It does not
-prove which route transition supplied the invalid format, exercise AVAudioSession
-activation on iOS, or prove capture on a real microphone. An iPhone route test is
-still needed. The failure message reports setup step, negotiated rate/channels,
-input port type, voice-processing state, and native error domain/code only.
+The actual native state dictionary serializes to the committed JSON fixture used by
+the capture reporting tests. Those tests call the production startup/reporting path
+and privacy sanitizer, including malformed fields and unknown user-content fields.
+The runner also type-checks the actual iOS session/setup APIs and tests zero formats
+and mono/stereo PCM conversion. Each compiler/executable has a 30-second deadline.
+
+This does not reproduce the production iPhone crash, drive an Expo bridge on a
+physical phone, prove successful microphone capture, or establish compatibility
+with unsupported voice-processing routes. A real iPhone route test remains needed.

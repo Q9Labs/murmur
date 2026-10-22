@@ -58,7 +58,7 @@ import {
   requestMicrophonePermission,
 } from "./workerApi";
 import { createAudioCaptureDiagnosticsTracker } from "./audioDiagnostics";
-import { getDevicePlaybackCaptureError } from "./captureLifecycle";
+import { getDevicePlaybackCaptureError, startAudioCapture } from "./captureLifecycle";
 import {
   preserveFirstLiveError,
   sessionErrorOutcome,
@@ -650,15 +650,13 @@ export function useLiveTranslation(
         updated_at_ms: Date.now(),
       }));
       try {
-        await MurmurAudioModule.startCapture(params.capture_source, maxSessionSecondsRef.current);
-      } catch (failure) {
-        captureMobileFailure(failure, {
-          app_session_id: sessionRef.current.identity.app_session_id,
-          operation: params.capture_source === "microphone"
-            ? "start_microphone_capture"
-            : "start_device_playback_capture",
-          stage: "audio_capture",
+        await startAudioCapture({
+          audio: MurmurAudioModule,
+          source: params.capture_source,
+          maxSessionSeconds: maxSessionSecondsRef.current,
+          appSessionId: sessionRef.current.identity.app_session_id,
         });
+      } catch {
         setLiveError(
           params.capture_source === "microphone"
             ? "microphone_start_failed"
