@@ -1,6 +1,0 @@
-Direct no-audio realtime/translations probes:
-Murmur OpenAI key: {"type":"error","code":"credit_balance_exhausted"}
-General development key: {"type":"error","code":"credit_balance_exhausted"}
-Both real app attempts: realtime_provider_quota_exhausted.
-No healthy live captions obtained.
-No key values logged.
