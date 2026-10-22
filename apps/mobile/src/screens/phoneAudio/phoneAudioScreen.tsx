@@ -1,3 +1,4 @@
+import { phoneAudioGiftMs } from "@murmur/protocol/billing/catalog";
 import { useRouter } from "expo-router";
 import { AudioLines, Captions, Clock } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
@@ -12,7 +13,7 @@ import { ProGate } from "../proGate";
 import { PrimaryAction, QuietAction, ScreenScaffold, StatusLine } from "../screenScaffold";
 import { useScreenServices } from "../screenServices";
 import { useScreenStyles } from "../styles";
-import { phoneAudioAccess, phoneAudioGiftMinutes } from "./phoneAudioAccess";
+import { phoneAudioAccess } from "./phoneAudioAccess";
 
 const phoneAudioBenefits: ReadonlyArray<{ icon: HeroPoint["icon"]; text: MessageKey }> = [
   { icon: AudioLines, text: "phoneAudio.gateDirect" },
@@ -59,7 +60,7 @@ export function PhoneAudioScreen(): ReactNode {
           <>
             <PrimaryAction
               disabled={claiming}
-              label={claiming ? t("phoneAudio.claiming") : t("phoneAudio.claim", { minutes: formatUiNumber(phoneAudioGiftMinutes, ui.locale) })}
+              label={claiming ? t("phoneAudio.claiming") : t("phoneAudio.claim", { minutes: formatUiNumber(phoneAudioGiftMs / 60_000, ui.locale) })}
               onPress={claim}
             />
             <QuietAction label={t("phoneAudio.notNow")} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
@@ -69,7 +70,7 @@ export function PhoneAudioScreen(): ReactNode {
       >
         <View style={styles.giftCard}>
           <GiftIllustration />
-          <Text style={styles.bodyStrong}>{t("phoneAudio.giftHeadline", { minutes: formatUiNumber(phoneAudioGiftMinutes, ui.locale) })}</Text>
+          <Text style={styles.bodyStrong}>{t("phoneAudio.giftHeadline", { minutes: formatUiNumber(phoneAudioGiftMs / 60_000, ui.locale) })}</Text>
           <Text style={styles.body}>{phoneAudioBody}</Text>
         </View>
         <StatusLine error={error} notice={null} />

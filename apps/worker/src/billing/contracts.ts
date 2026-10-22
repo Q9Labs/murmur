@@ -11,8 +11,6 @@ export type LedgerBalance = {
 export type BootstrapGuestCommand = {
   action: "bootstrap_guest";
   customerId: string;
-  freeAllowanceMs?: number;
-  grantFreeAllowance: boolean;
   nowMs: number;
   periodExpiresAtMs: number;
   periodKey: string;
@@ -20,7 +18,10 @@ export type BootstrapGuestCommand = {
   principalId: string;
   principalProvider: "anonymous" | "email";
   providerSubject: string;
-};
+} & (
+  | { grantFreeAllowance: true; freeAllowanceMs: number }
+  | { grantFreeAllowance: false }
+);
 
 export type GetBalanceCommand = {
   action: "get_balance";

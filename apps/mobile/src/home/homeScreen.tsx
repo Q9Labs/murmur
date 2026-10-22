@@ -40,7 +40,8 @@ import {
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
 } from "../lib/telemetry";
-import { hasTimeAvailable } from "../lib/billing/allowance";
+import { hasTimeAvailable, isHardPaywallLocked, lockedSurface } from "../lib/billing/allowance";
+import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
 import { nextPostSessionPrompt, type PostSessionPrompt } from "../screens/postSessionPrompt";
@@ -206,6 +207,22 @@ export function createAudioPlaybackPreferenceController(options: {
   };
 }
 
+export async function startWithAllowance(params: {
+  customer: MurmurCustomer | null;
+  refresh: () => Promise<MurmurCustomer | null>;
+  openPlans: () => void;
+  start: () => Promise<void>;
+}): Promise<void> {
+  if (!params.customer || isHardPaywallLocked(params.customer)) {
+    const fresh = await params.refresh();
+    if (isHardPaywallLocked(fresh ?? params.customer)) {
+      params.openPlans();
+      return;
+    }
+  }
+  await params.start();
+}
+
 export default function HomeScreen(): ReactNode {
   const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
@@ -333,15 +350,35 @@ export default function HomeScreen(): ReactNode {
   }, [incomingAcquisition, incomingUrl]);
 
   const refreshBilling = billing.refresh;
+  const handledExhaustionRef = useRef<string | null>(null);
   useEffect(() => {
-    if (isAllowanceExhaustedError(live.error)) {
-      setOutOfMinutesOpen(true);
-      void refreshBilling();
+    if (!isAllowanceExhaustedError(live.error)) {
+      handledExhaustionRef.current = null;
+    } else if (handledExhaustionRef.current !== live.error) {
+      handledExhaustionRef.current = live.error;
+      if (lockedSurface(billing.customer) === "out_of_minutes") {
+        setOutOfMinutesOpen(true);
+      }
+      void refreshBilling().then((fresh) => {
+        const customer = fresh ?? billing.customer;
+        if (hasTimeAvailable(customer)) {
+          return;
+        }
+        if (lockedSurface(customer) === "paywall") {
+          setOutOfMinutesOpen(false);
+          router.push("/plans");
+        } else if (lockedSurface(billing.customer) === "paywall") {
+          setOutOfMinutesOpen(true);
+        }
+      });
     }
+  }, [billing.customer, live.error, refreshBilling, router]);
+
+  useEffect(() => {
     if (isUpdateRequiredError(live.error)) {
       setUpdateRequiredOpen(true);
     }
-  }, [live.error, refreshBilling]);
+  }, [live.error]);
 
   useEffect(() => {
     if (live.status === "live" && acquisition) {
@@ -349,15 +386,19 @@ export default function HomeScreen(): ReactNode {
     }
   }, [acquisition, live.status]);
 
+  const customerLoaded = billing.customer !== null;
+  const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   useEffect(() => {
     if (
+      customerLoaded &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
-      onboardingStep === "done"
+      onboardingStep === "done" &&
+      !hardPaywallLocked
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, customerLoaded, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
@@ -518,8 +559,15 @@ export default function HomeScreen(): ReactNode {
       setSettingsMessage(t("settings.privacyLoading"));
       return;
     }
-    await audioPreferenceController.waitForRestore();
-    await live.start();
+    await startWithAllowance({
+      customer: billing.customer,
+      refresh: billing.refresh,
+      openPlans: () => router.push("/plans"),
+      start: async () => {
+        await audioPreferenceController.waitForRestore();
+        await live.start();
+      },
+    });
   }
 
   async function selectCaptureSource(source: AudioCaptureSource): Promise<void> {
@@ -554,7 +602,8 @@ export default function HomeScreen(): ReactNode {
       setUpdateRequiredOpen(true);
       return;
     }
-    if (isAllowanceExhaustedError(live.error) && !hasTimeAvailable(billing.customer)) {
+    if (isAllowanceExhaustedError(live.error) && !hasTimeAvailable(billing.customer) &&
+      lockedSurface(billing.customer) === "out_of_minutes") {
       setOutOfMinutesOpen(true);
       return;
     }

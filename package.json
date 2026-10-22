@@ -54,7 +54,7 @@
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers:closed",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
     "tooling:test": "node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs tooling/scripts/rollback-worker-logs.test.mjs",
-    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test && pnpm run verify:caption-recovery",
+    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test && pnpm run verify:caption-recovery && pnpm run verify:hard-paywall",
     "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
     "coverage": "pnpm run test:coverage",
     "test": "pnpm typecheck && pnpm worker:types && pnpm unit",
@@ -64,7 +64,8 @@
     "rollback:worker-logs": "node tooling/scripts/rollback-worker-logs.mjs",
     "verify:log-boundaries": "node tooling/scripts/verify-workers-log-boundaries.mjs",
     "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs",
-    "verify:caption-recovery": "node tooling/scripts/verify-caption-recovery.mjs"
+    "verify:caption-recovery": "node tooling/scripts/verify-caption-recovery.mjs",
+    "verify:hard-paywall": "node tooling/scripts/verify-hard-paywall.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.12",

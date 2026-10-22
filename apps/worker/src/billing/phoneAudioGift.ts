@@ -1,4 +1,4 @@
-const phoneAudioGiftDurationMs = 180_000;
+import { phoneAudioGiftMs } from "@murmur/protocol/billing/catalog";
 
 type GiftDatabase = {
   prepare: (query: string) => {
@@ -35,7 +35,7 @@ export async function claimPhoneAudioGift(
   await database.prepare(
     `INSERT OR IGNORE INTO phone_audio_gifts (customer_id, claimed_at_ms, remaining_ms)
      VALUES (?, ?, ?)`,
-  ).bind(customerId, nowMs, phoneAudioGiftDurationMs).run();
+  ).bind(customerId, nowMs, phoneAudioGiftMs).run();
   return getPhoneAudioGift(database, customerId);
 }
 

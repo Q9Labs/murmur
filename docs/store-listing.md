@@ -6,7 +6,7 @@ Replaces the current fastlane metadata copy. Two corrections baked in: the live 
 Murmur: Live Voice Translator
 
 ## Short description
-Live translated captions with 10 free minutes each month. No sign-up needed.
+Live translated captions. No sign-up needed.
 
 ## Google Play full description
 The tour guide is speaking. The lecture is running. The sermon has started. And it's all in a language you don't speak.
@@ -23,8 +23,7 @@ Made for listening, not conversation
 13 languages
 English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-Start free, then keep your time
-- A durable guest account starts with 10 translation minutes each month; there is nothing to sign up for.
+Add time when you need it
 - Murmur Pro includes 3 hours each month, with monthly and annual plans.
 - Non-expiring 60, 180, and 540 minute credit packs add time when you need it.
 - No interpretation headsets, event codes, or organizer setup — Murmur works for you, the person in the seat.
@@ -45,7 +44,7 @@ Live captions in 13 languages
 interpreter,conference,meeting,tour,lecture,sermon,arabic,hindi,spanish,speech,translate,transcribe
 
 ## Apple App Store promotional text
-Follow tours, talks, and lectures with live translated captions. Start with 10 free minutes each month, then add Pro or non-expiring credit packs.
+Follow tours, talks, and lectures with live translated captions. Add Pro or non-expiring credit packs.
 
 ## Apple App Store description
 The tour guide is speaking. The lecture is running. The sermon has started. And it's all in a language you don't speak.
@@ -61,8 +60,7 @@ Made for listening, not conversation:
 13 languages:
 English, Arabic, Spanish, French, German, Italian, Brazilian Portuguese, Japanese, Simplified Chinese, Korean, Russian, Hindi, and Dutch — with right-to-left support for Arabic.
 
-Start free, then keep your time:
-- A durable guest account starts with 10 translation minutes each month; there is nothing to sign up for.
+Add time when you need it:
 - Murmur Pro includes 3 hours each month, with monthly and annual plans.
 - Non-expiring 60, 180, and 540 minute credit packs add time when you need it.
 - No interpretation headsets, event codes, or organizer setup.
@@ -76,10 +74,10 @@ Built for real rooms:
 Murmur needs an internet connection and microphone access on iPhone.
 
 ## Google testing instructions
-A guest account is created automatically. For Microphone, grant microphone permission, pick a target language, and tap Listen while someone speaks. For Phone audio on Android 10 or later, choose Phone audio, allow display over other apps if you want the caption bubble, tap Listen, approve audio recording and screen sharing, then play eligible media in another app. Some protected media blocks capture. Use Account & Billing to test a Google Play sandbox purchase or Restore Purchases, then confirm the server-verified balance updates. An internet connection is required.
+A guest account is created automatically. A new install may include Free minutes depending on the current offer. Otherwise, tapping Listen opens the plans; buy Trip Pass with a store sandbox account before following the listening test path. For Microphone, grant microphone permission, pick a target language, and tap Listen while someone speaks. For Phone audio on Android 10 or later, choose Phone audio, allow display over other apps if you want the caption bubble, tap Listen, approve audio recording and screen sharing, then play eligible media in another app. Some protected media blocks capture. Use Account & Billing to test a Google Play sandbox purchase or Restore Purchases, then confirm the server-verified balance updates. An internet connection is required.
 
 ## Apple review notes
-A guest account is created automatically. Microphone audio is used only during an active Listen session and is not retained by default. To test billing, open Account & Billing, complete an Apple sandbox purchase or Restore Purchases, and confirm the server-verified balance updates.
+A guest account is created automatically. A new install may include Free minutes depending on the current offer. Otherwise, tapping Listen opens the plans; buy Trip Pass with a store sandbox account before following the listening test path. Microphone audio is used only during an active Listen session and is not retained by default. To test billing, open Account & Billing, complete an Apple sandbox purchase or Restore Purchases, and confirm the server-verified balance updates.
 
 ## Claims deliberately avoided (keep it this way)
 15 languages / Urdu, Turkish, or Indonesian; offline or on-device translation; two-way conversation features; camera/document translation; organizer or enterprise event features; accuracy guarantees; "unlimited use" (session and rate limits exist); background/lock-screen listening (spec vs. code conflict unresolved); "free forever"; "no data collected" (anonymous install ID and diagnostics exist).

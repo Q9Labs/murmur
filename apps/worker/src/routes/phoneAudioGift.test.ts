@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(async (): Promise<{ user: { id: string } } | null> => ({ user: { id: "customer-1" } })),
 }));
 
+vi.mock("../billing/allowanceService", () => ({ currentCustomerPlan: async () => "free" }));
+
 vi.mock("../auth/auth", () => ({ getMurmurSession: mocks.session }));
 vi.mock("../billing/phoneAudioGift", () => ({ claimPhoneAudioGift: mocks.claim }));
 

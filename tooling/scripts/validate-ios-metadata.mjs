@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFailureCollector, iosScreenshotSpec, validatePngDirectory } from "./store-screenshot-validation.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mobileRoot = join(repoRoot, "apps", "mobile");
-const metadataDir = join(mobileRoot, "fastlane", "metadata", "en-US");
+const metadataRoot = join(mobileRoot, "fastlane", "metadata");
+const metadataDir = join(metadataRoot, "en-US");
 const screenshotRedesignPending = existsSync(
   join(mobileRoot, "store-assets", "SCREENSHOTS_PENDING_REDESIGN.md"),
 );
@@ -38,6 +39,26 @@ assertLength("App Store name", name, 30);
 assertLength("App Store subtitle", subtitle, 30);
 assertLength("App Store promotional text", promotionalText, 170);
 assertLength("App Store keywords", keywords, 100);
+
+for (const locale of readdirSync(metadataRoot, { withFileTypes: true })) {
+  if (!locale.isDirectory() || locale.name === "android") continue;
+  for (const [file, max] of [
+    ["name.txt", 30],
+    ["subtitle.txt", 30],
+    ["promotional_text.txt", 170],
+    ["keywords.txt", 100],
+    ["description.txt", 4000],
+    ["release_notes.txt", 4000],
+  ]) {
+    const value = readFileSync(join(metadataRoot, locale.name, file), "utf8").trim();
+    if (file === "keywords.txt") {
+      const bytes = Buffer.byteLength(value, "utf8");
+      assert(bytes > 0 && bytes <= max, `${locale.name}/${file} must be 1-${max} bytes; got ${bytes}`);
+    } else {
+      assertLength(`${locale.name}/${file}`, value, max);
+    }
+  }
+}
 assertLength("App Store description", description, 4000);
 assertLength("App Store release notes", releaseNotes, 4000);
 
@@ -70,8 +91,9 @@ assert(
   "Review notes must explain the automatic guest account",
 );
 assert(
-  /5 free translation minutes/i.test(reviewNotes),
-  "Review notes must state the free monthly allowance",
+  /may include Free minutes depending on the current offer/i.test(reviewNotes)
+    && /buy Trip Pass with an Apple sandbox account/i.test(reviewNotes),
+  "Review notes must cover both the current offer and the no-time sandbox purchase path",
 );
 assert(
   /server-side/i.test(reviewNotes),

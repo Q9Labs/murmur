@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text } from "react-native";
 
 import { formatUiNumber, type UiText, useUiLocale } from "../i18n/runtime";
-import { freeAllowanceMinutes, isPaidCustomer } from "../lib/billing/allowance";
+import { isPaidCustomer } from "../lib/billing/allowance";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import { outOfMinutesIllustration } from "./illustrations";
 import { ModalSheet } from "./modalSheet";
@@ -66,10 +66,13 @@ function useCloseWhenBalanceRecovers(open: boolean, availableMs: number, onClose
 }
 
 export function outOfMinutesMessage(customer: MurmurCustomer | null, ui: UiText): string {
-  if (customer && isPaidCustomer(customer)) {
+  if (!customer || isPaidCustomer(customer) || customer.freeAllowanceMs === 0) {
     return ui.t("outOfMinutes.paid");
   }
-  return ui.t("outOfMinutes.free", { minutes: formatUiNumber(freeAllowanceMinutes, ui.locale) });
+  if (customer.freeAllowanceMs === null) {
+    return ui.t("outOfMinutes.freeUnknown");
+  }
+  return ui.t("outOfMinutes.free", { minutes: formatUiNumber(customer.freeAllowanceMs / 60_000, ui.locale) });
 }
 
 function createOutOfMinutesStyles(theme: MurmurTheme) {

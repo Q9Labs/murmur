@@ -1,8 +1,6 @@
-import { freeAllowanceMs } from "@murmur/protocol/billing/catalog";
-import type { MurmurCustomer } from "./customerResponse";
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 
-// Must match the worker's `free_allowance_minutes` default in server config.
-export const freeAllowanceMinutes = freeAllowanceMs / 60_000;
+import type { MurmurCustomer } from "./customerResponse";
 
 export const defaultLowBalanceThresholdMinutes = 15;
 
@@ -28,5 +26,13 @@ export function lowBalanceMinutes(
 }
 
 export function hasTimeAvailable(customer: MurmurCustomer | null): boolean {
-  return customer !== null && customer.availableMs > 0;
+  return customer !== null && customer.availableMs >= minimumSessionBalanceMs;
+}
+
+export function lockedSurface(customer: MurmurCustomer | null): "out_of_minutes" | "paywall" {
+  return customer?.freeAllowanceMs === 0 ? "paywall" : "out_of_minutes";
+}
+
+export function isHardPaywallLocked(customer: MurmurCustomer | null): boolean {
+  return customer !== null && customer.freeAllowanceMs === 0 && !hasTimeAvailable(customer);
 }

@@ -27,13 +27,13 @@ const pngBitDepthsByColorType = new Map([
 ]);
 
 export const androidScreenshotSpec = Object.freeze({
-  count: 8,
+  count: 7,
   height: 1920,
   width: 1080,
 });
 
 export const iosScreenshotSpec = Object.freeze({
-  count: 8,
+  count: 7,
   height: 2868,
   width: 1320,
 });
