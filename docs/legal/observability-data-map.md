@@ -1,6 +1,6 @@
 # Murmur Observability Data Map
 
-Last updated: 2026-09-23
+Last updated: 2026-10-22
 
 This internal map describes the 1.3.0 analytics, diagnostics, session-insight, survey, and report flows. Mobile product analytics pass through Murmur's Worker relay, which rejects unknown event names, drops properties outside the fixed schema, and rejects unbounded values and malformed types before forwarding events to PostHog US. The PostHog session-replay SDK connects directly from the device to PostHog and bypasses that relay. Sentry receives sanitized crash, error, and sampled performance diagnostics.
 

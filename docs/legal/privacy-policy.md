@@ -1,6 +1,6 @@
 # Murmur Privacy Policy
 
-Last updated: 2026-09-23
+Last updated: 2026-10-22
 
 Murmur is a one-way live speech translator operated by Q9 Labs. You choose languages and an available audio source, tap Listen, and Murmur shows translated captions. Microphone mode can also play translated speech.
 

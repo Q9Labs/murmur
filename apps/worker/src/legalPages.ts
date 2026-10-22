@@ -7,8 +7,8 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-09-23";
-const marketingUpdated = "2026-09-21";
+const lastUpdated = "2026-10-22";
+const marketingUpdated = "2026-10-22";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
