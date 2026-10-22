@@ -1,1 +1,1 @@
-The 1.3.0 Google Play set contains eight 1080×1920 opaque PNGs built from native Android preview captures. Keep this directory mirrored with `en-US`; `node tooling/scripts/build-store-screenshots.mjs` writes both.
+The 1.3.0 Google Play set contains seven 1080×1920 opaque PNGs built from native Android preview captures. Keep this directory mirrored with `en-US`; `node tooling/scripts/build-store-screenshots.mjs` writes both.
