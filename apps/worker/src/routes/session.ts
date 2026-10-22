@@ -31,7 +31,7 @@ import {
   isRateLimiterUnavailable,
 } from "../rateLimitDurableObject";
 import { parseLanguagePair } from "../translation/validation";
-import { getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
+import { freeAllowanceMs, getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
 
 export async function createSession(
   request: Request,
@@ -306,7 +306,7 @@ export async function prepareBillingUsage(
   const bootstrap = await ensureCurrentAllowance({
     customerId: customerSession.user.id,
     env,
-    freeAllowanceMinutes: config.free_allowance_minutes,
+    freeAllowanceMs: freeAllowanceMs(config),
     freeClaimHash,
     nowMs,
     principalProvider: customerSession.user.isAnonymous === true ? "anonymous" : "email",

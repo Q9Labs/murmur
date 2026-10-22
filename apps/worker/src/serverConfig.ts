@@ -4,7 +4,8 @@ import { OperationFailure } from "@murmur/protocol/diagnostics/failures";
 import { reportFailure } from "./observability/outcomes";
 
 import type { CustomerPlan } from "./billing/allowanceService";
-import { freeAllowanceMs } from "./billing/catalog";
+import { freeAllowanceMs as defaultFreeAllowanceMs } from "./billing/catalog";
+import { hashInstallId } from "./privacy";
 import { requiresDeviceIntegrity, type Env } from "./env";
 import { defaultRateLimits } from "./limits";
 
@@ -37,7 +38,7 @@ export function defaultServerConfig(env: Env): ServerConfig {
   return {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
-    free_allowance_minutes: freeAllowanceMs / 60_000,
+    free_allowance_minutes: defaultFreeAllowanceMs / 60_000,
     insights_model: "openai/gpt-6-luna",
     low_balance_threshold_minutes: 15,
     max_session_seconds_free: defaultRateLimits.maxSessionSeconds,
@@ -54,6 +55,29 @@ export function defaultServerConfig(env: Env): ServerConfig {
     sessions_enabled: true,
     source_transcript: false,
   };
+}
+
+export function freeAllowanceMs(config: ServerConfig): number {
+  return config.free_allowance_minutes * 60_000;
+}
+
+export async function getRequestServerConfig(
+  env: Env,
+  request: Request | undefined,
+  customer: { customerId: string; plan: CustomerPlan },
+): Promise<ServerConfig> {
+  const salt = env.SESSION_HASH_SALT ?? "local-development-salt";
+  const installId = request?.headers.get("x-murmur-install-id");
+  // Older apps omit install identity at sign-in; customer hashing keeps flags applicable.
+  const distinctId = installId && installId.length >= 8
+    ? `anonymous_install_${await hashInstallId(installId, salt)}`
+    : `anonymous_customer_${await hashInstallId(customer.customerId, salt)}`;
+  return getServerConfig(env, {
+    appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+    distinctId,
+    plan: customer.plan,
+    platform: request?.headers.get("x-murmur-app-platform") ?? null,
+  });
 }
 
 function flagsFailureCode(status: number) {
@@ -127,7 +151,8 @@ function parseServerConfigFlags(defaults: ServerConfig, flags: object, payloads:
     typeof value(name) === "boolean" ? value(name) === true : fallback;
   const number = (name: keyof ServerConfig, fallback: number): number => {
     const candidate = value(name);
-    return typeof candidate === "number" && Number.isInteger(candidate) && candidate > 0
+    return typeof candidate === "number" && Number.isInteger(candidate) &&
+      (candidate > 0 || (name === "free_allowance_minutes" && candidate === 0))
       ? candidate
       : fallback;
   };

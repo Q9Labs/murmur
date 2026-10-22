@@ -1,7 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import { allocateDebit, type GrantDebit, type SpendableGrant } from "./allocation";
-import { freeAllowanceMs } from "./catalog";
 import type {
   BootstrapGuestCommand,
   CloseUsageSessionCommand,
@@ -123,8 +122,8 @@ export class LedgerRepository {
     };
   }
 
-  private async grantFreeAllowance(command: BootstrapGuestCommand): Promise<void> {
-    const grantMs = command.freeAllowanceMs ?? freeAllowanceMs;
+  private async grantFreeAllowance(command: Extract<BootstrapGuestCommand, { grantFreeAllowance: true }>): Promise<void> {
+    const grantMs = command.freeAllowanceMs;
     const idempotencyKey = `${command.customerId}:${command.periodKey}`;
     const ledgerEntryId = `ledger:${idempotencyKey}`;
     const grantId = `grant:${idempotencyKey}`;

@@ -1,5 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import type { CustomerResponse } from "@murmur/protocol/transport/types";
+
 import { getMurmurSession } from "../auth/auth";
 import {
   currentCustomerPlan,
@@ -11,8 +13,7 @@ import { areBillingPurchasesEnabled, isBillingFulfillmentEnabled, type Env } fro
 import { revenueCatCustomerId } from "../billing/revenueCatIdentity";
 import { getPhoneAudioGift } from "../billing/phoneAudioGift";
 import { json } from "../http/response";
-import { hashInstallId } from "../privacy";
-import { defaultServerConfig, getServerConfig, sessionLimitSeconds } from "../serverConfig";
+import { freeAllowanceMs, getRequestServerConfig, sessionLimitSeconds } from "../serverConfig";
 
 type CreditPackRow = {
   expires_at_ms: number;
@@ -31,10 +32,13 @@ export async function getCustomer(
   }
 
   const nowMs = Date.now();
+  const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
+  const config = await getRequestServerConfig(env, request, { customerId: session.user.id, plan });
   const freeClaimHash = await freeAllowanceClaimHashFromRequest(request, env);
   const bootstrap = await ensureCurrentAllowance({
     customerId: session.user.id,
     env,
+    freeAllowanceMs: freeAllowanceMs(config),
     freeClaimHash,
     nowMs,
     principalProvider: session.user.isAnonymous === true ? "anonymous" : "email",
@@ -51,19 +55,9 @@ export async function getCustomer(
   if (!ledger.result.ok || !("balance" in ledger.result)) {
     return json({ error: ledger.result.ok ? "billing_unavailable" : ledger.result.code }, ledger.response.status);
   }
-  const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
   const gift = env.BILLING_DB
     ? await getPhoneAudioGift(env.BILLING_DB, session.user.id)
     : { claimable: true, remaining_ms: 0 };
-  const installId = request.headers.get("x-murmur-install-id");
-  const config = installId && installId.length >= 8
-    ? await getServerConfig(env, {
-      appVersion: request.headers.get("x-murmur-app-version"),
-      distinctId: `anonymous_install_${await hashInstallId(installId, env.SESSION_HASH_SALT ?? "local-development-salt")}`,
-      plan,
-      platform: request.headers.get("x-murmur-app-platform"),
-    })
-    : defaultServerConfig(env);
   const creditPacks = env.BILLING_DB
     ? (await env.BILLING_DB.prepare(
       `SELECT grant_id, remaining_ms, expires_at_ms
@@ -91,11 +85,12 @@ export async function getCustomer(
       history: paid,
       max_session_seconds: sessionLimitSeconds(config, plan),
     },
+    free_allowance_ms: freeAllowanceMs(config),
     fulfillment_enabled: isBillingFulfillmentEnabled(env),
     is_registered: session.user.isAnonymous !== true,
-    gifts: { phone_audio: gift },
+    gifts: { phone_audio: { ...gift, claimable: gift.claimable && freeAllowanceMs(config) > 0 } },
     plan,
     purchases_enabled: areBillingPurchasesEnabled(env),
     revenuecat_customer_id: revenueCatCustomerId(env, session.user.id),
-  });
+  } satisfies CustomerResponse);
 }
