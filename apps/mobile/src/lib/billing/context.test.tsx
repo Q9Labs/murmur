@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseMobileTelemetryEvent, type MobileTelemetryRequest } from "@murmur/protocol/telemetry";
 
-import { fixtureCustomer, fixturePack, fixtureYearly } from "../../screens/__tests__/billingFixture";
+import { fixtureCustomer, fixtureYearly } from "../../screens/__tests__/billingFixture";
 import { purchaseMode } from "../../screens/plans/purchaseMode";
 import { initializeAnonymousAnalytics } from "../telemetry";
 import { defaultAppConfig } from "./appConfig";
@@ -88,46 +88,6 @@ describe("billing refresh", () => {
 });
 
 describe("checkout telemetry", () => {
-  it("keeps offer redemption for sign-in checkout without plan metadata, even after the offer expired", async () => {
-    const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() - 60_000).toISOString() };
-    api.fetchMurmurAppConfig.mockResolvedValue({ ...defaultAppConfig, paywallOfferingId: personalOffer.offeringId, personalOffer });
-    await act(async () => { expect(await billing.refresh()).toEqual(fixtureCustomer); });
-    telemetry.deliverMobileTelemetryRequest.mockClear();
-    store.purchaseMurmurPlan.mockResolvedValue("purchased");
-    api.reconcileMurmurCustomer.mockResolvedValue({ purchaseCount: 1, subscriptionCount: 0 });
-    await act(async () => { expect(await billing.purchasePlan(fixtureYearly.id, undefined, undefined)).toBe(true); });
-    await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalledWith(expect.objectContaining({
-      payload: { event: "offer_redeemed", offering_id: personalOffer.offeringId },
-    })));
-  }, 10_000);
-  it("redeems an active personal offer only for a plan with an intro discount, not a pack", async () => {
-    const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() + 60_000).toISOString() };
-    api.fetchMurmurAppConfig.mockResolvedValue({ ...defaultAppConfig, paywallOfferingId: personalOffer.offeringId, personalOffer });
-    await act(async () => {
-      expect(await billing.refresh()).toEqual(fixtureCustomer);
-    });
-    telemetry.deliverMobileTelemetryRequest.mockClear();
-    store.purchaseMurmurPlan.mockResolvedValue("purchased");
-    const plans = [fixturePack, fixtureYearly, { ...fixtureYearly, introPrice: { amount: 79.99, price: "$79.99" } }];
-    for (const [index, plan] of plans.entries()) {
-      api.reconcileMurmurCustomer.mockResolvedValue({ purchaseCount: index + 1, subscriptionCount: 0 });
-      const completed = vi.fn();
-      await act(async () => {
-        purchaseMode(billing, completed, "hard_paywall").onBuy(plan);
-        await vi.waitFor(() => {
-          expect(billing.error).toBeNull();
-          expect(completed).toHaveBeenCalledOnce();
-        }, { timeout: 6_000 });
-      });
-      const redemptions = () => telemetry.deliverMobileTelemetryRequest.mock.calls
-        .filter(([request]) => request.payload.event === "offer_redeemed").map(([request]) => request.payload);
-      if (plan.introPrice) {
-        await vi.waitFor(() => expect(redemptions()).toEqual([{ event: "offer_redeemed", offering_id: personalOffer.offeringId }]));
-      } else {
-        expect(redemptions()).toEqual([]);
-      }
-    }
-  }, 20_000);
   it.each([
     ["purchased", "mobile_checkout_succeeded"],
     ["cancelled", "mobile_checkout_cancelled"],

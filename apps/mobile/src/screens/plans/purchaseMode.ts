@@ -1,5 +1,4 @@
 import type { MurmurBillingContext } from "../../lib/billing/context";
-import { introDiscountPercent } from "../../lib/billing/planCatalog";
 import type { PlanSurface } from "../../lib/billing/planLoading";
 import type { PlanPurchaseMode } from "./planPicker";
 
@@ -8,7 +7,7 @@ export function purchaseMode(billing: MurmurBillingContext, onGuestPurchased: ()
   const customer = billing.customer;
   return {
     onBuy: (plan) => {
-      void billing.purchasePlan(plan.id, surface, introDiscountPercent([plan]) !== null).then((purchased) => {
+      void billing.purchasePlan(plan.id, surface).then((purchased) => {
         if (purchased && customer?.isRegistered !== true) {
           onGuestPurchased();
         }

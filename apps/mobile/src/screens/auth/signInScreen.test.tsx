@@ -75,7 +75,7 @@ describe("sign-in screen", () => {
     expect(markup).toContain("You&#x27;re signed in");
     expect(markup).toContain("Subscribe for $99.99 / year");
     doneButton()?.onPress?.();
-    expect(signInBilling.current?.purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined, false);
+    expect(signInBilling.current?.purchasePlan).toHaveBeenCalledWith("$rc_annual");
     expect(router.back).toHaveBeenCalledOnce();
   });
 
@@ -88,7 +88,7 @@ describe("sign-in screen", () => {
     expect(router.back).toHaveBeenCalledOnce();
   });
 
-  it("keeps the checkout intent and unknown discount eligibility while the plan list reloads", () => {
+  it("keeps the checkout intent while the plan list reloads", () => {
     const purchasePlan = vi.fn(async () => true);
     const leave = vi.fn();
     const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en });
@@ -96,7 +96,7 @@ describe("sign-in screen", () => {
     expect(findCheckoutPlan({ status: "loading" }, "$rc_annual")).toBeNull();
     expect(action.label).toBe("Continue to checkout");
     action.onPress();
-    expect(purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined, undefined);
+    expect(purchasePlan).toHaveBeenCalledWith("$rc_annual");
     expect(leave).toHaveBeenCalledOnce();
   });
 

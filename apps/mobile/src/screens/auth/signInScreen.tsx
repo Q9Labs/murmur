@@ -4,7 +4,7 @@ import { View } from "react-native";
 
 import { type UiText, useUiLocale } from "../../i18n/runtime";
 import { type MurmurBillingContext, useMurmurBilling } from "../../lib/billing/context";
-import { introDiscountPercent, type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
+import { type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
 import { type PlanListState, usePlanList } from "../plans/planList";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
 import { type AuthDoneAction, EmailSignInView, emailSignInTitle, useEmailSignIn } from "./emailSignIn";
@@ -39,7 +39,7 @@ export function checkoutDoneAction(params: {
   leave: () => void;
   plan: MurmurPlan | null;
   planId: string | undefined;
-  purchasePlan: MurmurBillingContext["purchasePlan"];
+  purchasePlan: (planId: string) => Promise<boolean>;
   ui: UiText;
 }): AuthDoneAction {
   const { t } = params.ui;
@@ -54,7 +54,7 @@ export function checkoutDoneAction(params: {
     disabled: params.availability === "busy",
     label: params.plan ? planPurchaseLabel(params.plan, params.ui) : t("auth.continueToCheckout"),
     onPress: () => {
-      void params.purchasePlan(planId, undefined, params.plan ? introDiscountPercent([params.plan]) !== null : undefined);
+      void params.purchasePlan(planId);
       params.leave();
     },
   };

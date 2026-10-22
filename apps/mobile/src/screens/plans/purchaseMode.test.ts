@@ -11,7 +11,7 @@ describe("purchase mode", () => {
 
     expect(mode.storeReady).toBe(true);
     mode.onBuy(fixtureYearly);
-    expect(billing.purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined, false);
+    expect(billing.purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined);
     await vi.waitFor(() => expect(onGuestPurchased).toHaveBeenCalledOnce());
   });
 
