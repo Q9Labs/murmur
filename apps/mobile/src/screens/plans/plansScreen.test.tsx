@@ -87,7 +87,7 @@ describe("plans screen", () => {
     expect(buy).toBeGreaterThan(markup.indexOf("Pro Max"));
     const { recorded } = await import("../__tests__/reactNativePrimitives");
     recorded.controls.find((control) => control.accessibilityRole === "button" && control.accessibilityLabel === undefined)?.onPress?.();
-    expect(state.billing?.purchasePlan).toHaveBeenCalledWith(fixtureMonthly.id);
+    expect(state.billing?.purchasePlan).toHaveBeenCalledWith(fixtureMonthly.id, undefined);
     await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith("/save-purchase"));
   });
 

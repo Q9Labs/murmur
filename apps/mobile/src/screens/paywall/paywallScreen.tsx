@@ -44,7 +44,7 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
       router.dismissTo("/");
     }
   }, [billing.customer, router]));
-  const mode = purchaseMode(billing, () => router.replace("/save-purchase"));
+  const mode = purchaseMode(billing, () => router.replace("/save-purchase"), "hard_paywall");
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(ui.direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />

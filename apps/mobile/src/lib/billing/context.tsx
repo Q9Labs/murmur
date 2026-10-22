@@ -12,7 +12,7 @@ import {
   type ReconciliationSnapshot,
 } from "./reconciliation";
 import type { MurmurPlan } from "./planCatalog";
-import { loadPlansWithTelemetry } from "./planLoading";
+import { loadPlansWithTelemetry, type PlanSurface } from "./planLoading";
 
 export type MurmurBillingContext = {
   busy: boolean;
@@ -23,11 +23,11 @@ export type MurmurBillingContext = {
   error: string | null;
   manageSubscription: () => Promise<void>;
   initialized: boolean;
-  loadPlans: (surface?: "plan_picker" | "hard_paywall") => Promise<MurmurPlan[]>;
+  loadPlans: (surface?: PlanSurface) => Promise<MurmurPlan[]>;
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
   // Resolves true only when the store completed a purchase, so the UI can offer to save it.
-  purchasePlan: (planId: string) => Promise<boolean>;
+  purchasePlan: (planId: string, surface?: PlanSurface) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<MurmurCustomer | null>;
   restorePurchases: () => Promise<void>;
@@ -223,9 +223,9 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       endBusy();
     }
   }, []);
-  const completeStorePurchase = useCallback(async () => {
+  const completeStorePurchase = useCallback(async (surface: PlanSurface) => {
     captureBillingTelemetry("mobile_checkout_succeeded", {
-      packageLabel: "plan_picker",
+      packageLabel: surface,
       resultCategory: "purchased",
     });
     const converged = await reconcileWithBackoff("purchase");
@@ -237,7 +237,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
 
   const serverOfferingId = config.paywallOfferingId;
   const loadPlans = useCallback(
-    (surface?: "plan_picker" | "hard_paywall") => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry, surface),
+    (surface?: PlanSurface) => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry, surface),
     [serverOfferingId],
   );
   const loadPlansSilently = useCallback(async () => {
@@ -289,7 +289,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice: noticeText,
-    purchasePlan: async (planId) => {
+    purchasePlan: async (planId, surface = "plan_picker") => {
       let purchased = false;
       await runStoreAction(async () => {
         assertPaywallAvailable(customer);
@@ -297,16 +297,16 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
         captureBillingTelemetry("mobile_checkout_started", { packageLabel: planId });
         const outcome = await purchaseMurmurPlan(planId, config.paywallOfferingId).catch(
           (failure: unknown) => {
-            capturePaywallFailure("store_error");
+            capturePaywallFailure("store_error", surface);
             throw failure;
           },
         );
         if (outcome === "cancelled") {
-          capturePaywallCancellation();
+          capturePaywallCancellation(surface);
           setNotice("billing.noPurchase");
           return;
         }
-        await completeStorePurchase();
+        await completeStorePurchase(surface);
         if (config.personalOffer) {
           captureOfferRedeemed(config.personalOffer.offeringId);
         }
@@ -448,16 +448,16 @@ function assertPaywallAvailable(customer: MurmurCustomer | null): asserts custom
   }
 }
 
-function capturePaywallCancellation(): void {
+function capturePaywallCancellation(surface: PlanSurface): void {
   captureBillingTelemetry("mobile_checkout_cancelled", {
-    packageLabel: "plan_picker",
+    packageLabel: surface,
     resultCategory: "cancelled",
   });
 }
 
-function capturePaywallFailure(resultCategory: "store_error"): void {
+function capturePaywallFailure(resultCategory: "store_error", surface: PlanSurface): void {
   captureBillingTelemetry("mobile_checkout_failed", {
-    packageLabel: "plan_picker",
+    packageLabel: surface,
     resultCategory,
   });
   captureBillingTelemetry("mobile_paywall_failed", { resultCategory });

@@ -66,7 +66,7 @@ describe("demo-first paywall", () => {
     expect(router.dismissTo).not.toHaveBeenCalled();
     if (action === "purchase") {
       recorded.controls.find((control) => control.accessibilityRole === "button" && !control.accessibilityLabel)?.onPress?.();
-      await vi.waitFor(() => expect(state.billing?.purchasePlan).toHaveBeenCalledWith("trip_pass_60"));
+      await vi.waitFor(() => expect(state.billing?.purchasePlan).toHaveBeenCalledWith("trip_pass_60", "hard_paywall"));
     } else if (action === "restore") {
       findControl("Restore purchases")?.onPress?.();
       expect(state.billing?.restorePurchases).toHaveBeenCalledOnce();
@@ -94,7 +94,7 @@ describe("demo-first paywall", () => {
     renderToStaticMarkup(<PaywallScreen />);
     effects.splice(0).forEach((effect) => effect());
     recorded.controls.find((control) => control.accessibilityRole === "button" && !control.accessibilityLabel)?.onPress?.();
-    expect(state.billing?.purchasePlan).toHaveBeenCalledWith("trip_pass_60");
+    expect(state.billing?.purchasePlan).toHaveBeenCalledWith("trip_pass_60", "hard_paywall");
     await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith("/save-purchase"));
     state.focused = false;
     state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000 });
