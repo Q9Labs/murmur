@@ -15,6 +15,7 @@ import {
   type AuthPreviewScreen,
   previewAuthStates,
   previewBilling,
+  previewBillingFor,
   previewCheckoutPlanId,
   previewConversations,
   previewFreeServices,
@@ -49,6 +50,7 @@ export type ScreenPreview =
   | "phone-audio-gift"
   | "paywall"
   | "paywall-monthly"
+  | "paywall-monthly-intro"
   | "plans-monthly"
   | "plans-offer"
   | "plans-packs"
@@ -93,9 +95,12 @@ function PhoneAudioPreview({ services }: { services: ScreenServices }): ReactNod
   );
 }
 
+const paywallBilling = previewBillingFor({ availableMs: 0, freeAllowanceMs: 0 });
+
 export const screenPreviews: Readonly<Record<ScreenPreview, () => ReactNode>> = {
-  paywall: () => <WithFixtures><PaywallScreen /></WithFixtures>,
-  "paywall-monthly": () => <WithFixtures><PaywallScreen initialKey="monthly" /></WithFixtures>,
+  paywall: () => <WithFixtures billing={paywallBilling}><PaywallScreen /></WithFixtures>,
+  "paywall-monthly": () => <WithFixtures billing={paywallBilling}><PaywallScreen initialKey="monthly" /></WithFixtures>,
+  "paywall-monthly-intro": () => <WithFixtures billing={{ ...previewOfferBilling(Date.now()), customer: paywallBilling.customer }}><PaywallScreen initialKey="monthly" /></WithFixtures>,
   "account-guest": () => <WithFixtures><AccountScreen /></WithFixtures>,
   "account-pack": () => <WithFixtures billing={previewPackBilling}><AccountScreen /></WithFixtures>,
   "account-pro-max": () => <WithFixtures billing={previewProMaxBilling}><AccountScreen /></WithFixtures>,

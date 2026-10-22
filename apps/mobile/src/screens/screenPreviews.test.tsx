@@ -71,6 +71,9 @@ describe("screen previews", () => {
     expect(seen.screens).toEqual(["paywall"]);
     render("paywall-monthly");
     expect(seen.screens).toEqual(["paywall:monthly"]);
+    render("paywall-monthly-intro");
+    expect(seen.screens).toEqual(["paywall:monthly"]);
+    expect(Date.parse(seen.billing[0]?.config.personalOffer?.expiresAt ?? "")).toBeGreaterThan(Date.now());
     render("plans-offer");
     expect(seen.screens).toEqual(["plans:monthly"]);
     expect(Date.parse(seen.billing[0]?.config.personalOffer?.expiresAt ?? "")).toBeGreaterThan(Date.now());
