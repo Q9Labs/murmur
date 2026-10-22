@@ -1,4 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MurmurBillingContext } from "../lib/billing/context";
+
+const state = vi.hoisted(() => ({
+  billing: null as MurmurBillingContext | null,
+  push: vi.fn(),
+  experience: vi.fn((_props: { outOfMinutesOpen: boolean }) => null),
+  live: {
+    cancel: vi.fn(async () => undefined),
+    start: vi.fn(async () => undefined),
+    prepare: vi.fn(async () => undefined),
+    error: null as string | null,
+    spans: [],
+    status: "idle",
+  },
+}));
 
 const backHandler = vi.hoisted(() => ({
   addEventListener: vi.fn(() => ({ remove: vi.fn() })),
@@ -7,11 +24,11 @@ const backHandler = vi.hoisted(() => ({
 vi.mock("react-native", () => ({ BackHandler: backHandler }));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
-vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => state }));
 vi.mock("../screens/rating/ratingSheet", () => ({ RatingSheet: () => null }));
-vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({}) }));
+vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({ phoneAudioGift: { claimable: false }, insightsConsent: null, features: { phoneAudio: false } }) }));
 vi.mock("../lib/billing/context", () => ({
-  useMurmurBilling: () => ({ config: { enabledLanguages: null }, configLoaded: true, customer: null }),
+  useMurmurBilling: () => state.billing,
 }));
 vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
 vi.mock("expo-network", () => ({
@@ -55,7 +72,7 @@ vi.mock("../lib/phoneAudioGiftOffer", () => ({
 vi.mock("../lib/installIdentity", () => ({
   acknowledgePrivacyDisclosure: vi.fn(async () => undefined),
   deleteLocalMurmurData: vi.fn(async () => undefined),
-  hasAcknowledgedPrivacyDisclosure: vi.fn(async () => false),
+  hasAcknowledgedPrivacyDisclosure: vi.fn(async () => true),
   resetInstallId: vi.fn(async () => undefined),
 }));
 vi.mock("../lib/observability/sentry", () => ({
@@ -66,23 +83,18 @@ vi.mock("../lib/requestReview", () => ({ requestMurmurReview: vi.fn(async () => 
 vi.mock("../lib/shareMurmur", () => ({ shareMurmur: vi.fn(async () => undefined) }));
 vi.mock("../lib/telemetry", () => ({
   captureOnboardingCompleted: vi.fn(),
+  captureMobileTelemetry: vi.fn(),
   initializeAnonymousAnalytics: vi.fn(async () => true),
   resetAnonymousAnalyticsPreference: vi.fn(async () => undefined),
   updateAnonymousAnalyticsEnabled: vi.fn(async () => undefined),
 }));
-vi.mock("../lib/useLiveTranslation", () => ({
-  useLiveTranslation: vi.fn(() => ({
-    cancel: vi.fn(async () => undefined),
-    start: vi.fn(async () => undefined),
-    status: "idle",
-  })),
-}));
+vi.mock("../lib/useLiveTranslation", () => ({ useLiveTranslation: () => state.live }));
 vi.mock("./audioPlaybackPreference", () => ({
   deleteStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
   getStoredAudioPlaybackEnabled: vi.fn(async () => true),
   setStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
 }));
-vi.mock("./experience", () => ({ HomeExperience: () => null }));
+vi.mock("./experience", () => ({ HomeExperience: state.experience }));
 vi.mock("./onboardingScreen", () => ({ OnboardingScreen: () => null }));
 vi.mock("./variants/preference", () => ({ deleteStoredUiVariant: vi.fn(async () => undefined) }));
 vi.mock("./viewModel", () => ({
@@ -96,8 +108,8 @@ vi.mock("./viewModel", () => ({
   }),
 }));
 
-import { fixtureCustomer } from "../screens/__tests__/billingFixture";
-import { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
+import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
+import HomeScreen, { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -136,9 +148,25 @@ function createHarness() {
   return { controller, enabledChanges, getStored, messages, setStored };
 }
 
+const mounted: ReactTestRenderer[] = [];
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("__DEV__", false);
+  state.billing = fixtureBilling();
+  state.live.error = null;
 });
+afterEach(async () => {
+  await act(async () => {
+    for (const renderer of mounted.splice(0)) renderer.unmount();
+  });
+  vi.unstubAllGlobals();
+});
+
+async function renderHome(): Promise<ReactTestRenderer> {
+  await act(async () => { mounted.push(create(createElement(HomeScreen))); });
+  return mounted[mounted.length - 1];
+}
 
 describe("audio playback preference controller", () => {
   it("ignores a stored restore that resolves after a user toggle", async () => {
@@ -271,8 +299,8 @@ describe("Start allowance gate", () => {
     expect(openPlans).not.toHaveBeenCalled();
   });
 
-  it("leaves an unknown customer or a failed refresh to Worker enforcement", async () => {
-    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: 0 }]) {
+  it("leaves an unknown or legacy customer to Worker enforcement", async () => {
+    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 }]) {
       const start = vi.fn(async () => undefined);
       const openPlans = vi.fn();
       await startWithAllowance({ customer, refresh: async () => null, start, openPlans });
@@ -280,4 +308,38 @@ describe("Start allowance gate", () => {
       expect(openPlans).not.toHaveBeenCalled();
     }
   });
+});
+
+
+describe("home billing effects", () => {
+  it("keeps a known hard lock when customer refresh fails", async () => {
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({
+      customer: { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 },
+      refresh: async () => null, start, openPlans,
+    });
+    expect(start).not.toHaveBeenCalled();
+    expect(openPlans).toHaveBeenCalledOnce();
+  });
+
+  it.each(["allowance_exhausted", "realtime_allowance_exhausted"])(
+    "uses cached freemium on a failed refresh after %s", async (error) => {
+      state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(async () => null) };
+      state.live.error = error;
+      await renderHome();
+      expect(state.push).not.toHaveBeenCalled();
+      expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    },
+  );
+
+  it("opens Plans once for a cached hard lock after exhaustion and failed refresh", async () => {
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(async () => null) };
+    state.live.error = "allowance_exhausted";
+    const renderer = await renderHome();
+    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
 });

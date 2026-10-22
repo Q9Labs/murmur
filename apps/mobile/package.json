@@ -58,6 +58,8 @@
     "@sentry/cli": "3.6.2",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.3",
+    "@types/react-test-renderer": "19.3.0",
+    "react-test-renderer": "19.2.3",
     "babel-preset-expo": "~57.0.14",
     "vitest": "^4.1.12"
   }

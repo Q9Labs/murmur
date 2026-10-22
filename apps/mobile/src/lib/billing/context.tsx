@@ -98,10 +98,15 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     beginBusy();
     try {
       const { fetchMurmurAppConfig } = await import("./customerApi");
-      const [nextConfig, nextCustomer] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
-      setConfig(nextConfig);
-      setError(null);
-      return nextCustomer;
+      const [nextConfig, nextCustomer] = await Promise.allSettled([fetchMurmurAppConfig(), loadCustomer()]);
+      if (nextConfig.status === "fulfilled") {
+        setConfig(nextConfig.value);
+      }
+      if (nextCustomer.status === "rejected") {
+        throw nextCustomer.reason;
+      }
+      setError(nextConfig.status === "rejected" ? { failure: nextConfig.reason } : null);
+      return nextCustomer.value;
     } catch (failure) {
       setError({ failure });
       return null;

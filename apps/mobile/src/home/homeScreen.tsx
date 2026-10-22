@@ -215,7 +215,7 @@ export async function startWithAllowance(params: {
 }): Promise<void> {
   if (isHardPaywallLocked(params.customer)) {
     const fresh = await params.refresh();
-    if (isHardPaywallLocked(fresh)) {
+    if (isHardPaywallLocked(fresh ?? params.customer)) {
       params.openPlans();
       return;
     }
@@ -357,7 +357,7 @@ export default function HomeScreen(): ReactNode {
     } else if (handledExhaustionRef.current !== live.error) {
       handledExhaustionRef.current = live.error;
       void refreshBilling().then((fresh) => {
-        if (lockedSurface(fresh) === "paywall") {
+        if (lockedSurface(fresh ?? billing.customer) === "paywall") {
           router.push("/plans");
         } else {
           setOutOfMinutesOpen(true);
@@ -367,7 +367,7 @@ export default function HomeScreen(): ReactNode {
     if (isUpdateRequiredError(live.error)) {
       setUpdateRequiredOpen(true);
     }
-  }, [live.error, refreshBilling, router]);
+  }, [billing.customer, live.error, refreshBilling, router]);
 
   useEffect(() => {
     if (live.status === "live" && acquisition) {
