@@ -88,8 +88,8 @@ describe("billing refresh", () => {
 });
 
 describe("checkout telemetry", () => {
-  it("keeps active-offer redemption for sign-in checkout without plan metadata", async () => {
-    const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() + 60_000).toISOString() };
+  it("keeps offer redemption for sign-in checkout without plan metadata, even after the offer expired", async () => {
+    const personalOffer = { offeringId: "personal-offer", expiresAt: new Date(Date.now() - 60_000).toISOString() };
     api.fetchMurmurAppConfig.mockResolvedValue({ ...defaultAppConfig, paywallOfferingId: personalOffer.offeringId, personalOffer });
     await act(async () => { expect(await billing.refresh()).toEqual(fixtureCustomer); });
     telemetry.deliverMobileTelemetryRequest.mockClear();

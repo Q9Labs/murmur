@@ -292,9 +292,8 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     notice: noticeText,
     purchasePlan: async (planId, surface = "plan_picker", hasIntroDiscount) => {
       let purchased = false;
-      const personalOffer = hasIntroDiscount !== false && config.personalOffer && Date.parse(config.personalOffer.expiresAt) > Date.now()
-        ? config.personalOffer
-        : null;
+      // Checkout still buys from the cached offering after the offer expires, so the redemption counts.
+      const personalOffer = hasIntroDiscount === false ? null : config.personalOffer;
       await runStoreAction(async () => {
         assertPaywallAvailable(customer);
         const { purchaseMurmurPlan } = await import("./revenueCat");
