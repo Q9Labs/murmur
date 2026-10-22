@@ -13,6 +13,7 @@ const billingRef = vi.hoisted(() => ({ current: null as MurmurBillingContext | n
 const accountLock = vi.hoisted(() => ({ locked: false }));
 const telemetry = vi.hoisted(() => ({ captureBillingTelemetry: vi.fn() }));
 
+// fallow-ignore-next-line code-duplication -- Vitest hoists these mocks before imported helpers.
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));

@@ -4,7 +4,6 @@ import type { CustomerResponse } from "@murmur/protocol/transport/types";
 
 import { getMurmurSession } from "../auth/auth";
 import {
-  currentCustomerPlan,
   ensureCurrentAllowance,
 } from "../billing/allowanceService";
 import { callCustomerLedger } from "../billing/customerLedgerDurableObject";
@@ -13,7 +12,7 @@ import { areBillingPurchasesEnabled, isBillingFulfillmentEnabled, type Env } fro
 import { revenueCatCustomerId } from "../billing/revenueCatIdentity";
 import { getPhoneAudioGift } from "../billing/phoneAudioGift";
 import { json } from "../http/response";
-import { freeAllowanceMs, getRequestServerConfig, sessionLimitSeconds } from "../serverConfig";
+import { freeAllowanceMs, getCustomerBillingPolicy, sessionLimitSeconds } from "../serverConfig";
 
 type CreditPackRow = {
   expires_at_ms: number;
@@ -31,9 +30,7 @@ export async function getCustomer(
     return json({ error: "authentication_required" }, 401);
   }
 
-  const nowMs = Date.now();
-  const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
-  const config = await getRequestServerConfig(env, request, { customerId: session.user.id, plan });
+  const { nowMs, plan, config } = await getCustomerBillingPolicy(env, request, session.user.id);
   const freeClaimHash = await freeAllowanceClaimHashFromRequest(request, env);
   const bootstrap = await ensureCurrentAllowance({
     customerId: session.user.id,

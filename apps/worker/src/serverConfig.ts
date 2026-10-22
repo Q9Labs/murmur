@@ -3,8 +3,8 @@ import { isLanguageCode } from "@murmur/protocol/languages";
 import { OperationFailure } from "@murmur/protocol/diagnostics/failures";
 import { reportFailure } from "./observability/outcomes";
 
-import type { CustomerPlan } from "./billing/allowanceService";
-import { freeAllowanceMs as defaultFreeAllowanceMs } from "./billing/catalog";
+import { currentCustomerPlan, type CustomerPlan } from "./billing/allowanceService";
+import { defaultFreeAllowanceMs } from "./billing/catalog";
 import { hashInstallId } from "./privacy";
 import { requiresDeviceIntegrity, type Env } from "./env";
 import { defaultRateLimits } from "./limits";
@@ -59,6 +59,17 @@ export function defaultServerConfig(env: Env): ServerConfig {
 
 export function freeAllowanceMs(config: ServerConfig): number {
   return config.free_allowance_minutes * 60_000;
+}
+
+export async function getCustomerBillingPolicy(
+  env: Env,
+  request: Request,
+  customerId: string,
+): Promise<{ nowMs: number; plan: CustomerPlan; config: ServerConfig }> {
+  const nowMs = Date.now();
+  const plan = await currentCustomerPlan(env.BILLING_DB, customerId, nowMs);
+  const config = await getRequestServerConfig(env, request, { customerId, plan });
+  return { nowMs, plan, config };
 }
 
 export async function getRequestServerConfig(
