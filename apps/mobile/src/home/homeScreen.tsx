@@ -386,11 +386,11 @@ export default function HomeScreen(): ReactNode {
     }
   }, [acquisition, live.status]);
 
-  const billingSettled = billing.customer !== null || billing.initialized;
+  const customerLoaded = billing.customer !== null;
   const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   useEffect(() => {
     if (
-      billingSettled &&
+      customerLoaded &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
       onboardingStep === "done" &&
@@ -398,7 +398,7 @@ export default function HomeScreen(): ReactNode {
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, billingSettled, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, customerLoaded, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {

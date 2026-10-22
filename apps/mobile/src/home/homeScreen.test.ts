@@ -461,14 +461,19 @@ describe("home billing effects", () => {
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });
 
-  it("prepares once after the first customer load fails", async () => {
+  it("skips prepare after a failed customer load and prepares once after recovery", async () => {
     state.billing = { ...fixtureBilling(), customer: null, initialized: false };
     const root = await renderHome();
     expect(state.live.prepare).not.toHaveBeenCalled();
     state.billing = { ...state.billing, initialized: true, error: "customer unavailable" };
     await act(async () => { root.render(createElement(HomeScreen)); });
-    expect(state.live.prepare).toHaveBeenCalledOnce();
+    expect(state.live.prepare).not.toHaveBeenCalled();
     state.billing = { ...state.billing, error: "still unavailable" };
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling();
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
     await act(async () => { root.render(createElement(HomeScreen)); });
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });
