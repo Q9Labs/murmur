@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -28,6 +28,17 @@ const assertLength = (label, value, max) => {
   assert(value.length <= max, `${label} must be <= ${max} chars; got ${value.length}`);
 };
 
+for (const locale of readdirSync(metadataDir, { withFileTypes: true })) {
+  if (!locale.isDirectory()) continue;
+  for (const [file, max] of [
+    ["title.txt", 30],
+    ["short_description.txt", 80],
+    ["full_description.txt", 4000],
+  ]) {
+    assertLength(`${locale.name}/${file}`, read(locale.name, file), max);
+  }
+}
+
 for (const locale of locales) {
   const localeDir = join(metadataDir, locale);
   assert(existsSync(localeDir), `${locale} metadata directory must exist`);
@@ -51,8 +62,7 @@ for (const locale of locales) {
     /\btap Listen\b/i.test(combinedCopy),
     `${locale} Play metadata must include the real first-session CTA: tap Listen`,
   );
-  assert(/guest account|no sign-up/i.test(combinedCopy), `${locale} Play metadata must explain guest access`);
-  assert(/5 free translation minutes|5 translation minutes|5 free minutes/i.test(combinedCopy), `${locale} Play metadata must state the free monthly allowance`);
+  assert(/purchased pack minutes never expire/i.test(combinedCopy), `${locale} Play metadata must explain pack validity`);
   assert(/third-party AI service/i.test(combinedCopy), `${locale} Play metadata must disclose third-party AI service use`);
   assert(/results may be delayed, incomplete, or inaccurate/i.test(combinedCopy), `${locale} Play metadata must disclose translation limitations`);
 
