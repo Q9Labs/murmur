@@ -7,8 +7,7 @@
     "deploy:production": "node ../../tooling/scripts/deploy-worker-release.mjs production",
     "deploy:sandbox": "node ../../tooling/scripts/deploy-worker-release.mjs sandbox",
     "dev": "wrangler dev --config wrangler.toml",
-    "typecheck": "tsc-rs --noEmit --project tsconfig.json",
-    "unit": "vitest run"
+    "typecheck": "tsc-rs --noEmit --project tsconfig.json"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.2",
@@ -22,7 +21,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260516.1",
     "@sentry/cli": "3.6.2",
-    "vitest": "^4.1.11",
     "wrangler": "^4.92.0"
   }
 }

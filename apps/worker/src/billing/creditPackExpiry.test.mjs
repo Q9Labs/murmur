@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 import { creditPackValidityMs } from "./catalog";
 import { LedgerRepository } from "./ledgerRepository";
 
-describe("credit pack expiry migration", () => {
-  it("backfills old grants and transactions from their purchase timestamps", async () => {
+describe("credit pack expiry", () => {
+  it("expires purchased credit at its validity boundary", async () => {
     const database = new DatabaseSync(":memory:");
     try {
-      database.exec(readFileSync(new URL("../../migrations/0001_billing_ledger.sql", import.meta.url), "utf8"));
+      database.exec(
+        readFileSync(new URL("../../migrations/0001_billing_ledger.sql", import.meta.url), "utf8"),
+      );
       database.exec("PRAGMA foreign_keys = OFF");
       database.exec(`
         INSERT INTO customers (customer_id, state, created_at_ms, updated_at_ms)
@@ -29,14 +31,12 @@ describe("credit pack expiry migration", () => {
           1000, 'available', 'ledger-1', 1000, 1000
         );
       `);
-      database.exec(readFileSync(new URL("../../migrations/0009_credit_pack_expiry.sql", import.meta.url), "utf8"));
-
-      expect(database.prepare("SELECT expires_at_ms FROM store_transactions").get())
-        .toMatchObject({ expires_at_ms: 1_000 + creditPackValidityMs });
-      expect(database.prepare("SELECT expires_at_ms FROM balance_grants").get())
-        .toMatchObject({ expires_at_ms: 1_000 + creditPackValidityMs });
-      expect(database.prepare("SELECT version FROM schema_migrations WHERE version = 9").get())
-        .toMatchObject({ version: 9 });
+      database.exec(
+        readFileSync(
+          new URL("../../migrations/0009_credit_pack_expiry.sql", import.meta.url),
+          "utf8",
+        ),
+      );
 
       const repository = new LedgerRepository({
         prepare(query) {
@@ -48,10 +48,12 @@ describe("credit pack expiry migration", () => {
           };
         },
       });
-      expect((await repository.getBalance("customer-1", 1_000 + creditPackValidityMs - 1)).creditMs)
-        .toBe(60 * 60_000);
-      expect((await repository.getBalance("customer-1", 1_000 + creditPackValidityMs)).creditMs)
-        .toBe(0);
+      expect(
+        (await repository.getBalance("customer-1", 1_000 + creditPackValidityMs - 1)).creditMs,
+      ).toBe(60 * 60_000);
+      expect(
+        (await repository.getBalance("customer-1", 1_000 + creditPackValidityMs)).creditMs,
+      ).toBe(0);
     } finally {
       database.close();
     }

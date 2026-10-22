@@ -33,11 +33,32 @@ describe("RevenueCat webhook verification", () => {
     };
 
     await expect(verifyRevenueCatWebhook({ env, headers, nowMs, rawBody })).resolves.toBe(true);
-    await expect(verifyRevenueCatWebhook({
-      env,
-      headers,
-      nowMs,
-      rawBody: `${rawBody} `,
-    })).resolves.toBe(false);
+    const wrongAuthorization = new Headers(headers);
+    wrongAuthorization.set("authorization", "Bearer another-sender");
+    await expect(
+      verifyRevenueCatWebhook({ env, headers: wrongAuthorization, nowMs, rawBody }),
+    ).resolves.toBe(false);
+    for (const offsetMs of [-301_000, 301_000]) {
+      await expect(
+        verifyRevenueCatWebhook({ env, headers, nowMs: nowMs + offsetMs, rawBody }),
+      ).resolves.toBe(false);
+    }
+    await expect(
+      verifyRevenueCatWebhook({
+        env: { ...env, REVENUECAT_WEBHOOK_SIGNING_SECRET: undefined },
+        headers,
+        nowMs,
+        rawBody,
+      }),
+    ).resolves.toBe(false);
+
+    await expect(
+      verifyRevenueCatWebhook({
+        env,
+        headers,
+        nowMs,
+        rawBody: `${rawBody} `,
+      }),
+    ).resolves.toBe(false);
   });
 });

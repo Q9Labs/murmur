@@ -12,10 +12,7 @@
     "./transport/types": "./src/transport/types.ts"
   },
   "scripts": {
-    "typecheck": "tsc-rs --noEmit --project tsconfig.json",
-    "unit": "vitest run"
+    "typecheck": "tsc-rs --noEmit --project tsconfig.json"
   },
-  "devDependencies": {
-    "vitest": "^4.1.11"
-  }
+  "devDependencies": {}
 }

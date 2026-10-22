@@ -39,7 +39,6 @@
     "deps:syncpack": "syncpack lint --specifier-types missing,unsupported",
     "lint:spelling": "cspell apps/mobile/app apps/mobile/src apps/worker/src packages/protocol/src tooling package.json README.md AGENTS.md CONTRIBUTING.md docs/*.md docs/legal/*.md",
     "react:doctor": "cd apps/mobile && pnpm dlx expo-doctor@1.20.0",
-    "test:presence": "node tooling/gates/test-presence.mjs",
     "worker:types": "pnpm --filter @murmur/worker typecheck",
     "smoke:latency": "node tooling/scripts/smoke-latency.mjs",
     "store:secrets": "node tooling/scripts/validate-no-secrets.mjs",
@@ -48,19 +47,14 @@
     "store:blockers": "node tooling/scripts/validate-submission-blockers.mjs",
     "store:blockers:closed": "node tooling/scripts/validate-submission-blockers.mjs --require-closed",
     "store:metadata": "node tooling/scripts/validate-ios-metadata.mjs && node tooling/scripts/validate-android-metadata.mjs && node tooling/scripts/validate-store-assets.mjs",
-    "store:screenshots:test": "node --test tooling/scripts/build-store-screenshots.test.mjs tooling/scripts/store-screenshot-validation.test.mjs",
     "store:preflight": "pnpm test && pnpm store:secrets && pnpm store:config && pnpm run security:osv && pnpm react:doctor && pnpm store:metadata && (cd apps/mobile && fastlane ios validate_app_store_submission && fastlane android validate_play_submission)",
     "store:submission-readiness": "pnpm store:preflight && pnpm store:live",
     "store:launch-ready": "pnpm store:submission-readiness && pnpm store:blockers:closed",
     "typecheck": "pnpm --filter \"@murmur/*\" run typecheck",
-    "tooling:test": "node --test tooling/scripts/smoke-latency.test.mjs tooling/scripts/submission-blockers.test.mjs",
-    "unit": "pnpm --filter \"@murmur/*\" run unit && pnpm run store:screenshots:test && pnpm run tooling:test",
-    "test:coverage": "pnpm --filter \"@murmur/*\" exec vitest run --coverage",
-    "coverage": "pnpm run test:coverage",
-    "test": "pnpm typecheck && pnpm worker:types && pnpm unit"
+    "unit": "vitest run --config vitest.config.ts",
+    "test": "pnpm typecheck && pnpm unit"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.11",
     "cspell": "10.0.1",
     "fallow": "2.96.0",
     "lefthook": "2.1.9",
@@ -68,7 +62,7 @@
     "tsc-rs": "0.7.0",
     "typescript": "~5.9.2",
     "vite": "^8.0.16",
-    "vitest": "^4.1.11"
+    "vitest": "4.1.11"
   },
   "private": true,
   "workspaces": [

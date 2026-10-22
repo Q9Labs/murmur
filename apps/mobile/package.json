@@ -8,8 +8,7 @@
     "android": "expo run:android",
     "eas-build-on-success": "node ../../tooling/scripts/link-mobile-sentry-release.mjs",
     "ios": "expo run:ios",
-    "typecheck": "tsc-rs --noEmit",
-    "unit": "vitest run"
+    "typecheck": "tsc-rs --noEmit"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.2",
@@ -57,7 +56,6 @@
     "@sentry/cli": "3.6.2",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.1.0",
-    "babel-preset-expo": "~57.0.14",
-    "vitest": "^4.1.11"
+    "babel-preset-expo": "~57.0.14"
   }
 }

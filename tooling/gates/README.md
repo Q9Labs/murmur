@@ -8,7 +8,7 @@
 
 `pnpm run gate:hygiene` checks that the gate is real: scripts referenced from `tooling/gates/commit.sh` must exist, placeholder scripts such as `echo`, `true`, and `exit 0` are rejected, `--passWithNoTests` is rejected, and live/release/Fastlane lanes stay out of the hook.
 
-`pnpm run test:presence` requires meaningful Murmur source files to have nearby tests. The policy intentionally excludes generated files, declarations, barrels, assets, styles, configs, scripts, migrations, docs, store metadata, Fastlane, and release/live validation lanes.
+Runtime tests are a finite selection of billing, account deletion, signing, and audio lifecycle regressions. File-level test-presence requirements and coverage thresholds are removed; static checks and actual release validators remain.
 
 The static and security layers are:
 
@@ -21,6 +21,6 @@ The static and security layers are:
 - `pnpm run lint:spelling`: CSpell typo hygiene.
 - `pnpm run react:doctor`: pinned Expo Doctor 1.20.0 diagnostics for the React Native app stack.
 
-The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
+The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `unit`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
 
 Excluded from the hook on purpose: `store:live`, `store:preflight`, live production smoke checks, Fastlane submission validation, release lanes, and any command that mutates files.

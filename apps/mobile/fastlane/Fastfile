@@ -21,7 +21,7 @@ platform :ios do
   desc "Validate iOS submission metadata, plist files, and tracked App Privacy config locally"
   lane :validate_app_store_submission do
     sh("cd .. && pnpm exec expo config --type public >/tmp/murmur-expo-config-fastlane.json")
-    sh("cd .. && pnpm exec vitest run plugins/iosPrivacyManifestConfig.test.ts")
+    sh("cd ../../.. && pnpm run store:config")
     sh("cd ../../.. && node tooling/scripts/validate-ios-metadata.mjs")
     sh("plutil -lint ../ios/murmur/Info.plist ../ios/murmur/PrivacyInfo.xcprivacy ../ios/murmur/murmur.entitlements")
   end
