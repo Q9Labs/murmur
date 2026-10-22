@@ -96,6 +96,7 @@ export const urCatalog: Catalog = {
   "status.networkDegraded": "نیٹ ورک کمزور",
   "status.recovering": "دوبارہ جڑ رہا ہے",
   "status.disconnected": "رابطہ منقطع",
+  "status.waitingForTranslation": "ترجمے کا انتظار ہے",
   "status.connecting": "جڑ رہا ہے",
   "status.ready": "تیار",
   "status.degraded": "محدود",

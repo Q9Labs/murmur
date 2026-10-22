@@ -96,6 +96,7 @@ export const hiCatalog: Catalog = {
   "status.networkDegraded": "नेटवर्क कमज़ोर",
   "status.recovering": "फिर से जुड़ रहा है",
   "status.disconnected": "कनेक्शन टूटा",
+  "status.waitingForTranslation": "अनुवाद की प्रतीक्षा है",
   "status.connecting": "जुड़ रहा है",
   "status.ready": "तैयार",
   "status.degraded": "सीमित",

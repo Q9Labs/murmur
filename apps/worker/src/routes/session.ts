@@ -33,6 +33,8 @@ import {
 import { parseLanguagePair } from "../translation/validation";
 import { getServerConfig, isBelowMinimumVersion, sessionLimitSeconds, type ServerConfig } from "../serverConfig";
 
+type CustomerSession = Awaited<ReturnType<typeof getMurmurSession>>;
+
 export async function createSession(
   request: Request,
   env: Env,
@@ -54,7 +56,7 @@ export async function createSession(
   }
   const config = authorized.config;
   const maxSessionSeconds = sessionLimitSeconds(config, authorized.plan);
-  const phoneAudio = await authorizePhoneAudio(request, env, parsed.value.captureSource, authorized.plan);
+  const phoneAudio = await authorizePhoneAudio(env, parsed.value.captureSource, authorized.plan, authorized.customerSession);
   if (!phoneAudio.ok) {
     return phoneAudio.response;
   }
@@ -82,6 +84,7 @@ export async function createSession(
     authorized.plan,
     maxSessionSeconds,
     context,
+    authorized.customerSession,
   );
   if (!billingUsage.ok) {
     await closeSessionDurable({
@@ -99,7 +102,7 @@ export async function createSession(
     hashedInstallId: authorized.hashedInstallId,
     nowMs,
     parsed: parsed.value,
-    request,
+    customerId: authorized.customerSession?.user.id ?? null,
   });
   logWorkerEvent({
     acquisition: parsed.value.acquisition ?? null,
@@ -184,15 +187,14 @@ async function persistInsightsConsent(params: {
   hashedInstallId: string;
   nowMs: number;
   parsed: ParsedCreateSessionRequest;
-  request: Request;
+  customerId: string | null;
 }): Promise<void> {
   try {
-    const customerSession = await getMurmurSession(params.request, params.env);
     await recordInsightsConsent(params.env, {
       appSessionId: params.appSessionId,
       consent: params.parsed.insightsConsent,
       createdAt: new Date(params.nowMs).toISOString(),
-      customerId: customerSession?.user.id ?? null,
+      customerId: params.customerId,
       hashedInstallId: params.hashedInstallId,
       sourceLanguage: params.parsed.sourceLanguage,
       targetLanguage: params.parsed.targetLanguage,
@@ -208,7 +210,7 @@ async function prepareConfiguredSession(
   env: Env,
   nowMs: number,
 ): Promise<
-  | { config: ServerConfig; hashedInstallId: string; ok: true; plan: CustomerPlan; requestHashVerified: boolean }
+  | { config: ServerConfig; customerSession: CustomerSession; hashedInstallId: string; ok: true; plan: CustomerPlan; requestHashVerified: boolean }
   | { ok: false; response: Response }
 > {
   const customerSession = await getMurmurSession(request, env);
@@ -248,7 +250,7 @@ async function prepareConfiguredSession(
     hashedInstallId,
     config.device_integrity_required,
   );
-  return authorized.ok ? { ...authorized, config, plan } : authorized;
+  return authorized.ok ? { ...authorized, config, customerSession, plan } : authorized;
 }
 
 function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | null): string | null {
@@ -259,15 +261,14 @@ function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | n
 }
 
 async function authorizePhoneAudio(
-  request: Request,
   env: Env,
   captureSource: ParsedCreateSessionRequest["captureSource"],
   plan: CustomerPlan,
+  session: CustomerSession,
 ): Promise<{ ok: true; giftCustomerId: string | null } | { ok: false; response: Response }> {
   if (captureSource !== "phone_audio" || plan !== "free") {
     return { ok: true, giftCustomerId: null };
   }
-  const session = await getMurmurSession(request, env);
   if (!session) {
     return { ok: false, response: json({ error: "authentication_required" }, 401) };
   }
@@ -290,6 +291,7 @@ export async function prepareBillingUsage(
   plan: CustomerPlan,
   maxSessionSeconds: number,
   context?: TelemetryExecutionContext,
+  authenticatedSession?: CustomerSession,
 ): Promise<
   | { ok: true; sessionDurationMs: number }
   | { ok: false; response: Response }
@@ -298,7 +300,9 @@ export async function prepareBillingUsage(
   if (!isBillingEnforced(env)) {
     return { ok: true, sessionDurationMs: defaultDurationMs };
   }
-  const customerSession = await getMurmurSession(request, env);
+  const customerSession = authenticatedSession === undefined
+    ? await getMurmurSession(request, env)
+    : authenticatedSession;
   if (!customerSession) {
     return { ok: false, response: json({ error: "authentication_required" }, 401) };
   }

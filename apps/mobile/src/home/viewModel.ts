@@ -63,6 +63,7 @@ export function buildHomeViewModel(params: {
   const isLive = params.live.status === "live";
   const hasTranslatedText = Boolean(latestTranslationText.trim());
   const hasSourceText = Boolean(latestSourceCaption.trim());
+  const waitingForTranslation = isLive && !hasTranslatedText && !params.live.error;
 
   return {
     canChangeLanguages,
@@ -75,7 +76,9 @@ export function buildHomeViewModel(params: {
     pendingCount: countPendingSpans(params.live.spans),
     hasSourceText,
     hasTranslatedText,
-    healthText: getHealthText(params.live.status, params.live.error, translate),
+    healthText: waitingForTranslation
+      ? translate("home.listening")
+      : getHealthText(params.live.status, params.live.error, translate),
     isLive,
     latestProviderRoute: getLatestProviderRoute(params.live.spans) ?? "openai:gpt-realtime-translate",
     latestSourceCaption,
@@ -98,7 +101,7 @@ export function buildHomeViewModel(params: {
     }),
     sourceLanguage,
     sourceLanguageDisplayName: sourceLanguage ? languageLabel(sourceLanguage, uiLocale) : translate("home.autoDetect"),
-    statusText: getStatusText(
+    statusText: waitingForTranslation ? translate("status.waitingForTranslation") : getStatusText(
       params.live.status,
       params.live.error,
       params.live.preparation_status,

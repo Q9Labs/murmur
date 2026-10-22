@@ -96,6 +96,7 @@ export const esCatalog: Catalog = {
   "status.networkDegraded": "Red lenta",
   "status.recovering": "Recuperando",
   "status.disconnected": "Desconectado",
+  "status.waitingForTranslation": "Esperando la traducción",
   "status.connecting": "Conectando",
   "status.ready": "Listo",
   "status.degraded": "Limitado",

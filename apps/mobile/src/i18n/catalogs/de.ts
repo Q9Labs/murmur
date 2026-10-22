@@ -96,6 +96,7 @@ export const deCatalog: Catalog = {
   "status.networkDegraded": "Netzwerk langsam",
   "status.recovering": "Stellt wieder her",
   "status.disconnected": "Getrennt",
+  "status.waitingForTranslation": "Warten auf Übersetzung",
   "status.connecting": "Verbindet",
   "status.ready": "Bereit",
   "status.degraded": "Eingeschränkt",

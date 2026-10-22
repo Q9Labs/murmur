@@ -96,6 +96,7 @@ export const trCatalog: Catalog = {
   "status.networkDegraded": "Ağ yavaş",
   "status.recovering": "Toparlanıyor",
   "status.disconnected": "Bağlantı kesildi",
+  "status.waitingForTranslation": "Çeviri bekleniyor",
   "status.connecting": "Bağlanıyor",
   "status.ready": "Hazır",
   "status.degraded": "Kısıtlı",
