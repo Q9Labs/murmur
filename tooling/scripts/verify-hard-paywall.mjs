@@ -156,14 +156,14 @@ try {
   assert.equal((await customer(legacy, "1.4.0", false)).free_allowance_ms, 0);
   assert.equal(await rows("balance_grants", legacy.id), 0);
   pass("sign-up without install identity still evaluates hard-mode policy");
-  const headerless = await guest("1.4.0");
-  assert.deepEqual(await claimGift(headerless, "1.4.0"), { phone_audio: { claimable: false, remaining_ms: 0 } });
+  const legacyGift = await guest("1.4.0");
+  assert.deepEqual(await claimGift(legacyGift, "1.4.0"), { phone_audio: { claimable: false, remaining_ms: 0 } });
   const legacyClaim = await jsonResponse(await mf.dispatchFetch("https://murmur.test/v3/gifts/phone-audio/claim", {
-    method: "POST", headers: { Cookie: headerless.cookie, "cf-connecting-ip": headerless.ip },
+    method: "POST", headers: { Cookie: legacyGift.cookie, "cf-connecting-ip": legacyGift.ip },
   }));
   assert.deepEqual(legacyClaim, { phone_audio: { claimable: false, remaining_ms: 180_000 } });
-  assert.equal(await rows("phone_audio_gifts", headerless.id), 1);
-  pass("headerless legacy gift claim stays freemium under a version-targeted flag");
+  assert.equal(await rows("phone_audio_gifts", legacyGift.id), 1);
+  pass("legacy gift claim without release or install headers stays freemium under a version-targeted flag");
   console.log(`Hard paywall proof passed (${checks} scenarios).`);
 } finally {
   await mf.dispose();
