@@ -214,7 +214,7 @@ export const hiCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan} प्लान पर {balance} बचे",
-  "account.balanceNoPlanSpoken": "{balance} बचे। कोई प्लान नहीं।",
+  "account.balanceNoPlanSpoken": "{balance} बचे। कोई प्लान नहीं",
   "account.balancePlan": "{plan} पर बचे",
   "savePurchase.hint": "साइन इन करें ताकि नए फ़ोन पर भी आपकी खरीदारी रहे",
   "savePurchase.title": "खरीदारी सेव करें",

@@ -123,7 +123,7 @@ it("shows no plan without a free tier and lets guest subscribers manage their su
   billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
   const markup = renderToStaticMarkup(<AccountScreen />);
   expect(markup).toContain("No plan");
-  expect(recorded.accessibilityLabels).toContain("0 min left. No plan.");
+  expect(recorded.accessibilityLabels).toContain("0 min left. No plan");
   expect(recorded.accessibilityLabels.join(" ")).not.toContain("No plan plan");
   expect(markup).not.toContain("Free");
   resetRecorded();
@@ -156,4 +156,11 @@ it("keeps the Free plan label when a legacy Worker omits its allowance", () => {
   const markup = renderToStaticMarkup(<AccountScreen />);
   expect(markup).toContain("left on Free");
   expect(markup).not.toContain("No plan");
+});
+
+
+it("separates a no-plan balance from purchased-minute validity once", () => {
+  billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000, creditMs: 60_000 });
+  renderToStaticMarkup(<AccountScreen />);
+  expect(recorded.accessibilityLabels).toContain("1 min left. No plan. Credit packs: 1 min · Never expires");
 });

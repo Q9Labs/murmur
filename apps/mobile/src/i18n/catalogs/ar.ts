@@ -214,7 +214,7 @@ export const arCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "متبقٍ {balance} في خطة \u2068{plan}\u2069",
-  "account.balanceNoPlanSpoken": "متبقٍ {balance}. لا توجد خطة.",
+  "account.balanceNoPlanSpoken": "متبقٍ {balance}. لا توجد خطة",
   "account.balancePlan": "متبقٍ في \u2068{plan}\u2069",
   "savePurchase.hint": "سجّل الدخول ليبقى شراؤك معك على هاتف جديد",
   "savePurchase.title": "احفظ مشترياتك",

@@ -214,7 +214,7 @@ export const frCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Il reste {balance} sur la formule {plan}",
-  "account.balanceNoPlanSpoken": "Il reste {balance}. Aucune formule.",
+  "account.balanceNoPlanSpoken": "Il reste {balance}. Aucune formule",
   "account.balancePlan": "restant sur {plan}",
   "savePurchase.hint": "Connectez-vous pour garder votre achat sur un nouveau téléphone",
   "savePurchase.title": "Sauvegardez votre achat",
