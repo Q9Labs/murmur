@@ -160,20 +160,37 @@ public class MurmurAudioModule: Module {
     try session.setActive(true)
 
     let inputNode = captureEngine.inputNode
-    let inputFormat = inputNode.outputFormat(forBus: 0)
-    converter = AVAudioConverter(from: inputFormat, to: pcmFormat)
+    var step = "voice_processing"
+    var inputFormat: AVAudioFormat?
+    do {
+      captureEngine.stop()
+      inputNode.removeTap(onBus: 0)
+      if inputNode.isVoiceProcessingEnabled == false {
+        try inputNode.setVoiceProcessingEnabled(true)
+      }
 
-    if inputNode.isVoiceProcessingEnabled == false {
-      try? inputNode.setVoiceProcessingEnabled(true)
+      // Voice processing reconfigures the I/O graph. Read its negotiated format
+      // only after that transition, and use it for both conversion and the tap.
+      step = "input_format"
+      let format = inputNode.outputFormat(forBus: 0)
+      inputFormat = format
+      converter = try murmurCaptureConverter(from: format, to: pcmFormat)
+
+      step = "install_tap"
+      inputNode.installTap(onBus: 0, bufferSize: 960, format: format) { [weak self] buffer, _ in
+        self?.handleInput(buffer: buffer)
+      }
+
+      step = "engine_start"
+      captureEngine.prepare()
+      try captureEngine.start()
+    } catch {
+      let nativeError = error as NSError
+      let route = session.currentRoute.inputs.map { $0.portType.rawValue }.joined(separator: ",")
+      throw NSError(domain: "MurmurAudio", code: 4, userInfo: [
+        NSLocalizedDescriptionKey: "Audio capture failed step=\(step) rate=\(inputFormat?.sampleRate ?? 0) channels=\(inputFormat?.channelCount ?? 0) input=\(route.isEmpty ? "none" : route) voice=\(inputNode.isVoiceProcessingEnabled) error=\(nativeError.domain)/\(nativeError.code)"
+      ])
     }
-
-    inputNode.removeTap(onBus: 0)
-    inputNode.installTap(onBus: 0, bufferSize: 960, format: inputFormat) { [weak self] buffer, _ in
-      self?.handleInput(buffer: buffer)
-    }
-
-    captureEngine.prepare()
-    try captureEngine.start()
   }
 
   private func stopCaptureSync(reason: String) {
