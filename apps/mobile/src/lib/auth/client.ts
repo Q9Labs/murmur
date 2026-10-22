@@ -1,5 +1,5 @@
 import { expoClient } from "@better-auth/expo/client";
-import * as SecureStore from "expo-secure-store";
+import { secureStorage } from "../secureStorage";
 import { createAuthClient } from "better-auth/react";
 import { anonymousClient, emailOTPClient } from "better-auth/client/plugins";
 
@@ -33,7 +33,7 @@ const murmurAuthClient = createAuthClient({
     expoClient({
       cookiePrefix: "murmur",
       scheme: "murmur",
-      storage: SecureStore,
+      storage: secureStorage,
       storagePrefix: "murmur-auth",
     }),
   ],

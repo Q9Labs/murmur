@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/react-native";
 
+import { getStorageFailureDiagnostics } from "../storageDiagnostics";
+
 import { getMurmurEnvironment, getSentryDsn } from "../config";
 
 export type MobileFailureContext = {
@@ -54,6 +56,7 @@ export function captureMobileFailure(
     error_code: errorCode,
     operation: context.operation,
     stage: context.stage ?? "unknown",
+    ...getStorageFailureDiagnostics(failure),
     ...(context.external_link ? {
       link_target: context.external_link.target,
       link_step: context.external_link.step,
