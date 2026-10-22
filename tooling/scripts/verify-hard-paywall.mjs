@@ -204,6 +204,17 @@ try {
   assert.equal(await rows("free_allowance_claims", beforeFlip.id), 0);
   assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
   pass("pre-flip guest spends 120000 ms, then OTP linking in hard mode preserves exactly 180000 ms and the original Free grant");
+  for (let retry = 0; retry < 2; retry += 1) {
+    const rolledBack = await customer(linkedAfterFlip, "1.4.1");
+    assert.equal(rolledBack.free_allowance_ms, 300_000);
+    assert.equal(rolledBack.balance.allowance_ms, 180_000);
+    assert.equal(rolledBack.balance.available_ms, 180_000);
+  }
+  await session(linkedAfterFlip, "1.4.1", 200);
+  const afterRollbackFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedAfterFlip.id).all();
+  assert.deepEqual(afterRollbackFree.results, [originalFree]);
+  assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
+  pass("same-month rollback after hard-mode OTP linking reuses the moved Free grant and starts a session without adding minutes");
   const beforeRollback = await guest("1.4.0");
   const linkedAfterRollback = await linkAccount(beforeRollback, "1.4.1");
   assert.equal(await rows("free_allowance_claims", beforeRollback.id), 0);

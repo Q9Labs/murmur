@@ -128,8 +128,10 @@ export class LedgerRepository {
     const ledgerEntryId = `ledger:${idempotencyKey}`;
     const grantId = `grant:${idempotencyKey}`;
     const existing = await this.database
-      .prepare("SELECT grant_id FROM balance_grants WHERE grant_id = ?")
-      .bind(grantId)
+      .prepare(
+        "SELECT grant_id FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free' AND grant_key = ?",
+      )
+      .bind(command.customerId, command.periodKey)
       .first<{ grant_id: string }>();
     if (existing) {
       return;
