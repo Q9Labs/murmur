@@ -1,0 +1,94 @@
+[
+  {
+    "audio_generation_id": 2,
+    "capture_active": false,
+    "capture_source": "microphone",
+    "dropped_frames": 0,
+    "event_seq": 1,
+    "playback_active": false,
+    "playback_queued_ms": 0,
+    "reason": "get_audio_state",
+    "route": "unknown",
+    "sample_rate": 24000,
+    "capture_failure": {
+      "step": "session_category",
+      "hardware_rate": 0,
+      "hardware_channels": 0,
+      "output_rate": 0,
+      "output_channels": 0,
+      "route": "none",
+      "voice_processing": false,
+      "error_domain": "osstatus",
+      "error_code": -50
+    }
+  },
+  {
+    "audio_generation_id": 2,
+    "capture_active": false,
+    "capture_source": "microphone",
+    "dropped_frames": 0,
+    "event_seq": 1,
+    "playback_active": false,
+    "playback_queued_ms": 0,
+    "reason": "get_audio_state",
+    "route": "unknown",
+    "sample_rate": 24000,
+    "capture_failure": {
+      "step": "session_sample_rate",
+      "hardware_rate": 0,
+      "hardware_channels": 0,
+      "output_rate": 0,
+      "output_channels": 0,
+      "route": "none",
+      "voice_processing": false,
+      "error_domain": "osstatus",
+      "error_code": -50
+    }
+  },
+  {
+    "audio_generation_id": 2,
+    "capture_active": false,
+    "capture_source": "microphone",
+    "dropped_frames": 0,
+    "event_seq": 1,
+    "playback_active": false,
+    "playback_queued_ms": 0,
+    "reason": "get_audio_state",
+    "route": "unknown",
+    "sample_rate": 24000,
+    "capture_failure": {
+      "step": "session_buffer_duration",
+      "hardware_rate": 0,
+      "hardware_channels": 0,
+      "output_rate": 0,
+      "output_channels": 0,
+      "route": "none",
+      "voice_processing": false,
+      "error_domain": "osstatus",
+      "error_code": -50
+    }
+  },
+  {
+    "audio_generation_id": 2,
+    "capture_active": false,
+    "capture_source": "microphone",
+    "dropped_frames": 0,
+    "event_seq": 1,
+    "playback_active": false,
+    "playback_queued_ms": 0,
+    "reason": "get_audio_state",
+    "route": "unknown",
+    "sample_rate": 24000,
+    "capture_failure": {
+      "step": "session_activation",
+      "hardware_rate": 0,
+      "hardware_channels": 0,
+      "output_rate": 0,
+      "output_channels": 0,
+      "route": "none",
+      "voice_processing": false,
+      "error_domain": "osstatus",
+      "error_code": -50
+    }
+  }
+]
