@@ -75,7 +75,7 @@ describe("sign-in screen", () => {
     expect(markup).toContain("You&#x27;re signed in");
     expect(markup).toContain("Subscribe for $99.99 / year");
     doneButton()?.onPress?.();
-    expect(signInBilling.current?.purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(signInBilling.current?.purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined, false);
     expect(router.back).toHaveBeenCalledOnce();
   });
 
@@ -96,7 +96,7 @@ describe("sign-in screen", () => {
     expect(findCheckoutPlan({ status: "loading" }, "$rc_annual")).toBeNull();
     expect(action.label).toBe("Continue to checkout");
     action.onPress();
-    expect(purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(purchasePlan).toHaveBeenCalledWith("$rc_annual", undefined, false);
     expect(leave).toHaveBeenCalledOnce();
   });
 

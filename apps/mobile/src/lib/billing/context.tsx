@@ -27,7 +27,7 @@ export type MurmurBillingContext = {
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
   // Resolves true only when the store completed a purchase, so the UI can offer to save it.
-  purchasePlan: (planId: string, surface?: PlanSurface) => Promise<boolean>;
+  purchasePlan: (planId: string, surface?: PlanSurface, hasIntroDiscount?: boolean) => Promise<boolean>;
   purchasesAvailable: boolean;
   refresh: () => Promise<MurmurCustomer | null>;
   restorePurchases: () => Promise<void>;
@@ -289,8 +289,11 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
       await loadCustomer();
     }),
     notice: noticeText,
-    purchasePlan: async (planId, surface = "plan_picker") => {
+    purchasePlan: async (planId, surface = "plan_picker", hasIntroDiscount = false) => {
       let purchased = false;
+      const personalOffer = hasIntroDiscount && config.personalOffer && Date.parse(config.personalOffer.expiresAt) > Date.now()
+        ? config.personalOffer
+        : null;
       await runStoreAction(async () => {
         assertPaywallAvailable(customer);
         const { purchaseMurmurPlan } = await import("./revenueCat");
@@ -307,8 +310,8 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
           return;
         }
         await completeStorePurchase(surface);
-        if (config.personalOffer) {
-          captureOfferRedeemed(config.personalOffer.offeringId);
+        if (personalOffer) {
+          captureOfferRedeemed(personalOffer.offeringId);
         }
         purchased = true;
       });
