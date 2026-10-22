@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const native = vi.hoisted(() => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
   const state: { failure: Error | null } = { failure: null };
   return {
     ...state,
+    fetch,
     values: new Map<string, string>(),
     failingKey: "",
     failingStep: "read",
@@ -71,10 +74,11 @@ beforeEach(() => {
   native.failure = null;
   native.failingKey = "";
   native.failingStep = "read";
-  vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+  native.fetch.mockImplementation(async () => Response.json({
     session: { id: "test-session", expiresAt: "2099-01-01T00:00:00Z" },
     user: { id: "test-user" },
-  })));
+  }));
+  vi.stubGlobal("fetch", native.fetch);
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -138,6 +142,7 @@ describe("session-completion storage diagnostics through real handlers and SDKs"
     expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith("/stop"))).toBe(false);
     native.failure = null;
     await expect(closeWorkerSession("test-session", "completed")).resolves.toBe("closed");
+    expect(native.fetch.mock.calls.some(([input]) => String(input).endsWith("/get-session"))).toBe(true);
     expect(await getOrCreateInstallId()).toBe("existing-install");
     expect(await getOrCreateFreeAllowanceId()).toBe("existing-allowance");
     const stopCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith("/stop"));

@@ -20,7 +20,7 @@
     "@react-navigation/native": "^7.1.8",
     "@sentry/react-native": "~7.11.0",
     "better-auth": "1.7.2",
-    "expo": "57.0.31",
+    "expo": "~57.0.31",
     "expo-apple-authentication": "~57.0.2",
     "expo-application": "~57.0.3",
     "expo-build-properties": "~57.0.22",
@@ -31,10 +31,10 @@
     "expo-file-system": "~57.0.7",
     "expo-linking": "~57.0.13",
     "expo-localization": "~57.0.2",
-    "expo-network": "57.0.3",
-    "expo-router": "57.0.29",
+    "expo-network": "~57.0.3",
+    "expo-router": "~57.0.29",
     "expo-secure-store": "~57.0.4",
-    "expo-sharing": "57.0.24",
+    "expo-sharing": "~57.0.24",
     "expo-store-review": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "expo-updates": "~57.0.26",
@@ -59,6 +59,6 @@
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.3",
     "babel-preset-expo": "~57.0.14",
-    "vitest": "4.1.12"
+    "vitest": "^4.1.12"
   }
 }
