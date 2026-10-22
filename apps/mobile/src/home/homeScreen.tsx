@@ -356,13 +356,16 @@ export default function HomeScreen(): ReactNode {
       handledExhaustionRef.current = null;
     } else if (handledExhaustionRef.current !== live.error) {
       handledExhaustionRef.current = live.error;
-      void refreshBilling().then((fresh) => {
-        if (lockedSurface(fresh ?? billing.customer) === "paywall") {
-          router.push("/plans");
-        } else {
-          setOutOfMinutesOpen(true);
-        }
-      });
+      if (lockedSurface(billing.customer) === "out_of_minutes") {
+        setOutOfMinutesOpen(true);
+        void refreshBilling();
+      } else {
+        void refreshBilling().then((fresh) => {
+          if (!hasTimeAvailable(fresh ?? billing.customer)) {
+            router.push("/plans");
+          }
+        });
+      }
     }
   }, [billing.customer, live.error, refreshBilling, router]);
 

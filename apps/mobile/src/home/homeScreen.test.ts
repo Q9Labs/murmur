@@ -319,6 +319,35 @@ describe("Start allowance gate", () => {
 
 
 describe("home billing effects", () => {
+  it.each(["freemium", "unknown"])("opens the %s sheet before refresh resolves", async (kind) => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = {
+      ...fixtureBilling({ availableMs: 0 }),
+      customer: kind === "unknown" ? null : fixtureBilling({ availableMs: 0 }).customer,
+      refresh: vi.fn(() => pending.promise),
+    };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.billing.refresh).toHaveBeenCalledOnce();
+    expect(state.push).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve(fixtureCustomer); });
+  });
+
+  it("does not open Plans when the exhaustion refresh recovers paid minutes", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    expect(state.push).not.toHaveBeenCalled();
+    const recovered = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 };
+    await act(async () => { pending.resolve(recovered); });
+    state.billing = fixtureBilling(recovered);
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
   it("keeps a known hard lock when customer refresh fails", async () => {
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
@@ -330,19 +359,14 @@ describe("home billing effects", () => {
     expect(openPlans).toHaveBeenCalledOnce();
   });
 
-  it.each(["allowance_exhausted", "realtime_allowance_exhausted"])(
-    "uses cached freemium on a failed refresh after %s", async (error) => {
-      state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(async () => null) };
-      state.live.error = error;
-      await renderHome();
-      expect(state.push).not.toHaveBeenCalled();
-      expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
-    },
-  );
-
-  it("uses the out-of-minutes sheet when no customer has loaded and refresh fails", async () => {
-    state.billing = { ...fixtureBilling(), customer: null, error: "customer unavailable", refresh: vi.fn(async () => null) };
-    state.live.error = "allowance_exhausted";
+  it.each([
+    ["freemium", "allowance_exhausted"],
+    ["freemium", "realtime_allowance_exhausted"],
+    ["unknown", "allowance_exhausted"],
+  ])("uses the %s sheet after %s when refresh fails", async (kind, error) => {
+    const billing = fixtureBilling({ availableMs: 0 });
+    state.billing = { ...billing, customer: kind === "unknown" ? null : billing.customer, refresh: vi.fn(async () => null) };
+    state.live.error = error;
     await renderHome();
     expect(state.push).not.toHaveBeenCalled();
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
