@@ -44,7 +44,7 @@ describe("billing services", () => {
     await ensureCurrentAllowance({
       customerId: "customer-1",
       env: {},
-      freeAllowanceMinutes: 5,
+      freeAllowanceMs: 300_000,
       nowMs: Date.UTC(2026, 7, 29),
       principalProvider: "anonymous",
     });
@@ -56,7 +56,6 @@ describe("billing services", () => {
         action: "bootstrap_guest",
         customerId: "customer-1",
         grantFreeAllowance: false,
-        freeAllowanceMs: 300_000,
         principalProvider: "anonymous",
       }),
     );

@@ -65,14 +65,16 @@ function decodeBootstrapGuest(
   const principal = decodePrincipal(value);
   const freeAllowanceMs = optionalPositiveInteger(value, "freeAllowanceMs");
   const grantFreeAllowance = Reflect.get(value, "grantFreeAllowance");
-  if (!period || !principal || freeAllowanceMs === null || typeof grantFreeAllowance !== "boolean") {
+  if (!period || !principal || typeof grantFreeAllowance !== "boolean" ||
+    (grantFreeAllowance && (freeAllowanceMs === null || freeAllowanceMs === undefined))) {
     return null;
   }
   return {
     action: "bootstrap_guest",
     ...common,
-    grantFreeAllowance,
-    ...(freeAllowanceMs !== undefined ? { freeAllowanceMs } : {}),
+    ...(grantFreeAllowance && freeAllowanceMs != null
+      ? { grantFreeAllowance: true as const, freeAllowanceMs }
+      : { grantFreeAllowance: false as const }),
     ...period,
     ...principal,
   };

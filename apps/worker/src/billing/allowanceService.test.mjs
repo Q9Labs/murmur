@@ -49,6 +49,7 @@ describe("active subscription allowance", () => {
     await expect(currentCustomerPlan(database, "customer-1", nowMs)).resolves.toBe(plan);
     await ensureCurrentAllowance({
       customerId: "customer-1",
+      freeAllowanceMs: 0,
       env: { BILLING_DB: database },
       nowMs,
       principalProvider: "anonymous",

@@ -311,6 +311,7 @@ async function applyPurchase(context: EventContext): Promise<void> {
     return;
   }
   const allowance = await ensureCurrentAllowance({
+    freeAllowanceMs: 0, // Store events never mint Free.
     customerId: context.customerId,
     env: context.env,
     nowMs: context.nowMs,

@@ -1,3 +1,5 @@
+import { hasTimeAvailable, isHardPaywallLocked } from "../../lib/billing/allowance";
+import { fixtureCustomer } from "../../screens/__tests__/billingFixture";
 import { describe, expect, it } from "vitest";
 
 import { createSpan } from "@murmur/protocol/session";
@@ -143,7 +145,21 @@ describe("shouldKeepAutoScroll", () => {
 });
 
 describe("primaryStartLabel", () => {
+  it.each([
+    [0, "See plans", "See plans"],
+    [300_000, "Listen", "Get more time"],
+  ])("shows the right action at 500 ms with a %s ms Free allowance", (freeAllowanceMs, initial, exhausted) => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs, availableMs: 500 };
+    const timeAvailable = hasTimeAvailable(customer);
+    const hardLocked = isHardPaywallLocked(customer);
+    expect(primaryStartLabel(null, timeAvailable, undefined, hardLocked)).toBe(initial);
+    expect(primaryStartLabel("allowance_exhausted", timeAvailable, undefined, hardLocked)).toBe(exhausted);
+  });
+
   it("routes the primary action to the fix the listener needs", () => {
+    expect(primaryStartLabel(null, false, undefined, true)).toBe("See plans");
+    expect(primaryStartLabel("allowance_exhausted", false, undefined, true)).toBe("See plans");
+    expect(primaryStartLabel("app_version_unsupported", false, undefined, true)).toBe("Update Murmur");
     expect(primaryStartLabel(null, true)).toBe("Listen");
     expect(primaryStartLabel("microphone_permission_denied", true)).toBe("Listen");
     expect(primaryStartLabel("realtime_transport_error", true)).toBe("Try again");

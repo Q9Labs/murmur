@@ -1,7 +1,5 @@
 import type { PhoneAudioGift, ProFeatures } from "../screenServices";
 
-export const phoneAudioGiftMinutes = 3;
-
 export type PhoneAudioAccess = "gift_active" | "gift_claimable" | "included" | "locked";
 
 export function phoneAudioAccess(features: ProFeatures, gift: PhoneAudioGift): PhoneAudioAccess {

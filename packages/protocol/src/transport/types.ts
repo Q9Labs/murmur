@@ -116,3 +116,24 @@ export type ReportTranslationResponse = {
   report_id: string;
   retained_text_snapshot: boolean;
 };
+
+export type CustomerResponse = {
+  balance: {
+    allowance_ms: number;
+    available_ms: number;
+    credit_ms: number;
+    earliest_expiry_at_ms: number | null;
+    negative_ms: number;
+  };
+  credit_packs: { expires_at_ms: number; grant_id: string; remaining_ms: number }[];
+  customer_id: string;
+  entitlements: { pro: boolean; pro_max: boolean };
+  features: { history: boolean; max_session_seconds: number; phone_audio: boolean };
+  free_allowance_ms: number;
+  fulfillment_enabled: boolean;
+  gifts: { phone_audio: { claimable: boolean; remaining_ms: number } };
+  is_registered: boolean;
+  plan: "free" | "pro" | "pro_max";
+  purchases_enabled: boolean;
+  revenuecat_customer_id: string;
+};

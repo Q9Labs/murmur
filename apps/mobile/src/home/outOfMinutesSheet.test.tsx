@@ -30,7 +30,14 @@ describe("out-of-minutes sheet", () => {
 
   it("words the message for paid customers", () => {
     expect(outOfMinutesMessage({ ...fixtureCustomer, plan: "pro" }, en)).toBe("You've used all your translation time.");
-    expect(outOfMinutesMessage(null, en)).toContain("5 free minutes");
+    expect(outOfMinutesMessage(null, en)).not.toContain("free minutes");
+    expect(outOfMinutesMessage({ ...fixtureCustomer, freeAllowanceMs: 0 }, en)).not.toContain("free minutes");
+    expect(outOfMinutesMessage({ ...fixtureCustomer, freeAllowanceMs: 420_000 }, en)).toContain("7 free minutes");
+  });
+
+  it("keeps legacy customers on freemium copy without inventing an allowance", () => {
+    expect(outOfMinutesMessage({ ...fixtureCustomer, freeAllowanceMs: null }, en))
+      .toBe("You've used your free minutes for this month.");
   });
 
   it("closes once a refreshed balance is larger than when it opened", () => {
