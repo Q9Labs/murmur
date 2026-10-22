@@ -112,6 +112,11 @@ describe("checkout telemetry", () => {
       });
       const request = telemetry.deliverMobileTelemetryRequest.mock.calls.find(([request]) => request.payload.event === event)?.[0];
       expect(parseMobileTelemetryEvent(request?.payload)).toMatchObject({ event, package_label: surface ?? "plan_picker" });
+      if (outcome === "failed") {
+        await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalledWith(expect.objectContaining({
+          payload: expect.objectContaining({ event: "mobile_paywall_failed", package_label: surface ?? "plan_picker", result_category: "store_error" }),
+        })));
+      }
     }
   });
 });

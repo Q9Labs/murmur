@@ -460,7 +460,7 @@ function capturePaywallFailure(resultCategory: "store_error", surface: PlanSurfa
     packageLabel: surface,
     resultCategory,
   });
-  captureBillingTelemetry("mobile_paywall_failed", { resultCategory });
+  captureBillingTelemetry("mobile_paywall_failed", { packageLabel: surface, resultCategory });
 }
 
 function reportAppConfigFailure(failure: unknown): void {

@@ -15,6 +15,7 @@ import { StatusLine } from "../screenScaffold";
 import { PlanListStatus, usePlanList } from "../plans/planList";
 import { PlanCheckout, type PlanPurchaseMode } from "../plans/planPicker";
 import { purchaseMode } from "../plans/purchaseMode";
+import { usePersonalOffer } from "../plans/offerBanner";
 import { usePlanStyles } from "../plans/styles";
 import { PaywallDemo } from "./paywallDemo";
 import { usePaywallStyles } from "./styles";
@@ -32,6 +33,8 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
   const choices = paywallChoices(plans.status === "ready" ? plans.plans : []);
   const [selectedKey, setSelectedKey] = useState<PaywallKey | null>(initialKey ?? null);
   const activeKey = selectedKey && choices[selectedKey] ? selectedKey : choices.defaultKey;
+  const displayedPlan = activeKey ? choices[activeKey] : undefined;
+  usePersonalOffer(billing.config.personalOffer, displayedPlan ? [displayedPlan] : []);
   useEffect(() => {
     if (activeKey) {
       captureMobileTelemetry({
@@ -50,7 +53,7 @@ export function PaywallScreen({ initialKey }: { initialKey?: PaywallKey }): Reac
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel={t("accessibility.close")} accessibilityRole="button" onPress={() => router.back()} style={styles.close}>
+          <Pressable accessibilityLabel={t("accessibility.close")} accessibilityRole="button" onPress={() => router.canGoBack() ? router.back() : router.replace("/")} style={styles.close}>
             <X color={colors.primary} size={22} />
           </Pressable>
           <View style={styles.example}>

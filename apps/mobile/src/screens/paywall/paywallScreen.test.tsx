@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MurmurBillingContext } from "../../lib/billing/context";
 import type { MurmurPlan } from "../../lib/billing/planCatalog";
+import { createTranslator, formatUiNumber, UiLocaleContext } from "../../i18n/runtime";
+import { directionForLocale, uiLocales } from "../../i18n/types";
 import { fixtureBilling } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
 import { findControl, recorded, resetRecorded } from "../__tests__/reactNativePrimitives";
@@ -33,6 +35,39 @@ import { PaywallScreen } from "./paywallScreen";
 beforeEach(() => { vi.clearAllMocks(); resetRecorded(); effects.length = 0; state.focused = true; state.billing = fixtureBilling(); state.plans = previewPlans; });
 
 describe("demo-first paywall", () => {
+  it.each(uiLocales)("renders the lite Trip Pass's actual minutes in %s", (locale) => {
+    state.plans = previewPlans.map((plan) => plan.id === "trip_pass_60" ? { ...plan, id: "trip_pass_30", minutes: 30 } : plan);
+    const t = createTranslator(locale);
+    const markup = renderToStaticMarkup(
+      <UiLocaleContext.Provider value={{ locale, preference: locale, direction: directionForLocale(locale), ready: true, t, translate: t, setPreference: async () => undefined, deleteLocale: async () => undefined }}>
+        <PaywallScreen />
+      </UiLocaleContext.Provider>,
+    );
+    expect(markup).toContain(t("paywall.packDetail", { minutes: t("plans.minutes", { count: formatUiNumber(30, locale) }) }));
+    expect(markup).not.toContain(t("paywall.packDetail", { minutes: t("plans.minutes", { count: formatUiNumber(60, locale) }) }));
+  });
+  it.each([
+    ["monthly", true, true],
+    ["yearly", true, true],
+    ["pack", true, false],
+    ["monthly", false, false],
+  ] as const)("records only a displayed, unexpired personal offer (%s, active=%s)", async (key, active, shown) => {
+    const billing = fixtureBilling();
+    state.billing = { ...billing, config: { ...billing.config, personalOffer: { offeringId: "personal-offer", expiresAt: new Date(Date.now() + (active ? 60_000 : -60_000)).toISOString() } } };
+    state.plans = previewPlans.map((plan) => plan.term === "monthly" || plan.term === "yearly" ? { ...plan, introPrice: { amount: 1, price: "$1" } } : plan);
+    renderToStaticMarkup(<PaywallScreen initialKey={key} />);
+    effects.splice(0).forEach((effect) => effect());
+    await vi.waitFor(() => expect(telemetry.captureMobileTelemetry).toHaveBeenCalledWith(expect.objectContaining({ event: "plan_tab_viewed" })));
+    await vi.waitFor(() => expect(telemetry.captureMobileTelemetry.mock.calls.filter(([payload]) => payload.event === "offer_shown"))
+      .toEqual(shown ? [[{ event: "offer_shown", offering_id: "personal-offer" }]] : []));
+  });
+  it("closes a first-route paywall by replacing it with Home", () => {
+    router.canGoBack.mockReturnValueOnce(false);
+    renderToStaticMarkup(<PaywallScreen />);
+    findControl("Close")?.onPress?.();
+    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.back).not.toHaveBeenCalled();
+  });
   it.each([
     ["pack", "$7.99 once", "60 minutes that never expire.", "Buy for $7.99", "One payment. No subscription."],
     ["monthly", "Pro, $9.99 / month", "2 hours of translation every month.", "Subscribe for $9.99 / month", "Renews automatically. Cancel anytime."],

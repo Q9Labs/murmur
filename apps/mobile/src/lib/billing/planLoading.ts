@@ -19,7 +19,7 @@ export async function loadPlansWithTelemetry(
     const { loadMurmurPlans } = await import("./revenueCat");
     return await loadMurmurPlans(serverOfferingId);
   } catch (failure) {
-    report("mobile_paywall_failed", { resultCategory: "store_error" });
+    report("mobile_paywall_failed", { packageLabel: surface, resultCategory: "store_error" });
     throw failure;
   }
 }

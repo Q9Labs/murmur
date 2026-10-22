@@ -6,9 +6,9 @@ import { useUiLocale } from "../../i18n/runtime";
 import { openLegalLink } from "../../lib/legalLinks";
 import { LinkRow, RowGroup } from "../rowGroup";
 import { useMurmurBilling } from "../../lib/billing/context";
-import { introDiscountPercent, type PlanTerm } from "../../lib/billing/planCatalog";
+import type { PlanTerm } from "../../lib/billing/planCatalog";
 import { ScreenScaffold, StatusLine } from "../screenScaffold";
-import { OfferBanner, remainingOfferMs } from "./offerBanner";
+import { OfferBanner, usePersonalOffer } from "./offerBanner";
 import { PlanListStatus, usePlanList } from "./planList";
 import { PlanCheckout, PlanPicker, usePlanPicker } from "./planPicker";
 import { purchaseMode } from "./purchaseMode";
@@ -36,12 +36,7 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
   const picker = usePlanPicker(readyPlans, props.initialTerm);
   const mode = purchaseMode(billing, () => router.replace("/save-purchase"));
   const activeTerm = picker.activeTab?.term ?? null;
-  const offer = billing.config.personalOffer;
-  const discountPercent = introDiscountPercent(readyPlans);
-  const offerExpiresAtMs = offer ? Date.parse(offer.expiresAt) : null;
-  const offerOfferingId = offer && discountPercent !== null && remainingOfferMs(offerExpiresAtMs, Date.now()) > 0
-    ? offer.offeringId
-    : null;
+  const offer = usePersonalOffer(billing.config.personalOffer, readyPlans);
 
   useEffect(() => {
     if (activeTerm) {
@@ -49,20 +44,14 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
     }
   }, [activeTerm]);
 
-  useEffect(() => {
-    if (offerOfferingId) {
-      captureFunnelEvent({ event: "offer_shown", offering_id: offerOfferingId });
-    }
-  }, [offerOfferingId]);
-
   return (
     <ScreenScaffold
       footer={picker.selected ? <PlanCheckout mode={mode} plan={picker.selected} /> : null}
       title={t("plans.title")}
     >
       <OfferBanner
-        discountPercent={discountPercent}
-        expiresAtMs={offerExpiresAtMs}
+        discountPercent={offer.discountPercent}
+        expiresAtMs={offer.expiresAtMs}
       />
       {picker.activeTab ? <PlanPicker picker={picker} /> : <PlanListStatus onRetry={refresh} plans={plans} />}
       <RowGroup>

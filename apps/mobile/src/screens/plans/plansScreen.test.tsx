@@ -29,12 +29,12 @@ vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then(
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => m.expoRouterMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => state.billing }));
-vi.mock("./offerBanner", () => ({
+vi.mock("./offerBanner", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./offerBanner")>(),
   OfferBanner: (props: { discountPercent: number | null; expiresAtMs: number | null }) => {
     state.offer = props;
     return null;
   },
-  remainingOfferMs: (expiresAtMs: number | null, nowMs: number) => (expiresAtMs === null ? 0 : expiresAtMs - nowMs),
 }));
 vi.mock("./planList", () => ({
   PlanListStatus: () => <p>plan status</p>,
