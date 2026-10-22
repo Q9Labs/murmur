@@ -86,11 +86,12 @@ describe("guest merge with billing and runtime migrations", () => {
     }
   });
 
-  it("reuses a moved Free grant when the same-month allowance returns", async () => {
+  it.each([0, 180_000])("reuses a moved Free grant with %s ms when the same-month allowance returns", async (remainingMs) => {
     const { database, sqlite } = createDatabase();
     try {
       seedPaidGuest(sqlite, false);
-      sqlite.exec("UPDATE balance_grants SET remaining_ms = 180000 WHERE grant_id = 'guest-free'");
+      sqlite.prepare("UPDATE balance_grants SET remaining_ms = ?, state = ? WHERE grant_id = 'guest-free'")
+        .run(remainingMs, remainingMs > 0 ? "available" : "exhausted");
       await mergeGuestCustomer({ database, destinationCustomerId: "registered-1", nowMs, sourceCustomerId: "guest-1" });
       const grants = sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all();
       const entries = sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all();
@@ -106,14 +107,16 @@ describe("guest merge with billing and runtime migrations", () => {
           principalProvider: "email", providerSubject: "registered-1",
         });
         expect(result.created).toBe(false);
-        expect(result.balance.allowanceMs).toBe(180_000);
+        expect(result.balance.allowanceMs).toBe(remainingMs);
       }
       expect(sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all()).toEqual(grants);
       expect(sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all()).toEqual(entries);
       expect(sqlite.prepare("SELECT * FROM allowance_periods ORDER BY allowance_period_id").all()).toEqual(periods);
       expect(sqlite.prepare("SELECT * FROM projection_versions ORDER BY customer_id").all()).toEqual(projections);
       expect(sqlite.prepare("SELECT grant_id, remaining_ms FROM balance_grants WHERE customer_id = 'registered-1' AND grant_kind = 'free'").all())
-        .toEqual([{ grant_id: "guest-free", remaining_ms: 180_000 }]);
+        .toEqual([{ grant_id: "guest-free", remaining_ms: remainingMs }]);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM ledger_entries WHERE grant_id = 'guest-free' AND entry_kind = 'merge'").get().count)
+        .toBe(remainingMs > 0 ? 2 : 0);
     } finally {
       sqlite.close();
     }

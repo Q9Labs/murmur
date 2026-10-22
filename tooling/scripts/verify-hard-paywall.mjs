@@ -181,15 +181,14 @@ try {
   pass("hard-mode buyer saves paid credit through email OTP account linking without a Free grant");
   const beforeFlip = await guest("1.4.1");
   const namespace = await mf.getDurableObjectNamespace("CUSTOMER_LEDGER", "murmur");
-  const ledger = namespace.get(namespace.idFromName(beforeFlip.id));
   const usageSessionId = randomUUID();
-  const ledgerCommand = async (command) => jsonResponse(await ledger.fetch("https://ledger.internal/command", {
+  const ledgerCommand = async ({ customerId, ...command }) => jsonResponse(await namespace.get(namespace.idFromName(customerId)).fetch("https://ledger.internal/command", {
     method: "POST", headers: { "Content-Type": "application/json", "x-murmur-ledger-internal": "1" },
-    body: JSON.stringify({ ...command, customerId: beforeFlip.id, nowMs: Date.now() }),
+    body: JSON.stringify({ ...command, customerId, nowMs: Date.now() }),
   }));
-  await ledgerCommand({ action: "open_usage_session", usageSessionId });
-  await ledgerCommand({ action: "settle_usage", usageSessionId, settlementSequence: 1, amountMs: 120_000 });
-  await ledgerCommand({ action: "close_usage_session", usageSessionId, outcome: "closed" });
+  await ledgerCommand({ customerId: beforeFlip.id, action: "open_usage_session", usageSessionId });
+  await ledgerCommand({ customerId: beforeFlip.id, action: "settle_usage", usageSessionId, settlementSequence: 1, amountMs: 120_000 });
+  await ledgerCommand({ customerId: beforeFlip.id, action: "close_usage_session", usageSessionId, outcome: "closed" });
   assert.equal((await customer(beforeFlip, "1.4.1")).balance.allowance_ms, 180_000);
   const originalFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(beforeFlip.id).first();
   const linkedAfterFlip = await linkAccount(beforeFlip, "1.4.0");
@@ -215,6 +214,28 @@ try {
   assert.deepEqual(afterRollbackFree.results, [originalFree]);
   assert.equal(await rows("free_allowance_claims", linkedAfterFlip.id), 1);
   pass("same-month rollback after hard-mode OTP linking reuses the moved Free grant and starts a session without adding minutes");
+  const exhausted = await guest("1.4.1");
+  const exhaustedSessionId = randomUUID();
+  await ledgerCommand({ customerId: exhausted.id, action: "open_usage_session", usageSessionId: exhaustedSessionId });
+  await ledgerCommand({ customerId: exhausted.id, action: "settle_usage", usageSessionId: exhaustedSessionId, settlementSequence: 1, amountMs: 300_000 });
+  await ledgerCommand({ customerId: exhausted.id, action: "close_usage_session", usageSessionId: exhaustedSessionId, outcome: "closed" });
+  const exhaustedFree = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(exhausted.id).first();
+  assert.equal(exhaustedFree.remaining_ms, 0);
+  const exhaustedEntryCount = await rows("ledger_entries", exhausted.id);
+  const linkedExhausted = await linkAccount(exhausted, "1.4.0");
+  for (let retry = 0; retry < 2; retry += 1) {
+    const rolledBack = await customer(linkedExhausted, "1.4.1");
+    assert.equal(rolledBack.free_allowance_ms, 300_000);
+    assert.equal(rolledBack.balance.allowance_ms, 0);
+    assert.equal(rolledBack.balance.available_ms, 0);
+  }
+  const afterExhaustedRollback = await database.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(linkedExhausted.id).all();
+  assert.deepEqual(afterExhaustedRollback.results, [exhaustedFree]);
+  assert.equal(await database.prepare("SELECT COUNT(*) AS count FROM balance_grants WHERE customer_id = ? AND grant_kind = 'free'").bind(exhausted.id).first("count"), 0);
+  assert.equal(await rows("free_allowance_claims", exhausted.id), 0);
+  assert.equal(await rows("free_allowance_claims", linkedExhausted.id), 1);
+  assert.equal(await rows("ledger_entries", exhausted.id) + await rows("ledger_entries", linkedExhausted.id), exhaustedEntryCount);
+  pass("exhausted pre-flip Free grant survives hard-mode OTP linking and repeated same-month rollback without new minutes or ledger entries");
   const beforeRollback = await guest("1.4.0");
   const linkedAfterRollback = await linkAccount(beforeRollback, "1.4.1");
   assert.equal(await rows("free_allowance_claims", beforeRollback.id), 0);

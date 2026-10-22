@@ -214,6 +214,17 @@ function appendFreeGrantMergeStatements(params: {
       sourceRemainingMs: sourceGrant.remaining_ms,
     })
     : sourceGrant.remaining_ms;
+  if (!destinationGrant) {
+    statements.push(
+      database
+        .prepare(
+          `UPDATE balance_grants
+           SET customer_id = ?, updated_at_ms = ?
+           WHERE grant_id = ? AND customer_id = ?`,
+        )
+        .bind(params.destinationCustomerId, params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+    );
+  }
   if (sourceGrant.remaining_ms > 0) {
     statements.push(
       mergeLedgerEntry({
@@ -245,13 +256,6 @@ function appendFreeGrantMergeStatements(params: {
       );
     } else {
       statements.push(
-        database
-          .prepare(
-            `UPDATE balance_grants
-             SET customer_id = ?, updated_at_ms = ?
-             WHERE grant_id = ? AND customer_id = ?`,
-          )
-          .bind(params.destinationCustomerId, params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
         mergeLedgerEntry({
           amountMs: sourceGrant.remaining_ms,
           customerId: params.destinationCustomerId,
