@@ -1,0 +1,23 @@
+{
+  "audio_generation_id": 2,
+  "capture_active": false,
+  "capture_source": "microphone",
+  "dropped_frames": 0,
+  "event_seq": 1,
+  "playback_active": false,
+  "playback_queued_ms": 0,
+  "reason": "get_audio_state",
+  "route": "unknown",
+  "sample_rate": 24000,
+  "capture_failure": {
+    "step": "hardware_input",
+    "hardware_rate": 0,
+    "hardware_channels": 1,
+    "output_rate": 0,
+    "output_channels": 0,
+    "route": "none",
+    "voice_processing": true,
+    "error_domain": "murmur",
+    "error_code": 2
+  }
+}

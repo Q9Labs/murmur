@@ -33,6 +33,11 @@ function seedPaidGuest(sqlite, destinationHasFreeGrant = true) {
       `ledger-${grantId}`, grantId === "guest-pack" ? "purchase-1" : null, nowMs, nowMs,
     );
   }
+  for (const customerId of ["guest-1", ...(destinationHasFreeGrant ? ["registered-1"] : [])]) {
+    sqlite.prepare(
+      "INSERT INTO allowance_periods (allowance_period_id, customer_id, allowance_kind, period_key, starts_at_ms, expires_at_ms, allowance_ms, created_at_ms) VALUES (?, ?, 'free', 'free:2026-09', ?, ?, 300000, ?)",
+    ).run(`period:${customerId}:free:2026-09`, customerId, Date.UTC(2026, 8, 1), Date.UTC(2026, 9, 1), nowMs);
+  }
   sqlite.prepare("INSERT INTO phone_audio_gifts (customer_id, claimed_at_ms, remaining_ms) VALUES (?, ?, ?)")
     .run("guest-1", nowMs, 120_000);
   sqlite.prepare("INSERT INTO phone_audio_gifts (customer_id, claimed_at_ms, remaining_ms) VALUES (?, ?, ?)")
@@ -68,11 +73,13 @@ describe("guest merge with billing and runtime migrations", () => {
       const repository = new LedgerRepository(database);
       expect((await repository.getBalance("registered-1", nowMs)).allowanceMs).toBe(expectedMs);
       expect((await repository.getBalance("guest-1", nowMs)).allowanceMs).toBe(0);
-      if (sourceMs > 0 && destinationMs === null) {
-        expect(sqlite.prepare("SELECT customer_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE grant_id = 'guest-free'").get())
-          .toEqual({ customer_id: "registered-1", grant_key: "free:2026-09", original_ms: 300_000, remaining_ms: sourceMs, expires_at_ms: Date.UTC(2026, 9, 1), state: "available" });
-        expect(sqlite.prepare("SELECT customer_id, amount_ms FROM ledger_entries WHERE entry_kind = 'merge' AND grant_id = 'guest-free' ORDER BY amount_ms").all())
-          .toEqual([{ customer_id: "guest-1", amount_ms: -sourceMs }, { customer_id: "registered-1", amount_ms: sourceMs }]);
+      if (sourceMs !== null && destinationMs === null) {
+        expect(sqlite.prepare("SELECT grant_id, grant_key, original_ms, remaining_ms, expires_at_ms, state FROM balance_grants WHERE customer_id = 'registered-1' AND grant_kind = 'free'").get())
+          .toEqual({ grant_id: "grant:registered-1:free:2026-09", grant_key: "free:2026-09", original_ms: 300_000, remaining_ms: sourceMs, expires_at_ms: Date.UTC(2026, 9, 1), state: sourceMs > 0 ? "available" : "exhausted" });
+        expect(sqlite.prepare("SELECT remaining_ms, state FROM balance_grants WHERE grant_id = 'guest-free'").get())
+          .toEqual({ remaining_ms: 0, state: "exhausted" });
+        expect(sqlite.prepare("SELECT customer_id, amount_ms FROM ledger_entries WHERE entry_kind = 'merge' AND grant_id IN ('guest-free', 'grant:registered-1:free:2026-09') ORDER BY amount_ms").all())
+          .toEqual(sourceMs > 0 ? [{ customer_id: "guest-1", amount_ms: -sourceMs }, { customer_id: "registered-1", amount_ms: sourceMs }] : []);
       }
       const grants = sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all();
       const entries = sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all();
@@ -86,13 +93,20 @@ describe("guest merge with billing and runtime migrations", () => {
     }
   });
 
-  it.each([0, 180_000])("reuses a moved Free grant with %s ms when the same-month allowance returns", async (remainingMs) => {
+  it.each([[0, false], [180_000, false], [0, true], [180_000, true]])("reuses a canonical Free grant with %s ms (existing period: %s)", async (remainingMs, existingPeriod) => {
     const { database, sqlite } = createDatabase();
     try {
       seedPaidGuest(sqlite, false);
       sqlite.prepare("UPDATE balance_grants SET remaining_ms = ?, state = ? WHERE grant_id = 'guest-free'")
         .run(remainingMs, remainingMs > 0 ? "available" : "exhausted");
+      if (existingPeriod) {
+        sqlite.exec("INSERT INTO allowance_periods SELECT 'period:registered-1:free:2026-09', 'registered-1', allowance_kind, period_key, starts_at_ms, expires_at_ms, allowance_ms, created_at_ms FROM allowance_periods WHERE customer_id = 'guest-1'");
+      }
       await mergeGuestCustomer({ database, destinationCustomerId: "registered-1", nowMs, sourceCustomerId: "guest-1" });
+      expect(sqlite.prepare("SELECT allowance_period_id, starts_at_ms, expires_at_ms, allowance_ms FROM allowance_periods WHERE customer_id = 'registered-1' AND period_key = 'free:2026-09'").get())
+        .toEqual({ allowance_period_id: "period:registered-1:free:2026-09", starts_at_ms: Date.UTC(2026, 8, 1), expires_at_ms: Date.UTC(2026, 9, 1), allowance_ms: 300_000 });
+      expect(sqlite.prepare("SELECT l.customer_id, l.amount_ms FROM balance_grants g JOIN ledger_entries l ON l.ledger_entry_id = g.source_ledger_entry_id WHERE g.grant_id = 'grant:registered-1:free:2026-09'").get())
+        .toEqual({ customer_id: remainingMs > 0 ? "registered-1" : "guest-1", amount_ms: remainingMs > 0 ? remainingMs : 300_000 });
       const grants = sqlite.prepare("SELECT * FROM balance_grants ORDER BY grant_id").all();
       const entries = sqlite.prepare("SELECT * FROM ledger_entries ORDER BY ledger_entry_id").all();
       const periods = sqlite.prepare("SELECT * FROM allowance_periods ORDER BY allowance_period_id").all();
@@ -114,9 +128,9 @@ describe("guest merge with billing and runtime migrations", () => {
       expect(sqlite.prepare("SELECT * FROM allowance_periods ORDER BY allowance_period_id").all()).toEqual(periods);
       expect(sqlite.prepare("SELECT * FROM projection_versions ORDER BY customer_id").all()).toEqual(projections);
       expect(sqlite.prepare("SELECT grant_id, remaining_ms FROM balance_grants WHERE customer_id = 'registered-1' AND grant_kind = 'free'").all())
-        .toEqual([{ grant_id: "guest-free", remaining_ms: remainingMs }]);
+        .toEqual([{ grant_id: "grant:registered-1:free:2026-09", remaining_ms: remainingMs }]);
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM ledger_entries WHERE grant_id = 'guest-free' AND entry_kind = 'merge'").get().count)
-        .toBe(remainingMs > 0 ? 2 : 0);
+        .toBe(remainingMs > 0 ? 1 : 0);
     } finally {
       sqlite.close();
     }

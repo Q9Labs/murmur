@@ -215,14 +215,63 @@ function appendFreeGrantMergeStatements(params: {
     })
     : sourceGrant.remaining_ms;
   if (!destinationGrant) {
+    const periodKey = currentFreePeriodPrefix(params.nowMs);
+    const destinationGrantId = `grant:${params.destinationCustomerId}:${periodKey}`;
+    const destinationLedgerEntryId = `ledger:${params.mergeId}:destination-free`;
+    if (sourceGrant.remaining_ms > 0) {
+      statements.push(
+        mergeLedgerEntry({
+          amountMs: sourceGrant.remaining_ms,
+          customerId: params.destinationCustomerId,
+          database,
+          grantId: destinationGrantId,
+          idempotencyKey: `${params.mergeId}:destination-free`,
+          ledgerEntryId: destinationLedgerEntryId,
+          nowMs: params.nowMs,
+          sourceCustomerId: params.sourceCustomerId,
+        }),
+        updateProjection(database, params.destinationCustomerId, destinationLedgerEntryId, params.nowMs),
+      );
+    }
     statements.push(
       database
         .prepare(
-          `UPDATE balance_grants
-           SET customer_id = ?, updated_at_ms = ?
-           WHERE grant_id = ? AND customer_id = ?`,
+          `INSERT INTO allowance_periods
+            (allowance_period_id, customer_id, allowance_kind, period_key, starts_at_ms,
+             expires_at_ms, allowance_ms, created_at_ms)
+           SELECT ?, ?, allowance_kind, period_key, starts_at_ms, expires_at_ms, allowance_ms, ?
+           FROM allowance_periods WHERE customer_id = ? AND period_key = ?
+           ON CONFLICT(customer_id, period_key) DO NOTHING`,
         )
-        .bind(params.destinationCustomerId, params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+        .bind(
+          `period:${params.destinationCustomerId}:${periodKey}`,
+          params.destinationCustomerId,
+          params.nowMs,
+          params.sourceCustomerId,
+          periodKey,
+        ),
+      // An exhausted grant retains its provenance: ledger entries cannot have a zero amount.
+      database
+        .prepare(
+          `INSERT INTO balance_grants
+            (grant_id, customer_id, grant_kind, grant_key, original_ms, remaining_ms,
+             valid_from_ms, expires_at_ms, state, source_ledger_entry_id,
+             source_transaction_row_id, created_at_ms, updated_at_ms)
+           SELECT ?, ?, 'free', grant_key, original_ms, remaining_ms, valid_from_ms,
+                  expires_at_ms, state,
+                  CASE WHEN remaining_ms > 0 THEN ? ELSE source_ledger_entry_id END,
+                  NULL, ?, ?
+           FROM balance_grants WHERE grant_id = ? AND customer_id = ?`,
+        )
+        .bind(
+          destinationGrantId,
+          params.destinationCustomerId,
+          destinationLedgerEntryId,
+          params.nowMs,
+          params.nowMs,
+          sourceGrant.grant_id,
+          params.sourceCustomerId,
+        ),
     );
   }
   if (sourceGrant.remaining_ms > 0) {
@@ -244,32 +293,16 @@ function appendFreeGrantMergeStatements(params: {
         params.nowMs,
       ),
     );
-    if (destinationGrant) {
-      statements.push(
-        database
-          .prepare(
-            `UPDATE balance_grants
-             SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
-             WHERE grant_id = ? AND customer_id = ?`,
-          )
-          .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
-      );
-    } else {
-      statements.push(
-        mergeLedgerEntry({
-          amountMs: sourceGrant.remaining_ms,
-          customerId: params.destinationCustomerId,
-          database,
-          grantId: sourceGrant.grant_id,
-          idempotencyKey: `${params.mergeId}:destination-free`,
-          ledgerEntryId: `ledger:${params.mergeId}:destination-free`,
-          nowMs: params.nowMs,
-          sourceCustomerId: params.sourceCustomerId,
-        }),
-        updateProjection(database, params.destinationCustomerId, `ledger:${params.mergeId}:destination-free`, params.nowMs),
-      );
-    }
   }
+  statements.push(
+    database
+      .prepare(
+        `UPDATE balance_grants
+         SET remaining_ms = 0, state = 'exhausted', updated_at_ms = ?
+         WHERE grant_id = ? AND customer_id = ?`,
+      )
+      .bind(params.nowMs, sourceGrant.grant_id, params.sourceCustomerId),
+  );
   if (destinationGrant && destinationRemainingMs !== destinationGrant.remaining_ms) {
     const destinationDeltaMs = destinationRemainingMs - destinationGrant.remaining_ms;
     statements.push(
