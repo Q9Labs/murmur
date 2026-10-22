@@ -1,0 +1,10 @@
+Observed in the native simulator log during the first fresh-install Listen run:
+
+2026-10-22 21:41:31.519 Murmur[40115]
+Terminating app due to uncaught exception 'com.apple.coreaudio.avfaudio', reason:
+'required condition is false: IsFormatSampleRateAndChannelCountValid(format)'
+
+The native stack enters AVAudioEngineGraph::InstallTapOnNode and AUGraphNodeBaseV3::CreateRecordingTap.
+The matching Murmur call is inputNode.installTap in apps/mobile/modules/murmur-audio/ios/MurmurAudioModule.swift:171.
+The attached audio-devices.json shows no host audio input device.
+master-crash-summary.json records the final reproduction's SIGABRT and exception backtrace.

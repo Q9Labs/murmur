@@ -1,21 +1,12 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { resolve } from "node:path";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
+import { bundleWorkerProof } from "./worker-proof-runtime.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const require = createRequire(realpathSync(resolve(root, "apps/worker/node_modules/wrangler/package.json")));
-const { unstable_splitSqlQuery: splitSqlQuery } = require("wrangler");
-const bundle = await build({
-  entryPoints: [resolve(root, "apps/worker/src/index.ts")],
-  bundle: true, write: false, format: "esm", platform: "neutral",
-  mainFields: ["module", "main"],
-  conditions: ["workerd", "worker", "browser"], external: ["node:*", "cloudflare:*"],
+const { root, script, splitSqlQuery } = await bundleWorkerProof({
+  entryPoint: "apps/worker/src/index.ts", mainFields: ["module", "main"],
 });
 const provider = `export default { async fetch(request) {
   const url = new URL(request.url);
@@ -29,7 +20,7 @@ const provider = `export default { async fetch(request) {
   return Response.json({ flags: { free_allowance_minutes: { enabled: true, metadata: { payload: JSON.stringify(minutes) } } } });
 } };`;
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
-  name: "murmur", modules: true, script: bundle.outputFiles[0].text,
+  name: "murmur", modules: true, script,
   compatibilityDate: "2026-05-16", compatibilityFlags: ["nodejs_compat"],
   outboundService: "posthog", d1Databases: ["BILLING_DB"],
   durableObjects: {

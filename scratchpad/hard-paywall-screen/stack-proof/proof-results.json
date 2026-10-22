@@ -1,0 +1,29 @@
+{
+  "hard_paywall_scenarios": 9,
+  "caption_recovery_scenarios": 27,
+  "all_caption_scenarios_passed": true,
+  "gate_exit": 1,
+  "original_f4e880e_fallow_exit": 1,
+  "customers": [
+    {
+      "minutes": 5,
+      "customer_id": "dc74b3d6-ff8d-4ce4-b82f-edebc76ecc2f",
+      "free_allowance_ms": 300000,
+      "available_ms": 300000,
+      "gift": {
+        "claimable": true,
+        "remaining_ms": 0
+      }
+    },
+    {
+      "minutes": 0,
+      "customer_id": "44e1943f-69cd-4035-be37-e8b0af8cd17f",
+      "free_allowance_ms": 0,
+      "available_ms": 0,
+      "gift": {
+        "claimable": false,
+        "remaining_ms": 0
+      }
+    }
+  ]
+}
