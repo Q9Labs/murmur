@@ -1,10 +1,11 @@
+import { getLanguage } from "@murmur/protocol/languages";
 import { useEffect, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
 import { previewConversationFor } from "../../home/previewConversation";
 import { useReducedMotion } from "../../home/variants/hooks";
 import { useBloomStyles } from "../../home/variants/bloom/styles";
-import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
+import { languageLabel, uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import { usePaywallStyles } from "./styles";
 
 export function PaywallDemo(): ReactNode {
@@ -19,15 +20,15 @@ export function PaywallDemo(): ReactNode {
   const [visible, setVisible] = useState(0);
   useEffect(() => {
     setVisible(0);
-    if (reducedMotion) {
+    if (reducedMotion !== false) {
       return;
     }
-    const interval = setInterval(() => setVisible((count) => {
-      if (count >= words.length) {
-        clearInterval(interval);
-      }
-      return Math.min(count + 1, words.length);
-    }), 2000 / words.length);
+    let revealed = 0;
+    const interval = setInterval(() => {
+      revealed += 1;
+      setVisible(revealed);
+      if (revealed === words.length) clearInterval(interval);
+    }, 2000 / words.length);
     return () => clearInterval(interval);
   }, [conversation.translation, reducedMotion, words.length]);
   const count = reducedMotion ? words.length : visible;
@@ -36,14 +37,14 @@ export function PaywallDemo(): ReactNode {
     <View style={styles.demo}>
       <View style={styles.example}>
         <View style={styles.dot} />
-        <Text style={styles.exampleText}>{ui.t("paywall.example")}</Text>
+        <Text style={styles.exampleText}>{ui.t("paywall.example", { source: languageLabel(getLanguage(conversation.sourceLanguage), ui.locale), target: languageLabel(getLanguage(conversation.targetLanguage), ui.locale) })}</Text>
       </View>
-      <Text accessibilityLabel={conversation.translation} style={[caption.timelineTranslation, styles.caption, uiTextDirectionStyle(conversation.targetLanguage === "ar" ? "rtl" : "ltr", ui.direction)]}>
+      <Text accessibilityLabel={conversation.translation} style={[caption.timelineTranslation, styles.caption, uiTextDirectionStyle(getLanguage(conversation.targetLanguage).rtl ? "rtl" : "ltr", ui.direction)]}>
         <Text>{words.slice(0, Math.min(count, committedEnd)).join("")}</Text>
         <Text style={caption.translationPartial}>{words.slice(committedEnd, count).join("")}</Text>
         <Text style={styles.hidden}>{words.slice(count).join("")}</Text>
       </Text>
-      <Text style={[caption.sourceText, styles.source, uiTextDirectionStyle(conversation.sourceLanguage === "ar" ? "rtl" : "ltr", ui.direction)]}>{conversation.sourceCaption}</Text>
+      <Text numberOfLines={2} style={[caption.sourceText, styles.source, uiTextDirectionStyle(getLanguage(conversation.sourceLanguage).rtl ? "rtl" : "ltr", ui.direction)]}>{conversation.sourceCaption}</Text>
     </View>
   );
 }

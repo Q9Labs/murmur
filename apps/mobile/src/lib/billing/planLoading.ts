@@ -10,8 +10,9 @@ export type BillingTelemetryReporter = (
 export async function loadPlansWithTelemetry(
   serverOfferingId: string | null,
   report: BillingTelemetryReporter,
+  surface: "plan_picker" | "hard_paywall" = "plan_picker",
 ): Promise<MurmurPlan[]> {
-  report("mobile_paywall_opened", { packageLabel: "plan_picker" });
+  report("mobile_paywall_opened", { packageLabel: surface });
   try {
     const { loadMurmurPlans } = await import("./revenueCat");
     return await loadMurmurPlans(serverOfferingId);

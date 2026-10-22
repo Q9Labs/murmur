@@ -1,15 +1,6 @@
 import type { Catalog } from "./en";
 
 export const trCatalog: Catalog = {
-  "plans.twoHours": "2 saat",
-  "paywall.heading": "Bir sonraki konuşmanızı çevirin",
-  "paywall.example": "Örnek: Arapçadan İngilizceye",
-  "paywall.packDetail": "Süresi dolmayan {minutes}.",
-  "paywall.proDetail": "Her ay {allowance} çeviri.",
-  "paywall.onePayment": "Tek ödeme. Abonelik yok.",
-  "paywall.allPlans": "Tüm planlar",
-  "paywall.lockedHome": "Çeviriye başlamak için bir plan seçin.",
-  "paywall.once": "Tek seferlik {price}",
   "accessibility.closeSheet": "Paneli kapat",
   "accessibility.close": "Kapat",
   "accessibility.openSettings": "Ayarları aç",
@@ -169,6 +160,7 @@ export const trCatalog: Catalog = {
   "plans.packValidity": "Süresi dolmaz",
   "plans.minutes": "{count} dakika",
   "plans.oneHour": "1 saat",
+  "plans.twoHours": "2 saat",
   "plans.hours": "{count} saat",
   "plans.allowancePerMonth": "Ayda {allowance}",
   "plans.pricePerMonth": "Ayda {price}",
@@ -207,6 +199,17 @@ export const trCatalog: Catalog = {
   "plans.offerTitle": "Pro'da {percent} indirim",
   "plans.offerSpoken": "{title}. Teklif {countdown} sonra bitiyor",
   "plans.offerEnds": "{countdown} sonra bitiyor",
+
+  "paywall.heading": "Bir sonraki konuşmanızı çevirin",
+  "paywall.example": "Örnek çeviri: {source} → {target}",
+  "paywall.packDetail": "Süresi dolmayan {minutes}.",
+  "paywall.proDetail": "Her ay {allowance} çeviri.",
+  "paywall.onePayment": "Tek ödeme. Abonelik yok.",
+  "paywall.allPlans": "Tüm planlar",
+  "paywall.lockedHome": "Çeviriye başlamak için bir plan seçin.",
+  "paywall.once": "Tek seferlik {price}",
+  "paywall.subscriptionPrice": "{title}, {price}",
+
   "history.languagePair": "{source} → {target}",
   "account.title": "Hesap",
   "account.locked": "Hesabını yönetmek için çeviriyi durdur.",

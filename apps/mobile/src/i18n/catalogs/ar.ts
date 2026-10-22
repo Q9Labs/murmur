@@ -1,15 +1,6 @@
 import type { Catalog } from "./en";
 
 export const arCatalog: Catalog = {
-  "plans.twoHours": "ساعتان",
-  "paywall.heading": "ترجِم محادثتك القادمة",
-  "paywall.example": "مثال: من الإنجليزية إلى العربية",
-  "paywall.packDetail": "{minutes} لا تنتهي صلاحيتها.",
-  "paywall.proDetail": "رصيد الترجمة الشهري: {allowance}.",
-  "paywall.onePayment": "دفعة واحدة. دون اشتراك.",
-  "paywall.allPlans": "جميع الخطط",
-  "paywall.lockedHome": "اختر خطة لبدء الترجمة.",
-  "paywall.once": "{price} لمرة واحدة",
   "accessibility.closeSheet": "إغلاق اللوحة",
   "accessibility.close": "إغلاق",
   "accessibility.openSettings": "فتح الإعدادات",
@@ -169,6 +160,7 @@ export const arCatalog: Catalog = {
   "plans.packValidity": "لا تنتهي صلاحيتها",
   "plans.minutes": "{count} دقيقة",
   "plans.oneHour": "ساعة واحدة",
+  "plans.twoHours": "ساعتان",
   "plans.hours": "{count} ساعات",
   "plans.allowancePerMonth": "{allowance} شهريًا",
   "plans.pricePerMonth": "\u2068{price}\u2069 شهريًا",
@@ -207,6 +199,17 @@ export const arCatalog: Catalog = {
   "plans.offerTitle": "خصم {percent} على \u2068Pro\u2069",
   "plans.offerSpoken": "{title}. ينتهي العرض خلال {countdown}",
   "plans.offerEnds": "ينتهي خلال {countdown}",
+
+  "paywall.heading": "ترجِم محادثتك القادمة",
+  "paywall.example": "مثال: من {source} إلى {target}",
+  "paywall.packDetail": "{minutes} لا تنتهي صلاحيتها.",
+  "paywall.proDetail": "رصيد الترجمة الشهري: {allowance}.",
+  "paywall.onePayment": "دفعة واحدة. دون اشتراك.",
+  "paywall.allPlans": "جميع الخطط",
+  "paywall.lockedHome": "اختر خطة لبدء الترجمة.",
+  "paywall.once": "{price} لمرة واحدة",
+  "paywall.subscriptionPrice": "{title}، {price}",
+
   "history.languagePair": "من {source} إلى {target}",
   "account.title": "الحساب",
   "account.locked": "أوقف الترجمة لإدارة حسابك.",

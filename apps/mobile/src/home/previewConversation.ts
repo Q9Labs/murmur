@@ -1,11 +1,11 @@
 // cspell:ignore acompanhar anders chaque cidade ciudad comprend consigo diferente distinta entende entiendes folgen jede jedem parece peux puedo rente siente Stadt Stimme suivre versteht ville
-import type { LanguageCode, SourceLanguageCode } from "@murmur/protocol/languages";
+import type { LanguageCode } from "@murmur/protocol/languages";
 
 import type { UiLocale } from "../i18n/types";
 
 export type PreviewConversation = {
   sourceCaption: string;
-  sourceLanguage: SourceLanguageCode;
+  sourceLanguage: LanguageCode;
   targetLanguage: LanguageCode;
   translation: string;
 };

@@ -3,16 +3,6 @@
  * is easy to spot and so catalog parity can be checked without walking a tree.
  */
 export const enCatalog = {
-  "plans.twoHours": "2 hours",
-  "paywall.heading": "Translate your next conversation",
-  "paywall.example": "Example: Arabic to English",
-  "paywall.packDetail": "{minutes} that never expire.",
-  "paywall.proDetail": "{allowance} of translation every month.",
-  "paywall.onePayment": "One payment. No subscription.",
-  "paywall.allPlans": "All plans",
-  "paywall.lockedHome": "Choose a plan to start translating.",
-  "paywall.once": "{price} once",
-
   "accessibility.closeSheet": "Close sheet",
   "accessibility.close": "Close",
   "accessibility.openSettings": "Open settings",
@@ -185,6 +175,7 @@ export const enCatalog = {
   "plans.packValidity": "Never expires",
   "plans.minutes": "{count} minutes",
   "plans.oneHour": "1 hour",
+  "plans.twoHours": "2 hours",
   "plans.hours": "{count} hours",
   "plans.allowancePerMonth": "{allowance} a month",
   "plans.pricePerMonth": "{price} a month",
@@ -223,6 +214,17 @@ export const enCatalog = {
   "plans.offerTitle": "{percent} off Pro",
   "plans.offerSpoken": "{title}. Offer ends in {countdown}",
   "plans.offerEnds": "Ends in {countdown}",
+
+  "paywall.heading": "Translate your next conversation",
+  "paywall.example": "Example: {source} to {target}",
+  "paywall.packDetail": "{minutes} that never expire.",
+  "paywall.proDetail": "{allowance} of translation every month.",
+  "paywall.onePayment": "One payment. No subscription.",
+  "paywall.allPlans": "All plans",
+  "paywall.lockedHome": "Choose a plan to start translating.",
+  "paywall.once": "{price} once",
+  "paywall.subscriptionPrice": "{title}, {price}",
+
   "history.languagePair": "{source} to {target}",
   "account.title": "Account",
   "account.locked": "Stop translating to manage your account.",

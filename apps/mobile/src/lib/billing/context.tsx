@@ -23,7 +23,7 @@ export type MurmurBillingContext = {
   error: string | null;
   manageSubscription: () => Promise<void>;
   initialized: boolean;
-  loadPlans: () => Promise<MurmurPlan[]>;
+  loadPlans: (surface?: "plan_picker" | "hard_paywall") => Promise<MurmurPlan[]>;
   loadPlansSilently: () => Promise<MurmurPlan[]>;
   notice: string | null;
   // Resolves true only when the store completed a purchase, so the UI can offer to save it.
@@ -232,7 +232,7 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
 
   const serverOfferingId = config.paywallOfferingId;
   const loadPlans = useCallback(
-    () => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry),
+    (surface?: "plan_picker" | "hard_paywall") => loadPlansWithTelemetry(serverOfferingId, captureBillingTelemetry, surface),
     [serverOfferingId],
   );
   const loadPlansSilently = useCallback(async () => {

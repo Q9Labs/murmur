@@ -131,7 +131,7 @@ function perMonthLine(plan: MurmurPlan, ui: UiText): string | null {
     : null;
 }
 
-function introRenewalLine(plan: MurmurPlan, ui: UiText): string | null {
+export function introRenewalLine(plan: MurmurPlan, ui: UiText): string | null {
   if (!plan.introPrice || !plan.period) {
     return null;
   }

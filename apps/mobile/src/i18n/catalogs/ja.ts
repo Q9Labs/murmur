@@ -1,15 +1,6 @@
 import type { Catalog } from "./en";
 
 export const jaCatalog: Catalog = {
-  "plans.twoHours": "2時間",
-  "paywall.heading": "次の会話を翻訳しましょう",
-  "paywall.example": "翻訳例：英語から日本語へ",
-  "paywall.packDetail": "有効期限のない{minutes}。",
-  "paywall.proDetail": "毎月{allowance}の翻訳。",
-  "paywall.onePayment": "お支払いは1回のみ。定期購入ではありません。",
-  "paywall.allPlans": "すべてのプラン",
-  "paywall.lockedHome": "プランを選んで翻訳を始めましょう。",
-  "paywall.once": "{price}の買い切り",
   "accessibility.closeSheet": "シートを閉じる",
   "accessibility.close": "閉じる",
   "accessibility.openSettings": "設定を開く",
@@ -169,6 +160,7 @@ export const jaCatalog: Catalog = {
   "plans.packValidity": "有効期限なし",
   "plans.minutes": "{count}分",
   "plans.oneHour": "1時間",
+  "plans.twoHours": "2時間",
   "plans.hours": "{count}時間",
   "plans.allowancePerMonth": "毎月{allowance}",
   "plans.pricePerMonth": "月額{price}",
@@ -207,6 +199,17 @@ export const jaCatalog: Catalog = {
   "plans.offerTitle": "Proが{percent}オフ",
   "plans.offerSpoken": "{title}。オファー終了まで{countdown}",
   "plans.offerEnds": "終了まで{countdown}",
+
+  "paywall.heading": "次の会話を翻訳しましょう",
+  "paywall.example": "翻訳例：{source}から{target}へ",
+  "paywall.packDetail": "有効期限のない{minutes}。",
+  "paywall.proDetail": "毎月{allowance}の翻訳。",
+  "paywall.onePayment": "お支払いは1回のみ。定期購入ではありません。",
+  "paywall.allPlans": "すべてのプラン",
+  "paywall.lockedHome": "プランを選んで翻訳を始めましょう。",
+  "paywall.once": "{price}の買い切り",
+  "paywall.subscriptionPrice": "{title}：{price}",
+
   "history.languagePair": "{source} → {target}",
   "account.title": "アカウント",
   "account.locked": "アカウントを管理するには翻訳を停止してください。",

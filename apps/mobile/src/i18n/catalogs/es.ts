@@ -1,15 +1,6 @@
 import type { Catalog } from "./en";
 
 export const esCatalog: Catalog = {
-  "plans.twoHours": "2 horas",
-  "paywall.heading": "Traduce tu próxima conversación",
-  "paywall.example": "Ejemplo: de inglés a español",
-  "paywall.packDetail": "{minutes} que nunca caducan.",
-  "paywall.proDetail": "{allowance} de traducción cada mes.",
-  "paywall.onePayment": "Un solo pago. Sin suscripción.",
-  "paywall.allPlans": "Todos los planes",
-  "paywall.lockedHome": "Elige un plan para empezar a traducir.",
-  "paywall.once": "{price} una vez",
   "accessibility.closeSheet": "Cerrar panel",
   "accessibility.close": "Cerrar",
   "accessibility.openSettings": "Abrir ajustes",
@@ -169,6 +160,7 @@ export const esCatalog: Catalog = {
   "plans.packValidity": "No caduca",
   "plans.minutes": "{count} minutos",
   "plans.oneHour": "1 hora",
+  "plans.twoHours": "2 horas",
   "plans.hours": "{count} horas",
   "plans.allowancePerMonth": "{allowance} al mes",
   "plans.pricePerMonth": "{price} al mes",
@@ -207,6 +199,17 @@ export const esCatalog: Catalog = {
   "plans.offerTitle": "{percent} de descuento en Pro",
   "plans.offerSpoken": "{title}. La oferta termina en {countdown}",
   "plans.offerEnds": "Termina en {countdown}",
+
+  "paywall.heading": "Traduce tu próxima conversación",
+  "paywall.example": "Ejemplo: de {source} a {target}",
+  "paywall.packDetail": "{minutes} que nunca caducan.",
+  "paywall.proDetail": "{allowance} de traducción cada mes.",
+  "paywall.onePayment": "Un solo pago. Sin suscripción.",
+  "paywall.allPlans": "Todos los planes",
+  "paywall.lockedHome": "Elige un plan para empezar a traducir.",
+  "paywall.once": "{price} una vez",
+  "paywall.subscriptionPrice": "{title}, {price}",
+
   "history.languagePair": "{source} a {target}",
   "account.title": "Cuenta",
   "account.locked": "Detén la traducción para gestionar tu cuenta.",

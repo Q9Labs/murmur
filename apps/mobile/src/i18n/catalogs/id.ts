@@ -1,15 +1,6 @@
 import type { Catalog } from "./en";
 
 export const idCatalog: Catalog = {
-  "plans.twoHours": "2 jam",
-  "paywall.heading": "Terjemahkan percakapan Anda berikutnya",
-  "paywall.example": "Contoh: bahasa Arab ke bahasa Inggris",
-  "paywall.packDetail": "{minutes} yang tidak pernah kedaluwarsa.",
-  "paywall.proDetail": "{allowance} penerjemahan setiap bulan.",
-  "paywall.onePayment": "Sekali bayar. Tanpa langganan.",
-  "paywall.allPlans": "Semua paket",
-  "paywall.lockedHome": "Pilih paket untuk mulai menerjemahkan.",
-  "paywall.once": "{price} sekali bayar",
   "accessibility.closeSheet": "Tutup panel",
   "accessibility.close": "Tutup",
   "accessibility.openSettings": "Buka pengaturan",
@@ -169,6 +160,7 @@ export const idCatalog: Catalog = {
   "plans.packValidity": "Tidak kedaluwarsa",
   "plans.minutes": "{count} menit",
   "plans.oneHour": "1 jam",
+  "plans.twoHours": "2 jam",
   "plans.hours": "{count} jam",
   "plans.allowancePerMonth": "{allowance} per bulan",
   "plans.pricePerMonth": "{price} per bulan",
@@ -207,6 +199,17 @@ export const idCatalog: Catalog = {
   "plans.offerTitle": "Diskon {percent} untuk Pro",
   "plans.offerSpoken": "{title}. Penawaran berakhir dalam {countdown}",
   "plans.offerEnds": "Berakhir dalam {countdown}",
+
+  "paywall.heading": "Terjemahkan percakapan Anda berikutnya",
+  "paywall.example": "Contoh: {source} ke {target}",
+  "paywall.packDetail": "{minutes} yang tidak pernah kedaluwarsa.",
+  "paywall.proDetail": "{allowance} penerjemahan setiap bulan.",
+  "paywall.onePayment": "Sekali bayar. Tanpa langganan.",
+  "paywall.allPlans": "Semua paket",
+  "paywall.lockedHome": "Pilih paket untuk mulai menerjemahkan.",
+  "paywall.once": "{price} sekali bayar",
+  "paywall.subscriptionPrice": "{title}, {price}",
+
   "history.languagePair": "{source} ke {target}",
   "account.title": "Akun",
   "account.locked": "Hentikan terjemahan untuk mengelola akun Anda.",

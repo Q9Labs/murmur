@@ -1,3 +1,4 @@
+import { parseMobileTelemetryEvent } from "@murmur/protocol/telemetry";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const store = vi.hoisted(() => ({ loadMurmurPlans: vi.fn() }));
@@ -24,6 +25,14 @@ describe("loading plans", () => {
     resolveStore([]);
     await expect(pending).resolves.toEqual([]);
     expect(report).toHaveBeenCalledOnce();
+  });
+
+  it("labels hard-paywall loads separately from Plans", async () => {
+    const report = vi.fn();
+    store.loadMurmurPlans.mockResolvedValue([]);
+    await loadPlansWithTelemetry(null, report, "hard_paywall");
+    expect(report).toHaveBeenCalledWith("mobile_paywall_opened", { packageLabel: "hard_paywall" });
+    expect(parseMobileTelemetryEvent({ event: "mobile_paywall_opened", package_label: "hard_paywall", app_version: "1.0", build_number: "1", backend_environment: "sandbox", platform: "ios", result_category: null })).not.toBeNull();
   });
 
   it("records a failed paywall when the store cannot list plans", async () => {
