@@ -16,6 +16,7 @@ public class MurmurAudioModule: Module {
   private let audioQueue = DispatchQueue(label: "murmur.audio.native")
   private var converter: AVAudioConverter?
   private var captureFailure: MurmurCaptureFailure?
+  private var captureInputNode: AVAudioInputNode?
   private var captureDeadline: DispatchWorkItem?
   private var captureBuffer = Data()
   private var captureActive = false
@@ -154,40 +155,47 @@ public class MurmurAudioModule: Module {
   private func configureAndStartCaptureEngine() throws {
     captureFailure = nil
     let session = AVAudioSession.sharedInstance()
-    try session.setCategory(
-      .playAndRecord,
-      mode: .voiceChat,
-      options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
-    )
-    try session.setPreferredSampleRate(48_000)
-    try session.setPreferredIOBufferDuration(0.02)
-    try session.setActive(true)
-
-    let inputNode = captureEngine.inputNode
-    var step = MurmurCaptureStep.voice_processing
+    var step = MurmurCaptureStep.session_category
+    var inputNode: AVAudioInputNode?
     var hardwareFormat: AVAudioFormat?
     var inputFormat: AVAudioFormat?
     do {
+      try session.setCategory(
+        .playAndRecord,
+        mode: .voiceChat,
+        options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
+      )
+      step = .session_sample_rate
+      try session.setPreferredSampleRate(48_000)
+      step = .session_buffer_duration
+      try session.setPreferredIOBufferDuration(0.02)
+      step = .session_activation
+      try session.setActive(true)
+
+      step = .voice_processing
+      let node = captureEngine.inputNode
+      inputNode = node
+      captureInputNode = node
       captureEngine.stop()
-      inputNode.removeTap(onBus: 0)
-      if inputNode.isVoiceProcessingEnabled == false {
-        try inputNode.setVoiceProcessingEnabled(true)
+      node.removeTap(onBus: 0)
+      if node.isVoiceProcessingEnabled == false {
+        try node.setVoiceProcessingEnabled(true)
       }
 
       // Voice processing reconfigures the I/O graph. Read its negotiated format
       // only after that transition, and use it for both conversion and the tap.
       step = .hardware_input
-      let hardware = inputNode.inputFormat(forBus: 0)
+      let hardware = node.inputFormat(forBus: 0)
       hardwareFormat = hardware
       try murmurRequireCaptureInput(hardware)
 
       step = .input_format
-      let format = inputNode.outputFormat(forBus: 0)
+      let format = node.outputFormat(forBus: 0)
       inputFormat = format
       converter = try murmurCaptureConverter(from: format, to: pcmFormat)
 
       step = .install_tap
-      inputNode.installTap(onBus: 0, bufferSize: 960, format: format) { [weak self] buffer, _ in
+      node.installTap(onBus: 0, bufferSize: 960, format: format) { [weak self] buffer, _ in
         self?.handleInput(buffer: buffer)
       }
 
@@ -207,7 +215,7 @@ public class MurmurAudioModule: Module {
       captureFailure = MurmurCaptureFailure(
         step: step, hardware: hardwareFormat, output: inputFormat,
         route: route,
-        voiceProcessing: inputNode.isVoiceProcessingEnabled, error: error as NSError
+        voiceProcessing: inputNode?.isVoiceProcessingEnabled ?? false, error: error as NSError
       )
       throw NSError(domain: "MurmurAudio", code: 4, userInfo: [
         NSLocalizedDescriptionKey: "Audio capture failed"
@@ -223,9 +231,12 @@ public class MurmurAudioModule: Module {
   private func resetCaptureEngine() {
     captureDeadline?.cancel()
     captureDeadline = nil
-    captureEngine.inputNode.removeTap(onBus: 0)
-    captureEngine.stop()
-    captureEngine.reset()
+    if let captureInputNode {
+      captureInputNode.removeTap(onBus: 0)
+      captureEngine.stop()
+      captureEngine.reset()
+      self.captureInputNode = nil
+    }
     clearCaptureBufferSync()
     converter = nil
     captureActive = false

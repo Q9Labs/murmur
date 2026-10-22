@@ -2,6 +2,7 @@ import type { ErrorEvent } from "@sentry/react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import nativeState from "../../../../../tooling/ios-capture/tests/capture-failure.json";
+import sessionStates from "../../../../../tooling/ios-capture/tests/session-failures.json";
 
 const sentry = vi.hoisted(() => ({ captureException: vi.fn(), captureMessage: vi.fn(), init: vi.fn() }));
 vi.mock("@sentry/react-native", () => sentry);
@@ -9,6 +10,20 @@ vi.mock("@sentry/react-native", () => sentry);
 import { sanitizeMobileEvent } from "../observability/sentry";
 
 import { getDevicePlaybackCaptureError, startAudioCapture } from "./captureLifecycle";
+
+const delivered: ErrorEvent[] = [];
+beforeEach(() => {
+  vi.clearAllMocks();
+  delivered.length = 0;
+  sentry.captureException.mockImplementation((_failure: unknown, options: ErrorEvent) => {
+    delivered.push(sanitizeMobileEvent({
+      ...options,
+      type: undefined,
+      exception: { values: [{ value: "private native message" }] },
+      extra: { transcript: "private speech" },
+    }));
+  });
+});
 
 describe("Device Audio lifecycle", () => {
   it("maps projection revocation separately from unexpected service stops", () => {
@@ -28,20 +43,6 @@ describe("Device Audio lifecycle", () => {
 });
 
 describe("capture startup reporting through the privacy sanitizer", () => {
-  const delivered: ErrorEvent[] = [];
-  beforeEach(() => {
-    vi.clearAllMocks();
-    delivered.length = 0;
-    sentry.captureException.mockImplementation((_failure: unknown, options: ErrorEvent) => {
-      delivered.push(sanitizeMobileEvent({
-        ...options,
-        type: undefined,
-        exception: { values: [{ value: "private native message" }] },
-        extra: { transcript: "private speech" },
-      }));
-    });
-  });
-
   it("delivers the serialized native state without forwarding its raw content", async () => {
     const failure = new Error("private native message");
     const audio = {
@@ -85,6 +86,21 @@ describe("capture startup reporting through the privacy sanitizer", () => {
       source: "microphone", maxSessionSeconds: 60, appSessionId: "session-1",
     })).rejects.toThrow();
     expect(delivered[0]?.contexts?.audio_capture).toBeUndefined();
+    expect(JSON.stringify(delivered)).not.toContain("private");
+  });
+});
+
+describe("session setup failures through the privacy sanitizer", () => {
+  it.each(sessionStates)("reports the native session step: $capture_failure.step", async (state) => {
+    const failure = new Error("private platform error");
+    const audio = {
+      startCapture: vi.fn().mockRejectedValue(failure),
+      getAudioState: vi.fn().mockResolvedValue(state),
+    };
+    await expect(startAudioCapture({ audio, source: "microphone", maxSessionSeconds: 60, appSessionId: "session-1" }))
+      .rejects.toBe(failure);
+    expect(delivered[0]?.contexts?.audio_capture).toEqual(state.capture_failure);
+    expect(delivered[0]?.exception?.values?.[0]?.value).toBe("mobile_operation_failed");
     expect(JSON.stringify(delivered)).not.toContain("private");
   });
 });

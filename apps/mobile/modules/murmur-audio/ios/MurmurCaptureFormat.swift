@@ -23,6 +23,7 @@ func murmurCaptureConverter(from input: AVAudioFormat, to output: AVAudioFormat)
 // Only this closed payload crosses getAudioState. Never serialize NSError.userInfo
 // or port names, which can contain user or device content.
 enum MurmurCaptureStep: String {
+  case session_category, session_sample_rate, session_buffer_duration, session_activation
   case voice_processing, hardware_input, input_format, install_tap, engine_start
 }
 

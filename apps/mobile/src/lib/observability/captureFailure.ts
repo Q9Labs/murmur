@@ -1,5 +1,8 @@
 // cspell:words avfaudio osstatus
-const captureSteps = ["voice_processing", "hardware_input", "input_format", "install_tap", "engine_start"] as const;
+const captureSteps = [
+  "session_category", "session_sample_rate", "session_buffer_duration", "session_activation",
+  "voice_processing", "hardware_input", "input_format", "install_tap", "engine_start",
+] as const;
 const captureRoutes = ["none", "built_in", "bluetooth", "wired", "usb", "other"] as const;
 const captureErrorDomains = ["murmur", "avfaudio", "osstatus", "other"] as const;
 
