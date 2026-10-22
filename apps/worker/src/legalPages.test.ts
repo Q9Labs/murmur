@@ -46,7 +46,7 @@ describe("legalPages", () => {
       throw new Error("Expected public page responses");
     }
 
-    expect(await sitemap.text()).toContain("<lastmod>2026-09-21</lastmod>");
+    expect(await sitemap.text()).toContain("<lastmod>2026-10-22</lastmod>");
     const homepageHtml = await homepage.text();
     expect(homepageHtml).toContain("box-shadow: 0 0 0 6px var(--ink)");
     expect(homepageHtml).toContain("header { align-items: flex-start; flex-direction: column; }");

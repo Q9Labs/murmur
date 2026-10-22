@@ -7,8 +7,8 @@ type Page = {
   isMarketing?: boolean;
 };
 
-const lastUpdated = "2026-09-23";
-const marketingUpdated = "2026-09-21";
+const lastUpdated = "2026-10-22";
+const marketingUpdated = "2026-10-22";
 const siteUrl = "https://murmur.q9labs.ai";
 const siteName = "Murmur Translate";
 const supportEmail = "q9labs.ai@gmail.com";
@@ -274,7 +274,7 @@ export const legalPages: Record<string, Page> = {
     path: "/",
     title: "Murmur | Live Translated Captions for Tours and Talks",
     description:
-      "Follow tours, talks, lectures, and conferences in another language with live translated captions. Start with 5 free minutes and no cloud transcript history; eligible paid users keep translated captions on device.",
+      "Follow tours, talks, lectures, and conferences in another language with live translated captions. No cloud transcript history; eligible paid users keep translated captions on device.",
     keywords: defaultKeywords,
     html: `
       <section class="hero">
@@ -355,14 +355,8 @@ export const legalPages: Record<string, Page> = {
       </section>
 
       <section class="section" id="pricing">
-        <h2>Start free. Add time when you need it.</h2>
+        <h2>Add time when you need it.</h2>
         <div class="price-grid">
-          <article class="price-card">
-            <span class="icon-tile tone-teal">${icon("gift")}</span>
-            <h3>Free</h3>
-            <p class="price">$0</p>
-            <p>5 minutes every month.</p>
-          </article>
           <article class="price-card price-card-featured">
             <span class="bloom" aria-hidden="true"></span>
             <span class="icon-tile tone-yellow">${icon("sparkles")}</span>
@@ -374,7 +368,7 @@ export const legalPages: Record<string, Page> = {
             <span class="icon-tile tone-violet">${icon("coins")}</span>
             <h3>Credit packs</h3>
             <p class="price">From $7.99</p>
-            <p>Trip Pass and Event Pass minutes expire 90 days after purchase.</p>
+            <p>Trip Pass and Event Pass minutes never expire.</p>
           </article>
         </div>
         <p class="pricing-note">Purchases use Apple App Store or Google Play billing. Taxes and localized prices can vary by storefront.</p>
@@ -396,7 +390,7 @@ export const legalPages: Record<string, Page> = {
     path: "/live-translation-for-travel",
     title: "Live Translation for Travel and Tours | Murmur",
     description:
-      "Follow guides and spoken explanations in another language with live translated captions on your phone. Start with 5 free minutes each month.",
+      "Follow guides and spoken explanations in another language with live translated captions on your phone.",
     keywords: "live translation for travel, tour guide translator, travel voice translator, live captions for tours",
     heading: "Understand the guide without interrupting the tour.",
     lede:
@@ -489,7 +483,7 @@ export const legalPages: Record<string, Page> = {
       <p>Only a session with AI session insights consent can have translated text collected for insight processing. For a consented session with at least 30 seconds of translation, Murmur's Worker holds that text in memory during the session and sends it to OpenRouter at the end to derive a short record. The record may include the kind of setting, an event name if spoken, the topic, domain terms, an estimated speaker count, apparent user intent, a translation-quality score, possible confusing words or phrases, general sentiment, a short summary, and brief product feedback signals. Murmur discards the translated text after processing; it is not written to Murmur storage or logs.</p>
       <p>Murmur stores the derived insight, not the transcript. The record is associated with a hashed install identifier, app session identifier, language pair, session duration, and creation time. A daily job deletes each insight after 24 months; deleting the associated Murmur account removes its insights sooner. Turning off AI session insights stops collection for future sessions but does not delete insights already stored. Avoid speaking sensitive or identifying information if you do not want it reflected in a derived insight.</p>
       <h2>Accounts, Sign-In, and Purchases</h2>
-      <p>Murmur creates a random guest customer identifier so it can provide Free time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.</p>
+      <p>Murmur creates a random guest customer identifier so it can provide translation time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.</p>
       <p>You may save a purchase by signing in with Apple, Google, or email. For Apple sign-in, Murmur receives your email address and, if you share it with Apple on first sign-in, your name. Murmur stores your email address, the name you share, and Apple's stable account identifier with your account until you delete the account. For Google sign-in, Murmur receives your email address and, when Google provides them, your name and profile image. Murmur stores the received profile information and Google's stable account identifier with your account until you delete the account. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.</p>
       <p>Murmur stores plan state, credit grants, usage debits, renewal, restore and refund records, and store transaction identifiers in an entitlement ledger. RevenueCat and the applicable app store help validate and manage purchases. Murmur does not receive or store payment-card details.</p>
       <h2>Install, Session, and Connection Data</h2>
@@ -542,8 +536,8 @@ export const legalPages: Record<string, Page> = {
       <p>AI Session Insights are optional and separate from live translation. Only translated text from a consented session is collected for this feature. For a session with at least 30 seconds of translation, Murmur sends the text to OpenRouter to create a short derived insight, then discards the text without storing it as a transcript. Murmur deletes each insight after 24 months in a daily job or earlier when the associated account is deleted. Turning off insights stops collection and deletes the insights already stored for your account. The Privacy Policy explains the consent and deletion controls.</p>
       <p>You can report translation issues in the app. Reports help support and quality review but do not guarantee that a specific translation will be corrected.</p>
       <h2>Accounts, Plans, Credits, and Usage</h2>
-      <p>Murmur creates a guest customer account automatically. A guest can use the available Free allowance and can purchase, restore, and reconcile store purchases without adding an email or creating a registered account. You may save a guest purchase to an account using Apple, Google, or email sign-in; Murmur then links the guest's purchase and remaining balance to that account so they can be recovered on another device. Apple provides your email address and, if you share it with Apple on first sign-in, your name; Murmur stores those details with your account until account deletion. Google provides your email address and, when available, your name and profile image; Murmur stores the profile information Google provides with your account until account deletion.</p>
-      <p>The app shows the current Free allowance, plan limits, credit value, price, and renewal terms before purchase. Paid allowances are subject to the expiry shown in the app. Purchased credit packs never expire. Monthly plans renew each month. Annual plans renew yearly, with allowance timing shown in the app. Unused allowances do not roll over.</p>
+      <p>Murmur creates a guest customer account automatically. A guest can use any Free allowance the app shows and can purchase, restore, and reconcile store purchases without adding an email or creating a registered account. You may save a guest purchase to an account using Apple, Google, or email sign-in; Murmur then links the guest's purchase and remaining balance to that account so they can be recovered on another device. Apple provides your email address and, if you share it with Apple on first sign-in, your name; Murmur stores those details with your account until account deletion. Google provides your email address and, when available, your name and profile image; Murmur stores the profile information Google provides with your account until account deletion.</p>
+      <p>The app shows any Free allowance, plan limits, credit value, price, and renewal terms before purchase. Paid allowances are subject to the expiry shown in the app. Purchased credit packs never expire. Monthly plans renew each month. Annual plans renew yearly, with allowance timing shown in the app. Unused allowances do not roll over.</p>
       <p>The applicable app store and a payment and subscription provider handle payment, renewal, cancellation, and applicable taxes. Murmur does not receive or store payment-card details. Deleting a Murmur account does not cancel a store subscription; cancel it through the relevant app store. Refunds can remove granted value and may create a negative balance when refunded time has already been used. A reversed refund restores the corresponding value.</p>
       <p>For eligible paid users, Murmur saves committed translated captions in local app storage on the device only; it does not upload this history to the cloud. Deleting a Murmur account does not erase local translation history. You can delete individual history entries or use Delete Local Data to clear on-device data.</p>
       <p>If you choose to submit an in-app rating survey, its stars, use-case answer, and optional Other text are sent directly to Murmur's server, not to product analytics, and retained for 24 months. The submission is sent even if Anonymous Analytics is off. Account deletion removes linked responses but does not find anonymous ratings.</p>
@@ -591,7 +585,7 @@ export const legalPages: Record<string, Page> = {
       <h2>Report Translation Triage</h2>
       <p>Murmur's in-app report categories are inaccurate, wrong language, harmful or offensive, speech issue, and other.</p>
       <h2>Store Submission Notes</h2>
-      <p>Store reviewers can start with the automatic guest account and Free allowance. Tap Listen, speak naturally, review translated captions, then test purchase and Restore controls as a guest. Use the report buttons on a committed translation span.</p>
+      <p>Store reviewers can start with the automatic guest account. A new install may include Free minutes depending on the current offer. Otherwise, tap Listen to open the plans and buy Trip Pass with a store sandbox account. Tap Listen, speak naturally, review translated captions, then test purchase and Restore controls as a guest. Use the report buttons on a committed translation span.</p>
     `,
   },
 
@@ -908,6 +902,7 @@ function renderHtml(page: Page): string {
       }
 
       .steps, .values, .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+      .price-grid { grid-template-columns: repeat(2, 1fr); }
       @media (max-width: 800px) { .steps, .values, .price-grid { grid-template-columns: 1fr; } }
 
       .stage { aspect-ratio: 5 / 4; border-radius: 28px; display: grid; place-items: center; overflow: hidden; }
@@ -1185,7 +1180,7 @@ function renderJsonLd(page: Page, canonicalUrl: string): string {
           "@type": "SoftwareApplication",
           applicationCategory: "UtilitiesApplication",
           description:
-            "One-way live speech translation with real-time translated captions, a monthly Free allowance, optional paid time, no cloud transcript history, eligible paid local translation history, and optional consent-based session insights.",
+            "One-way live speech translation with real-time translated captions, paid time, no cloud transcript history, eligible paid local translation history, and optional consent-based session insights.",
           featureList: [
             "One-way live speech translation",
             "Real-time translated captions",
