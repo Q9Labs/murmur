@@ -12,6 +12,7 @@ import { getAnonymousAnalyticsEnabled } from "../anonymousAnalytics";
 import {
   requestMurmurAppConfig,
   requestMurmurCustomer,
+  requestPhoneAudioGiftClaim,
   requestMurmurReconciliation,
 } from "./murmurBillingApi";
 
@@ -45,6 +46,23 @@ describe("Murmur billing Worker adapter", () => {
     expect(reconciliationHeaders).toBeInstanceOf(Headers);
     expect(reconciliationHeaders?.get("x-murmur-reconciliation-trigger")).toBe("restore");
     expect(reconciliationHeaders?.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends gift claims with the same release and install identity as customer reads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await requestMurmurCustomer();
+    await requestPhoneAudioGiftClaim();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://worker.example.test/v3/gifts/phone-audio/claim",
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) }),
+    );
+    const customerHeaders = fetchMock.mock.calls[0]?.[1]?.headers;
+    const giftHeaders = fetchMock.mock.calls[1]?.[1]?.headers;
+    for (const name of ["x-murmur-app-platform", "x-murmur-app-version", "x-murmur-install-id"]) {
+      expect(customerHeaders?.get(name)).toBeTruthy();
+      expect(giftHeaders?.get(name)).toBe(customerHeaders?.get(name));
+    }
   });
 
   it("sends the disabled analytics preference with reconciliation", async () => {

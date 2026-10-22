@@ -16,8 +16,13 @@ export async function requestMurmurCustomer(): Promise<Response> {
 }
 
 export async function requestPhoneAudioGiftClaim(): Promise<Response> {
+  const release = getAppRelease();
   return fetch(`${getWorkerBaseUrl()}/v3/gifts/phone-audio/claim`, {
-    headers: await authenticatedWorkerHeaders(),
+    headers: await authenticatedWorkerHeaders({
+      "x-murmur-app-platform": release.app_platform,
+      "x-murmur-app-version": release.app_version,
+      "x-murmur-install-id": await getOrCreateInstallId(),
+    }),
     method: "POST",
   });
 }
