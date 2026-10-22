@@ -370,6 +370,29 @@ describe("home billing effects", () => {
     await act(async () => { pending.resolve(fixtureCustomer); });
   });
 
+  it("closes the freemium sheet and opens Plans when refresh returns a hard lock", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
+  });
+
+  it("opens the freemium sheet when a cached hard lock refreshes to freemium", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
   it("does not open Plans when the exhaustion refresh recovers paid minutes", async () => {
     const pending = deferred<typeof fixtureCustomer | null>();
     state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
