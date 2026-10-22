@@ -44,6 +44,7 @@ vi.mock("better-auth/react", () => ({
   }),
 }));
 vi.mock("expo-secure-store", () => ({}));
+vi.mock("react-native", () => ({ AppState: { currentState: "active" } }));
 vi.mock("../appRelease", () => ({
   getAppRelease: () => release,
 }));

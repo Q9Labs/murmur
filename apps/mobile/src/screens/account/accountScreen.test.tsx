@@ -1,6 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { UiLocaleContext, createTranslator } from "../../i18n/runtime";
+import { uiLocales, directionForLocale } from "../../i18n/types";
+import { formatMinutes } from "../formatMinutes";
 import type { MurmurBillingContext } from "../../lib/billing/context";
 import { fixtureBilling, fixtureCustomer } from "../__tests__/billingFixture";
 import { router } from "../__tests__/navigation";
@@ -10,6 +13,8 @@ const billingRef = vi.hoisted(() => ({ current: null as MurmurBillingContext | n
 const accountLock = vi.hoisted(() => ({ locked: false }));
 const telemetry = vi.hoisted(() => ({ captureBillingTelemetry: vi.fn() }));
 
+// Vitest hoists these mocks before imported helpers.
+// fallow-ignore-next-line code-duplication
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("lucide-react-native", () => import("../__tests__/navigation").then((m) => m.lucideMock));
 vi.mock("../screenScaffold", () => import("../__tests__/scaffoldMock"));
@@ -119,10 +124,45 @@ it("shows no plan without a free tier and lets guest subscribers manage their su
   billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
   const markup = renderToStaticMarkup(<AccountScreen />);
   expect(markup).toContain("No plan");
+  expect(recorded.accessibilityLabels).toContain("0 min left. No plan");
+  expect(recorded.accessibilityLabels.join(" ")).not.toContain("No plan plan");
   expect(markup).not.toContain("Free");
   resetRecorded();
   billingRef.current = fixtureBilling({ freeAllowanceMs: 0, isRegistered: false, plan: "pro" });
   renderToStaticMarkup(<AccountScreen />);
   findControl("Manage subscription")?.onPress?.();
   expect(billingRef.current.manageSubscription).toHaveBeenCalledOnce();
+});
+
+
+it.each(uiLocales)("speaks the no-plan balance without a plan-name slot in %s", (locale) => {
+  billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+  const t = createTranslator(locale);
+  renderToStaticMarkup(
+    <UiLocaleContext.Provider value={{
+      locale, preference: locale, direction: directionForLocale(locale), ready: true,
+      t, translate: t, deleteLocale: async () => undefined, setPreference: async () => undefined,
+    }}>
+      <AccountScreen />
+    </UiLocaleContext.Provider>,
+  );
+  const balance = formatMinutes(0, { locale, t });
+  expect(recorded.accessibilityLabels).toContain(t("account.balanceNoPlanSpoken", { balance }));
+  expect(t("account.balanceNoPlanSpoken", { balance })).not.toMatch(/[.।۔。]$/u);
+  expect(recorded.accessibilityLabels).not.toContain(t("account.balanceSpoken", { balance, plan: t("account.planNone") }));
+});
+
+
+it("keeps the Free plan label when a legacy Worker omits its allowance", () => {
+  billingRef.current = fixtureBilling({ freeAllowanceMs: null, availableMs: 0 });
+  const markup = renderToStaticMarkup(<AccountScreen />);
+  expect(markup).toContain("left on Free");
+  expect(markup).not.toContain("No plan");
+});
+
+
+it("separates a no-plan balance from purchased-minute validity once", () => {
+  billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000, creditMs: 60_000 });
+  renderToStaticMarkup(<AccountScreen />);
+  expect(recorded.accessibilityLabels).toContain("1 min left. No plan. Credit packs: 1 min · Never expires");
 });

@@ -1,42 +1,40 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import type { MurmurBillingContext } from "../lib/billing/context";
-import type { HomeExperience } from "./experience";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
 
-const screen = vi.hoisted(() => ({
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MurmurBillingContext } from "../lib/billing/context";
+
+const state = vi.hoisted(() => ({
   billing: null as MurmurBillingContext | null,
-  effects: [] as Array<() => void | (() => void)>,
-  slots: [] as unknown[],
-  cursor: 0,
-  home: null as Parameters<typeof HomeExperience>[0] | null,
-  error: null as string | null,
-  start: vi.fn(async () => undefined),
-  router: { push: vi.fn(), setParams: vi.fn() },
-}));
-vi.mock("react", async (importOriginal) => ({
-  ...await importOriginal<typeof import("react")>(),
-  useEffect: (effect: () => void | (() => void)) => screen.effects.push(effect),
-  useState: <T>(initial: T | (() => T)) => {
-    const index = screen.cursor++;
-    if (!(index in screen.slots)) screen.slots[index] = typeof initial === "function" ? (initial as () => T)() : initial;
-    return [screen.slots[index] as T, (value: T | ((previous: T) => T)) => {
-      screen.slots[index] = typeof value === "function" ? (value as (previous: T) => T)(screen.slots[index] as T) : value;
-    }];
+  push: vi.fn(),
+  experience: vi.fn((_props: { onPrimaryAction: () => void; outOfMinutesOpen: boolean; onCloseOutOfMinutes: () => void; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
+  live: {
+    cancel: vi.fn(async () => undefined),
+    start: vi.fn(async () => undefined),
+    prepare: vi.fn(async () => undefined),
+    error: null as string | null,
+    spans: [],
+    status: "idle",
   },
 }));
+
 const backHandler = vi.hoisted(() => ({
   addEventListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
 
-vi.mock("react-native", () => ({ BackHandler: backHandler }));
+vi.mock("react-native", async () => ({
+  ...(await import("../screens/__tests__/reactNativePrimitives")).reactNativePrimitives,
+  BackHandler: backHandler,
+}));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
-vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => screen.router }));
+vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => state }));
 vi.mock("../screens/rating/ratingSheet", () => ({ RatingSheet: () => null }));
-vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({ features: { phoneAudio: false }, phoneAudioGift: { claimable: false } }) }));
+vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({ phoneAudioGift: { claimable: false }, insightsConsent: null, features: { phoneAudio: false } }) }));
 vi.mock("../lib/billing/context", () => ({
-  useMurmurBilling: () => screen.billing,
+  useMurmurBilling: () => state.billing,
 }));
 vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
 vi.mock("expo-network", () => ({
@@ -91,26 +89,18 @@ vi.mock("../lib/requestReview", () => ({ requestMurmurReview: vi.fn(async () => 
 vi.mock("../lib/shareMurmur", () => ({ shareMurmur: vi.fn(async () => undefined) }));
 vi.mock("../lib/telemetry", () => ({
   captureOnboardingCompleted: vi.fn(),
+  captureMobileTelemetry: vi.fn(),
   initializeAnonymousAnalytics: vi.fn(async () => true),
   resetAnonymousAnalyticsPreference: vi.fn(async () => undefined),
   updateAnonymousAnalyticsEnabled: vi.fn(async () => undefined),
 }));
-vi.mock("../lib/useLiveTranslation", () => ({
-  useLiveTranslation: vi.fn(() => ({
-    cancel: vi.fn(async () => undefined),
-    start: screen.start,
-    prepare: vi.fn(async () => undefined),
-    error: screen.error,
-    spans: [],
-    status: "idle",
-  })),
-}));
+vi.mock("../lib/useLiveTranslation", () => ({ useLiveTranslation: () => state.live }));
 vi.mock("./audioPlaybackPreference", () => ({
   deleteStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
   getStoredAudioPlaybackEnabled: vi.fn(async () => true),
   setStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
 }));
-vi.mock("./experience", () => ({ HomeExperience: (props: Parameters<typeof HomeExperience>[0]) => { screen.home = props; return null; } }));
+vi.mock("./experience", () => ({ HomeExperience: state.experience }));
 vi.mock("./onboardingScreen", () => ({ OnboardingScreen: () => null }));
 vi.mock("./variants/preference", () => ({ deleteStoredUiVariant: vi.fn(async () => undefined) }));
 vi.mock("./viewModel", () => ({
@@ -164,16 +154,27 @@ function createHarness() {
   return { controller, enabledChanges, getStored, messages, setStored };
 }
 
+const mounted: Root[] = [];
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal("__DEV__", true);
-  screen.effects.length = 0;
-  screen.slots.length = 0;
-  screen.cursor = 0;
-  screen.home = null;
-  screen.error = null;
-  screen.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("__DEV__", false);
+  state.billing = fixtureBilling();
+  state.live.error = null;
 });
+afterEach(async () => {
+  await act(async () => {
+    for (const root of mounted.splice(0)) root.unmount();
+  });
+  vi.unstubAllGlobals();
+});
+
+async function renderHome(): Promise<Root> {
+  const root = createRoot(document.createElement("div"));
+  mounted.push(root);
+  await act(async () => { root.render(createElement(HomeScreen)); });
+  return root;
+}
 
 describe("audio playback preference controller", () => {
   it("ignores a stored restore that resolves after a user toggle", async () => {
@@ -274,22 +275,72 @@ describe("audio playback preference controller", () => {
 });
 
 describe("Start allowance gate", () => {
-  it.each([null, "allowance_exhausted"])("routes the real home Start/exhaustion path to the paywall (%s)", async (error) => {
-    screen.error = error;
-    screen.cursor = 0;
-    renderToStaticMarkup(createElement(HomeScreen));
-    const cleanups = screen.effects.splice(0).map((effect) => effect());
-    await flushMicrotasks();
-    if (!error) {
-      screen.cursor = 0;
-      renderToStaticMarkup(createElement(HomeScreen));
-      expect(screen.home).not.toBeNull();
-      screen.home?.onPrimaryAction();
-      await flushMicrotasks();
-    }
-    expect(screen.router.push).toHaveBeenCalledWith("/paywall");
-    expect(screen.start).not.toHaveBeenCalled();
-    cleanups.forEach((cleanup) => cleanup?.());
+
+  it("routes the real home Start action to the paywall without starting translation", async () => {
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+    await renderHome();
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onPrimaryAction(); });
+    expect(state.push).toHaveBeenCalledWith("/paywall");
+    expect(state.live.start).not.toHaveBeenCalled();
+  });
+
+  it("waits for an unknown customer and opens the paywall without starting capture", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    const refresh = vi.fn(() => pending.promise);
+    const starting = startWithAllowance({ customer: null, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+    expect(openPlans).not.toHaveBeenCalled();
+    pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 });
+    await starting;
+    expect(openPlans).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("starts when an unknown customer's refresh fails", async () => {
+    const refresh = vi.fn(async () => null);
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({ customer: null, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
+  });
+
+  it("starts a known paid customer without refreshing", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 };
+    const refresh = vi.fn(async () => customer);
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({ customer, refresh, start, openPlans });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
+  });
+
+  it("opens the paywall without starting translation when hard-mode balance stays empty", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
+    const start = vi.fn(async () => undefined);
+    const push = vi.fn();
+    const refresh = vi.fn(async () => customer);
+    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/paywall") });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledWith("/paywall");
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("opens the paywall instead of starting with a sub-second hard-mode balance", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: minimumSessionBalanceMs - 1 };
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    const refresh = vi.fn(async () => customer);
+    await startWithAllowance({ customer, refresh, start, openPlans });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(openPlans).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
   });
 
   it("keeps freemium Start unchanged even at zero balance", async () => {
@@ -302,7 +353,7 @@ describe("Start allowance gate", () => {
     expect(start).toHaveBeenCalledOnce();
   });
 
-  it.each([1, 7_200_000])("starts when a stale empty cache refreshes to %s ms", async (availableMs) => {
+  it.each([minimumSessionBalanceMs, 7_200_000])("starts when a stale empty cache refreshes to %s ms", async (availableMs) => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
@@ -313,13 +364,172 @@ describe("Start allowance gate", () => {
     expect(openPlans).not.toHaveBeenCalled();
   });
 
-  it("leaves an unknown customer or a failed refresh to Worker enforcement", async () => {
-    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: 0 }]) {
+  it("leaves an unknown or legacy customer to Worker enforcement", async () => {
+    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 }]) {
       const start = vi.fn(async () => undefined);
       const openPlans = vi.fn();
       await startWithAllowance({ customer, refresh: async () => null, start, openPlans });
       expect(start).toHaveBeenCalledOnce();
       expect(openPlans).not.toHaveBeenCalled();
     }
+  });
+});
+
+
+describe("home billing effects", () => {
+  it.each(["freemium", "unknown"])("opens the %s sheet before refresh resolves", async (kind) => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = {
+      ...fixtureBilling({ availableMs: 0 }),
+      customer: kind === "unknown" ? null : fixtureBilling({ availableMs: 0 }).customer,
+      refresh: vi.fn(() => pending.promise),
+    };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.billing.refresh).toHaveBeenCalledOnce();
+    expect(state.push).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve(fixtureCustomer); });
+  });
+
+  it.each([0, 500])("closes the freemium sheet and opens the paywall when refresh returns %s ms in hard mode", async (availableMs) => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
+  });
+
+  it("keeps the freemium sheet dismissed when its pending refresh returns no time", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseOutOfMinutes(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("opens the freemium sheet when a cached hard lock refreshes to freemium", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("does not open Plans when the exhaustion refresh recovers paid minutes", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    expect(state.push).not.toHaveBeenCalled();
+    const recovered = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 };
+    await act(async () => { pending.resolve(recovered); });
+    state.billing = fixtureBilling(recovered);
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
+  it("keeps a known hard lock when customer refresh fails", async () => {
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({
+      customer: { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 },
+      refresh: async () => null, start, openPlans,
+    });
+    expect(start).not.toHaveBeenCalled();
+    expect(openPlans).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["freemium", "allowance_exhausted"],
+    ["freemium", "realtime_allowance_exhausted"],
+    ["unknown", "allowance_exhausted"],
+  ])("uses the %s sheet after %s when refresh fails", async (kind, error) => {
+    const billing = fixtureBilling({ availableMs: 0 });
+    state.billing = { ...billing, customer: kind === "unknown" ? null : billing.customer, refresh: vi.fn(async () => null) };
+    state.live.error = error;
+    await renderHome();
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+  });
+
+  it("keeps a dismissed update-required sheet closed across customer refreshes", async () => {
+    state.live.error = "app_version_unsupported";
+    const root = await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: true }), undefined);
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseUpdateRequired(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: false }), undefined);
+    state.billing = fixtureBilling({ availableMs: 60_000 });
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: false }), undefined);
+  });
+
+  it("opens the paywall once for a cached hard lock after exhaustion and failed refresh", async () => {
+    state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(async () => null) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
+  it("waits for billing before preparing the microphone", async () => {
+    state.billing = { ...fixtureBilling(), customer: null, initialized: false };
+    const root = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling();
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("skips prepare after a failed customer load and prepares once after recovery", async () => {
+    state.billing = { ...fixtureBilling(), customer: null, initialized: false };
+    const root = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = { ...state.billing, initialized: true, error: "customer unavailable" };
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = { ...state.billing, error: "still unavailable" };
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling();
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("does not prepare while hard locked, but prepares when balance arrives", async () => {
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+    const root = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000 });
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("does not request the microphone again on same-policy customer refreshes", async () => {
+    const root = await renderHome();
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+    for (const availableMs of [0, 60_000]) {
+      state.billing = fixtureBilling({ availableMs });
+      await act(async () => { root.render(createElement(HomeScreen)); });
+    }
+    expect(state.live.prepare).toHaveBeenCalledOnce();
   });
 });

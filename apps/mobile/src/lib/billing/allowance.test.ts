@@ -1,3 +1,4 @@
+import { minimumSessionBalanceMs } from "@murmur/protocol/billing/catalog";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -28,13 +29,16 @@ const customer: MurmurCustomer = {
 };
 
 describe("allowance rules", () => {
-  it("chooses copy from the free tier and locks only an empty hard-mode balance", () => {
+  it("chooses copy from the free tier and locks hard-mode balances below the session minimum", () => {
     expect(lockedSurface(customer)).toBe("out_of_minutes");
+    expect(lockedSurface({ ...customer, freeAllowanceMs: null })).toBe("out_of_minutes");
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: null, availableMs: 0 })).toBe(false);
     expect(lockedSurface({ ...customer, freeAllowanceMs: 0 })).toBe("paywall");
-    expect(lockedSurface(null)).toBe("paywall");
+    expect(lockedSurface(null)).toBe("out_of_minutes");
     expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: 0 })).toBe(true);
     expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: -1 })).toBe(true);
-    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: 1 })).toBe(false);
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: minimumSessionBalanceMs - 1 })).toBe(true);
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: minimumSessionBalanceMs })).toBe(false);
     expect(isHardPaywallLocked({ ...customer, availableMs: 0 })).toBe(false);
     expect(isHardPaywallLocked(null)).toBe(false);
   });
@@ -55,9 +59,14 @@ describe("allowance rules", () => {
     expect(lowBalanceMinutes(null, 15)).toBeNull();
   });
 
-  it("reports whether any translation time remains", () => {
+  it("reports whether enough translation time remains for a session", () => {
     expect(hasTimeAvailable(customer)).toBe(true);
     expect(hasTimeAvailable({ ...customer, availableMs: 0 })).toBe(false);
     expect(hasTimeAvailable(null)).toBe(false);
+    for (const availableMs of [1, 500, minimumSessionBalanceMs - 1]) {
+      expect(hasTimeAvailable({ ...customer, availableMs })).toBe(false);
+    }
+    expect(hasTimeAvailable({ ...customer, availableMs: minimumSessionBalanceMs })).toBe(true);
+    expect(isHardPaywallLocked({ ...customer, availableMs: 500 })).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import { secureStorage } from "./secureStorage";
 import { Platform } from "react-native";
 
 type WebStorage = {
@@ -11,7 +11,7 @@ export async function getLocalValue(storageId: string): Promise<string | null> {
   if (Platform.OS === "web") {
     return getWebStorage()?.getItem(storageId) ?? null;
   }
-  return SecureStore.getItemAsync(storageId);
+  return secureStorage.getItemAsync(storageId);
 }
 
 export async function setLocalValue(storageId: string, value: string): Promise<void> {
@@ -19,7 +19,7 @@ export async function setLocalValue(storageId: string, value: string): Promise<v
     requireWebStorage().setItem(storageId, value);
     return;
   }
-  await SecureStore.setItemAsync(storageId, value);
+  await secureStorage.setItemAsync(storageId, value);
 }
 
 export async function deleteLocalValue(storageId: string): Promise<void> {
@@ -27,7 +27,7 @@ export async function deleteLocalValue(storageId: string): Promise<void> {
     requireWebStorage().removeItem(storageId);
     return;
   }
-  await SecureStore.deleteItemAsync(storageId);
+  await secureStorage.deleteItemAsync(storageId);
 }
 
 function getWebStorage(): WebStorage | undefined {

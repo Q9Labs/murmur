@@ -213,9 +213,9 @@ export async function startWithAllowance(params: {
   openPlans: () => void;
   start: () => Promise<void>;
 }): Promise<void> {
-  if (isHardPaywallLocked(params.customer)) {
+  if (!params.customer || isHardPaywallLocked(params.customer)) {
     const fresh = await params.refresh();
-    if (isHardPaywallLocked(fresh)) {
+    if (isHardPaywallLocked(fresh ?? params.customer)) {
       params.openPlans();
       return;
     }
@@ -358,18 +358,29 @@ export default function HomeScreen(): ReactNode {
       handledExhaustionRef.current = null;
     } else if (handledExhaustionRef.current !== live.error) {
       handledExhaustionRef.current = live.error;
+      if (lockedSurface(billing.customer) === "out_of_minutes") {
+        setOutOfMinutesOpen(true);
+      }
       void refreshBilling().then((fresh) => {
-        if (lockedSurface(fresh) === "paywall") {
+        const customer = fresh ?? billing.customer;
+        if (hasTimeAvailable(customer)) {
+          return;
+        }
+        if (lockedSurface(customer) === "paywall") {
+          setOutOfMinutesOpen(false);
           router.push("/paywall");
-        } else {
+        } else if (lockedSurface(billing.customer) === "paywall") {
           setOutOfMinutesOpen(true);
         }
       });
     }
+  }, [billing.customer, live.error, refreshBilling, router]);
+
+  useEffect(() => {
     if (isUpdateRequiredError(live.error)) {
       setUpdateRequiredOpen(true);
     }
-  }, [live.error, refreshBilling, router]);
+  }, [live.error]);
 
   useEffect(() => {
     if (live.status === "live" && acquisition) {
@@ -377,16 +388,18 @@ export default function HomeScreen(): ReactNode {
     }
   }, [acquisition, live.status]);
 
+  const customerLoaded = billing.customer !== null;
   useEffect(() => {
     if (
+      customerLoaded &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
       onboardingStep === "done" &&
-      !isHardPaywallLocked(billing.customer)
+      !hardPaywallLocked
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, billing.customer, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, customerLoaded, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {
