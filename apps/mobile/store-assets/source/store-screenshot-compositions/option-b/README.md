@@ -20,8 +20,7 @@ One short, plain line per screenshot, with no subtext, prices, or AI vendor name
 | 4 | Listens in the background. | Listens in the background. |
 | 5 | Go Pro, or get a Trip Pass. | Go Pro, or get a Trip Pass. |
 | 6 | Your audio isn't kept. | Your audio isn't kept. |
-| 7 | Start free. No account. | Start free. No account. |
-| 8 | Murmur, in your language. | Murmur, in your language. |
+| 7 | Murmur, in your language. | Murmur, in your language. |
 
 ## Imagegen prompt contract for new bases
 
