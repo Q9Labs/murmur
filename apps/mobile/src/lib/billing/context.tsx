@@ -29,7 +29,7 @@ export type MurmurBillingContext = {
   // Resolves true only when the store completed a purchase, so the UI can offer to save it.
   purchasePlan: (planId: string) => Promise<boolean>;
   purchasesAvailable: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<MurmurCustomer | null>;
   restorePurchases: () => Promise<void>;
   sendSignInCode: (email: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -53,7 +53,7 @@ const unavailableBillingContext: MurmurBillingContext = {
   notice: null,
   purchasePlan: async () => false,
   purchasesAvailable: false,
-  refresh: async () => undefined,
+  refresh: async () => null,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
   signInWithApple: async () => undefined,
@@ -94,15 +94,17 @@ export function MurmurBillingProvider({ children }: { children: ReactNode }): Re
     return nextCustomer;
   }, []);
 
-  const refresh = useCallback(async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<MurmurCustomer | null> => {
     beginBusy();
     try {
       const { fetchMurmurAppConfig } = await import("./customerApi");
-      const [nextConfig] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
+      const [nextConfig, nextCustomer] = await Promise.all([fetchMurmurAppConfig(), loadCustomer()]);
       setConfig(nextConfig);
       setError(null);
+      return nextCustomer;
     } catch (failure) {
       setError({ failure });
+      return null;
     } finally {
       endBusy();
     }

@@ -210,6 +210,7 @@ export const arCatalog: Catalog = {
   "account.signInBenefit": "احتفظ بدقائقك وخططك على أي هاتف.",
   "account.deleteAccount": "حذف الحساب",
   "account.planFree": "مجاني",
+  "account.planNone": "بلا خطة",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "متبقٍ {balance} في خطة \u2068{plan}\u2069",

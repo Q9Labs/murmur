@@ -210,6 +210,7 @@ export const esCatalog: Catalog = {
   "account.signInBenefit": "Conserva tus minutos y planes en cualquier teléfono.",
   "account.deleteAccount": "Borrar cuenta",
   "account.planFree": "Gratis",
+  "account.planNone": "Sin plan",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Quedan {balance} en el plan {plan}",

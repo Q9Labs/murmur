@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { hasTimeAvailable, lowBalanceMinutes } from "../../../lib/billing/allowance";
+import { hasTimeAvailable, isHardPaywallLocked, lowBalanceMinutes } from "../../../lib/billing/allowance";
 import { useMurmurBilling } from "../../../lib/billing/context";
 import { captureBillingTelemetry } from "../../../lib/telemetry";
 import { isAllowanceExhaustedError } from "../../errorCopy";
@@ -32,6 +32,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const { live, viewModel } = props;
   const { colors, styles } = useBloomStyles();
   const billing = useMurmurBilling();
+  const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   const wasLive = useRef(viewModel.isLive);
   const lowBalance = viewModel.isLive
     ? null
@@ -68,13 +69,15 @@ export function BloomShell(props: VariantShellProps): ReactNode {
       />
       <TranslationStage {...props} />
       <View style={styles.controlColumn}>
-        <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
+        {!hardPaywallLocked || !isAllowanceExhaustedError(live.error) ? (
+          <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
+        ) : null}
         {lowBalance ? (
           <LowBalancePill minutes={lowBalance} onPress={props.onOpenLowBalance} />
         ) : null}
         {props.listeningInBackground ? <BackgroundListeningPill /> : (
           <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-            {viewModel.statusText}
+            {hardPaywallLocked && isAllowanceExhaustedError(live.error) ? "" : viewModel.statusText}
           </Text>
         )}
         <CaptureSourceControl
@@ -99,7 +102,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           isLive={viewModel.isLive}
           onPrimaryAction={props.onPrimaryAction}
           pressedStyle={styles.pressed}
-          startLabel={primaryStartLabel(live.error, hasTimeAvailable(billing.customer), t)}
+          startLabel={primaryStartLabel(live.error, hasTimeAvailable(billing.customer), t, hardPaywallLocked)}
           stopLabel={t("home.stop")}
           style={styles.listenPill}
           textStyle={styles.listenPillText}

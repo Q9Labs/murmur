@@ -210,6 +210,7 @@ export const hiCatalog: Catalog = {
   "account.signInBenefit": "अपने मिनट और प्लान हर फ़ोन पर साथ रखें।",
   "account.deleteAccount": "खाता हटाएँ",
   "account.planFree": "फ़्री",
+  "account.planNone": "कोई प्लान नहीं",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan} प्लान पर {balance} बचे",

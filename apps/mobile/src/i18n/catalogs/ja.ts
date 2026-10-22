@@ -210,6 +210,7 @@ export const jaCatalog: Catalog = {
   "account.signInBenefit": "どのスマホでも残り時間とプランを引き継げます。",
   "account.deleteAccount": "アカウントを削除",
   "account.planFree": "無料",
+  "account.planNone": "プランなし",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan}プランの残り{balance}",

@@ -210,6 +210,7 @@ export const deCatalog: Catalog = {
   "account.signInBenefit": "Behalte deine Minuten und Tarife auf jedem Handy.",
   "account.deleteAccount": "Konto löschen",
   "account.planFree": "Kostenlos",
+  "account.planNone": "Kein Tarif",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Noch {balance} im Tarif {plan}",

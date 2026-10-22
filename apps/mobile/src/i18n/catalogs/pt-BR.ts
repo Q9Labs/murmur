@@ -210,6 +210,7 @@ export const ptBRCatalog: Catalog = {
   "account.signInBenefit": "Mantenha seus minutos e planos em qualquer celular.",
   "account.deleteAccount": "Apagar conta",
   "account.planFree": "Grátis",
+  "account.planNone": "Sem plano",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Restam {balance} no plano {plan}",

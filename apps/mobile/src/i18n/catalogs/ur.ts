@@ -210,6 +210,7 @@ export const urCatalog: Catalog = {
   "account.signInBenefit": "اپنے منٹ اور پلان ہر فون پر ساتھ رکھیں۔",
   "account.deleteAccount": "اکاؤنٹ حذف کریں",
   "account.planFree": "مفت",
+  "account.planNone": "کوئی پلان نہیں",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "\u2068{plan}\u2069 پلان پر {balance} باقی",

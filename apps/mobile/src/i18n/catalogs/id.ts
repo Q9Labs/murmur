@@ -210,6 +210,7 @@ export const idCatalog: Catalog = {
   "account.signInBenefit": "Simpan menit dan paket Anda di ponsel mana pun.",
   "account.deleteAccount": "Hapus akun",
   "account.planFree": "Gratis",
+  "account.planNone": "Tanpa paket",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Sisa {balance} di paket {plan}",

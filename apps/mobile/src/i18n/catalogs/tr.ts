@@ -210,6 +210,7 @@ export const trCatalog: Catalog = {
   "account.signInBenefit": "Dakikalarını ve planlarını her telefonda koru.",
   "account.deleteAccount": "Hesabı sil",
   "account.planFree": "Ücretsiz",
+  "account.planNone": "Plan yok",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan} planında {balance} kaldı",

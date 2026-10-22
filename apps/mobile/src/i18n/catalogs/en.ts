@@ -226,6 +226,7 @@ export const enCatalog = {
   "account.signInBenefit": "Keep your minutes and plans on any phone.",
   "account.deleteAccount": "Delete account",
   "account.planFree": "Free",
+  "account.planNone": "No plan",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{balance} left on the {plan} plan",

@@ -1,6 +1,5 @@
 import { LocalizedError } from "../i18n/localizedError";
 import { authError } from "../lib/auth/authErrors";
-import { freeAllowanceMinutes } from "../lib/billing/allowance";
 import type { MurmurBillingContext } from "../lib/billing/context";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import type { MurmurPlan } from "../lib/billing/planCatalog";
@@ -9,14 +8,15 @@ import type { ConversationRecord, ScreenServices } from "./screenServices";
 import type { SettingsControls } from "./settings/settingsControls";
 
 const previewCustomer: MurmurCustomer = {
-  allowanceMs: freeAllowanceMinutes * 60_000,
-  availableMs: freeAllowanceMinutes * 60_000,
+  allowanceMs: 300_000,
+  availableMs: 300_000,
   creditMs: 0,
   customerId: "preview-customer",
   creditPacks: [],
   earliestExpiryAtMs: null,
   entitlements: { pro: false, proMax: false },
   features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
+  freeAllowanceMs: 300_000,
   fulfillmentEnabled: true,
   isRegistered: false,
   negativeMs: 0,
@@ -109,7 +109,7 @@ export const previewBilling: MurmurBillingContext = {
   notice: null,
   purchasePlan: async () => true,
   purchasesAvailable: true,
-  refresh: async () => undefined,
+  refresh: async () => previewCustomer,
   restorePurchases: async () => undefined,
   sendSignInCode: async () => undefined,
   signInWithApple: async () => undefined,

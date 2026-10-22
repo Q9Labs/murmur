@@ -53,15 +53,17 @@ export function AccountScreen(): ReactNode {
           onPress={() => void billing.restorePurchases()}
         />
       </RowGroup>
+      {customer !== null && customer.plan !== "free" ? (
+        <RowGroup>
+          <LinkRow
+            disabled={storeUnavailable}
+            label={t("account.manageSubscription")}
+            onPress={() => void billing.manageSubscription()}
+          />
+        </RowGroup>
+      ) : null}
       {registered ? (
         <RowGroup>
-          {customer !== null && customer.plan !== "free" ? (
-            <LinkRow
-              disabled={storeUnavailable}
-              label={t("account.manageSubscription")}
-              onPress={() => void billing.manageSubscription()}
-            />
-          ) : null}
           <LinkRow
             disabled={busy}
             label={t(billing.syncing ? "account.syncingBalance" : "account.refreshBalance")}
@@ -118,7 +120,8 @@ function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNo
   const styles = colors.dark ? darkStyles : lightStyles;
   const ui = useUiLocale();
   const balance = customer ? formatMinutes(customer.availableMs, ui) : "…";
-  const plan = ui.t(planNames[customer?.plan ?? "free"]);
+  const plan = ui.t(customer?.plan === "free" && customer.freeAllowanceMs === 0
+    ? "account.planNone" : planNames[customer?.plan ?? "free"]);
   const validity = packValidity(customer, ui);
   return (
     <View

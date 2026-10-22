@@ -210,6 +210,7 @@ export const frCatalog: Catalog = {
   "account.signInBenefit": "Gardez vos minutes et formules sur n’importe quel téléphone.",
   "account.deleteAccount": "Supprimer le compte",
   "account.planFree": "Gratuit",
+  "account.planNone": "Aucune offre",
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Il reste {balance} sur la formule {plan}",
