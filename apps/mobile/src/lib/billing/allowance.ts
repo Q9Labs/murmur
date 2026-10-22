@@ -28,7 +28,7 @@ export function hasTimeAvailable(customer: MurmurCustomer | null): boolean {
 }
 
 export function lockedSurface(customer: MurmurCustomer | null): "out_of_minutes" | "paywall" {
-  return customer !== null && customer.freeAllowanceMs !== 0 ? "out_of_minutes" : "paywall";
+  return customer?.freeAllowanceMs === 0 ? "paywall" : "out_of_minutes";
 }
 
 export function isHardPaywallLocked(customer: MurmurCustomer | null): boolean {

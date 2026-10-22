@@ -364,10 +364,13 @@ export default function HomeScreen(): ReactNode {
         }
       });
     }
+  }, [billing.customer, live.error, refreshBilling, router]);
+
+  useEffect(() => {
     if (isUpdateRequiredError(live.error)) {
       setUpdateRequiredOpen(true);
     }
-  }, [billing.customer, live.error, refreshBilling, router]);
+  }, [live.error]);
 
   useEffect(() => {
     if (live.status === "live" && acquisition) {
@@ -375,11 +378,11 @@ export default function HomeScreen(): ReactNode {
     }
   }, [acquisition, live.status]);
 
-  const customerLoaded = billing.customer !== null;
+  const billingSettled = billing.customer !== null || billing.initialized;
   const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   useEffect(() => {
     if (
-      customerLoaded &&
+      billingSettled &&
       anonymousAnalyticsEnabled !== null &&
       privacyAcknowledged &&
       onboardingStep === "done" &&
@@ -387,7 +390,7 @@ export default function HomeScreen(): ReactNode {
     ) {
       void live.prepare();
     }
-  }, [anonymousAnalyticsEnabled, customerLoaded, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
+  }, [anonymousAnalyticsEnabled, billingSettled, hardPaywallLocked, live.prepare, onboardingStep, privacyAcknowledged]);
 
   useEffect(() => {
     if (anonymousAnalyticsEnabled === true && onboardingStep !== "done") {

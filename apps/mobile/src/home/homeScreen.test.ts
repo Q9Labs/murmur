@@ -1,12 +1,14 @@
-import { createElement } from "react";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+// @vitest-environment jsdom
+
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MurmurBillingContext } from "../lib/billing/context";
 
 const state = vi.hoisted(() => ({
   billing: null as MurmurBillingContext | null,
   push: vi.fn(),
-  experience: vi.fn((_props: { outOfMinutesOpen: boolean }) => null),
+  experience: vi.fn((_props: { outOfMinutesOpen: boolean; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
   live: {
     cancel: vi.fn(async () => undefined),
     start: vi.fn(async () => undefined),
@@ -21,7 +23,10 @@ const backHandler = vi.hoisted(() => ({
   addEventListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
 
-vi.mock("react-native", () => ({ BackHandler: backHandler }));
+vi.mock("react-native", async () => ({
+  ...(await import("../screens/__tests__/reactNativePrimitives")).reactNativePrimitives,
+  BackHandler: backHandler,
+}));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
 vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => state }));
@@ -148,7 +153,7 @@ function createHarness() {
   return { controller, enabledChanges, getStored, messages, setStored };
 }
 
-const mounted: ReactTestRenderer[] = [];
+const mounted: Root[] = [];
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -158,14 +163,16 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await act(async () => {
-    for (const renderer of mounted.splice(0)) renderer.unmount();
+    for (const root of mounted.splice(0)) root.unmount();
   });
   vi.unstubAllGlobals();
 });
 
-async function renderHome(): Promise<ReactTestRenderer> {
-  await act(async () => { mounted.push(create(createElement(HomeScreen))); });
-  return mounted[mounted.length - 1];
+async function renderHome(): Promise<Root> {
+  const root = createRoot(document.createElement("div"));
+  mounted.push(root);
+  await act(async () => { root.render(createElement(HomeScreen)); });
+  return root;
 }
 
 describe("audio playback preference controller", () => {
@@ -333,39 +340,71 @@ describe("home billing effects", () => {
     },
   );
 
+  it("uses the out-of-minutes sheet when no customer has loaded and refresh fails", async () => {
+    state.billing = { ...fixtureBilling(), customer: null, error: "customer unavailable", refresh: vi.fn(async () => null) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+  });
+
+  it("keeps a dismissed update-required sheet closed across customer refreshes", async () => {
+    state.live.error = "app_version_unsupported";
+    const root = await renderHome();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: true }), undefined);
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseUpdateRequired(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: false }), undefined);
+    state.billing = fixtureBilling({ availableMs: 60_000 });
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: false }), undefined);
+  });
+
   it("opens Plans once for a cached hard lock after exhaustion and failed refresh", async () => {
     state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(async () => null) };
     state.live.error = "allowance_exhausted";
-    const renderer = await renderHome();
-    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    const root = await renderHome();
+    await act(async () => { root.render(createElement(HomeScreen)); });
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
   });
 
   it("waits for billing before preparing the microphone", async () => {
-    state.billing = { ...fixtureBilling(), customer: null };
-    const renderer = await renderHome();
+    state.billing = { ...fixtureBilling(), customer: null, initialized: false };
+    const root = await renderHome();
     expect(state.live.prepare).not.toHaveBeenCalled();
     state.billing = fixtureBilling();
-    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("prepares once after the first customer load fails", async () => {
+    state.billing = { ...fixtureBilling(), customer: null, initialized: false };
+    const root = await renderHome();
+    expect(state.live.prepare).not.toHaveBeenCalled();
+    state.billing = { ...state.billing, initialized: true, error: "customer unavailable" };
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.live.prepare).toHaveBeenCalledOnce();
+    state.billing = { ...state.billing, error: "still unavailable" };
+    await act(async () => { root.render(createElement(HomeScreen)); });
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });
 
   it("does not prepare while hard locked, but prepares when balance arrives", async () => {
     state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
-    const renderer = await renderHome();
+    const root = await renderHome();
     expect(state.live.prepare).not.toHaveBeenCalled();
     state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 60_000 });
-    await act(async () => { renderer.update(createElement(HomeScreen)); });
+    await act(async () => { root.render(createElement(HomeScreen)); });
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });
 
   it("does not request the microphone again on same-policy customer refreshes", async () => {
-    const renderer = await renderHome();
+    const root = await renderHome();
     expect(state.live.prepare).toHaveBeenCalledOnce();
     for (const availableMs of [0, 60_000]) {
       state.billing = fixtureBilling({ availableMs });
-      await act(async () => { renderer.update(createElement(HomeScreen)); });
+      await act(async () => { root.render(createElement(HomeScreen)); });
     }
     expect(state.live.prepare).toHaveBeenCalledOnce();
   });

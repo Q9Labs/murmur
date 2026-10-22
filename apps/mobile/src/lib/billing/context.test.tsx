@@ -1,4 +1,7 @@
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+// @vitest-environment jsdom
+
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fixtureCustomer } from "../../screens/__tests__/billingFixture";
@@ -16,7 +19,7 @@ vi.mock("../observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 import { MurmurBillingProvider, useMurmurBilling, type MurmurBillingContext } from "./context";
 
 let billing: MurmurBillingContext;
-const mounted: ReactTestRenderer[] = [];
+const mounted: Root[] = [];
 function Probe() {
   billing = useMurmurBilling();
   return null;
@@ -26,14 +29,16 @@ beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   api.fetchMurmurCustomer.mockResolvedValue({ ...fixtureCustomer, fulfillmentEnabled: false });
   api.fetchMurmurAppConfig.mockResolvedValue(defaultAppConfig);
+  const root = createRoot(document.createElement("div"));
+  mounted.push(root);
   await act(async () => {
-    mounted.push(create(<MurmurBillingProvider><Probe /></MurmurBillingProvider>));
+    root.render(<MurmurBillingProvider><Probe /></MurmurBillingProvider>);
   });
   await vi.waitFor(() => expect(billing.initialized).toBe(true));
 });
 afterEach(async () => {
   await act(async () => {
-    for (const renderer of mounted.splice(0)) renderer.unmount();
+    for (const root of mounted.splice(0)) root.unmount();
   });
   vi.resetAllMocks();
   vi.unstubAllGlobals();
