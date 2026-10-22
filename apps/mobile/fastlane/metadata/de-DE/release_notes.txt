@@ -1,3 +1,1 @@
-Neue Pläne: Pro, Pro Max, Trip Pass und Event Pass. Übersetzung läuft im Hintergrund weiter. Anmeldung mit Apple oder Google. Neues Design und App in 11 Sprachen.
-
-Klarere Einwilligung für OpenAI, korrigierte Anmeldung mit Apple und Google und stabilere Hintergrundaufnahme.
+Murmur geht jetzt beim Starten des Zuhörens zuverlässiger mit einem nicht verfügbaren Mikrofon um.
