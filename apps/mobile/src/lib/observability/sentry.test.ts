@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sentry = vi.hoisted(() => ({
   captureException: vi.fn(),
@@ -7,6 +7,9 @@ const sentry = vi.hoisted(() => ({
 }));
 
 vi.mock("@sentry/react-native", () => sentry);
+
+const device = vi.hoisted(() => ({ isDevice: true }));
+vi.mock("expo-device", () => device);
 
 import { captureMobileFailure, sanitizeMobileEvent } from "./sentry";
 
@@ -76,5 +79,50 @@ describe("mobile Sentry privacy sanitizer", () => {
     expect(event.exception?.values?.[0]?.value).toBe("mobile_operation_failed");
     expect(JSON.stringify(event)).not.toContain("private");
     expect(JSON.stringify(event)).not.toContain("raw-install-id");
+  });
+});
+
+
+describe("mobile Sentry build isolation", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("EXPO_PUBLIC_SENTRY_DSN", "https://public@sentry.example/1");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    device.isDevice = true;
+  });
+
+  it.each([
+    { debug: true, physicalDevice: true },
+    { debug: true, physicalDevice: false },
+    { debug: false, physicalDevice: false },
+  ])("does not initialize reporting for $debug debug / $physicalDevice physical device", async ({ debug, physicalDevice }) => {
+    vi.stubGlobal("__DEV__", debug);
+    device.isDevice = physicalDevice;
+
+    const { initializeSentry } = await import("./sentry");
+    initializeSentry();
+
+    expect(sentry.init).not.toHaveBeenCalled();
+  });
+
+  it.each(["production", "preview", "sandbox", "development"])("keeps %s reporting for physical release builds", async (environment) => {
+    vi.stubGlobal("__DEV__", false);
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", environment);
+    device.isDevice = true;
+
+    const { initializeSentry } = await import("./sentry");
+    initializeSentry();
+    initializeSentry();
+
+    expect(sentry.init).toHaveBeenCalledTimes(1);
+    expect(sentry.init).toHaveBeenCalledWith(expect.objectContaining({
+      enabled: true,
+      environment,
+    }));
   });
 });

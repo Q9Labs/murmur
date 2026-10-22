@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react-native";
+import * as Device from "expo-device";
 
 import { getMurmurEnvironment, getSentryDsn } from "../config";
 
@@ -12,7 +13,7 @@ export type MobileFailureContext = {
 let initialized = false;
 
 export function initializeSentry(): void {
-  if (initialized) {
+  if (initialized || __DEV__ || !Device.isDevice) {
     return;
   }
   initialized = true;
@@ -35,7 +36,7 @@ export function initializeSentry(): void {
     replaysOnErrorSampleRate: 0,
     replaysSessionSampleRate: 0,
     sendDefaultPii: false,
-    tracesSampleRate: __DEV__ ? 0 : 0.1,
+    tracesSampleRate: 0.1,
   });
 }
 
