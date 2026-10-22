@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const jaCatalog: Catalog = {
+  "plans.twoHours": "2時間",
+  "paywall.heading": "次の会話を翻訳しましょう",
+  "paywall.example": "翻訳例：英語から日本語へ",
+  "paywall.packDetail": "有効期限のない{minutes}。",
+  "paywall.proDetail": "毎月{allowance}の翻訳。",
+  "paywall.onePayment": "お支払いは1回のみ。定期購入ではありません。",
+  "paywall.allPlans": "すべてのプラン",
+  "paywall.lockedHome": "プランを選んで翻訳を始めましょう。",
+  "paywall.once": "{price}の買い切り",
   "accessibility.closeSheet": "シートを閉じる",
   "accessibility.close": "閉じる",
   "accessibility.openSettings": "設定を開く",

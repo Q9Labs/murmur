@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const ptBRCatalog: Catalog = {
+  "plans.twoHours": "2 horas",
+  "paywall.heading": "Traduza sua próxima conversa",
+  "paywall.example": "Exemplo: de inglês para português",
+  "paywall.packDetail": "{minutes} que nunca expiram.",
+  "paywall.proDetail": "{allowance} de tradução por mês.",
+  "paywall.onePayment": "Pagamento único. Sem assinatura.",
+  "paywall.allPlans": "Todos os planos",
+  "paywall.lockedHome": "Escolha um plano para começar a traduzir.",
+  "paywall.once": "{price} uma vez",
   "accessibility.closeSheet": "Fechar painel",
   "accessibility.close": "Fechar",
   "accessibility.openSettings": "Abrir ajustes",

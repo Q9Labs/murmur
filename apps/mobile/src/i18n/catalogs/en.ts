@@ -3,6 +3,15 @@
  * is easy to spot and so catalog parity can be checked without walking a tree.
  */
 export const enCatalog = {
+  "plans.twoHours": "2 hours",
+  "paywall.heading": "Translate your next conversation",
+  "paywall.example": "Example: Arabic to English",
+  "paywall.packDetail": "{minutes} that never expire.",
+  "paywall.proDetail": "{allowance} of translation every month.",
+  "paywall.onePayment": "One payment. No subscription.",
+  "paywall.allPlans": "All plans",
+  "paywall.lockedHome": "Choose a plan to start translating.",
+  "paywall.once": "{price} once",
 
   "accessibility.closeSheet": "Close sheet",
   "accessibility.close": "Close",

@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const trCatalog: Catalog = {
+  "plans.twoHours": "2 saat",
+  "paywall.heading": "Bir sonraki konuşmanızı çevirin",
+  "paywall.example": "Örnek: Arapçadan İngilizceye",
+  "paywall.packDetail": "Süresi dolmayan {minutes}.",
+  "paywall.proDetail": "Her ay {allowance} çeviri.",
+  "paywall.onePayment": "Tek ödeme. Abonelik yok.",
+  "paywall.allPlans": "Tüm planlar",
+  "paywall.lockedHome": "Çeviriye başlamak için bir plan seçin.",
+  "paywall.once": "Tek seferlik {price}",
   "accessibility.closeSheet": "Paneli kapat",
   "accessibility.close": "Kapat",
   "accessibility.openSettings": "Ayarları aç",

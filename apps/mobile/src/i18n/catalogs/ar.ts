@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const arCatalog: Catalog = {
+  "plans.twoHours": "ساعتان",
+  "paywall.heading": "ترجِم محادثتك القادمة",
+  "paywall.example": "مثال: من الإنجليزية إلى العربية",
+  "paywall.packDetail": "{minutes} لا تنتهي صلاحيتها.",
+  "paywall.proDetail": "رصيد الترجمة الشهري: {allowance}.",
+  "paywall.onePayment": "دفعة واحدة. دون اشتراك.",
+  "paywall.allPlans": "جميع الخطط",
+  "paywall.lockedHome": "اختر خطة لبدء الترجمة.",
+  "paywall.once": "{price} لمرة واحدة",
   "accessibility.closeSheet": "إغلاق اللوحة",
   "accessibility.close": "إغلاق",
   "accessibility.openSettings": "فتح الإعدادات",

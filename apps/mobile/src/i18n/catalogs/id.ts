@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const idCatalog: Catalog = {
+  "plans.twoHours": "2 jam",
+  "paywall.heading": "Terjemahkan percakapan Anda berikutnya",
+  "paywall.example": "Contoh: bahasa Arab ke bahasa Inggris",
+  "paywall.packDetail": "{minutes} yang tidak pernah kedaluwarsa.",
+  "paywall.proDetail": "{allowance} penerjemahan setiap bulan.",
+  "paywall.onePayment": "Sekali bayar. Tanpa langganan.",
+  "paywall.allPlans": "Semua paket",
+  "paywall.lockedHome": "Pilih paket untuk mulai menerjemahkan.",
+  "paywall.once": "{price} sekali bayar",
   "accessibility.closeSheet": "Tutup panel",
   "accessibility.close": "Tutup",
   "accessibility.openSettings": "Buka pengaturan",

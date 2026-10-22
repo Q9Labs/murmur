@@ -1,6 +1,15 @@
 import type { Catalog } from "./en";
 
 export const esCatalog: Catalog = {
+  "plans.twoHours": "2 horas",
+  "paywall.heading": "Traduce tu próxima conversación",
+  "paywall.example": "Ejemplo: de inglés a español",
+  "paywall.packDetail": "{minutes} que nunca caducan.",
+  "paywall.proDetail": "{allowance} de traducción cada mes.",
+  "paywall.onePayment": "Un solo pago. Sin suscripción.",
+  "paywall.allPlans": "Todos los planes",
+  "paywall.lockedHome": "Elige un plan para empezar a traducir.",
+  "paywall.once": "{price} una vez",
   "accessibility.closeSheet": "Cerrar panel",
   "accessibility.close": "Cerrar",
   "accessibility.openSettings": "Abrir ajustes",
