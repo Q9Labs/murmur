@@ -1,5 +1,30 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { MurmurBillingContext } from "../lib/billing/context";
+import type { HomeExperience } from "./experience";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const screen = vi.hoisted(() => ({
+  billing: null as MurmurBillingContext | null,
+  effects: [] as Array<() => void | (() => void)>,
+  slots: [] as unknown[],
+  cursor: 0,
+  home: null as Parameters<typeof HomeExperience>[0] | null,
+  error: null as string | null,
+  start: vi.fn(async () => undefined),
+  router: { push: vi.fn(), setParams: vi.fn() },
+}));
+vi.mock("react", async (importOriginal) => ({
+  ...await importOriginal<typeof import("react")>(),
+  useEffect: (effect: () => void | (() => void)) => screen.effects.push(effect),
+  useState: <T>(initial: T | (() => T)) => {
+    const index = screen.cursor++;
+    if (!(index in screen.slots)) screen.slots[index] = typeof initial === "function" ? (initial as () => T)() : initial;
+    return [screen.slots[index] as T, (value: T | ((previous: T) => T)) => {
+      screen.slots[index] = typeof value === "function" ? (value as (previous: T) => T)(screen.slots[index] as T) : value;
+    }];
+  },
+}));
 const backHandler = vi.hoisted(() => ({
   addEventListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
@@ -7,11 +32,11 @@ const backHandler = vi.hoisted(() => ({
 vi.mock("react-native", () => ({ BackHandler: backHandler }));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "test" } } }));
 vi.mock("expo-linking", () => ({ useURL: () => null }));
-vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("expo-router", () => ({ useLocalSearchParams: () => ({}), useRouter: () => screen.router }));
 vi.mock("../screens/rating/ratingSheet", () => ({ RatingSheet: () => null }));
-vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({}) }));
+vi.mock("../screens/screenServices", () => ({ useScreenServices: () => ({ features: { phoneAudio: false }, phoneAudioGift: { claimable: false } }) }));
 vi.mock("../lib/billing/context", () => ({
-  useMurmurBilling: () => ({ config: { enabledLanguages: null }, configLoaded: true, customer: null }),
+  useMurmurBilling: () => screen.billing,
 }));
 vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
 vi.mock("expo-network", () => ({
@@ -55,7 +80,7 @@ vi.mock("../lib/phoneAudioGiftOffer", () => ({
 vi.mock("../lib/installIdentity", () => ({
   acknowledgePrivacyDisclosure: vi.fn(async () => undefined),
   deleteLocalMurmurData: vi.fn(async () => undefined),
-  hasAcknowledgedPrivacyDisclosure: vi.fn(async () => false),
+  hasAcknowledgedPrivacyDisclosure: vi.fn(async () => true),
   resetInstallId: vi.fn(async () => undefined),
 }));
 vi.mock("../lib/observability/sentry", () => ({
@@ -73,7 +98,10 @@ vi.mock("../lib/telemetry", () => ({
 vi.mock("../lib/useLiveTranslation", () => ({
   useLiveTranslation: vi.fn(() => ({
     cancel: vi.fn(async () => undefined),
-    start: vi.fn(async () => undefined),
+    start: screen.start,
+    prepare: vi.fn(async () => undefined),
+    error: screen.error,
+    spans: [],
     status: "idle",
   })),
 }));
@@ -82,7 +110,7 @@ vi.mock("./audioPlaybackPreference", () => ({
   getStoredAudioPlaybackEnabled: vi.fn(async () => true),
   setStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
 }));
-vi.mock("./experience", () => ({ HomeExperience: () => null }));
+vi.mock("./experience", () => ({ HomeExperience: (props: Parameters<typeof HomeExperience>[0]) => { screen.home = props; return null; } }));
 vi.mock("./onboardingScreen", () => ({ OnboardingScreen: () => null }));
 vi.mock("./variants/preference", () => ({ deleteStoredUiVariant: vi.fn(async () => undefined) }));
 vi.mock("./viewModel", () => ({
@@ -96,8 +124,8 @@ vi.mock("./viewModel", () => ({
   }),
 }));
 
-import { fixtureCustomer } from "../screens/__tests__/billingFixture";
-import { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
+import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
+import HomeScreen, { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -138,6 +166,13 @@ function createHarness() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal("__DEV__", true);
+  screen.effects.length = 0;
+  screen.slots.length = 0;
+  screen.cursor = 0;
+  screen.home = null;
+  screen.error = null;
+  screen.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
 });
 
 describe("audio playback preference controller", () => {
@@ -239,15 +274,22 @@ describe("audio playback preference controller", () => {
 });
 
 describe("Start allowance gate", () => {
-  it("opens the paywall without starting translation when hard-mode balance stays empty", async () => {
-    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
-    const start = vi.fn(async () => undefined);
-    const push = vi.fn();
-    const refresh = vi.fn(async () => customer);
-    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/paywall") });
-    expect(refresh).toHaveBeenCalledOnce();
-    expect(push).toHaveBeenCalledWith("/paywall");
-    expect(start).not.toHaveBeenCalled();
+  it.each([null, "allowance_exhausted"])("routes the real home Start/exhaustion path to the paywall (%s)", async (error) => {
+    screen.error = error;
+    screen.cursor = 0;
+    renderToStaticMarkup(createElement(HomeScreen));
+    const cleanups = screen.effects.splice(0).map((effect) => effect());
+    await flushMicrotasks();
+    if (!error) {
+      screen.cursor = 0;
+      renderToStaticMarkup(createElement(HomeScreen));
+      expect(screen.home).not.toBeNull();
+      screen.home?.onPrimaryAction();
+      await flushMicrotasks();
+    }
+    expect(screen.router.push).toHaveBeenCalledWith("/paywall");
+    expect(screen.start).not.toHaveBeenCalled();
+    cleanups.forEach((cleanup) => cleanup?.());
   });
 
   it("keeps freemium Start unchanged even at zero balance", async () => {
