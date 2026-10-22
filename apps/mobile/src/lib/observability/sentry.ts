@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react-native";
 
+import { type CaptureFailure, parseCaptureFailure } from "./captureFailure";
 import { getStorageFailureDiagnostics } from "../storageDiagnostics";
 
 import { getMurmurEnvironment, getSentryDsn } from "../config";
@@ -7,6 +8,7 @@ import { getMurmurEnvironment, getSentryDsn } from "../config";
 export type MobileFailureContext = {
   app_session_id?: string;
   error_code?: string;
+  audio_capture?: CaptureFailure;
   external_link?: {
     target: "privacy" | "support" | "terms";
     step: "open_url";
@@ -64,12 +66,14 @@ export function captureMobileFailure(
     } : {}),
   };
   const fingerprint = [context.operation, tags.stage, errorCode];
+  const contexts = context.audio_capture ? { audio_capture: context.audio_capture } : undefined;
   if (failure instanceof Error) {
-    Sentry.captureException(failure, { fingerprint, tags });
+    Sentry.captureException(failure, { fingerprint, tags, ...(contexts ? { contexts } : {}) });
     return;
   }
   Sentry.captureMessage(context.operation, {
     fingerprint,
+    ...(contexts ? { contexts } : {}),
     level: "error",
     tags,
   });
@@ -95,6 +99,10 @@ export function sanitizeMobileEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent
   return {
     ...event,
     breadcrumbs: undefined,
+    contexts: event.contexts ? {
+      ...event.contexts,
+      audio_capture: parseCaptureFailure({ capture_failure: event.contexts.audio_capture }),
+    } : undefined,
     exception,
     extra: undefined,
     message: event.message ? "mobile_operation_failed" : undefined,
