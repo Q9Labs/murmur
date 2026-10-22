@@ -40,7 +40,7 @@ import {
   resetAnonymousAnalyticsPreference,
   updateAnonymousAnalyticsEnabled,
 } from "../lib/telemetry";
-import { isHardPaywallLocked, lockedSurface } from "../lib/billing/allowance";
+import { hasTimeAvailable, isHardPaywallLocked, lockedSurface } from "../lib/billing/allowance";
 import type { MurmurCustomer } from "../lib/billing/customerResponse";
 import { useMurmurBilling } from "../lib/billing/context";
 import { useLiveTranslation } from "../lib/useLiveTranslation";
@@ -586,6 +586,11 @@ export default function HomeScreen(): ReactNode {
     }
     if (isUpdateRequiredError(live.error)) {
       setUpdateRequiredOpen(true);
+      return;
+    }
+    if (isAllowanceExhaustedError(live.error) && !hasTimeAvailable(billing.customer) &&
+      lockedSurface(billing.customer) === "out_of_minutes") {
+      setOutOfMinutesOpen(true);
       return;
     }
     if (!viewModel.canStart) {
