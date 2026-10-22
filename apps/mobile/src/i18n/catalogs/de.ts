@@ -214,6 +214,7 @@ export const deCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Noch {balance} im Tarif {plan}",
+  "account.balanceNoPlanSpoken": "Noch {balance}. Kein Tarif.",
   "account.balancePlan": "übrig in {plan}",
   "savePurchase.hint": "Melde dich an, damit dein Kauf auch auf einem neuen Handy dir gehört",
   "savePurchase.title": "Kauf sichern",

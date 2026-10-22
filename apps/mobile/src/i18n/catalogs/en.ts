@@ -230,6 +230,7 @@ export const enCatalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{balance} left on the {plan} plan",
+  "account.balanceNoPlanSpoken": "{balance} left. No plan.",
   "account.balancePlan": "left on {plan}",
   "savePurchase.hint": "Sign in so your purchase stays yours on a new phone",
   "savePurchase.title": "Save your purchase",

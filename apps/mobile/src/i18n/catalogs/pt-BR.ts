@@ -214,6 +214,7 @@ export const ptBRCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Restam {balance} no plano {plan}",
+  "account.balanceNoPlanSpoken": "Restam {balance}. Sem plano.",
   "account.balancePlan": "restantes no {plan}",
   "savePurchase.hint": "Entre para manter sua compra em um celular novo",
   "savePurchase.title": "Salve sua compra",

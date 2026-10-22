@@ -214,6 +214,7 @@ export const jaCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan}プランの残り{balance}",
+  "account.balanceNoPlanSpoken": "残り{balance}。プランなし。",
   "account.balancePlan": "{plan}の残り",
   "savePurchase.hint": "ログインすると、新しいスマホでも購入を引き継げます",
   "savePurchase.title": "購入を保存",

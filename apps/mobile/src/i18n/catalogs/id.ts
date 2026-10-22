@@ -214,6 +214,7 @@ export const idCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Sisa {balance} di paket {plan}",
+  "account.balanceNoPlanSpoken": "Sisa {balance}. Tanpa paket.",
   "account.balancePlan": "tersisa di {plan}",
   "savePurchase.hint": "Masuk agar pembelian Anda tetap ada di ponsel baru",
   "savePurchase.title": "Simpan pembelian Anda",

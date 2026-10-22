@@ -214,6 +214,7 @@ export const trCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "{plan} planında {balance} kaldı",
+  "account.balanceNoPlanSpoken": "{balance} kaldı. Plan yok.",
   "account.balancePlan": "{plan} planında kaldı",
   "savePurchase.hint": "Satın aldığın şey yeni telefonda da senin kalsın diye giriş yap",
   "savePurchase.title": "Satın aldığını kaydet",

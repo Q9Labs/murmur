@@ -214,6 +214,7 @@ export const esCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "Quedan {balance} en el plan {plan}",
+  "account.balanceNoPlanSpoken": "Quedan {balance}. Sin plan.",
   "account.balancePlan": "restantes en {plan}",
   "savePurchase.hint": "Inicia sesión para conservar tu compra en un teléfono nuevo",
   "savePurchase.title": "Guarda tu compra",

@@ -214,6 +214,7 @@ export const urCatalog: Catalog = {
   "account.planPro": "Pro",
   "account.planProMax": "Pro Max",
   "account.balanceSpoken": "\u2068{plan}\u2069 پلان پر {balance} باقی",
+  "account.balanceNoPlanSpoken": "{balance} باقی۔ کوئی پلان نہیں۔",
   "account.balancePlan": "\u2068{plan}\u2069 پر باقی",
   "savePurchase.hint": "سائن اِن کریں تاکہ نئے فون پر بھی آپ کی خریداری رہے",
   "savePurchase.title": "خریداری محفوظ کریں",
