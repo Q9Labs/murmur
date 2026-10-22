@@ -147,6 +147,7 @@ it.each(uiLocales)("speaks the no-plan balance without a plan-name slot in %s", 
   );
   const balance = formatMinutes(0, { locale, t });
   expect(recorded.accessibilityLabels).toContain(t("account.balanceNoPlanSpoken", { balance }));
+  expect(t("account.balanceNoPlanSpoken", { balance })).not.toMatch(/[.।۔。]$/u);
   expect(recorded.accessibilityLabels).not.toContain(t("account.balanceSpoken", { balance, plan: t("account.planNone") }));
 });
 
