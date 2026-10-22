@@ -120,12 +120,14 @@ function BalanceHero({ customer }: { customer: MurmurCustomer | null }): ReactNo
   const styles = colors.dark ? darkStyles : lightStyles;
   const ui = useUiLocale();
   const balance = customer ? formatMinutes(customer.availableMs, ui) : "…";
-  const noPlan = customer?.plan === "free" && customer.freeAllowanceMs === 0;
-  const plan = ui.t(noPlan ? "account.planNone" : planNames[customer?.plan ?? "free"]);
+  const [planKey, balanceSpokenKey] = customer?.plan === "free" && customer.freeAllowanceMs === 0
+    ? ["account.planNone", "account.balanceNoPlanSpoken"] as const
+    : [planNames[customer?.plan ?? "free"], "account.balanceSpoken"] as const;
+  const plan = ui.t(planKey);
   const validity = packValidity(customer, ui);
   return (
     <View
-      accessibilityLabel={[ui.t(noPlan ? "account.balanceNoPlanSpoken" : "account.balanceSpoken", { balance, plan }), ...validity].join(". ")}
+      accessibilityLabel={[ui.t(balanceSpokenKey, { balance, plan }), ...validity].join(". ")}
       accessible
       style={styles.hero}
     >
