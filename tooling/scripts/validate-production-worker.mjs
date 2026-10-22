@@ -2,7 +2,7 @@
 
 const workerUrl = process.env.MURMUR_WORKER_URL ?? "https://murmur.q9labs.ai";
 const baseUrl = workerUrl.replace(/\/+$/, "");
-const currentLegalPageDate = "2026-09-23";
+const currentLegalPageDate = "2026-10-22";
 const failures = [];
 
 const assert = (condition, message) => {

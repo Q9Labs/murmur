@@ -6,7 +6,7 @@
 
 Murmur is a guest-first, one-way live translator on iOS and Android. The mobile app creates a durable customer account, the Worker authenticates translation sessions, and the customer ledger Durable Object serializes allowance, credit, refund, and usage changes into D1. The Worker observes accepted PCM input and persists billable usage in milliseconds without retaining microphone audio or transcript history by default.
 
-Murmur needs a sustainable paid service without weakening its privacy contract. A customer must be able to try the app for free, subscribe on either store, buy non-expiring translation credits, restore purchases, use one balance across supported devices, and receive correct balance changes after renewals and refunds. A client, delayed webhook, duplicate event, reinstall, reconnect, or store outage must not create or spend value incorrectly.
+Murmur needs a sustainable paid service without weakening its privacy contract. A customer must be able to use any Free allowance offered, subscribe on either store, buy non-expiring translation credits, restore purchases, use one balance across supported devices, and receive correct balance changes after renewals and refunds. A client, delayed webhook, duplicate event, reinstall, reconnect, or store outage must not create or spend value incorrectly.
 
 The final product has durable guest and registered customer accounts. Apple and Google remain the only purchase surfaces. RevenueCat normalizes store transactions and subscription state. Cloudflare D1 is the source of truth for customer ownership, entitlements, allowance grants, credit grants, translation usage, merges, renewals, cancellations, and refund reversals. Murmur continues to save no microphone audio or transcript history by default.
 
@@ -14,7 +14,7 @@ The final product has durable guest and registered customer accounts. Apple and 
 
 This work is complete when all of the following are observable:
 
-- A new install receives a durable guest customer and the Free allowance for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
+- A new install receives a durable guest customer and any configured Free allowance for the current UTC month without entering personal data. A hashed secure-storage claim prevents account deletion from minting a second grant for that installation in the same month.
 - A guest can register or sign in with a verified email code without losing purchased value or usage history. A merge into an existing customer recomputes Free usage under one monthly cap instead of stacking two Free grants.
 - A registered customer can buy Murmur Pro monthly or annual on iOS or Android, restore it on another supported device, and see the same server-owned entitlement and balance.
 - A registered customer can buy any credit pack. Pack credits survive subscription expiry, app reinstall, and supported cross-platform sign-in.
@@ -49,7 +49,7 @@ All internal quantities use integer milliseconds. Storefronts localize the base 
 
 | Product | Store type | Included translation | Base price |
 | --- | --- | ---: | ---: |
-| Free | Server allowance | 10 minutes per UTC month | $0 |
+| Free | Server allowance | Monthly minutes from `free_allowance_minutes`; Worker default 5; 0 disables new Free grants | $0 |
 | Murmur Pro Monthly | Auto-renewing subscription | 180 minutes per allowance cycle | $12.99/month |
 | Murmur Pro Annual | Auto-renewing subscription | 180 minutes per internal monthly allowance cycle | $124.99/year |
 | 60-Minute Credit Pack | Consumable / one-time product | 60 non-expiring minutes | $3.99 |
@@ -66,7 +66,7 @@ Pro replaces Free for an allowance cycle; it does not stack 180 paid minutes on 
 
 The app creates a Better Auth anonymous session on first use and receives a random Murmur customer ID from the Worker. The customer ID, auth session, and RevenueCat App User ID are kept in secure device storage. The RevenueCat App User ID is the Murmur customer ID, never an email, install ID, store account ID, advertising ID, or predictable value.
 
-Free translation does not require personal data. Purchase, restore, subscription management, and cross-device access require registration. The paywall explains this before starting authentication.
+Use of any Free allowance does not require personal data. Purchase, restore, subscription management, and cross-device access require registration. The paywall explains this before starting authentication.
 
 When a guest registers or signs in to an existing registered account, the verified registered customer becomes canonical. After authentication, the Worker creates a merge intent and computes the result in one D1 batch. The guest becomes an alias, both customers' Free usage resolves under one monthly cap, open guest usage sessions close, and the anonymous auth record is removed. Purchases pause during the merge. The app logs RevenueCat into the canonical customer ID, refreshes cached CustomerInfo, and the Worker replays pending events after every alias resolves to the canonical ID. A guest cannot own paid value because purchase requires registration. The app shows the resulting registered balance before it leaves the merge flow. Ledger history is never rewritten.
 
@@ -123,7 +123,7 @@ Reversal first removes unused value from the affected grant. Already-spent refun
 
 ### Exhaustion and offline behavior
 
-The app shows remaining time before translation and while live. At zero, capture stops, buffered provider output can finish, and the app shows Free renewal timing, Pro, and credit packs. It never opens a purchase dialog automatically.
+The app shows remaining time before translation and while live. At zero, capture stops, buffered provider output can finish, and the app shows Free renewal timing when a Free allowance is offered, Pro, and credit packs. Tapping Listen with no available time opens the plans. It never opens a purchase dialog automatically.
 
 Translation cannot start offline. Store catalog failure leaves current translation and account management usable. D1, auth, or metering failure fails closed before more audio is forwarded upstream. A purchase that succeeded while reconciliation is unavailable reports a verification failure and can be recovered by Restore or the daily server reconciliation job.
 
@@ -190,7 +190,9 @@ Only one translation generation can be active per customer. The lease heartbeat 
 
 ### Grant rules
 
-Free grants use the unique key `free:<UTC YYYY-MM>` and are created lazily once per customer per calendar month. Active Pro hides Free value and usage cannot spend it. If Pro ends, the customer can receive the current Free period through the same idempotent grant path. Session rate limits and the existing optional App Attest or Play Integrity checks protect translation access; store-reviewed paid value does not depend on device-integrity availability.
+The monthly Free allowance comes from the PostHog flag `free_allowance_minutes`, whose payload is a number of minutes. The Worker default is 5 minutes; a PostHog failure falls back to that default. PostHog targeting on `app_version` keeps old app versions on freemium. A value of 0 enables the hard paywall: no new Free grant and no Phone audio gift. Minutes a customer already has remain spendable under their existing expiry terms, including after account linking; switching the flag does not revoke or discard that balance.
+
+When the configured allowance is greater than 0, Free grants use the unique key `free:<UTC YYYY-MM>` and are created lazily once per customer per calendar month. Active Pro hides Free value and usage cannot spend it. If Pro ends and the configured Free allowance is greater than 0, the customer can receive the current Free period through the same idempotent grant path. Session rate limits and the existing optional App Attest or Play Integrity checks protect translation access; store-reviewed paid value does not depend on device-integrity availability.
 
 An uninterrupted Pro entitlement creates an internal episode ID and retains one UTC anchor across monthly and annual product changes. Cycle `n` uses the key `pro:<episode_id>:<n>`. Its boundaries are calculated from the original anchor plus `n` calendar months, clamping the day to the last valid day of each target month without drifting the later anchor. A lapse closes the episode; a later purchase starts a new one. Product replacement, deferred change, annual renewal, missed webhook recovery, and billing recovery cannot create a second grant for an existing cycle. Annual Pro creates one 180-minute grant at each internal monthly boundary, not 2,160 minutes upfront.
 
@@ -249,7 +251,7 @@ Apple review notes give a fresh-install path through Continue as Guest, Sign in 
 The bloom UI remains the design direction. Billing extends the existing Settings and translation surfaces rather than adding a second navigation system.
 
 - Settings shows customer status, remaining time, renewal or reset time, linked sign-in methods, Restore Purchases, Manage Subscription, Delete Account, support customer ID, privacy, and terms.
-- The paywall shows Free, monthly Pro, annual Pro, and credit packs with native localized prices. Annual copy states that 180 minutes refresh each month; it never implies 2,160 minutes are granted at once.
+- The paywall shows any offered Free allowance, monthly Pro, annual Pro, and credit packs with native localized prices. Annual copy states that 180 minutes refresh each month; it never implies 2,160 minutes are granted at once.
 - Purchase buttons remain disabled while the relevant store operation is running and cannot issue duplicate requests.
 - Restore and purchase success appear only after D1 reconciliation.
 - The live translation screen shows a quiet remaining-time indicator and a clear low-balance state without interrupting captions.
@@ -278,7 +280,7 @@ Murmur continues to state that it does not store microphone audio or transcript 
 
 Terms cover automatic renewal, localized store price and tax handling, cancellation through the original store, allowance expiry, non-expiring credits, refund reversals, negative balances, account linking, acceptable use, service availability, and store terms. Support copy explains Restore, pending purchases, duplicate charges, refunds, account deletion, and the customer ID support workflow.
 
-Apple App Privacy and Google Data Safety must match the implemented collection and linking behavior. Store descriptions and screenshots remove accountless claims and show the final Free and Pro experience. Review notes provide a usable reviewer path and sandbox account only when the store requires one.
+Apple App Privacy and Google Data Safety must match the implemented collection and linking behavior. Store descriptions and screenshots remove accountless claims and show the current allowance and paid-plan experience. Review notes provide a usable reviewer path and sandbox account only when the store requires one.
 
 ## Security, privacy, and operations
 
