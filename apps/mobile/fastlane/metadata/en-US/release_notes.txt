@@ -1,3 +1,1 @@
-New Pro, Pro Max, Trip Pass, and Event Pass plans. Listen in the background, sign in with Apple or Google, and enjoy the redesigned app, now in 11 languages.
-
-Clearer OpenAI consent, fixed Apple and Google sign-in, and improved background recording stability.
+Murmur now handles an unavailable microphone more reliably when you start listening.

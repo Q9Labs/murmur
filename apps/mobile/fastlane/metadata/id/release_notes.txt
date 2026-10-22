@@ -1,3 +1,1 @@
-Paket baru Pro, Pro Max, Trip Pass, dan Event Pass. Dengarkan di latar, masuk dengan Apple atau Google, dan nikmati desain baru. Aplikasi kini tersedia dalam 11 bahasa.
-
-Persetujuan OpenAI lebih jelas, perbaikan masuk dengan Apple dan Google, serta perekaman latar belakang lebih stabil.
+Murmur kini menangani mikrofon yang tidak tersedia dengan lebih andal saat Anda mulai mendengarkan.

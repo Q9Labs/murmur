@@ -27,9 +27,9 @@ const assert = (condition, message) => {
 const productionWorkerUrl = "https://murmur.q9labs.ai";
 const testingWorkerUrl = "https://murmur-worker-dev.msbilal.workers.dev";
 const sandboxWorkerUrl = "https://murmur-worker-sandbox.msbilal.workers.dev";
-const releaseVersion = "1.3.1";
-const iosBuildNumber = "21";
-const androidVersionCode = 16;
+const releaseVersion = "1.3.2";
+const iosBuildNumber = "22";
+const androidVersionCode = 17;
 const requiredPrivacyTypes = [
   "NSPrivacyCollectedDataTypeAudioData",
   "NSPrivacyCollectedDataTypeOtherUserContent",
