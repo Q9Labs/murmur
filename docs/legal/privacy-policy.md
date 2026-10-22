@@ -26,7 +26,7 @@ Murmur stores the derived insight, not the transcript. The record is associated 
 
 ## Accounts, Sign-In, and Purchases
 
-Murmur creates a random guest customer identifier so it can provide Free time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.
+Murmur creates a random guest customer identifier so it can provide translation time, track usage, and manage purchases. You can purchase, restore, and reconcile a purchase as a guest; an email or registered account is not required. If you choose to save a guest purchase to an account, Murmur links the guest's purchase and remaining balance to that account so you can recover them on another device.
 
 You may save a purchase by signing in with Apple, Google, or email. For Apple sign-in, Murmur receives your email address and, if you share it with Apple on first sign-in, your name. Murmur stores your email address, the name you share, and Apple's stable account identifier with your account until you delete the account. For Google sign-in, Murmur receives your email address and, when Google provides them, your name and profile image. Murmur stores the received profile information and Google's stable account identifier with your account until you delete the account. Email sign-in uses your email address to deliver a one-time code. Murmur does not receive your Apple or Google password.
 
