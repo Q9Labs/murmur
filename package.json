@@ -68,7 +68,7 @@
     "verify:hard-paywall": "node tooling/scripts/verify-hard-paywall.mjs"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "cspell": "10.0.1",
     "esbuild": "0.28.1",
     "fallow": "2.96.0",
@@ -78,7 +78,7 @@
     "tsc-rs": "0.7.0",
     "typescript": "~5.9.2",
     "vite": "^8.1.6",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "private": true,
   "workspaces": [
