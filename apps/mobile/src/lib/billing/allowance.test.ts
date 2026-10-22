@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  freeAllowanceMinutes,
   hasTimeAvailable,
+  isHardPaywallLocked,
+  lockedSurface,
   isPaidCustomer,
   lowBalanceMinutes,
 } from "./allowance";
@@ -17,6 +18,7 @@ const customer: MurmurCustomer = {
   earliestExpiryAtMs: null,
   entitlements: { pro: true, proMax: false },
   features: { history: true, maxSessionSeconds: 3_600, phoneAudio: true },
+  freeAllowanceMs: 300_000,
   fulfillmentEnabled: true,
   isRegistered: true,
   negativeMs: 0,
@@ -26,8 +28,15 @@ const customer: MurmurCustomer = {
 };
 
 describe("allowance rules", () => {
-  it("matches the worker's five-minute free allowance", () => {
-    expect(freeAllowanceMinutes).toBe(5);
+  it("chooses copy from the free tier and locks only an empty hard-mode balance", () => {
+    expect(lockedSurface(customer)).toBe("out_of_minutes");
+    expect(lockedSurface({ ...customer, freeAllowanceMs: 0 })).toBe("paywall");
+    expect(lockedSurface(null)).toBe("paywall");
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: 0 })).toBe(true);
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: -1 })).toBe(true);
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: 1 })).toBe(false);
+    expect(isHardPaywallLocked({ ...customer, availableMs: 0 })).toBe(false);
+    expect(isHardPaywallLocked(null)).toBe(false);
   });
 
   it("treats Pro, Pro Max and top-up credit as paid", () => {

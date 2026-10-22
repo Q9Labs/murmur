@@ -96,7 +96,8 @@ vi.mock("./viewModel", () => ({
   }),
 }));
 
-import { createAudioPlaybackPreferenceController } from "./homeScreen";
+import { fixtureCustomer } from "../screens/__tests__/billingFixture";
+import { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -234,5 +235,49 @@ describe("audio playback preference controller", () => {
     await expect(controller.restore()).resolves.toBeUndefined();
 
     expect(enabledChanges).toEqual([]);
+  });
+});
+
+describe("Start allowance gate", () => {
+  it("opens Plans without starting translation when hard-mode balance stays empty", async () => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
+    const start = vi.fn(async () => undefined);
+    const push = vi.fn();
+    const refresh = vi.fn(async () => customer);
+    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/plans") });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledWith("/plans");
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("keeps freemium Start unchanged even at zero balance", async () => {
+    const start = vi.fn(async () => undefined);
+    const refresh = vi.fn(async () => fixtureCustomer);
+    const openPlans = vi.fn();
+    await startWithAllowance({ customer: fixtureCustomer, refresh, start, openPlans });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(openPlans).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledOnce();
+  });
+
+  it.each([1, 7_200_000])("starts when a stale empty cache refreshes to %s ms", async (availableMs) => {
+    const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({
+      customer, refresh: async () => ({ ...customer, availableMs }), start, openPlans,
+    });
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
+  });
+
+  it("leaves an unknown customer or a failed refresh to Worker enforcement", async () => {
+    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: 0 }]) {
+      const start = vi.fn(async () => undefined);
+      const openPlans = vi.fn();
+      await startWithAllowance({ customer, refresh: async () => null, start, openPlans });
+      expect(start).toHaveBeenCalledOnce();
+      expect(openPlans).not.toHaveBeenCalled();
+    }
   });
 });

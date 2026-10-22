@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { appConfig, defaultServerConfig, getServerConfig, isBelowMinimumVersion, sessionLimitSeconds } from "./serverConfig";
+import { appConfig, defaultServerConfig, freeAllowanceMs, getServerConfig, isBelowMinimumVersion, sessionLimitSeconds } from "./serverConfig";
 import { posthogFlagsBody } from "./posthogFlagsFixture";
 
 afterEach(() => {
@@ -168,5 +168,19 @@ describe("server configuration", () => {
     expect(isBelowMinimumVersion("unknown", "1.2.10")).toBe(true);
     expect(isBelowMinimumVersion("1..2", "1.2.10")).toBe(true);
     expect(isBelowMinimumVersion(null, null)).toBe(false);
+  });
+});
+
+describe("free allowance flag", () => {
+  it.each([0, "0", -1, 2.5, true])("accepts only nonnegative integer minutes (%s)", async (payload) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ flags: {
+      free_allowance_minutes: { enabled: true, metadata: { payload } },
+      max_session_seconds_free: { enabled: true, metadata: { payload: "0" } },
+    } })));
+    const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: "1.4.0", distinctId: `hard-policy-${typeof payload}-${payload}`, plan: "free", platform: "ios",
+    });
+    expect(freeAllowanceMs(config)).toBe(payload === 0 || payload === "0" ? 0 : 300_000);
+    expect(config.max_session_seconds_free).toBe(300);
   });
 });

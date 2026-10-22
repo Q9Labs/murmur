@@ -114,3 +114,15 @@ describe("account screen", () => {
     expect(packValidity(null, en)).toEqual([]);
   });
 });
+
+it("shows no plan without a free tier and lets guest subscribers manage their subscription", () => {
+  billingRef.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+  const markup = renderToStaticMarkup(<AccountScreen />);
+  expect(markup).toContain("No plan");
+  expect(markup).not.toContain("Free");
+  resetRecorded();
+  billingRef.current = fixtureBilling({ freeAllowanceMs: 0, isRegistered: false, plan: "pro" });
+  renderToStaticMarkup(<AccountScreen />);
+  findControl("Manage subscription")?.onPress?.();
+  expect(billingRef.current.manageSubscription).toHaveBeenCalledOnce();
+});
