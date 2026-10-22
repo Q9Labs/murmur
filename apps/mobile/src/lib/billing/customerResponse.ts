@@ -7,7 +7,7 @@ export type MurmurCustomer = {
   earliestExpiryAtMs: number | null;
   entitlements: { pro: boolean; proMax: boolean };
   features: { history: boolean; maxSessionSeconds: number; phoneAudio: boolean };
-  freeAllowanceMs: number;
+  freeAllowanceMs: number | null;
   fulfillmentEnabled: boolean;
   gifts?: { phoneAudio: { claimable: boolean; remainingMs: number } };
   isRegistered: boolean;
@@ -34,13 +34,13 @@ export function decodeCustomer(payload: unknown): MurmurCustomer | null {
   const customerId = Reflect.get(payload, "customer_id");
   const balance = decodeBalance(Reflect.get(payload, "balance"));
   const metadata = decodeMetadata(payload);
-  const freeAllowanceMs = Reflect.get(payload, "free_allowance_ms") === undefined
-    ? 0 : nonnegativeInteger(payload, "free_allowance_ms");
+  const allowanceReported = Reflect.get(payload, "free_allowance_ms") !== undefined;
+  const freeAllowanceMs = allowanceReported ? nonnegativeInteger(payload, "free_allowance_ms") : null;
   const entitlements = decodeEntitlements(Reflect.get(payload, "entitlements"));
   const features = decodeFeatures(Reflect.get(payload, "features"));
   const gifts = decodeGifts(Reflect.get(payload, "gifts"));
   const creditPacks = decodeCreditPacks(Reflect.get(payload, "credit_packs"));
-  if (!isValidCustomerId(customerId) || balance === null || metadata === null || freeAllowanceMs === null ||
+  if (!isValidCustomerId(customerId) || balance === null || metadata === null || (allowanceReported && freeAllowanceMs === null) ||
     entitlements === null || features === null || gifts === null || creditPacks === null) {
     return null;
   }

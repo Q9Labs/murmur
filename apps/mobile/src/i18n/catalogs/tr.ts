@@ -345,6 +345,7 @@ export const trCatalog: Catalog = {
   "outOfMinutes.title": "Dakikan bitti",
   "outOfMinutes.paid": "Tüm çeviri süreni kullandın.",
   "outOfMinutes.free": "Bu ayki {minutes} ücretsiz dakikanı kullandın.",
+  "outOfMinutes.freeUnknown": "Bu ayki ücretsiz dakikalarını kullandın.",
   "outOfMinutes.seePlans": "Planları gör",
   "update.title": "Murmur'u güncelle",
   "update.body": "Murmur'un yeni sürümü hazır. Bu sürüm artık çeviri başlatamıyor; konuşmaya devam etmek için güncelle.",

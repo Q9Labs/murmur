@@ -35,6 +35,11 @@ describe("out-of-minutes sheet", () => {
     expect(outOfMinutesMessage({ ...fixtureCustomer, freeAllowanceMs: 420_000 }, en)).toContain("7 free minutes");
   });
 
+  it("keeps legacy customers on freemium copy without inventing an allowance", () => {
+    expect(outOfMinutesMessage({ ...fixtureCustomer, freeAllowanceMs: null }, en))
+      .toBe("You've used your free minutes for this month.");
+  });
+
   it("closes once a refreshed balance is larger than when it opened", () => {
     expect(balanceRecovered(0, 60_000)).toBe(true);
     expect(balanceRecovered(0, 0)).toBe(false);

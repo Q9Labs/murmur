@@ -30,6 +30,8 @@ const customer: MurmurCustomer = {
 describe("allowance rules", () => {
   it("chooses copy from the free tier and locks only an empty hard-mode balance", () => {
     expect(lockedSurface(customer)).toBe("out_of_minutes");
+    expect(lockedSurface({ ...customer, freeAllowanceMs: null })).toBe("out_of_minutes");
+    expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: null, availableMs: 0 })).toBe(false);
     expect(lockedSurface({ ...customer, freeAllowanceMs: 0 })).toBe("paywall");
     expect(lockedSurface(null)).toBe("paywall");
     expect(isHardPaywallLocked({ ...customer, freeAllowanceMs: 0, availableMs: 0 })).toBe(true);

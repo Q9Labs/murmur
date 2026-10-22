@@ -345,6 +345,7 @@ export const hiCatalog: Catalog = {
   "outOfMinutes.title": "समय खत्म",
   "outOfMinutes.paid": "आपने अपना सारा अनुवाद समय इस्तेमाल कर लिया।",
   "outOfMinutes.free": "आपने इस महीने के {minutes} फ़्री मिनट इस्तेमाल कर लिए।",
+  "outOfMinutes.freeUnknown": "आपने इस महीने के फ़्री मिनट इस्तेमाल कर लिए।",
   "outOfMinutes.seePlans": "प्लान देखें",
   "update.title": "Murmur अपडेट करें",
   "update.body": "Murmur का नया वर्शन आ गया है। यह वर्शन अनुवाद शुरू नहीं कर सकता, इसलिए बातचीत जारी रखने के लिए अपडेट करें।",

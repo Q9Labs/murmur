@@ -14,7 +14,7 @@ describe("decodeCustomer", () => {
       customer_id: "guest-1", is_registered: false, plan: "free", purchases_enabled: false,
       balance: { allowance_ms: 0, available_ms: 0, credit_ms: 0, earliest_expiry_at_ms: null, negative_ms: 0 },
     };
-    expect(decodeCustomer(payload)?.freeAllowanceMs).toBe(0);
+    expect(decodeCustomer(payload)?.freeAllowanceMs).toBeNull();
     for (const amount of [0, 300_000, 420_000]) {
       expect(decodeCustomer({ ...payload, free_allowance_ms: amount })?.freeAllowanceMs).toBe(amount);
     }
@@ -45,7 +45,7 @@ describe("decodeCustomer", () => {
       earliestExpiryAtMs: 1_800_000_000_000,
       entitlements: { pro: false, proMax: false },
       features: { history: false, maxSessionSeconds: 300, phoneAudio: false },
-      freeAllowanceMs: 0,
+      freeAllowanceMs: null,
       fulfillmentEnabled: true,
       isRegistered: false,
       negativeMs: 0,

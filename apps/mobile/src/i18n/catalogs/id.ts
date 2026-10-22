@@ -345,6 +345,7 @@ export const idCatalog: Catalog = {
   "outOfMinutes.title": "Menit habis",
   "outOfMinutes.paid": "Anda sudah memakai semua waktu terjemahan.",
   "outOfMinutes.free": "Anda sudah memakai {minutes} menit gratis bulan ini.",
+  "outOfMinutes.freeUnknown": "Anda sudah memakai menit gratis bulan ini.",
   "outOfMinutes.seePlans": "Lihat paket",
   "update.title": "Perbarui Murmur",
   "update.body": "Versi Murmur yang lebih baru sudah siap. Versi ini tidak bisa lagi memulai terjemahan, jadi perbarui untuk melanjutkan percakapan.",

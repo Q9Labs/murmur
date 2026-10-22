@@ -345,6 +345,7 @@ export const jaCatalog: Catalog = {
   "outOfMinutes.title": "時間がなくなりました",
   "outOfMinutes.paid": "翻訳時間をすべて使いました。",
   "outOfMinutes.free": "今月の無料{minutes}分を使い切りました。",
+  "outOfMinutes.freeUnknown": "今月の無料分を使い切りました。",
   "outOfMinutes.seePlans": "プランを見る",
   "update.title": "Murmurをアップデート",
   "update.body": "Murmurの新しいバージョンがあります。このバージョンでは翻訳を開始できないため、アップデートして会話を続けてください。",

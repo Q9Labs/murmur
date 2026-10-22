@@ -345,6 +345,7 @@ export const urCatalog: Catalog = {
   "outOfMinutes.title": "وقت ختم",
   "outOfMinutes.paid": "آپ نے اپنا سارا ترجمے کا وقت استعمال کر لیا۔",
   "outOfMinutes.free": "آپ نے اس ماہ کے {minutes} مفت منٹ استعمال کر لیے۔",
+  "outOfMinutes.freeUnknown": "آپ نے اس ماہ کے مفت منٹ استعمال کر لیے۔",
   "outOfMinutes.seePlans": "پلانز دیکھیں",
   "update.title": "\u2068Murmur\u2069 اپ ڈیٹ کریں",
   "update.body": "\u2068Murmur\u2069 کا نیا ورژن آ گیا ہے۔ یہ ورژن ترجمہ شروع نہیں کر سکتا، اس لیے گفتگو جاری رکھنے کے لیے اپ ڈیٹ کریں۔",

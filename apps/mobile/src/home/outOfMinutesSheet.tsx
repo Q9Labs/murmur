@@ -69,7 +69,10 @@ export function outOfMinutesMessage(customer: MurmurCustomer | null, ui: UiText)
   if (!customer || isPaidCustomer(customer) || customer.freeAllowanceMs === 0) {
     return ui.t("outOfMinutes.paid");
   }
-  return ui.t("outOfMinutes.free", { minutes: formatUiNumber((customer?.freeAllowanceMs ?? 0) / 60_000, ui.locale) });
+  if (customer.freeAllowanceMs === null) {
+    return ui.t("outOfMinutes.freeUnknown");
+  }
+  return ui.t("outOfMinutes.free", { minutes: formatUiNumber(customer.freeAllowanceMs / 60_000, ui.locale) });
 }
 
 function createOutOfMinutesStyles(theme: MurmurTheme) {

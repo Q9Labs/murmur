@@ -345,6 +345,7 @@ export const frCatalog: Catalog = {
   "outOfMinutes.title": "Plus de minutes",
   "outOfMinutes.paid": "Vous avez utilisé tout votre temps de traduction.",
   "outOfMinutes.free": "Vous avez utilisé vos {minutes} minutes gratuites ce mois-ci.",
+  "outOfMinutes.freeUnknown": "Vous avez utilisé vos minutes gratuites ce mois-ci.",
   "outOfMinutes.seePlans": "Voir les formules",
   "update.title": "Mettre à jour Murmur",
   "update.body": "Une nouvelle version de Murmur est prête. Cette version ne peut plus lancer de traduction : mettez-la à jour pour continuer la conversation.",

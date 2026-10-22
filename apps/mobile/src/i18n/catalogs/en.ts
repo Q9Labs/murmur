@@ -361,6 +361,7 @@ export const enCatalog = {
   "outOfMinutes.title": "Out of minutes",
   "outOfMinutes.paid": "You've used all your translation time.",
   "outOfMinutes.free": "You've used your {minutes} free minutes for this month.",
+  "outOfMinutes.freeUnknown": "You've used your free minutes for this month.",
   "outOfMinutes.seePlans": "See plans",
   "update.title": "Update Murmur",
   "update.body": "A newer version of Murmur is ready. This version can no longer start translations, so update to keep the conversation going.",

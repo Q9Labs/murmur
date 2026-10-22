@@ -345,6 +345,7 @@ export const arCatalog: Catalog = {
   "outOfMinutes.title": "نفدت الدقائق",
   "outOfMinutes.paid": "استخدمت كل وقت الترجمة.",
   "outOfMinutes.free": "استخدمت دقائقك المجانية الـ{minutes} لهذا الشهر.",
+  "outOfMinutes.freeUnknown": "استخدمت دقائقك المجانية لهذا الشهر.",
   "outOfMinutes.seePlans": "عرض الخطط",
   "update.title": "حدّث \u2068Murmur\u2069",
   "update.body": "إصدار أحدث من \u2068Murmur\u2069 جاهز. هذا الإصدار لم يعد يبدأ الترجمة، فحدّثه لمواصلة المحادثة.",

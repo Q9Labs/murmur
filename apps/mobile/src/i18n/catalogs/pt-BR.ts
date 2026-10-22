@@ -345,6 +345,7 @@ export const ptBRCatalog: Catalog = {
   "outOfMinutes.title": "Sem minutos",
   "outOfMinutes.paid": "Você usou todo o seu tempo de tradução.",
   "outOfMinutes.free": "Você usou seus {minutes} minutos grátis deste mês.",
+  "outOfMinutes.freeUnknown": "Você usou seus minutos grátis deste mês.",
   "outOfMinutes.seePlans": "Ver planos",
   "update.title": "Atualize o Murmur",
   "update.body": "Uma nova versão do Murmur está pronta. Esta versão não consegue mais iniciar traduções, então atualize para continuar a conversa.",

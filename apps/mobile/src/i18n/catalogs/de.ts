@@ -345,6 +345,7 @@ export const deCatalog: Catalog = {
   "outOfMinutes.title": "Keine Minuten mehr",
   "outOfMinutes.paid": "Du hast deine gesamte Übersetzungszeit genutzt.",
   "outOfMinutes.free": "Du hast deine {minutes} Gratisminuten für diesen Monat genutzt.",
+  "outOfMinutes.freeUnknown": "Du hast deine Gratisminuten für diesen Monat genutzt.",
   "outOfMinutes.seePlans": "Tarife ansehen",
   "update.title": "Murmur aktualisieren",
   "update.body": "Eine neue Version von Murmur ist da. Diese Version kann keine Übersetzungen mehr starten, also aktualisiere, um weiterzumachen.",
