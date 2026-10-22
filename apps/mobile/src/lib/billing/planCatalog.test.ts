@@ -152,7 +152,7 @@ describe("plan catalog", () => {
     ]);
     expect(planTermLabel("monthly", de)).toBe("Monatlich");
     expect(planDisplayPrice(pack, de)).toEqual({ price: "$7.99", suffix: null });
-    expect(formatAllowance(120, ar)).toBe("\u0662 ساعات");
+    expect(formatAllowance(120, ar)).toBe("ساعتان");
     expect(planAccessibilityLabel(pack, ios, ar)).toContain("Trip Pass");
   });
 });

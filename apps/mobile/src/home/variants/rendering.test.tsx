@@ -7,8 +7,18 @@ import { createSpan } from "@murmur/protocol/session";
 import { buildHomeViewModel } from "../viewModel";
 import { sanitizeMobileEvent } from "../../lib/observability/sentry";
 import { OnboardingFlow, type OnboardingText, type OnboardingTheme } from "./onboardingFlow";
+import { BloomShell } from "./bloom";
+import { fixtureBilling } from "../../screens/__tests__/billingFixture";
 import { SpanTimeline, timelineScrollHandlers } from "./shared";
 import type { VariantOnboardingProps, VariantShellProps } from "./types";
+
+await vi.hoisted(async () => {
+  const { createRequire } = await import("node:module");
+  createRequire(`${process.cwd()}/test.cjs`).extensions[".png"] = (module) => { module.exports = 1; };
+});
+vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }) }));
+vi.mock("../../lib/telemetry", () => ({ captureBillingTelemetry: vi.fn() }));
 
 const harness = vi.hoisted(() => ({
   controls: [] as Array<{
@@ -19,6 +29,7 @@ const harness = vi.hoisted(() => ({
   }>,
   maskedContentViews: 0,
   scheme: "dark" as "dark" | "light" | null,
+  sentry: { captureException: vi.fn(), captureMessage: vi.fn() },
 }));
 
 vi.mock("posthog-react-native", () => ({
@@ -65,6 +76,7 @@ vi.mock("react-native", () => {
 
   return {
     Animated: { View: Primitive },
+    Image: () => null,
     Platform: { OS: "ios", select: <T,>(values: { default?: T; ios?: T }): T | undefined => values.ios ?? values.default },
     Pressable,
     ScrollView: Primitive,
@@ -83,16 +95,10 @@ vi.mock("react-native-safe-area-context", () => ({
 const openURL = vi.hoisted(() => vi.fn(async () => true));
 
 vi.mock("expo-linking", () => ({ openURL }));
-vi.mock("lucide-react-native", () => ({
-  AudioLines: () => null,
-  ChartNoAxesColumn: () => null,
-  ShieldCheck: () => null,
-}));
-const sentry = vi.hoisted(() => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
-vi.mock("@sentry/react-native", () => sentry);
+vi.mock("lucide-react-native", () => import("../../screens/__tests__/navigation").then((m) => m.lucideMock));
+vi.mock("@sentry/react-native", () => harness.sentry);
 
 vi.mock("./hooks", () => ({
-  useMicLevelValue: () => 0.75,
   useReducedMotion: () => true,
   usePulse: () => ({ interpolate: () => 1 }),
 }));
@@ -243,10 +249,10 @@ describe("shared variant onboarding flow", () => {
     const privacy = onboardingProps("privacy");
     render(<OnboardingFlow {...privacy} text={onboardingText} theme={onboardingTheme} />);
     harness.controls.find((control) => control.accessibilityRole === "link")?.onPress?.();
-    await vi.waitFor(() => expect(sentry.captureException).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(harness.sentry.captureException).toHaveBeenCalledOnce());
     expect(openURL).toHaveBeenCalledExactlyOnceWith("https://murmur.q9labs.ai/privacy");
     const event = sanitizeMobileEvent({
-      ...sentry.captureException.mock.calls[0]?.[1],
+      ...harness.sentry.captureException.mock.calls[0]?.[1],
       exception: { values: [{ type: "Error", value: message }] },
       extra: { content: "private-user-content" },
       user: { email: "private-user-content" },
@@ -372,5 +378,35 @@ describe("translation-only timeline", () => {
 
   it("shows translation starting before anything is heard", () => {
     expect(renderTimeline(false, false)).toContain("Translation is starting…");
+  });
+});
+
+describe("locked Bloom home", () => {
+  it("hides only the ready status while the paywall blocks Start", () => {
+    const props = shellProps({ hasTimeline: false, isLive: false });
+    props.live.status = "idle";
+    props.live.error = null;
+    props.viewModel = buildHomeViewModel({ hardPaywallLocked: true, live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
+    expect(props.viewModel.statusText).toBe("");
+    expect(render(<BloomShell {...props} />)).not.toContain("Ready to translate");
+  });
+  it.each([false, true])("uses the timeline empty state even with hidden spans (%s)", (hiddenSpan) => {
+    const props = shellProps({ hasTimeline: false, isLive: false });
+    if (hiddenSpan) props.live.spans = [createSpan(" ")];
+    const markup = render(<BloomShell {...props} />);
+    expect(markup).toContain("Choose a plan to start translating.");
+    expect(markup).not.toContain("Ready to translate");
+    expect(markup).not.toContain("The conversation appears here once you start.");
+    expect(markup).toContain("See plans");
+  });
+  it.each(["app_version_unsupported", "worker_session_network_error", "microphone_permission_denied"])("keeps non-billing status when hard locked (%s)", (error) => {
+    const props = shellProps({ hasTimeline: false, isLive: false });
+    props.live.error = error;
+    props.live.status = "idle";
+    props.viewModel = buildHomeViewModel({ hardPaywallLocked: true, captureSource: "microphone", live: props.live, sourceLanguageCode: "en", targetLanguageCode: "ar" });
+    const markup = render(<BloomShell {...props} />);
+    if (error === "app_version_unsupported") expect(markup).toContain("Update Murmur");
+    expect(markup).toContain(props.viewModel.statusText);
+    expect(props.viewModel.statusText).not.toBe("");
   });
 });

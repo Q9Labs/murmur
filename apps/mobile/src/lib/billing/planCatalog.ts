@@ -131,7 +131,7 @@ function perMonthLine(plan: MurmurPlan, ui: UiText): string | null {
     : null;
 }
 
-function introRenewalLine(plan: MurmurPlan, ui: UiText): string | null {
+export function introRenewalLine(plan: MurmurPlan, ui: UiText): string | null {
   if (!plan.introPrice || !plan.period) {
     return null;
   }
@@ -166,6 +166,9 @@ export function formatAllowance(minutes: number, ui: UiText): string {
     return formatPlanMinutes(minutes, ui);
   }
   const hours = minutes / 60;
+  if (hours === 2 && ui.locale === "ar") {
+    return ui.t("plans.twoHours");
+  }
   return ui.t(hours === 1 ? "plans.oneHour" : "plans.hours", { count: formatUiNumber(hours, ui.locale) });
 }
 

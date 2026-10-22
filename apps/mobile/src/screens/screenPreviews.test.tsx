@@ -12,8 +12,8 @@ const seen = vi.hoisted(() => ({
 }));
 
 function screen(name: string) {
-  return (props: { id?: string; initialTerm?: string; planId?: string }) => {
-    seen.screens.push([name, props.initialTerm ?? props.planId ?? props.id].filter(Boolean).join(":"));
+  return (props: { id?: string; initialKey?: string; initialTerm?: string; planId?: string }) => {
+    seen.screens.push([name, props.initialKey ?? props.initialTerm ?? props.planId ?? props.id].filter(Boolean).join(":"));
     return null;
   };
 }
@@ -25,6 +25,7 @@ vi.mock("./history/conversationScreen", () => ({ ConversationScreen: screen("con
 vi.mock("./history/historyScreen", () => ({ HistoryScreen: screen("history") }));
 vi.mock("./insights/insightsConsentScreen", () => ({ InsightsConsentScreen: screen("insights-consent") }));
 vi.mock("./phoneAudio/phoneAudioScreen", () => ({ PhoneAudioScreen: screen("phone-audio") }));
+vi.mock("./paywall/paywallScreen", () => ({ PaywallScreen: screen("paywall") }));
 vi.mock("./plans/plansScreen", () => ({ PlansScreen: screen("plans") }));
 vi.mock("./settings/languageScreen", () => ({ LanguageScreen: screen("app-language") }));
 vi.mock("./settings/settingsScreen", () => ({ SettingsScreen: screen("settings") }));
@@ -66,6 +67,13 @@ describe("screen previews", () => {
   });
 
   it("opens plans on the requested tab, with the offer where asked", () => {
+    render("paywall");
+    expect(seen.screens).toEqual(["paywall"]);
+    render("paywall-monthly");
+    expect(seen.screens).toEqual(["paywall:monthly"]);
+    render("paywall-monthly-intro");
+    expect(seen.screens).toEqual(["paywall:monthly"]);
+    expect(Date.parse(seen.billing[0]?.config.personalOffer?.expiresAt ?? "")).toBeGreaterThan(Date.now());
     render("plans-offer");
     expect(seen.screens).toEqual(["plans:monthly"]);
     expect(Date.parse(seen.billing[0]?.config.personalOffer?.expiresAt ?? "")).toBeGreaterThan(Date.now());

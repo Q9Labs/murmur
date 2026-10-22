@@ -65,7 +65,8 @@
     "verify:log-boundaries": "node tooling/scripts/verify-workers-log-boundaries.mjs",
     "verify:log-runtime": "node tooling/scripts/verify-workers-log-runtime.mjs",
     "verify:caption-recovery": "node tooling/scripts/verify-caption-recovery.mjs",
-    "verify:hard-paywall": "node tooling/scripts/verify-hard-paywall.mjs"
+    "verify:hard-paywall": "node tooling/scripts/verify-hard-paywall.mjs",
+    "dev:hard-paywall": "node tooling/scripts/dev-hard-paywall.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.12",

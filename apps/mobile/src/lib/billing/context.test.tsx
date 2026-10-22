@@ -3,17 +3,31 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parseMobileTelemetryEvent, type MobileTelemetryRequest } from "@murmur/protocol/telemetry";
 
-import { fixtureCustomer } from "../../screens/__tests__/billingFixture";
+import { fixtureCustomer, fixtureYearly } from "../../screens/__tests__/billingFixture";
+import { purchaseMode } from "../../screens/plans/purchaseMode";
+import { initializeAnonymousAnalytics } from "../telemetry";
 import { defaultAppConfig } from "./appConfig";
 
 const api = vi.hoisted(() => ({
   fetchMurmurCustomer: vi.fn(),
   fetchMurmurAppConfig: vi.fn(),
+  reconcileMurmurCustomer: vi.fn(),
+}));
+const store = vi.hoisted(() => ({ purchaseMurmurPlan: vi.fn() }));
+const telemetry = vi.hoisted(() => ({
+  deliverMobileTelemetryRequest: vi.fn<(request: MobileTelemetryRequest) => Promise<void>>(async () => undefined),
 }));
 vi.mock("./customerApi", () => api);
-vi.mock("./revenueCat", () => ({ configureRevenueCat: async () => false }));
-vi.mock("../telemetry", () => ({ captureBillingTelemetry: vi.fn() }));
+vi.mock("./revenueCat", () => ({ ...store, configureRevenueCat: async () => true }));
+vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "1.2.0", ios: { buildNumber: "10" } } } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+vi.mock("../anonymousAnalytics", () => ({ getAnonymousAnalyticsEnabled: async () => true }));
+vi.mock("../installIdentity", () => ({ getOrCreateInstallId: async () => "install-id-123456" }));
+vi.mock("../installAttribution", () => ({ captureInstallAttribution: vi.fn() }));
+vi.mock("../replay", () => ({ setReplayAnalyticsEnabled: vi.fn() }));
+vi.mock("../providers/mobileTelemetry", () => telemetry);
 vi.mock("../observability/sentry", () => ({ captureMobileFailure: vi.fn() }));
 
 import { MurmurBillingProvider, useMurmurBilling, type MurmurBillingContext } from "./context";
@@ -27,8 +41,11 @@ function Probe() {
 
 beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  api.fetchMurmurCustomer.mockResolvedValue({ ...fixtureCustomer, fulfillmentEnabled: false });
+  api.fetchMurmurCustomer.mockResolvedValue(fixtureCustomer);
   api.fetchMurmurAppConfig.mockResolvedValue(defaultAppConfig);
+  api.reconcileMurmurCustomer.mockResolvedValue({ purchaseCount: 0, subscriptionCount: 0 });
+  await initializeAnonymousAnalytics();
+  await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalled());
   const root = createRoot(document.createElement("div"));
   mounted.push(root);
   await act(async () => {
@@ -67,5 +84,39 @@ describe("billing refresh", () => {
     expect(billing.customer).toEqual(previous);
     expect(billing.error).not.toBeNull();
     expect(billing.busy).toBe(false);
+  });
+});
+
+describe("checkout telemetry", () => {
+  it.each([
+    ["purchased", "mobile_checkout_succeeded"],
+    ["cancelled", "mobile_checkout_cancelled"],
+    ["failed", "mobile_checkout_failed"],
+  ] as const)("labels a %s checkout with its purchase surface", async (outcome, event) => {
+    await act(async () => {
+      expect(await billing.refresh()).toEqual(fixtureCustomer);
+    });
+    for (const surface of ["hard_paywall", undefined] as const) {
+      telemetry.deliverMobileTelemetryRequest.mockClear();
+      if (outcome === "failed") store.purchaseMurmurPlan.mockRejectedValueOnce(new Error("store unavailable"));
+      else store.purchaseMurmurPlan.mockResolvedValueOnce(outcome);
+      api.reconcileMurmurCustomer.mockResolvedValue({ purchaseCount: surface ? 1 : 2, subscriptionCount: 0 });
+
+      await act(async () => {
+        expect(billing.customer).toEqual(fixtureCustomer);
+        purchaseMode(billing, vi.fn(), surface).onBuy(fixtureYearly);
+        await vi.waitFor(() => expect(store.purchaseMurmurPlan).toHaveBeenCalledWith(fixtureYearly.id, defaultAppConfig.paywallOfferingId));
+        await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalledWith(expect.objectContaining({
+          payload: expect.objectContaining({ event, package_label: surface ?? "plan_picker" }),
+        })));
+      });
+      const request = telemetry.deliverMobileTelemetryRequest.mock.calls.find(([request]) => request.payload.event === event)?.[0];
+      expect(parseMobileTelemetryEvent(request?.payload)).toMatchObject({ event, package_label: surface ?? "plan_picker" });
+      if (outcome === "failed") {
+        await vi.waitFor(() => expect(telemetry.deliverMobileTelemetryRequest).toHaveBeenCalledWith(expect.objectContaining({
+          payload: expect.objectContaining({ event: "mobile_paywall_failed", package_label: surface ?? "plan_picker", result_category: "store_error" }),
+        })));
+      }
+    }
   });
 });

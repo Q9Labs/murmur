@@ -2,7 +2,26 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
 import { formatUiNumber, useUiLocale, type UiText } from "../../i18n/runtime";
+import type { MurmurAppConfig } from "../../lib/billing/appConfig";
+import { introDiscountPercent, type MurmurPlan } from "../../lib/billing/planCatalog";
 import { usePlanStyles } from "./styles";
+
+export function usePersonalOffer(offer: MurmurAppConfig["personalOffer"], displayedPlans: MurmurPlan[]) {
+  const discountPercent = introDiscountPercent(displayedPlans);
+  const expiresAtMs = offer ? Date.parse(offer.expiresAt) : null;
+  const offeringId = offer && discountPercent !== null && remainingOfferMs(expiresAtMs, Date.now()) > 0
+    ? offer.offeringId
+    : null;
+
+  useEffect(() => {
+    if (offeringId) {
+      void import("../../lib/telemetry").then((telemetry) =>
+        telemetry.captureMobileTelemetry({ event: "offer_shown", offering_id: offeringId }));
+    }
+  }, [offeringId]);
+
+  return { discountPercent, expiresAtMs };
+}
 
 export function remainingOfferMs(expiresAtMs: number | null, nowMs: number): number {
   return expiresAtMs === null ? 0 : Math.max(0, expiresAtMs - nowMs);

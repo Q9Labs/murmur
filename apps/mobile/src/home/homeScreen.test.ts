@@ -9,7 +9,7 @@ import type { MurmurBillingContext } from "../lib/billing/context";
 const state = vi.hoisted(() => ({
   billing: null as MurmurBillingContext | null,
   push: vi.fn(),
-  experience: vi.fn((_props: { outOfMinutesOpen: boolean; onCloseOutOfMinutes: () => void; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
+  experience: vi.fn((_props: { onPrimaryAction: () => void; outOfMinutesOpen: boolean; onCloseOutOfMinutes: () => void; updateRequiredOpen: boolean; onCloseUpdateRequired: () => void }) => null),
   live: {
     cancel: vi.fn(async () => undefined),
     start: vi.fn(async () => undefined),
@@ -275,7 +275,17 @@ describe("audio playback preference controller", () => {
 });
 
 describe("Start allowance gate", () => {
-  it("waits for an unknown customer and opens Plans without starting capture", async () => {
+
+  it("routes the real home Start action to the paywall without starting translation", async () => {
+    state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
+    await renderHome();
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onPrimaryAction(); });
+    expect(state.push).toHaveBeenCalledWith("/paywall");
+    expect(state.live.start).not.toHaveBeenCalled();
+  });
+
+  it("waits for an unknown customer and opens the paywall without starting capture", async () => {
     const pending = deferred<typeof fixtureCustomer | null>();
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
@@ -311,18 +321,18 @@ describe("Start allowance gate", () => {
     expect(openPlans).not.toHaveBeenCalled();
   });
 
-  it("opens Plans without starting translation when hard-mode balance stays empty", async () => {
+  it("opens the paywall without starting translation when hard-mode balance stays empty", async () => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 };
     const start = vi.fn(async () => undefined);
     const push = vi.fn();
     const refresh = vi.fn(async () => customer);
-    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/plans") });
+    await startWithAllowance({ customer, refresh, start, openPlans: () => push("/paywall") });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(push).toHaveBeenCalledWith("/plans");
+    expect(push).toHaveBeenCalledWith("/paywall");
     expect(start).not.toHaveBeenCalled();
   });
 
-  it("opens Plans instead of starting with a sub-second hard-mode balance", async () => {
+  it("opens the paywall instead of starting with a sub-second hard-mode balance", async () => {
     const customer = { ...fixtureCustomer, freeAllowanceMs: 0, availableMs: minimumSessionBalanceMs - 1 };
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
@@ -382,7 +392,7 @@ describe("home billing effects", () => {
     await act(async () => { pending.resolve(fixtureCustomer); });
   });
 
-  it.each([0, 500])("closes the freemium sheet and opens Plans when refresh returns %s ms in hard mode", async (availableMs) => {
+  it.each([0, 500])("closes the freemium sheet and opens the paywall when refresh returns %s ms in hard mode", async (availableMs) => {
     const pending = deferred<typeof fixtureCustomer | null>();
     state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
     state.live.error = "allowance_exhausted";
@@ -391,7 +401,7 @@ describe("home billing effects", () => {
     expect(state.push).not.toHaveBeenCalled();
     await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs }); });
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
-    expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
   });
 
   it("keeps the freemium sheet dismissed when its pending refresh returns no time", async () => {
@@ -469,12 +479,12 @@ describe("home billing effects", () => {
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ updateRequiredOpen: false }), undefined);
   });
 
-  it("opens Plans once for a cached hard lock after exhaustion and failed refresh", async () => {
+  it("opens the paywall once for a cached hard lock after exhaustion and failed refresh", async () => {
     state.billing = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), refresh: vi.fn(async () => null) };
     state.live.error = "allowance_exhausted";
     const root = await renderHome();
     await act(async () => { root.render(createElement(HomeScreen)); });
-    expect(state.push).toHaveBeenCalledExactlyOnceWith("/plans");
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
     expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
   });
 

@@ -67,7 +67,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         onAudioPlaybackEnabledChange={props.onAudioPlaybackEnabledChange}
         onOpenSettings={props.onOpenSettings}
       />
-      <TranslationStage {...props} />
+      <TranslationStage {...props} hardPaywallLocked={hardPaywallLocked} />
       <View style={styles.controlColumn}>
         {!hardPaywallLocked || !isAllowanceExhaustedError(live.error) ? (
           <StatusMessages errorStyle={styles.error} live={live} receiptStyle={styles.receipt} />
@@ -77,7 +77,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         ) : null}
         {props.listeningInBackground ? <BackgroundListeningPill /> : (
           <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-            {hardPaywallLocked && isAllowanceExhaustedError(live.error) ? "" : viewModel.statusText}
+            {viewModel.statusText}
           </Text>
         )}
         <CaptureSourceControl
@@ -226,12 +226,14 @@ export function BreathingBlob({ isLive }: { isLive: boolean }): ReactNode {
   );
 }
 
-function TranslationStage(props: VariantShellProps): ReactNode {
+function TranslationStage(props: VariantShellProps & { hardPaywallLocked: boolean }): ReactNode {
   const { styles } = useBloomStyles();
   const translationOnly = !props.live.source_transcript_enabled;
+  const { t } = useUiLocale();
   return (
     <View style={styles.flexFill}>
       <SpanTimeline
+        lockedText={props.hardPaywallLocked && !props.viewModel.isLive ? t("paywall.lockedHome") : undefined}
         captureSource={props.captureSource}
         contentStyle={[styles.timelineContent, translationOnly && styles.timelineContentTranslationOnly]}
         autoScrollRef={props.autoScrollRef}

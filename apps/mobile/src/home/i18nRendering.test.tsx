@@ -15,6 +15,8 @@ vi.mock("react-native", () => ({
   Animated: { View: ({ children }: { children?: ReactNode }) => createElement("div", null, children) },
   StyleSheet: { create: <T,>(styles: T) => styles },
   useColorScheme: () => "light",
+  // Keep this isolated text/style capture mock local to the rendering suite.
+  // fallow-ignore-next-line code-duplication
   ScrollView: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
   Text: ({ children, style }: { children?: ReactNode; style?: unknown }) => {
     capturedText.push({ children, style });
@@ -51,12 +53,13 @@ beforeEach(() => {
   capturedText.length = 0;
 });
 
-function renderTimeline(live: unknown, viewModel: unknown): string {
+function renderTimeline(live: unknown, viewModel: unknown, lockedText?: string): string {
   return renderToStaticMarkup(
     <UiLocaleContext.Provider value={arabicContext}>
       <SpanTimeline
         autoScrollRef={{ current: true }}
         live={live as never}
+        lockedText={lockedText}
         textStyles={{ ltr: ltrText, partial: {}, rtl: rtlText, source: {}, translation: {} }}
         timelineRef={{ current: null }}
         userInteractedRef={{ current: false }}
@@ -67,6 +70,14 @@ function renderTimeline(live: unknown, viewModel: unknown): string {
 }
 
 describe("Arabic UI rendering", () => {
+  it("keeps the locked-home empty state in the UI text direction", () => {
+    const lockedText = arabicTranslate("paywall.lockedHome");
+    const live = { source_transcript_enabled: true, spans: [createSpan(" ")], tentative_source_caption: "", starting_slow: false };
+    const model = { isLive: false, sourceLanguage: { rtl: false }, targetLanguage: { rtl: true } };
+    expect(renderTimeline(live, model, lockedText)).toContain(lockedText);
+    expect(capturedText.find(({ children }) => children === lockedText)?.style)
+      .toContainEqual(expect.objectContaining({ writingDirection: "rtl", textAlign: "right" }));
+  });
   it.each([false, true])("replaces the starting state immediately on a first caption (source enabled: %s)", (showSource) => {
     const live = { source_transcript_enabled: showSource, spans: [], tentative_source_caption: "", starting_slow: false };
     const model = { isLive: true, sourceLanguage: { rtl: false }, targetLanguage: { rtl: true } };

@@ -25,31 +25,8 @@ export function useMicLevel(active: boolean): Animated.Value {
   return level;
 }
 
-export function useMicLevelValue(active: boolean, intervalMs = 120): number {
-  const [micLevel, setMicLevel] = useState(0);
-  const lastUpdateRef = useRef(0);
-
-  useEffect(() => {
-    if (!active) {
-      setMicLevel(0);
-      return;
-    }
-    const subscription = MurmurAudioModule.addListener("onAudioFrame", (frame: AudioFrameEvent) => {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < intervalMs) {
-        return;
-      }
-      lastUpdateRef.current = now;
-      setMicLevel(normalizedMicLevel(frame.rms));
-    });
-    return () => subscription.remove();
-  }, [active, intervalMs]);
-
-  return micLevel;
-}
-
-export function useReducedMotion(): boolean {
-  const [reducedMotion, setReducedMotion] = useState(false);
+export function useReducedMotion(): boolean | null {
+  const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -59,7 +36,11 @@ export function useReducedMotion(): boolean {
           setReducedMotion(enabled);
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (mounted) {
+          setReducedMotion(false);
+        }
+      });
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReducedMotion);
     return () => {
       mounted = false;
@@ -70,7 +51,7 @@ export function useReducedMotion(): boolean {
   return reducedMotion;
 }
 
-export function usePulse(active: boolean, reducedMotion: boolean, durationMs = 1400): Animated.Value {
+export function usePulse(active: boolean, reducedMotion: boolean | null, durationMs = 1400): Animated.Value {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

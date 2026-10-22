@@ -13,6 +13,8 @@ import { normalizePreviewLocale, normalizePreviewScreen } from "./preview";
 
 describe("preview route", () => {
   it("selects only supported deterministic screens", () => {
+    expect(normalizePreviewScreen("paywall")).toBe("paywall");
+    expect(normalizePreviewScreen("paywall-monthly")).toBe("paywall-monthly");
     expect(normalizePreviewScreen("languages")).toBe("languages");
     expect(normalizePreviewScreen("picker")).toBe("picker");
     expect(normalizePreviewScreen("privacy")).toBe("privacy");

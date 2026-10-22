@@ -105,6 +105,14 @@ describe("mobile telemetry parsing", () => {
     expect(parseMobileTelemetryEvent(event)).toEqual(event);
   });
 
+  it("preserves the plan-tab surface and rejects unknown surfaces", () => {
+    for (const surface of ["plan_picker", "hard_paywall"]) {
+      const event = { event: "plan_tab_viewed", tab: "monthly", surface };
+      expect(parseMobileTelemetryEvent(event)).toEqual(event);
+    }
+    expect(parseMobileTelemetryEvent({ event: "plan_tab_viewed", tab: "monthly", surface: "other" })).toBeNull();
+  });
+
   it("accepts every bounded enum value", () => {
     for (const tab of ["monthly", "yearly", "credit_packs"]) {
       expect(parseMobileTelemetryEvent({ event: "plan_tab_viewed", tab })).not.toBeNull();

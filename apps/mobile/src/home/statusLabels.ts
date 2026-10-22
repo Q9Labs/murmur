@@ -2,6 +2,8 @@ import type { MessageKey } from "../i18n/catalogs/en";
 import { createTranslator, type Translate } from "../i18n/runtime";
 import type { SessionPreparationStatus } from "../lib/live-translation/sessionPreparation";
 
+import { isAllowanceExhaustedError } from "./errorCopy";
+
 const fallbackTranslate = createTranslator("en");
 
 export function getStatusText(
@@ -9,7 +11,13 @@ export function getStatusText(
   error: string | null,
   preparationStatus?: SessionPreparationStatus,
   translate: Translate = fallbackTranslate,
+  hardPaywallLocked = false,
 ): string {
+  if (hardPaywallLocked && (status === "idle" || status === "ended") &&
+    (!preparationStatus || preparationStatus === "idle" || preparationStatus === "ready") &&
+    (!error || isAllowanceExhaustedError(error))) {
+    return "";
+  }
   if (status === "requesting_mic_permission") {
     if (preparationStatus === "microphone_denied") {
       return translate("home.microphoneAccessNeeded");

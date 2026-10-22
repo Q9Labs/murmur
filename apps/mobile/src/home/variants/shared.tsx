@@ -109,6 +109,7 @@ export function SpanTimeline({
   contentStyle,
   captureSource = "microphone",
   live,
+  lockedText,
   style,
   textStyles,
   viewModel,
@@ -118,6 +119,7 @@ export function SpanTimeline({
   captureSource?: AudioCaptureSource;
   live: VariantShellProps["live"];
   style?: StyleProp<ViewStyle>;
+  lockedText?: string;
   textStyles: TimelineTextStyles;
   viewModel: VariantShellProps["viewModel"];
 }): ReactNode {
@@ -143,7 +145,7 @@ export function SpanTimeline({
         {starting ? <TranslationStarting slow={starting === "slow"} phoneAudio={captureSource === "device_playback"} /> : null}
         {!hasTimeline && !starting ? (
           <Text style={[textStyles.source, uiTextDirectionStyle(direction)]}>
-            {timelineEmptyText(
+            {lockedText ?? timelineEmptyText(
               viewModel.isLive,
               showSource ? null : viewModel.targetLanguageDisplayName,
               t,

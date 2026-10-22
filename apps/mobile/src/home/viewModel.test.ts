@@ -56,6 +56,27 @@ function makeLive(overrides: Partial<LiveTranslationController> = {}): LiveTrans
 }
 
 describe("home view model", () => {
+  it.each(["idle", "ended"] as const)("blanks only the ready %s status when hard locked", (status) => {
+    for (const error of [null, "allowance_exhausted"]) {
+      const live = makeLive({ status, error });
+      expect(buildHomeViewModel({ live, hardPaywallLocked: true, sourceLanguageCode: "en", targetLanguageCode: "ar" }).statusText).toBe("");
+      expect(buildHomeViewModel({ live, hardPaywallLocked: false, sourceLanguageCode: "en", targetLanguageCode: "ar" }).statusText).not.toBe("");
+    }
+  });
+  it.each([
+    { preparation_status: "checking_microphone", error: null },
+    { preparation_status: "checking_device", error: null },
+    { preparation_status: "microphone_denied", error: null },
+    { preparation_status: "failed", error: null },
+    { preparation_status: "ready", error: "worker_session_network_error" },
+    { preparation_status: "ready", error: "microphone_permission_denied" },
+  ] as const)("keeps non-paywall status when locked: $preparation_status/$error", (overrides) => {
+    const live = makeLive(overrides);
+    expect(buildHomeViewModel({ live, hardPaywallLocked: true, sourceLanguageCode: "en", targetLanguageCode: "ar" }).statusText)
+      .toBe(buildHomeViewModel({ live, hardPaywallLocked: false, sourceLanguageCode: "en", targetLanguageCode: "ar" }).statusText);
+    expect(buildHomeViewModel({ live, hardPaywallLocked: true, sourceLanguageCode: "en", targetLanguageCode: "ar" }).statusText).not.toBe("");
+  });
+
   it("derives initial ready state and language controls", () => {
     const model = buildHomeViewModel({
       live: makeLive(),
