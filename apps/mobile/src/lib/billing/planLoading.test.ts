@@ -5,7 +5,8 @@ const store = vi.hoisted(() => ({ loadMurmurPlans: vi.fn() }));
 
 vi.mock("./revenueCat", () => store);
 
-import { loadPlansWithTelemetry } from "./planLoading";
+import { LocalizedError } from "../../i18n/localizedError";
+import { loadPlansWithTelemetry, paywallFailureCode } from "./planLoading";
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -98,6 +98,16 @@ const validEvents: MobileTelemetryEvent[] = [
   { event: "offer_redeemed", offering_id: "personal_offer" },
   { event: "account_saved", method: "apple" },
   { event: "store_review_prompted", platform: "ios" },
+  {
+    app_version: "1.2.3",
+    backend_environment: "sandbox",
+    build_number: "14",
+    error_code: "get_offerings:23:configuration_error",
+    event: "mobile_paywall_failed",
+    package_label: null,
+    platform: "ios",
+    result_category: "store_error",
+  },
 ];
 
 describe("mobile telemetry parsing", () => {
@@ -171,6 +181,20 @@ describe("mobile telemetry parsing", () => {
         event: "mobile_translation_reported",
       })).not.toBeNull();
     }
+  });
+
+  it("drops a billing failure code that is not a bounded code", () => {
+    const paywallFailed = {
+      app_version: "1.2.3",
+      backend_environment: "sandbox",
+      build_number: "14",
+      event: "mobile_paywall_failed",
+      package_label: null,
+      platform: "ios",
+      result_category: "store_error",
+    };
+    expect(parseMobileTelemetryEvent({ ...paywallFailed, error_code: "No products for user@example.com" }))
+      .toEqual(paywallFailed);
   });
 
   it("wraps a valid event and drops unknown request fields", () => {

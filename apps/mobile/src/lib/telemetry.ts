@@ -63,11 +63,12 @@ export function captureOnboardingCompleted(): void {
 
 export function captureBillingTelemetry(
   event: MobileBillingTelemetryEventName,
-  options: { packageLabel?: string; resultCategory?: string } = {},
+  options: { errorCode?: string; packageLabel?: string; resultCategory?: string } = {},
 ): void {
   captureMobileTelemetry({
     ...getAppIdentity(),
     backend_environment: getMurmurEnvironment(),
+    ...(options.errorCode ? { error_code: options.errorCode } : {}),
     event,
     package_label: options.packageLabel ?? null,
     platform: getTelemetryPlatform(),
