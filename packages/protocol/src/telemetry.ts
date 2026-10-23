@@ -36,6 +36,7 @@ export type MobileTelemetryEvent =
       app_version: string;
       backend_environment: string;
       build_number: string;
+      error_code?: string;
       event: MobileBillingTelemetryEventName;
       package_label: string | null;
       platform: TelemetryPlatform;
@@ -273,6 +274,7 @@ function parseBillingEvent(
     app_version: value.app_version,
     backend_environment: value.backend_environment,
     build_number: value.build_number,
+    ...(isFailureCode(value.error_code) ? { error_code: value.error_code } : {}),
     event,
     package_label: value.package_label,
     platform: value.platform,

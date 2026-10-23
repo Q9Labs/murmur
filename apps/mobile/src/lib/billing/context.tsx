@@ -482,7 +482,7 @@ function captureOfferRedeemed(offeringId: string): void {
 
 function captureBillingTelemetry(
   event: MobileBillingTelemetryEventName,
-  options: { packageLabel?: string; resultCategory?: string } = {},
+  options: { errorCode?: string; packageLabel?: string; resultCategory?: string } = {},
 ): void {
   void import("../telemetry").then((telemetry) => telemetry.captureBillingTelemetry(event, options));
 }
