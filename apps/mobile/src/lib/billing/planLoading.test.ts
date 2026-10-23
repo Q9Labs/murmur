@@ -6,7 +6,7 @@ const store = vi.hoisted(() => ({ loadMurmurPlans: vi.fn() }));
 vi.mock("./revenueCat", () => store);
 
 import { LocalizedError } from "../../i18n/localizedError";
-import { loadPlansWithTelemetry, paywallFailureCode } from "./planLoading";
+import { loadPlansWithTelemetry } from "./planLoading";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,6 +41,27 @@ describe("loading plans", () => {
     store.loadMurmurPlans.mockRejectedValue(new Error("store down"));
 
     await expect(loadPlansWithTelemetry(null, report, surface)).rejects.toThrow("store down");
-    expect(report).toHaveBeenLastCalledWith("mobile_paywall_failed", { packageLabel: surface ?? "plan_picker", resultCategory: "store_error" });
+    expect(report).toHaveBeenLastCalledWith("mobile_paywall_failed", {
+      errorCode: "unclassified",
+      packageLabel: surface ?? "plan_picker",
+      resultCategory: "store_error",
+    });
+  });
+
+  it.each([
+    [new LocalizedError("billing.productsMissing"), "offering_missing"],
+    [{ code: "23", userInfo: { readableErrorCode: "CONFIGURATION_ERROR" } }, "get_offerings:23:configuration_error"],
+    [{ code: "23", userInfo: { readableErrorCode: "No products for user@example.com" } }, "get_offerings:23"],
+    [new Error("No products for user@example.com"), "unclassified"],
+  ])("reports only a bounded failure code for %#", async (failure, errorCode) => {
+    const report = vi.fn();
+    store.loadMurmurPlans.mockRejectedValue(failure);
+
+    await expect(loadPlansWithTelemetry(null, report)).rejects.toBe(failure);
+    expect(report).toHaveBeenLastCalledWith("mobile_paywall_failed", {
+      errorCode,
+      packageLabel: "plan_picker",
+      resultCategory: "store_error",
+    });
   });
 });

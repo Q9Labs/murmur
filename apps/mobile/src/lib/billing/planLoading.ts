@@ -1,5 +1,6 @@
 import type { MobileBillingTelemetryEventName } from "@murmur/protocol/telemetry";
 
+import type { MessageKey } from "../../i18n/catalogs/en";
 import { LocalizedError } from "../../i18n/localizedError";
 import type { MurmurPlan } from "./planCatalog";
 
@@ -29,24 +30,28 @@ export async function loadPlansWithTelemetry(
   }
 }
 
+const localizedFailureCodes: Partial<Record<MessageKey, string>> = {
+  "billing.notConfigured": "sdk_not_configured",
+  "billing.productsMissing": "offering_missing",
+  "billing.basePlanMissing": "play_base_plan_missing",
+  "billing.storePriceMissing": "play_price_missing",
+  "billing.offerPriceMissing": "play_offer_missing",
+  "billing.personalOfferMissing": "play_offer_missing",
+};
+
 // Only fixed names and RevenueCat's numeric and readable error codes leave the device, never SDK message text.
-export function paywallFailureCode(failure: unknown): string {
-  if (failure instanceof LocalizedError) {
-    switch (failure.messageKey) {
-      case "billing.notConfigured": return "sdk_not_configured";
-      case "billing.productsMissing": return "offering_missing";
-      case "billing.basePlanMissing": return "play_base_plan_missing";
-      case "billing.storePriceMissing": return "play_price_missing";
-      case "billing.offerPriceMissing":
-      case "billing.personalOfferMissing": return "play_offer_missing";
-      default: return "unclassified";
-    }
-  }
-  // Purchases.getOfferings is the only call in this path that rejects with a RevenueCat error.
-  const code: unknown = typeof failure === "object" && failure !== null ? Reflect.get(failure, "code") : null;
-  const info: unknown = typeof failure === "object" && failure !== null ? Reflect.get(failure, "userInfo") : null;
+function paywallFailureCode(failure: unknown): string {
+  if (failure instanceof LocalizedError) return localizedFailureCodes[failure.messageKey] ?? "unclassified";
+  return revenueCatFailureCode(failure) ?? "unclassified";
+}
+
+// Purchases.getOfferings is the only call in this path that rejects with a RevenueCat error.
+function revenueCatFailureCode(failure: unknown): string | null {
+  if (typeof failure !== "object" || failure === null) return null;
+  const code: unknown = Reflect.get(failure, "code");
+  if (typeof code !== "string" || !/^\d{1,3}$/.test(code)) return null;
+  const info: unknown = Reflect.get(failure, "userInfo");
   const readable: unknown = typeof info === "object" && info !== null ? Reflect.get(info, "readableErrorCode") : null;
-  if (typeof code !== "string" || !/^\d{1,3}$/.test(code)) return "unclassified";
   const name = typeof readable === "string" && /^[A-Z_]{1,48}$/.test(readable) ? `:${readable.toLowerCase()}` : "";
   return `get_offerings:${code}${name}`;
 }
