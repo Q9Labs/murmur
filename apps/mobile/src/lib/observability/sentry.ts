@@ -9,6 +9,13 @@ export type MobileFailureContext = {
   app_session_id?: string;
   error_code?: string;
   audio_capture?: CaptureFailure;
+  install_attribution?:
+    | {
+        step: "android_referrer";
+        response: "service_unavailable" | "developer_error" | "feature_not_supported"
+          | "service_disconnected" | "remote_exception" | "unknown";
+      }
+    | { step: "install_identity" | "ios_token" | "deliver" | "record" };
   external_link?: {
     target: "privacy" | "support" | "terms";
     step: "open_url";
@@ -59,6 +66,12 @@ export function captureMobileFailure(
     operation: context.operation,
     stage: context.stage ?? "unknown",
     ...getStorageFailureDiagnostics(failure),
+    ...(context.install_attribution ? {
+      attribution_step: context.install_attribution.step,
+      ...(context.install_attribution.step === "android_referrer" ? {
+        install_referrer_response: context.install_attribution.response,
+      } : {}),
+    } : {}),
     ...(context.external_link ? {
       link_target: context.external_link.target,
       link_step: context.external_link.step,

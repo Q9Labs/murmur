@@ -14,7 +14,7 @@ const state = vi.hoisted(() => {
   };
 });
 
-vi.mock("@sentry/react-native", () => ({ captureException: vi.fn() }));
+vi.mock("@sentry/react-native", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 vi.mock("expo-application", () => ({ getInstallReferrerAsync: state.getInstallReferrer }));
 vi.mock("react-native", () => ({ Platform: { get OS() { return state.platform; } } }));
 vi.mock("../../modules/murmur-audio", () => ({
@@ -68,6 +68,7 @@ describe("install attribution", () => {
     expect(event.tags).toMatchObject({
       error_code: `install_attribution_http_${status}`,
       operation: "capture_install_attribution",
+      attribution_step: "deliver",
     });
     expect(event.fingerprint).toEqual([
       "capture_install_attribution", "unknown", `install_attribution_http_${status}`,
@@ -98,10 +99,96 @@ describe("install attribution", () => {
     expect(state.setLocalValue).not.toHaveBeenCalled();
   });
 
-  it("does not deliver attribution when analytics is disabled during token collection", async () => {
-    state.platform = "ios";
+  it.each([
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code 1", "service_unavailable"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code 3", "developer_error"],
+    ["ERR_APPLICATION_INSTALL_REFERRER_UNAVAILABLE", "private message", "feature_not_supported"],
+    ["ERR_APPLICATION_INSTALL_REFERRER_SERVICE_DISCONNECTED", "private message", "service_disconnected"],
+    ["ERR_APPLICATION_INSTALL_REFERRER_REMOTE_EXCEPTION", "private message", "remote_exception"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code 2", "unknown"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code -1", "unknown"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code 99", "unknown"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code 1\\nprivate token", "unknown"],
+    ["ERR_APPLICATION_INSTALL_REFERRER", "private token https://private.test", "unknown"],
+    ["OTHER_NATIVE_CODE", "General error retrieving the install referrer: response code 1", "unknown"],
+  ])("retains only safe Android diagnostics for %s / %s", async (code, message, response) => {
+    const nativeFailure = Object.assign(new Error(message), { code });
+    state.getInstallReferrer.mockRejectedValueOnce(nativeFailure);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await captureInstallAttribution(() => true);
+
+    const [failure, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+    const event = sanitizeMobileEvent({
+      ...context,
+      extra: { referrer: "private token", installId: "install_12345678" },
+      exception: { values: [{ value: failure instanceof Error ? failure.message : String(failure) }] },
+      type: undefined,
+    });
+    expect(failure).toBe(nativeFailure);
+    expect(event.tags).toMatchObject({
+      error_code: code,
+      operation: "capture_install_attribution",
+      attribution_step: "android_referrer",
+      install_referrer_response: response,
+    });
+    expect(event.fingerprint).toEqual(["capture_install_attribution", "unknown", code]);
+    for (const privateValue of [message, "private", "install_12345678", "utm_source=google", "https://murmur.test"]) {
+      expect(JSON.stringify(event)).not.toContain(privateValue);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(state.setLocalValue).not.toHaveBeenCalled();
+
+    await captureInstallAttribution(() => true);
+
+    expect(state.getInstallReferrer).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(state.setLocalValue).toHaveBeenCalledOnce();
+  });
+
+  it("does not infer a native response from an identity failure", async () => {
+    state.getOrCreateInstallId.mockRejectedValueOnce(Object.assign(new Error(
+      "General error retrieving the install referrer: response code 1",
+    ), { code: "ERR_APPLICATION_INSTALL_REFERRER" }));
+
+    await captureInstallAttribution(() => true);
+
+    const [, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+    expect(context).toMatchObject({ tags: { attribution_step: "install_identity" } });
+    expect(context).not.toHaveProperty("tags.install_referrer_response");
+    expect(state.getInstallReferrer).not.toHaveBeenCalled();
+  });
+
+  it.each([new Error("private token"), { code: "ERR_APPLICATION_INSTALL_REFERRER", message: "private token" }, null])(
+    "keeps unrecognized native failures private and unknown: %s", async (nativeFailure) => {
+      state.getInstallReferrer.mockRejectedValueOnce(nativeFailure);
+
+      await captureInstallAttribution(() => true);
+
+      const context = nativeFailure instanceof Error
+        ? vi.mocked(Sentry.captureException).mock.calls[0]?.[1]
+        : vi.mocked(Sentry.captureMessage).mock.calls[0]?.[1];
+      expect(context).toMatchObject({ tags: {
+        attribution_step: "android_referrer", install_referrer_response: "unknown", error_code: "none",
+      } });
+      expect(JSON.stringify(context)).not.toContain("private");
+      expect(state.setLocalValue).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not read or send attribution without analytics consent", async () => {
+    await captureInstallAttribution(() => false);
+    expect(state.getOrCreateInstallId).not.toHaveBeenCalled();
+    expect(state.getInstallReferrer).not.toHaveBeenCalled();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it.each(["ios", "android"])("does not deliver attribution when analytics is disabled during %s token collection", async (platform) => {
+    state.platform = platform;
     let resolveToken = (_token: string): void => undefined;
-    state.getAdServicesAttributionToken.mockImplementationOnce(() => new Promise((resolve) => {
+    const collectToken = platform === "ios" ? state.getAdServicesAttributionToken : state.getInstallReferrer;
+    collectToken.mockImplementationOnce(() => new Promise((resolve) => {
       resolveToken = resolve;
     }));
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
@@ -109,7 +196,7 @@ describe("install attribution", () => {
     let analyticsEnabled = true;
 
     const pending = captureInstallAttribution(() => analyticsEnabled);
-    await vi.waitFor(() => expect(state.getAdServicesAttributionToken).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(collectToken).toHaveBeenCalledOnce());
     analyticsEnabled = false;
     resolveToken("attribution-token");
     await pending;
