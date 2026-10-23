@@ -118,16 +118,7 @@ export function parsePlayReferrer(referrer: string): { campaignId: string | null
 }
 
 async function resolveAppleAttribution(token: string): Promise<{ campaignId: string | null; source: string }> {
-  const signal = AbortSignal.timeout(10_000);
-  const response = await fetch("https://api-adservices.apple.com/api/v1/", {
-    body: token,
-    headers: { "Content-Type": "text/plain" },
-    method: "POST",
-    signal,
-  }).catch((failure: unknown) => {
-    throw appleTransportFailure(failure, signal);
-  });
-  if (!response.ok) throw new AppleAttributionHttpFailure(response.status);
+  const { response, signal } = await requestAppleAttribution(token);
   const value: unknown = await response.json().catch((failure: unknown) => {
     throw failure instanceof SyntaxError
       ? new OperationFailure("attribution.apple_invalid_response")
@@ -138,6 +129,27 @@ async function resolveAppleAttribution(token: string): Promise<{ campaignId: str
   const campaignId = "campaignId" in value && typeof value.campaignId === "number"
     ? String(value.campaignId) : null;
   return { campaignId, source: value.attribution ? "apple_ads" : "app_store" };
+}
+
+async function requestAppleAttribution(token: string): Promise<{ response: Response; signal: AbortSignal }> {
+  // Apple documents up to three attempts, five seconds apart, for records not ready yet.
+  // https://developer.apple.com/documentation/adservices/aaattribution/attributiontoken()
+  for (let attempt = 1; ; attempt += 1) {
+    const signal = AbortSignal.timeout(10_000);
+    const response = await fetch("https://api-adservices.apple.com/api/v1/", {
+      body: token,
+      headers: { "Content-Type": "text/plain" },
+      method: "POST",
+      signal,
+    }).catch((failure: unknown) => {
+      throw appleTransportFailure(failure, signal);
+    });
+    if (response.ok) return { response, signal };
+    // Release unused bodies without letting cleanup delay or mask the upstream result.
+    void response.body?.cancel().catch(() => {});
+    if (response.status !== 404 || attempt >= 3) throw new AppleAttributionHttpFailure(response.status);
+    await new Promise<void>((resolve) => setTimeout(resolve, 5_000));
+  }
 }
 
 function appleTransportFailure(failure: unknown, signal: AbortSignal): OperationFailure {

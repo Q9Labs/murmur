@@ -7,7 +7,7 @@ vi.mock("@sentry/cloudflare", () => sentry);
 
 import { captureInstallAttribution, parsePlayReferrer } from "./attribution";
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("install attribution", () => {
   it("allows only normalized Play campaign values", () => {
@@ -51,6 +51,112 @@ function iosRequest() {
     body: JSON.stringify({ app_install_id: "PRIVATE_INSTALL", platform: "ios", token: "PRIVATE_TOKEN_123456789012345" }),
   });
 }
+
+describe("Apple attribution readiness retries", () => {
+  it.each([1, 2])("recovers after %i not-ready responses without duplicate analytics", async (notReadyCount) => {
+    vi.useFakeTimers();
+    const cancelled = vi.fn();
+    const attempts: number[] = [];
+    const analytics: string[] = [];
+    const provider = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url !== "https://api-adservices.apple.com/api/v1/") {
+        analytics.push(String(init?.body));
+        return new Response(null);
+      }
+      attempts.push(Date.now());
+      return attempts.length <= notReadyCount
+        ? new Response(new ReadableStream({ cancel: cancelled }), { status: 404 })
+        : Response.json({ attribution: true, campaignId: 123 });
+    });
+    vi.stubGlobal("fetch", provider);
+    const pending: Promise<unknown>[] = [];
+    const delivery = captureInstallAttribution(iosRequest(), { POSTHOG_PROJECT_TOKEN: "phc_test" }, {
+      waitUntil: (promise) => void pending.push(promise),
+    });
+    await vi.waitFor(() => expect(cancelled).toHaveBeenCalledOnce());
+    for (let attempt = 0; attempt < notReadyCount; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(attempts[0] + (attempt + 1) * 5_000 - Date.now() - 1);
+      expect(attempts).toHaveLength(attempt + 1);
+      expect(analytics).toHaveLength(0);
+      await vi.advanceTimersByTimeAsync(1);
+    }
+    expect((await delivery).status).toBe(200);
+    await Promise.all(pending);
+    expect(attempts.map((time) => time - attempts[0])).toEqual(notReadyCount === 1 ? [0, 5_000] : [0, 5_000, 10_000]);
+    expect(cancelled).toHaveBeenCalledTimes(notReadyCount);
+    expect(analytics).toHaveLength(1);
+    expect(analytics[0]).toContain("apple_ads");
+    expect(analytics[0]).not.toContain("PRIVATE");
+    expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("fails after three persistent 404s, releases each body, and never fabricates organic attribution", async () => {
+    vi.useFakeTimers();
+    const cancelled = vi.fn();
+    const provider = vi.fn(async () => new Response(new ReadableStream({ cancel: cancelled }), { status: 404 }));
+    vi.stubGlobal("fetch", provider);
+    const delivery = captureInstallAttribution(iosRequest(), { POSTHOG_PROJECT_TOKEN: "phc_test" });
+    await vi.waitFor(() => expect(provider).toHaveBeenCalledOnce());
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await delivery;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "attribution_unavailable" });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(provider).toHaveBeenCalledTimes(3);
+    expect(cancelled).toHaveBeenCalledTimes(3);
+    expect(sentry.captureException).toHaveBeenCalledOnce();
+    const [error, hint] = sentry.captureException.mock.calls[0];
+    expect(error.code).toBe("attribution.apple_http_failed");
+    expect(hint.tags.upstream_status).toBe("404");
+  });
+
+  it("does not let failed body cleanup mask a non-404 or trigger retries", async () => {
+    const cancelled = vi.fn(async () => { throw new Error("PRIVATE_CLEANUP"); });
+    const provider = vi.fn(async () => new Response(new ReadableStream({ cancel: cancelled }), { status: 401 }));
+    vi.stubGlobal("fetch", provider);
+    expect((await captureInstallAttribution(iosRequest(), {})).status).toBe(503);
+    expect(provider).toHaveBeenCalledOnce();
+    expect(cancelled).toHaveBeenCalledOnce();
+    const [error, hint] = sentry.captureException.mock.calls[0];
+    expect(String(error)).not.toContain("PRIVATE");
+    expect(hint.tags.upstream_status).toBe("401");
+  });
+
+  it("bounds slow attempts, including the response body, without retrying a deadline failure", async () => {
+    vi.useFakeTimers();
+    const deadlines: number[] = [];
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      deadlines.push(milliseconds);
+      const deadline = new AbortController();
+      setTimeout(() => deadline.abort(new DOMException("PRIVATE_TIMEOUT", "TimeoutError")), milliseconds);
+      return deadline.signal;
+    });
+    let attempts = 0;
+    let startedAt = 0;
+    vi.stubGlobal("fetch", vi.fn((_url: string, init?: RequestInit) => {
+      attempts += 1;
+      if (attempts === 1) startedAt = Date.now();
+      if (attempts < 3) return new Promise<Response>((resolve) => {
+        setTimeout(() => resolve(new Response(null, { status: 404 })), 9_999);
+      });
+      return Promise.resolve(new Response(new ReadableStream({ start(controller) {
+        init?.signal?.addEventListener("abort", () => controller.error(init.signal?.reason), { once: true });
+      } })));
+    }));
+    const delivery = captureInstallAttribution(iosRequest(), {});
+    await vi.waitFor(() => expect(attempts).toBe(1));
+    let settled = false;
+    void delivery.then(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(startedAt + 39_997 - Date.now());
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect((await delivery).status).toBe(503);
+    expect(attempts).toBe(3);
+    expect(deadlines).toEqual([10_000, 10_000, 10_000]);
+    const [error] = sentry.captureException.mock.calls[0];
+    expect(error.code).toBe("attribution.apple_timeout");
+  });
+});
 
 describe("attribution failure diagnostics through the route and Sentry sanitizer", () => {
   it.each([
