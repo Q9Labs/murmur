@@ -1,6 +1,7 @@
 import type { CloudflareOptions, ErrorEvent, StackFrame } from "@sentry/cloudflare";
 import { failureDefinition, isFailureCode } from "@murmur/protocol/diagnostics/failures";
 import type { Env } from "../env";
+import { sanitizeHttpFailureTags } from "./httpFailure";
 
 export function getSentryOptions(env: Env): CloudflareOptions | undefined {
   const dsn = env.SENTRY_DSN?.trim();
@@ -80,6 +81,7 @@ export function sanitizeWorkerEvent(event: ErrorEvent): ErrorEvent {
     } : undefined,
     tags: {
       failure_code: code, operation: definition.operation,
+      ...(code === "worker.request_failed" ? sanitizeHttpFailureTags(event.tags) : {}),
       ...(code === "billing.realtime_unavailable" ? safeBillingTags(event.tags) : {}),
       ...(code === "attribution.apple_http_failed" && typeof upstreamStatus === "string" &&
         /^[1-5][0-9]{2}$/.test(upstreamStatus) ? { upstream_status: upstreamStatus } : {}),

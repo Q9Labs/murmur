@@ -42,6 +42,7 @@ export function createMurmurAuth(
         if (isAPIError(failure) && failure.statusCode < 500) return;
         reportFailure({
           code: "worker.request_failed", failure, env,
+          http: { boundary: "auth_api", request, status: isAPIError(failure) ? failure.statusCode : undefined },
           duration_ms: Date.now() - startedAt,
         });
       },
