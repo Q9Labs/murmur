@@ -5,7 +5,7 @@ import MurmurAudioModule from "../../modules/murmur-audio";
 import { getOrCreateInstallId } from "./installIdentity";
 import { getLocalValue, setLocalValue } from "./localStorage";
 import { captureMobileFailure, type MobileFailureContext } from "./observability/sentry";
-import { deliverInstallAttribution } from "./providers/insightsWorker";
+import { deliverInstallAttribution, InstallAttributionHttpFailure } from "./providers/insightsWorker";
 
 const attributionRecordedKey = "murmur_install_attribution_recorded_v1";
 
@@ -30,7 +30,9 @@ export async function captureInstallAttribution(isAnalyticsEnabled: () => boolea
       operation: "capture_install_attribution",
       install_attribution: step === "android_referrer"
         ? { step, response: classifyInstallReferrerFailure(failure) }
-        : { step },
+        : step === "deliver" && failure instanceof InstallAttributionHttpFailure
+          ? { step, response: failure.responseSource }
+          : { step },
     });
   }
 }

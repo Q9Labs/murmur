@@ -21,7 +21,7 @@ export async function captureInstallAttribution(
 ): Promise<Response> {
   const body: unknown = await request.json().catch(() => null);
   const parsed = parseAttributionRequest(body);
-  if (!parsed) return json({ error: "invalid_attribution" }, 400);
+  if (!parsed) return attributionJson({ error: "invalid_attribution" }, 400);
   const clientAddress = request.headers.get("CF-Connecting-IP") ?? parsed.app_install_id;
   const hashedClientId = await hashInstallId(
     `attribution-client:${clientAddress}`, env.SESSION_HASH_SALT ?? "local-development-salt",
@@ -35,7 +35,7 @@ export async function captureInstallAttribution(
     if (isRateLimiterUnavailable(limit)) {
       reportLimiterFailure();
     }
-    return json({ error: limit.code }, isRateLimiterUnavailable(limit) ? 503 : 429);
+    return attributionJson({ error: limit.code }, isRateLimiterUnavailable(limit) ? 503 : 429);
   }
   try {
     const attribution = parsed.platform === "android"
@@ -55,14 +55,20 @@ export async function captureInstallAttribution(
         campaign_id: attribution.campaignId,
       },
     });
-    return json({ ok: true });
+    return attributionJson({ ok: true });
   } catch (failure) {
     Sentry.captureException(failure, { tags: {
       failure_code: failure instanceof OperationFailure ? failure.code : "attribution.failed",
       ...(failure instanceof AppleAttributionHttpFailure ? { upstream_status: String(failure.status) } : {}),
     } });
-    return json({ error: "attribution_unavailable" }, 503);
+    return attributionJson({ error: "attribution_unavailable" }, 503);
   }
+}
+
+function attributionJson(payload: unknown, status = 200): Response {
+  const response = json(payload, status);
+  response.headers.set("X-Murmur-Attribution-Response", "v1");
+  return response;
 }
 
 function reportLimiterFailure(): void {

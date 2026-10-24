@@ -10,6 +10,15 @@ import { captureInstallAttribution, parsePlayReferrer } from "./attribution";
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("install attribution", () => {
+  it("marks route-generated rejection responses without reflecting request content", async () => {
+    const response = await captureInstallAttribution(new Request("https://murmur.test/v3/attribution", {
+      method: "POST", body: "private-invalid-body",
+    }), {});
+    expect(response.status).toBe(400);
+    expect(response.headers.get("X-Murmur-Attribution-Response")).toBe("v1");
+    expect(await response.text()).toBe('{"error":"invalid_attribution"}');
+  });
+
   it("allows only normalized Play campaign values", () => {
     expect(parsePlayReferrer("utm_source=google&utm_campaign=summer-26"))
       .toEqual({ source: "google", campaignId: "summer-26" });
@@ -37,6 +46,7 @@ describe("install attribution", () => {
     );
     await Promise.all(pending);
     expect(response.status).toBe(200);
+    expect(response.headers.get("X-Murmur-Attribution-Response")).toBe("v1");
     expect(fetchMock.mock.calls[0][0]).toBe("https://api-adservices.apple.com/api/v1/");
     const analyticsBody = JSON.stringify(fetchMock.mock.calls[1][1].body);
     expect(analyticsBody).toContain("apple_ads");

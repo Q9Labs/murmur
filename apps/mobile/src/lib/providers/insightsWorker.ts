@@ -30,6 +30,19 @@ export async function deliverRatingSurvey(body: {
   await postInsights("/v3/ratings", body, "rating_survey", headers);
 }
 
+export class InstallAttributionHttpFailure extends Error {
+  readonly code: string;
+  readonly responseSource: "worker_route" | "unmarked";
+
+  constructor(response: Response) {
+    const code = `install_attribution_http_${response.status}`;
+    super(code);
+    this.code = code;
+    this.responseSource = response.headers.get("X-Murmur-Attribution-Response") === "v1"
+      ? "worker_route" : "unmarked";
+  }
+}
+
 async function postInsights(
   path: string,
   body: object,
@@ -42,6 +55,7 @@ async function postInsights(
     method: "POST",
   });
   if (!response.ok) {
+    if (operation === "install_attribution") throw new InstallAttributionHttpFailure(response);
     const code = `${operation}_http_${response.status}`;
     throw Object.assign(new Error(code), { code });
   }
