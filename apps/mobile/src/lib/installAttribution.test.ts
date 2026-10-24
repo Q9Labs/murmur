@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+
 import * as Sentry from "@sentry/react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +13,7 @@ const state = vi.hoisted(() => {
     platform: "android",
     setLocalValue: vi.fn(async (key: string, value: string) => { storage.set(key, value); }),
     storage,
+    workerBaseUrl: "https://murmur.test",
   };
 });
 
@@ -20,7 +23,7 @@ vi.mock("react-native", () => ({ Platform: { get OS() { return state.platform; }
 vi.mock("../../modules/murmur-audio", () => ({
   default: { getAdServicesAttributionToken: state.getAdServicesAttributionToken },
 }));
-vi.mock("./config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
+vi.mock("./config", () => ({ getWorkerBaseUrl: () => state.workerBaseUrl }));
 vi.mock("./auth/client", () => ({ authenticatedWorkerHeaders: vi.fn(async () => ({})) }));
 vi.mock("./installIdentity", () => ({ getOrCreateInstallId: state.getOrCreateInstallId }));
 vi.mock("./localStorage", () => ({
@@ -36,6 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.storage.clear();
   state.platform = "android";
+  state.workerBaseUrl = "https://murmur.test";
 });
 
 describe("install attribution", () => {
@@ -79,6 +83,51 @@ describe("install attribution", () => {
       expect(serialized).not.toContain(privateValue);
     }
     expect(state.setLocalValue).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [504, undefined, "unmarked"],
+    [503, "v1", "worker_route"],
+    [504, "private-unrecognized-marker", "unmarked"],
+  ] as const)("reports bounded response provenance for HTTP %i and marker %s", async (status, marker, source) => {
+    let requests = 0;
+    const server = createServer((request, response) => {
+      requests += 1;
+      expect(request.url).toBe("/v3/attribution");
+      request.resume();
+      if (marker) response.setHeader("X-Murmur-Attribution-Response", marker);
+      response.writeHead(status, { "Content-Type": "text/html" });
+      response.end("private-response-body");
+    });
+    try {
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Expected local HTTP address");
+      state.workerBaseUrl = `http://127.0.0.1:${address.port}`;
+      await captureInstallAttribution(() => true);
+      const [failure, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
+      const event = sanitizeMobileEvent({
+        ...context,
+        exception: { values: [{ value: failure instanceof Error ? failure.message : String(failure) }] },
+        type: undefined,
+      });
+      expect(event.tags).toMatchObject({
+        attribution_step: "deliver",
+        attribution_response: source,
+        error_code: `install_attribution_http_${status}`,
+      });
+      expect(event.fingerprint).toEqual([
+        "capture_install_attribution", "unknown", `install_attribution_http_${status}`,
+      ]);
+      for (const privateValue of ["private", "utm_source", "install_12345678", "127.0.0.1"]) {
+        expect(JSON.stringify(event)).not.toContain(privateValue);
+      }
+      expect(requests).toBe(1);
+      expect(state.setLocalValue).not.toHaveBeenCalled();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close((failure) => failure ? reject(failure) : resolve()));
+    }
   });
 
   it("does not classify arbitrary failure messages as HTTP diagnostics", async () => {

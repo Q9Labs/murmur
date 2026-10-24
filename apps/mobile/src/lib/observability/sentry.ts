@@ -15,7 +15,8 @@ export type MobileFailureContext = {
         response: "service_unavailable" | "developer_error" | "feature_not_supported"
           | "service_disconnected" | "remote_exception" | "unknown";
       }
-    | { step: "install_identity" | "ios_token" | "deliver" | "record" };
+    | { step: "deliver"; response?: "worker_route" | "unmarked" }
+    | { step: "install_identity" | "ios_token" | "record" };
   external_link?: {
     target: "privacy" | "support" | "terms";
     step: "open_url";
@@ -70,6 +71,9 @@ export function captureMobileFailure(
       attribution_step: context.install_attribution.step,
       ...(context.install_attribution.step === "android_referrer" ? {
         install_referrer_response: context.install_attribution.response,
+      } : {}),
+      ...(context.install_attribution.step === "deliver" && context.install_attribution.response ? {
+        attribution_response: context.install_attribution.response,
       } : {}),
     } : {}),
     ...(context.external_link ? {
