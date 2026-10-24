@@ -18,6 +18,19 @@ internal interface MurmurCaptureListener {
 internal object MurmurCaptureBridge {
   @Volatile private var listener: MurmurCaptureListener? = null
   @Volatile private var service: MurmurForegroundService? = null
+  @Volatile var startupFailure: Map<String, Any?>? = null
+    private set
+
+  fun clearStartupFailure() { startupFailure = null }
+
+  fun recordStartupFailure(
+    step: CaptureStartupStep,
+    error: Throwable? = null,
+    reason: CaptureStartupReason = CaptureStartupReason.EXCEPTION
+  ) {
+    startupFailure = captureStartupFailure(step, error, reason)
+  }
+
   private var nextStartId = 0L
   private val pendingStarts = mutableMapOf<Long, String?>()
 

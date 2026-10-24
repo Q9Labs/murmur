@@ -25,6 +25,7 @@ class MurmurForegroundServiceTest : InstrumentationTestCase(), MurmurCaptureList
     stopReason = null
     stoppedSource = null
     startupError = null
+    MurmurCaptureBridge.clearStartupFailure()
     MurmurCaptureBridge.attach(this)
     val context = instrumentation.targetContext
     val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)!!
@@ -91,6 +92,19 @@ class MurmurForegroundServiceTest : InstrumentationTestCase(), MurmurCaptureList
     assertTrue(MurmurCaptureBridge.stopCapture("test_normal_stop"))
     assertTrue("Service did not stop", stopped.await(5, TimeUnit.SECONDS))
     assertEquals("test_normal_stop", stopReason)
+  }
+
+  fun testMissingProjectionApprovalRetainsStartupDiagnosticAfterServiceStops() {
+    instrumentation.runOnMainSync { startService(CAPTURE_SOURCE_DEVICE_PLAYBACK) }
+    assertTrue("Startup failure did not stop service", stopped.await(5, TimeUnit.SECONDS))
+    instrumentation.waitForIdleSync()
+    assertNotNull(startupError)
+    assertEquals(mapOf(
+      "platform" to "android", "step" to "projection_data", "error_domain" to "illegal_state",
+      "error_code" to null, "reason" to "exception"
+    ), MurmurCaptureBridge.startupFailure)
+    MurmurCaptureBridge.clearStartupFailure()
+    assertNull(MurmurCaptureBridge.startupFailure)
   }
 
   private fun cancelDuringQueuedStart(background: Boolean, source: String = CAPTURE_SOURCE_MICROPHONE) {

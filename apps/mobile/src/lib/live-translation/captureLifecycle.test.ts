@@ -104,3 +104,25 @@ describe("session setup failures through the privacy sanitizer", () => {
     expect(JSON.stringify(delivered)).not.toContain("private");
   });
 });
+
+it("delivers bounded Android startup diagnostics without exposing native error content", async () => {
+  const diagnostic = {
+    platform: "android", step: "media_projection", error_domain: "security",
+    error_code: null, reason: "exception",
+  };
+  const failure = Object.assign(new Error("private native message"), { code: "E_CAPTURE_START_FAILED" });
+  await expect(startAudioCapture({
+    audio: {
+      startCapture: vi.fn().mockRejectedValue(failure),
+      getAudioState: vi.fn().mockResolvedValue({ capture_failure: {
+        ...diagnostic, message: "private URL", transcript: "private speech",
+      } }),
+    },
+    source: "device_playback", maxSessionSeconds: 60, appSessionId: "session-1",
+  })).rejects.toBe(failure);
+  expect(sentry.captureException).toHaveBeenCalledOnce();
+  expect(delivered[0]?.contexts?.audio_capture).toEqual(diagnostic);
+  expect(delivered[0]?.tags?.operation).toBe("start_device_playback_capture");
+  expect(delivered[0]?.tags?.error_code).toBe("E_CAPTURE_START_FAILED");
+  expect(JSON.stringify(delivered)).not.toContain("private");
+});

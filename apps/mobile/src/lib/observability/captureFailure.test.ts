@@ -24,3 +24,21 @@ describe("native capture diagnostic boundary", () => {
       .toBeUndefined();
   });
 });
+
+const androidFailure = {
+  platform: "android", step: "recorder_start", error_domain: "illegal_state",
+  error_code: 0, reason: "exception",
+};
+
+it("retains Android fields only and does not coerce unsafe values", () => {
+  expect(parseCaptureFailure({ capture_failure: { ...androidFailure, message: "private" } }))
+    .toEqual(androidFailure);
+});
+
+it.each([
+  { platform: "private" }, { step: "private" }, { error_domain: "java.private.Class" },
+  { reason: "private URL" }, { error_code: "private" }, { error_code: Infinity },
+  { error_code: 0.5 }, { error_code: 2_147_483_648 }, { error_code: -2_147_483_649 },
+])("rejects unbounded Android diagnostics: %j", (invalid) => {
+  expect(parseCaptureFailure({ capture_failure: { ...androidFailure, ...invalid } })).toBeUndefined();
+});

@@ -32,7 +32,7 @@ dependencies { implementation 'androidx.annotation:annotation:1.9.1' }
 
 tasks.register('copyCaptureSources', Sync) {
   from '../../apps/mobile/modules/murmur-audio/android/src/main/java'
-  include '**/MurmurForegroundService.kt', '**/MurmurCaptureBridge.kt', '**/MurmurOverlayController.kt', '**/MurmurCaptionWindow.kt'
+  include '**/MurmurForegroundService.kt', '**/MurmurCaptureBridge.kt', '**/MurmurOverlayController.kt', '**/MurmurCaptionWindow.kt', '**/MurmurCaptureFailure.kt'
   into layout.buildDirectory.dir('capture-sources')
 }
 tasks.named('preBuild') { dependsOn 'copyCaptureSources' }

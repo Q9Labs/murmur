@@ -39,6 +39,7 @@ class MurmurForegroundService : Service() {
   @Volatile private var recorder: AudioRecord? = null
   private var captureThread: Thread? = null
   @Volatile private var captureActive = false
+  private var startupStep = CaptureStartupStep.FOREGROUND_PROMOTION
   private var stopNotified = false
   private lateinit var overlayController: MurmurOverlayController
 
@@ -73,6 +74,7 @@ class MurmurForegroundService : Service() {
       return START_NOT_STICKY
     }
 
+    startupStep = CaptureStartupStep.FOREGROUND_PROMOTION
     try {
       startForegroundForSource()
       if (stopCancelledStartup(intent, startId)) {
@@ -153,19 +155,23 @@ class MurmurForegroundService : Service() {
 
   @RequiresApi(Build.VERSION_CODES.Q)
   private fun startDevicePlaybackCapture(intent: Intent?) {
+    startupStep = CaptureStartupStep.PROJECTION_DATA
     val projectionResultCode = intent?.getIntExtra(
       MURMUR_CAPTURE_PROJECTION_CODE_EXTRA,
       Activity.RESULT_CANCELED
     ) ?: Activity.RESULT_CANCELED
     val projectionData = intent?.getParcelableExtra<Intent>(MURMUR_CAPTURE_PROJECTION_DATA_EXTRA)
       ?: throw IllegalStateException("MediaProjection approval data is missing")
+    startupStep = CaptureStartupStep.MEDIA_PROJECTION
     val manager = getSystemService(MediaProjectionManager::class.java)
       ?: throw IllegalStateException("MediaProjectionManager is unavailable")
     val projection = manager.getMediaProjection(projectionResultCode, projectionData)
       ?: throw IllegalStateException("MediaProjection could not be created")
     mediaProjection = projection
+    startupStep = CaptureStartupStep.PROJECTION_CALLBACK
     projection.registerCallback(projectionCallback, mainHandler)
 
+    startupStep = CaptureStartupStep.PLAYBACK_CONFIG
     val playbackConfig = AudioPlaybackCaptureConfiguration.Builder(projection)
       .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
       .addMatchingUsage(AudioAttributes.USAGE_GAME)
@@ -180,6 +186,7 @@ class MurmurForegroundService : Service() {
       ),
       MURMUR_FRAME_BYTES * 8
     )
+    startupStep = CaptureStartupStep.RECORDER_BUILD
     val record = AudioRecord.Builder()
       .setAudioFormat(
         AudioFormat.Builder()
@@ -192,16 +199,19 @@ class MurmurForegroundService : Service() {
       .setAudioPlaybackCaptureConfig(playbackConfig)
       .build()
     if (record.state != AudioRecord.STATE_INITIALIZED) {
+      val state = record.state
       record.release()
-      throw IllegalStateException("Playback AudioRecord failed to initialize")
+      throw CaptureStartupException(CaptureStartupReason.RECORDER_UNINITIALIZED, state)
     }
 
     recorder = record
     try {
+      startupStep = CaptureStartupStep.RECORDER_START
       record.startRecording()
       if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
-        throw IllegalStateException("Playback AudioRecord failed to start")
+        throw CaptureStartupException(CaptureStartupReason.RECORDER_NOT_RECORDING, record.recordingState)
       }
+      startupStep = CaptureStartupStep.CAPTURE_DISPATCH
       captureActive = true
       stopNotified = false
       overlayController.show()
@@ -248,6 +258,7 @@ class MurmurForegroundService : Service() {
   }
 
   private fun reportStartupFailure(error: Throwable) {
+    MurmurCaptureBridge.recordStartupFailure(startupStep, error)
     val reason = "capture_start_failed"
     MurmurCaptureBridge.notifyCaptureError(source, reason, error)
     stopCaptureInternal(reason)
