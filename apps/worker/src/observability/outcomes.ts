@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { failures, OperationFailure, type FailureCode } from "@murmur/protocol/diagnostics/failures";
 import type { Env } from "../env";
 import { logWorkerEvent } from "../privacy";
+import { httpFailureTags } from "./httpFailure";
 
 export function isDiagnosticCode(value: unknown): value is string {
   return typeof value === "string" && /^(?!0{32}$)[0-9a-f]{32}$/.test(value);
@@ -72,6 +73,7 @@ export function writeOutcome(params: {
 export function reportFailure(params: {
   code: FailureCode;
   failure?: unknown;
+  http?: { boundary: "http_handler" | "auth_api"; request?: Request; status?: number };
   env: Env;
   duration_ms: number;
   outcome?: "failed" | "degraded" | "rejected";
@@ -85,7 +87,10 @@ export function reportFailure(params: {
       const error = new Error(definition.description);
       if (params.failure instanceof Error) error.stack = params.failure.stack;
       eventId = Sentry.captureException(error, {
-        tags: { failure_code: params.code, operation: definition.operation, trace_id: context.trace_id },
+        tags: {
+          failure_code: params.code, operation: definition.operation, trace_id: context.trace_id,
+          ...(params.code === "worker.request_failed" && params.http ? httpFailureTags(params.http, params.failure) : {}),
+        },
       });
     } catch {
       // A broken SDK cannot replace the application's result or invoke another exporter.
@@ -122,6 +127,7 @@ export async function withHttpDiagnostics(
       reportFailure({
         code: failure instanceof OperationFailure ? failure.code : "worker.request_failed",
         failure, env, duration_ms: Date.now() - start,
+        http: { boundary: "http_handler", request },
       });
       response = new Response(JSON.stringify({ error: "worker_operation_failed", diagnostic_code: context.trace_id }), {
         status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },

@@ -110,8 +110,43 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
       expect(response.status).toBe(500);
       expect(exceptionCount()).toBe(1);
       expect(sentryBodies.join("")).toContain(trace);
+      expect(sentryBodies.join("")).toContain('"http_failure_boundary":"auth_api"');
+      expect(sentryBodies.join("")).toContain('"http_failure_route":"/api/auth/*"');
       expect(sentryBodies.join("") + lines.join("")).not.toContain("PRIVATE_AUTH_EMAIL");
     } finally { restore(); }
+  });
+
+  it("names a generic HTTP boundary without exposing the thrown error or request", async () => {
+    await withSdk(async () => {
+      const failure = new TypeError("PRIVATE_SENTINEL SQL token");
+      failure.name = "PRIVATE_SENTINEL";
+      failure.stack = "PRIVATE_SENTINEL at https://private.invalid/customer";
+      const response = await withHttpDiagnostics(request("/v2/session/PRIVATE_SENTINEL/stop"), env, async () => { throw failure; });
+      expect(response.status).toBe(500);
+    });
+    await drain();
+    expect(exceptionCount()).toBe(1);
+    expect(sentryBodies.join("")).toContain('"http_failure_boundary":"http_handler"');
+    expect(sentryBodies.join("")).toContain('"http_failure_route":"/v2/session/:id/stop"');
+    expect(sentryBodies.join("")).toContain('"http_failure_category":"type_error"');
+    expect(sentryBodies.join("") + lines.join("")).not.toContain("PRIVATE_SENTINEL");
+  });
+
+  it("preserves an allowlisted auth status but not HTTP tags on unrelated failures in real envelopes", async () => {
+    await withSdk(async () => {
+      for (const code of ["worker.request_failed", "billing.realtime_unavailable"]) {
+        Sentry.captureEvent({ message: code, tags: {
+          failure_code: code, http_failure_boundary: "auth_api", http_failure_route: "/api/auth/*",
+          http_failure_category: "error", http_failure_status: "503",
+        } });
+      }
+    });
+    await drain();
+    const events = sentryBodies.filter((body) => body.includes('"type":"event"'));
+    expect(events).toHaveLength(2);
+    expect(events.filter((body) => body.includes('"http_failure_status":"503"'))).toHaveLength(1);
+    expect(events.find((body) => body.includes('"failure_code":"billing.realtime_unavailable"'))).not.toContain("http_failure_");
+    expect(events.join("")).not.toContain("PRIVATE_SENTINEL");
   });
 
   it("P1: reports an unexpected HTTP failure once, with matching safe code and outcome", async () => {
@@ -316,7 +351,11 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
   it("P5: reconstructs exception chains, contexts, breadcrumbs and frame locals in the actual envelope", async () => {
     await withSdk(async () => {
     Sentry.captureEvent({
-      message: "PRIVATE_SENTINEL transcript", tags: { customer: "PRIVATE_SENTINEL" },
+      message: "PRIVATE_SENTINEL transcript", tags: {
+        failure_code: "worker.request_failed", customer: "PRIVATE_SENTINEL",
+        http_failure_boundary: "PRIVATE_SENTINEL", http_failure_category: "PRIVATE_SENTINEL",
+        http_failure_route: "/v2/session/PRIVATE_SENTINEL/stop", http_failure_status: "503 PRIVATE_SENTINEL",
+      },
       user: { email: "PRIVATE_SENTINEL@example.test" },
       extra: { api_key: "PRIVATE_SENTINEL", answers: "PRIVATE_SENTINEL" },
       contexts: { provider: { transcript: "PRIVATE_SENTINEL" } },
