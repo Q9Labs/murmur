@@ -214,6 +214,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       promise.resolve(statePayload("capture_already_active"))
       return
     }
+    if (pendingCaptureStart == null) {
+      MurmurCaptureBridge.clearStartupFailure()
+    }
     if (!hasRecordAudioPermission()) {
       promise.reject("E_RECORD_AUDIO", "RECORD_AUDIO permission is not granted", null)
       return
@@ -275,6 +278,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       )
       mainHandler.postDelayed({
         if (pendingCaptureStart === promise) {
+          MurmurCaptureBridge.recordStartupFailure(
+            CaptureStartupStep.SERVICE_START, reason = CaptureStartupReason.START_TIMEOUT
+          )
           pendingCaptureStart = null
           captureActive = false
           mainHandler.removeCallbacks(captureDeadline)
@@ -284,6 +290,7 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
         }
       }, 10_000)
     } catch (error: Throwable) {
+      MurmurCaptureBridge.recordStartupFailure(CaptureStartupStep.SERVICE_START, error)
       pendingCaptureStart = null
       mainHandler.removeCallbacks(captureDeadline)
       promise.reject("E_CAPTURE_START_FAILED", error.message ?: "Device playback capture failed", error)
@@ -910,8 +917,8 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     sendEvent("onAudioState", statePayload(reason))
   }
 
-  private fun statePayload(reason: String): Map<String, Any> =
-    mapOf(
+  private fun statePayload(reason: String): Map<String, Any> {
+    val state = mapOf(
       "android" to androidDiagnostics(),
       "audio_generation_id" to audioGenerationId,
       "capture_active" to captureActive,
@@ -924,6 +931,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       "route" to "android",
       "sample_rate" to MURMUR_SAMPLE_RATE
     )
+    val failure = MurmurCaptureBridge.startupFailure ?: return state
+    return state + ("capture_failure" to failure)
+  }
 
   private fun nextEventSeq(): Int {
     return eventSeq.incrementAndGet()
@@ -1194,6 +1204,11 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
     }
     captureActive = false
     if (pendingCaptureStart != null) {
+      if (MurmurCaptureBridge.startupFailure == null) {
+        MurmurCaptureBridge.recordStartupFailure(
+          CaptureStartupStep.SERVICE_START, reason = captureStartupStopReason(reason)
+        )
+      }
       pendingCaptureStart?.reject("E_CAPTURE_START_FAILED", reason, null)
       pendingCaptureStart = null
     }
@@ -1208,6 +1223,9 @@ class MurmurAudioModule : Module(), MurmurCaptureListener {
       return
     }
     captureActive = false
+    if (pendingCaptureStart != null && MurmurCaptureBridge.startupFailure == null) {
+      MurmurCaptureBridge.recordStartupFailure(CaptureStartupStep.CAPTURE_DISPATCH, error)
+    }
     pendingCaptureStart?.reject(
       "E_CAPTURE_START_FAILED",
       error?.message ?: reason,
