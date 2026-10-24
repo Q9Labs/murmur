@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { TunnelMcpServerProxy } from "@expo/mcp-tunnel";
 
 const mobileRequire = createRequire(new URL("../../apps/mobile/package.json", import.meta.url));
 const expoRequire = createRequire(mobileRequire.resolve("expo/package.json"));
@@ -66,4 +67,34 @@ test("Expo CLI validates text, image and audio output without accepting invalid 
     [{ type: "text", text: "Fixture", level: "unknown" }],
     [{ type: "unknown" }],
   ]) assert.equal(DevToolsPluginOutputSchema.safeParse(invalid).success, false);
+});
+
+
+test("Expo MCP tunnel serializes CLI commands and arguments without losing their constraints", async () => {
+  const proxy = new TunnelMcpServerProxy("wss://example.invalid", {
+    projectRoot: "/tmp", devServerUrl: "http://localhost:1234",
+  });
+  try {
+    const schema = createMCPDevToolsExtensionSchema(PluginSchema.parse(plugin));
+    proxy.registerTool(plugin.packageName, { inputSchema: { parameters: schema } }, async ({ parameters }) => ({
+      content: [{ type: "text", text: JSON.stringify(schema.parse(parameters)) }],
+    }));
+    const serialized = proxy.getRegisteredTools().get(plugin.packageName).inputSchema;
+    assert.deepEqual(serialized.required, ["parameters"]);
+    const parameters = serialized.properties.parameters;
+    assert.deepEqual(parameters.required, ["command"]);
+    assert.deepEqual(parameters.properties.command.enum, ["inspect"]);
+    assert.equal(parameters.properties.label.type, "string");
+    assert.equal(parameters.properties.count.type, "number");
+    assert.equal(parameters.properties.enabled.type, "boolean");
+    assert.equal(parameters.additionalProperties, false);
+    const input = { command: "inspect", count: 2 };
+    const result = await proxy.handleToolCall({ name: plugin.packageName, arguments: { parameters: input } });
+    assert.deepEqual(JSON.parse(result.content[0].text), input);
+    await assert.rejects(proxy.handleToolCall({
+      name: plugin.packageName, arguments: { parameters: { command: "unknown" } },
+    }));
+  } finally {
+    await proxy.close();
+  }
 });
