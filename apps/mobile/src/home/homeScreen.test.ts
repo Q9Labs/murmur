@@ -115,7 +115,11 @@ vi.mock("./viewModel", () => ({
 }));
 
 import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
-import HomeScreen, { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
+import HomeScreen, {
+  createAudioPlaybackPreferenceController,
+  exhaustionSurface,
+  startWithAllowance,
+} from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -376,6 +380,19 @@ describe("Start allowance gate", () => {
 });
 
 
+describe("exhaustionSurface", () => {
+  it("routes on the refreshed customer instead of the stale render-time one", () => {
+    // A top-up landing between refresh and render must surface nothing.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 }))
+      .toBe("none");
+    // Hard-paywall account with no time goes to the paywall, not the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }))
+      .toBe("paywall");
+    // A freemium account out of minutes still gets the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, availableMs: 0 })).toBe("out_of_minutes");
+  });
+});
+
 describe("home billing effects", () => {
   it.each(["freemium", "unknown"])("opens the %s sheet before refresh resolves", async (kind) => {
     const pending = deferred<typeof fixtureCustomer | null>();
@@ -531,5 +548,102 @@ describe("home billing effects", () => {
       await act(async () => { root.render(createElement(HomeScreen)); });
     }
     expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("closes the stale sheet when the exhaustion refresh returns a funded customer", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    // Optimistic open on the stale exhausted customer.
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 60_000 }); });
+    // A funded refresh must close that stale sheet instead of leaving it up.
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("does not reopen a dismissed sheet when a new exhaustion error arrives", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseOutOfMinutes(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    // A different exhaustion error is not a reason to re-nag.
+    state.live.error = "realtime_allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("never navigates from a refresh resolving after the error cleared", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    state.live.error = null;
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("never navigates from the refresh of a superseded exhaustion error", async () => {
+    const staleRefresh = deferred<typeof fixtureCustomer | null>();
+    const currentRefresh = deferred<typeof fixtureCustomer | null>();
+    const refresh = vi.fn()
+      .mockReturnValueOnce(staleRefresh.promise)
+      .mockReturnValueOnce(currentRefresh.promise);
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    // A different exhaustion error supersedes the first and refreshes again.
+    state.live.error = "realtime_allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // The obsolete callback resolving to a paywall must not navigate.
+    await act(async () => { staleRefresh.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+    // The current error's own refresh still routes normally.
+    await act(async () => { currentRefresh.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
+  });
+
+  it("never navigates when a cleared same-string error revives an obsolete refresh", async () => {
+    const obsolete = deferred<typeof fixtureCustomer | null>();
+    const current = deferred<typeof fixtureCustomer | null>();
+    const refresh = vi.fn()
+      .mockReturnValueOnce(obsolete.promise)
+      .mockReturnValueOnce(current.promise);
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    // ABA: the error clears, then the same string returns with a new refresh.
+    state.live.error = null;
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    state.live.error = "allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // The newer cycle resolves funded first: it closes the sheet it opened.
+    await act(async () => { current.resolve({ ...fixtureCustomer, availableMs: 60_000 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+    // The obsolete same-string refresh resolving to a paywall must not act.
+    await act(async () => { obsolete.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
+  it("never navigates from a refresh resolving after unmount", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    await act(async () => { root.unmount(); });
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
   });
 });

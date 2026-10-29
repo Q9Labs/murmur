@@ -4,7 +4,6 @@ import { OperationFailure } from "@murmur/protocol/diagnostics/failures";
 import { reportFailure } from "./observability/outcomes";
 
 import { currentCustomerPlan, type CustomerPlan } from "./billing/allowanceService";
-import { defaultFreeAllowanceMs } from "./billing/catalog";
 import { hashInstallId } from "./privacy";
 import { requiresDeviceIntegrity, type Env } from "./env";
 import { defaultRateLimits } from "./limits";
@@ -23,11 +22,19 @@ export type ServerConfig = Omit<AppConfigResponse, "personal_offer"> & {
   source_transcript: boolean;
 };
 
+// `platform`/`appVersion` are server-verified values only (device-integrity
+// attestation): they steer the person_properties that match entitlement-
+// affecting flags. `reported` carries client-claimed hints for analytics; they
+// reach PostHog under *_client names and must never authorize economic grants.
 type ConfigIdentity = {
   appVersion: string | null;
   distinctId: string;
   plan: CustomerPlan;
   platform: string | null;
+  reported?: {
+    appPlatform?: string | null;
+    appVersion?: string | null;
+  };
 };
 
 const cache = new Map<string, { expiresAt: number; value: ServerConfig }>();
@@ -38,7 +45,10 @@ export function defaultServerConfig(env: Env): ServerConfig {
   return {
     device_integrity_required: requiresDeviceIntegrity(env),
     enabled_languages: null,
-    free_allowance_minutes: defaultFreeAllowanceMs / 60_000,
+    // Hard paywall: while no flag value is reachable (PostHog down, missing
+    // token or flag, timeout), a new customer gets zero free minutes — never a
+    // built-in trial default. Free minutes only come from an explicit flag.
+    free_allowance_minutes: 0,
     insights_model: "openai/gpt-6-luna",
     low_balance_threshold_minutes: 15,
     max_session_seconds_free: defaultRateLimits.maxSessionSeconds,
@@ -84,10 +94,16 @@ export async function getRequestServerConfig(
     ? `anonymous_install_${await hashInstallId(installId, salt)}`
     : `anonymous_customer_${await hashInstallId(customer.customerId, salt)}`;
   return getServerConfig(env, {
-    appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+    // These headers are client claims, not verified values: they travel as
+    // analytics hints only so they cannot steer entitlement-affecting flags.
+    appVersion: null,
     distinctId,
     plan: customer.plan,
-    platform: request?.headers.get("x-murmur-app-platform") ?? null,
+    platform: null,
+    reported: {
+      appPlatform: request?.headers.get("x-murmur-app-platform") ?? null,
+      appVersion: request?.headers.get("x-murmur-app-version") ?? null,
+    },
   });
 }
 
@@ -98,13 +114,37 @@ function flagsFailureCode(status: number) {
   return "config.flags_failed";
 }
 
+// Only attested platform/appVersion may steer flag evaluation; client hints are
+// sent under *_client names so PostHog never grants economics off a forged
+// header, but analytics can still segment by what the client claims.
+function flagPersonProperties(identity: ConfigIdentity): Record<string, string> {
+  return {
+    ...(identity.platform !== null ? { app_platform: identity.platform } : {}),
+    ...(identity.appVersion !== null ? { app_version: identity.appVersion } : {}),
+    ...(identity.reported?.appPlatform
+      ? { app_platform_client: identity.reported.appPlatform }
+      : {}),
+    ...(identity.reported?.appVersion
+      ? { app_version_client: identity.reported.appVersion }
+      : {}),
+    plan: identity.plan,
+  };
+}
+
 export async function getServerConfig(env: Env, identity: ConfigIdentity): Promise<ServerConfig> {
   const defaults = defaultServerConfig(env);
   const token = env.POSTHOG_PROJECT_TOKEN?.trim();
   if (!token) {
     return defaults;
   }
-  const key = JSON.stringify([identity.distinctId, identity.plan, identity.platform, identity.appVersion]);
+  const key = JSON.stringify([
+    identity.distinctId,
+    identity.plan,
+    identity.platform,
+    identity.appVersion,
+    identity.reported?.appPlatform ?? null,
+    identity.reported?.appVersion ?? null,
+  ]);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.value;
@@ -114,11 +154,7 @@ export async function getServerConfig(env: Env, identity: ConfigIdentity): Promi
     const response = await fetch("https://us.i.posthog.com/flags/", {
       body: JSON.stringify({
         distinct_id: identity.distinctId,
-        person_properties: {
-          app_platform: identity.platform,
-          app_version: identity.appVersion,
-          plan: identity.plan,
-        },
+        person_properties: flagPersonProperties(identity),
         token,
       }),
       headers: { "Content-Type": "application/json" },

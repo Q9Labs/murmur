@@ -194,4 +194,23 @@ describe("home view model", () => {
       statusText: "Service unavailable",
     });
   });
+
+  it.each([
+    { error: "microphone_permission_denied", preparation_status: "ready" },
+    { error: null, preparation_status: "microphone_denied" },
+  ] as const)("surfaces a settings action when the mic is denied (%o)", (overrides) => {
+    const denied = buildHomeViewModel({
+      live: makeLive({ error: overrides.error, preparation_status: overrides.preparation_status, status: "idle" }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+    expect(denied.microphoneDenied).toBe(true);
+
+    const granted = buildHomeViewModel({
+      live: makeLive({ status: "idle" }),
+      sourceLanguageCode: "en",
+      targetLanguageCode: "ar",
+    });
+    expect(granted.microphoneDenied).toBe(false);
+  });
 });

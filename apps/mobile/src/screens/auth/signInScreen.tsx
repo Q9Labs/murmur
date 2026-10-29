@@ -50,12 +50,28 @@ export function checkoutDoneAction(params: {
   if (params.availability === "unavailable") {
     return { label: t("auth.backToPlans"), onPress: params.leave };
   }
+  // Purchases are async: leave only after a completed purchase so cancellation
+  // and failures stay recoverable on this screen. `busy`/`inFlight` guard both
+  // manual taps and programmatic presses (e.g. the social sign-in effect).
+  let inFlight = false;
   return {
     disabled: params.availability === "busy",
     label: params.plan ? planPurchaseLabel(params.plan, params.ui) : t("auth.continueToCheckout"),
     onPress: () => {
-      void params.purchasePlan(planId);
-      params.leave();
+      if (params.availability === "busy" || inFlight) {
+        return;
+      }
+      inFlight = true;
+      void params.purchasePlan(planId)
+        .catch(() => false)
+        .then((purchased) => {
+          if (purchased) {
+            params.leave();
+          }
+        })
+        .finally(() => {
+          inFlight = false;
+        });
     },
   };
 }

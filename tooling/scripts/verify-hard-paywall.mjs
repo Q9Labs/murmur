@@ -20,7 +20,9 @@ export default { async fetch(request) {
   if (url.hostname !== "us.i.posthog.com") throw new Error("unexpected external request: " + url.hostname);
   if (url.pathname !== "/flags/") return Response.json({});
   const body = await request.json();
-  const version = body.person_properties.app_version;
+  // Server sends attested values as app_version and client-claimed hints as
+  // app_version_client; nothing attests in this harness, so read both.
+  const version = body.person_properties.app_version ?? body.person_properties.app_version_client;
   if (version === "1.4.503") return new Response(null, { status: 503 });
   if (version === "1.4.5") return Response.json({ flags: {} });
   const minutes = version === "1.4.0" ? 0 : 5;
@@ -247,14 +249,25 @@ try {
   pass("hard-mode guest linking after rollback creates and transfers the same-month Free claim");
   for (const version of ["1.4.5", "1.4.503"]) {
     const freemium = await guest(version);
+    // A brand-new account gets nothing while the flag is missing or PostHog is
+    // down — the paywall fails closed.
+    assert.equal((await customer(freemium, version)).free_allowance_ms, 0);
+    // Minutes already granted under an earlier client build are still honored:
+    // the same customer keeps the balance once the flag stops answering.
+    const granted = await customer(freemium, "1.4.1");
+    assert.equal(granted.free_allowance_ms, 300_000);
     const current = await customer(freemium, version);
-    assert.equal(current.free_allowance_ms, 300_000);
+    // free_allowance_ms mirrors the live config, so it reads 0 while the flag
+    // is down — the entitlement that matters (granted minutes) is preserved.
+    assert.equal(current.free_allowance_ms, 0);
     assert.equal(current.balance.available_ms, 300_000);
-    assert.equal(current.gifts.phone_audio.claimable, true);
+    // Fail-closed also blocks NEW gift claims while policy can't be evaluated;
+    // the minutes themselves stay usable.
+    assert.equal(current.gifts.phone_audio.claimable, false);
     await session(freemium, version, 200);
     assert.equal((await customer(freemium, version)).balance.available_ms, 300_000);
     assert.equal(await rows("balance_grants", freemium.id), 1);
-    pass(`${version === "1.4.5" ? "no flag" : "PostHog 503"} preserves new and existing freemium customers`);
+    pass(`${version === "1.4.5" ? "no flag" : "PostHog 503"} hard-locks new guests but preserves granted freemium minutes`);
   }
   const legacy = await guest("1.4.0", false);
   assert.equal((await customer(legacy, "1.4.0", false)).free_allowance_ms, 0);

@@ -8,6 +8,15 @@ const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const iosUrlScheme = iosClientId?.endsWith(".apps.googleusercontent.com")
   ? `com.googleusercontent.apps.${iosClientId.slice(0, -".apps.googleusercontent.com".length)}`
   : "com.googleusercontent.apps.not-configured";
+// Config contract: Google sign-in needs EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID plus
+// the platform client id (EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID on iOS). When the
+// provider is intended but the iOS scheme id is absent, say so at config time —
+// the dummy scheme would otherwise ship silently into a store build.
+if (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID && !iosClientId) {
+  console.warn(
+    "[murmur] EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID missing: iOS Google sign-in will be unavailable in this build.",
+  );
+}
 // EAS builds inject the update channel; local signed builds pass it explicitly.
 const updatesChannel = process.env.MURMUR_UPDATES_CHANNEL?.trim();
 const buildTarget = process.env.EAS_BUILD_PROFILE || updatesChannel;
