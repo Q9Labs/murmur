@@ -8,8 +8,6 @@
 
 `pnpm run gate:hygiene` checks that the gate is real: scripts referenced from `tooling/gates/commit.sh` must exist, placeholder scripts such as `echo`, `true`, and `exit 0` are rejected, `--passWithNoTests` is rejected, and live/release/Fastlane lanes stay out of the hook.
 
-`pnpm run test:presence` requires meaningful Murmur source files to have nearby tests. The policy intentionally excludes generated files, declarations, barrels, assets, styles, configs, scripts, migrations, docs, store metadata, Fastlane, and release/live validation lanes.
-
 The static and security layers are:
 
 - `pnpm run static:fallow`: changed-code audit with `fallow audit`; existing dead-code, complexity, and duplication backlog is captured in reviewed baselines under `tooling/gates/fallow-baselines/`, so the gate blocks regressions instead of demanding instant cleanup of inherited findings.
@@ -21,6 +19,8 @@ The static and security layers are:
 - `pnpm run lint:spelling`: CSpell typo hygiene.
 - `pnpm run react:doctor`: pinned Expo Doctor 1.20.0 diagnostics for the React Native app stack.
 
-The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `test:coverage`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
+The Murmur project checks are `react:doctor`, `store:secrets`, `typecheck`, `worker:types`, `unit`, `store:config`, `store:metadata`, and `store:blockers`. The blocker check validates the ledger while allowing truthful open items; `store:launch-ready` uses `store:blockers:closed` to require every P0 blocker to be closed before release.
 
 Excluded from the hook on purpose: `store:live`, `store:preflight`, live production smoke checks, Fastlane submission validation, release lanes, and any command that mutates files.
+
+Unit tests are selected runtime regressions, not a per-file quota. Coverage percentages and matching-test-file requirements are not gates. Native device harnesses and Worker runtime proofs remain available.

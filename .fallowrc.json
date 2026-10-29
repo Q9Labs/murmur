@@ -4,18 +4,15 @@
     "apps/worker/src/auth/accountMigration.test.mjs",
     "tooling/scripts/build-store-screenshots.mjs",
     "apps/worker/legacy-ios-proxy/index.ts",
-    "apps/worker/src/billing/allowanceService.test.mjs",
     "apps/worker/src/billing/creditPackExpiry.test.mjs",
     "apps/worker/src/billing/freeAllowanceClaims.test.mjs",
     "apps/worker/src/insights/deleteCustomerData.test.mjs",
     "apps/worker/src/insights/deleteExpiredSessionInsights.test.mjs",
-    "apps/worker/src/routes/customer.test.mjs",
     "apps/worker/privacy-probe.ts",
     "apps/worker/caption-recovery-probe.ts"
   ],
   "ignorePatterns": [
     "apps/mobile/assets/**",
-    "**/coverage/**",
     "docs/**",
     "apps/mobile/fastlane/**",
     "scratchpad/**",

@@ -1,8 +1,7 @@
 {
   "unused_files": [
     "apps/mobile/modules/murmur-audio/src/MurmurAudioModule.ts",
-    "apps/mobile/plugins/withAndroidReleaseSigning.js",
-    "apps/mobile/plugins/withAndroidReleaseSigning.test.mjs"
+    "apps/mobile/plugins/withAndroidReleaseSigning.js"
   ],
   "unused_exports": [
     "apps/mobile/plugins/withAndroidReleaseSigning.js:addReleaseSigning"

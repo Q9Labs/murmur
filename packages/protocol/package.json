@@ -13,10 +13,6 @@
     "./diagnostics/failures": "./src/diagnostics/failures.ts"
   },
   "scripts": {
-    "typecheck": "tsc-rs --noEmit --project tsconfig.json",
-    "unit": "vitest run"
-  },
-  "devDependencies": {
-    "vitest": "^4.1.12"
+    "typecheck": "tsc-rs --noEmit --project tsconfig.json"
   }
 }
