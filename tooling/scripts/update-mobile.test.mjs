@@ -40,6 +40,43 @@ test("installed nonproduction channels reject production-labelled or production-
   assert.throws(() => resolveWorkerTarget({ nodeEnv: "production" }), /known Murmur/);
 });
 
+test("native development clients cannot select production regardless of JS mode or channel", () => {
+  for (const nodeEnv of ["development", "production"]) {
+    for (const channel of [null, undefined, "", "production"]) {
+      const input = { channel, nodeEnv, environment: "production", workerUrl: profiles.production.env.EXPO_PUBLIC_MURMUR_WORKER_URL };
+      assert.throws(() => resolveWorkerTarget({ ...input, isDevelopmentClient: true }), /development clients cannot select/);
+      assert.equal(resolveWorkerTarget({ ...input, isDevelopmentClient: false }), profiles.production.env.EXPO_PUBLIC_MURMUR_WORKER_URL);
+    }
+  }
+});
+
+test("native development clients retain explicit nonproduction bundles and installed OTA channels", () => {
+  for (const name of ["development", "preview", "testing", "sandbox"]) {
+    const profile = profiles[name];
+    for (const channel of [null, name]) {
+      assert.equal(resolveWorkerTarget({ channel, nodeEnv: "production", environment: profile.env.EXPO_PUBLIC_MURMUR_ENV, workerUrl: profile.env.EXPO_PUBLIC_MURMUR_WORKER_URL, isDevelopmentClient: true }), profile.env.EXPO_PUBLIC_MURMUR_WORKER_URL);
+    }
+  }
+});
+
+test("only local development accepts an unlabeled explicit loopback URL", () => {
+  for (const workerUrl of ["http://localhost:8787", "http://127.0.0.1:8787", "http://[::1]:8787"]) {
+    assert.equal(resolveWorkerTarget({ workerUrl, nodeEnv: "development", channel: null }), workerUrl);
+    assert.throws(() => resolveWorkerTarget({ workerUrl, nodeEnv: "production", channel: null, isDevelopmentClient: true }), /known Murmur/);
+    assert.throws(() => resolveWorkerTarget({ workerUrl, nodeEnv: "development", channel: "preview", environment: "preview" }), /does not match/);
+  }
+  for (const workerUrl of ["https://murmur.q9labs.ai", "http://localhost.evil.test:8787", "http://192.0.2.1:8787", "https://localhost:8787"]) {
+    assert.throws(() => resolveWorkerTarget({ workerUrl, nodeEnv: "development", channel: null }), /known Murmur/);
+  }
+});
+
+test("development identity never relaxes missing, unknown or conflicting target validation", () => {
+  assert.throws(() => resolveWorkerTarget({ nodeEnv: "production", channel: null, isDevelopmentClient: true }), /known Murmur/);
+  assert.throws(() => resolveWorkerTarget({ nodeEnv: "production", channel: "unrecognized", isDevelopmentClient: true }), /known Murmur/);
+  assert.throws(() => resolveWorkerTarget({ channel: "preview", environment: "production", workerUrl: profiles.production.env.EXPO_PUBLIC_MURMUR_WORKER_URL, isDevelopmentClient: true }), /explicit environment/);
+  assert.throws(() => resolveWorkerTarget({ channel: null, environment: "preview", workerUrl: profiles.production.env.EXPO_PUBLIC_MURMUR_WORKER_URL, isDevelopmentClient: true }), /does not match/);
+});
+
 test("app configuration rejects missing/mismatched release targets but preserves explicit production builds", () => {
   const config = fileURLToPath(new URL("../../apps/mobile/app.config.js", import.meta.url));
   const evaluate = (variables) => spawnSync(process.execPath, ["-e", "require(process.argv[1])", config], { encoding: "utf8", env: { PATH: process.env.PATH, NODE_ENV: "production", ...variables } });

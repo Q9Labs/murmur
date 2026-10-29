@@ -21,6 +21,7 @@ if (buildTarget || process.env.NODE_ENV === "production") {
     environment: process.env.EXPO_PUBLIC_MURMUR_ENV,
     channel: buildTarget,
     nodeEnv: process.env.NODE_ENV,
+    isDevelopmentClient: profile?.developmentClient === true,
   });
 }
 
