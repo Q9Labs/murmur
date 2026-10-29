@@ -17,6 +17,10 @@ ignorePaths:
 ignoreRegExpList:
   - "[^\\x00-\\x7F]+"
 words:
+  - notnull
+  - GHSA
+  - gcqx
+  - unreviewed
   - NSOS
   - osstatus
   - Ablaufdatum

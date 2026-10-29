@@ -39,3 +39,6 @@ allowBuilds:
   esbuild: false
   lefthook: false
   workerd: false
+
+patchedDependencies:
+  deepmerge@4.3.1: patches/deepmerge@4.3.1.patch

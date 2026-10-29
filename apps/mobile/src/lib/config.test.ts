@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   getMurmurEnvironment,
@@ -9,30 +9,53 @@ import {
   getWorkerBaseUrl,
 } from "./config";
 
+const updates = vi.hoisted((): { channel: string | null } => ({ channel: null }));
+vi.mock("expo-updates", () => ({ get channel() { return updates.channel; } }));
+
+beforeEach(() => { updates.channel = null; });
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("Worker URL config", () => {
-  it("uses the explicit Expo public Worker URL when provided", () => {
-    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://worker.example.test");
+  it("keeps the existing explicit production build target", () => {
+    updates.channel = "production";
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur.q9labs.ai");
     vi.stubEnv("NODE_ENV", "production");
-
-    expect(getWorkerBaseUrl()).toBe("https://worker.example.test");
+    expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
   });
 
-  it("falls back to localhost only in development", () => {
+  it("uses dev for a preview binary even though release JavaScript uses NODE_ENV=production", () => {
+    updates.channel = "preview";
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "preview");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur-worker-dev.msbilal.workers.dev");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(getWorkerBaseUrl()).toBe("https://murmur-worker-dev.msbilal.workers.dev");
+  });
+
+  it("rejects production variables delivered to an installed preview channel", () => {
+    updates.channel = "preview";
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur.q9labs.ai");
+    expect(() => getWorkerBaseUrl()).toThrow(/explicit environment/);
+  });
+
+  it("fails before a request when a release or OTA is missing its target", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(() => getWorkerBaseUrl()).toThrow(/known Murmur/);
+    updates.channel = "production";
+    expect(() => getWorkerBaseUrl()).toThrow(/explicit environment/);
+  });
+
+  it("keeps localhost only for local development without an installed channel", () => {
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "");
     vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "");
     vi.stubEnv("NODE_ENV", "development");
-
     expect(getWorkerBaseUrl()).toBe("http://localhost:8787");
-  });
-
-  it("falls back to the public Murmur host outside development", () => {
-    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "");
-    vi.stubEnv("NODE_ENV", "production");
-
-    expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
   });
 });
 
