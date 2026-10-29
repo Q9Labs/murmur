@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { BackHandler, type ScrollView } from "react-native";
 
@@ -235,6 +235,71 @@ export async function startWithAllowance(params: {
   await params.start();
 }
 
+// Routes an allowance-exhaustion error to the out-of-minutes sheet or the
+// paywall based on the *refreshed* customer. A sheet the user dismissed stays
+// dismissed until a funded refresh resets the exhaustion cycle.
+function useExhaustionRouting(params: {
+  customer: MurmurCustomer | null;
+  error: string | null;
+  refresh: () => Promise<MurmurCustomer | null>;
+  router: ReturnType<typeof useRouter>;
+  setOutOfMinutesOpen: (open: boolean) => void;
+}): { dismissOutOfMinutes: () => void } {
+  const { customer, error, refresh, router, setOutOfMinutesOpen } = params;
+  const handledExhaustionRef = useRef<string | null>(null);
+  const outOfMinutesDismissedRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!isAllowanceExhaustedError(error)) {
+      handledExhaustionRef.current = null;
+      return;
+    }
+    if (handledExhaustionRef.current === error) {
+      return;
+    }
+    const exhaustion = error;
+    handledExhaustionRef.current = exhaustion;
+    const staleSurface = lockedSurface(customer);
+    if (staleSurface === "out_of_minutes" && !outOfMinutesDismissedRef.current) {
+      setOutOfMinutesOpen(true);
+    }
+    void refresh().then((fresh) => {
+      // Error cleared/superseded or the screen unmounted while the refresh was
+      // in flight — an obsolete callback must not navigate or reopen surfaces.
+      if (!mountedRef.current || handledExhaustionRef.current !== exhaustion) {
+        return;
+      }
+      const surface = exhaustionSurface(fresh ?? customer);
+      if (surface === "paywall") {
+        outOfMinutesDismissedRef.current = false;
+        setOutOfMinutesOpen(false);
+        router.push("/paywall");
+      } else if (surface === "none") {
+        // A top-up landed between the stale read and the refresh: close the
+        // optimistically opened sheet over a funded account.
+        outOfMinutesDismissedRef.current = false;
+        setOutOfMinutesOpen(false);
+      } else if (surface === "out_of_minutes" && staleSurface === "paywall" &&
+                 !outOfMinutesDismissedRef.current) {
+        // Only surface the sheet when it was never presented this session —
+        // re-opening one the user already dismissed would feel like a nag.
+        setOutOfMinutesOpen(true);
+      }
+    });
+  }, [customer, error, refresh, router, setOutOfMinutesOpen]);
+  const dismissOutOfMinutes = useCallback(() => {
+    outOfMinutesDismissedRef.current = true;
+    setOutOfMinutesOpen(false);
+  }, [setOutOfMinutesOpen]);
+  return { dismissOutOfMinutes };
+}
+
 export default function HomeScreen(): ReactNode {
   const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
@@ -363,30 +428,13 @@ export default function HomeScreen(): ReactNode {
     setAcquisition(incomingAcquisition);
   }, [incomingAcquisition, incomingUrl]);
 
-  const refreshBilling = billing.refresh;
-  const handledExhaustionRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!isAllowanceExhaustedError(live.error)) {
-      handledExhaustionRef.current = null;
-    } else if (handledExhaustionRef.current !== live.error) {
-      handledExhaustionRef.current = live.error;
-      const staleSurface = lockedSurface(billing.customer);
-      if (staleSurface === "out_of_minutes") {
-        setOutOfMinutesOpen(true);
-      }
-      void refreshBilling().then((fresh) => {
-        const surface = exhaustionSurface(fresh ?? billing.customer);
-        if (surface === "paywall") {
-          setOutOfMinutesOpen(false);
-          router.push("/paywall");
-        } else if (surface === "out_of_minutes" && staleSurface === "paywall") {
-          // Only surface the sheet when it was never presented this session —
-          // re-opening one the user already dismissed would feel like a nag.
-          setOutOfMinutesOpen(true);
-        }
-      });
-    }
-  }, [billing.customer, live.error, refreshBilling, router]);
+  const { dismissOutOfMinutes } = useExhaustionRouting({
+    customer: billing.customer,
+    error: live.error,
+    refresh: billing.refresh,
+    router,
+    setOutOfMinutesOpen,
+  });
 
   useEffect(() => {
     if (isUpdateRequiredError(live.error)) {
@@ -758,7 +806,7 @@ export default function HomeScreen(): ReactNode {
         networkType={networkType}
         onCloseDiagnostics={() => setDiagnosticsOpen(false)}
         onClosePicker={() => setPickerMode(null)}
-        onCloseOutOfMinutes={() => setOutOfMinutesOpen(false)}
+        onCloseOutOfMinutes={dismissOutOfMinutes}
         onCloseUpdateRequired={() => setUpdateRequiredOpen(false)}
         onCaptureSourceChange={(source) => void selectCaptureSource(source)}
         onAudioPlaybackEnabledChange={(enabled) => {
@@ -769,7 +817,7 @@ export default function HomeScreen(): ReactNode {
         onOpenSettings={() => router.push("/settings")}
         onPrimaryAction={() => void handlePrimaryAction()}
         onSeePlans={() => {
-          setOutOfMinutesOpen(false);
+          dismissOutOfMinutes();
           router.push("/plans");
         }}
         onSwapLanguages={swapLanguages}
