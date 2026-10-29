@@ -20,7 +20,8 @@
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "environment": "development"
     },
     "preview": {
       "channel": "preview",
@@ -32,12 +33,13 @@
         "EXPO_PUBLIC_MURMUR_ENV": "preview",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HOTHoeaYGLkitWlBTcymRlqRbMd",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_ikOqAxhanMxzSwGKkQgnSSGoMlA",
-        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur.q9labs.ai",
+        "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-dev.msbilal.workers.dev",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "environment": "preview"
     },
     "testing": {
       "channel": "testing",
@@ -54,7 +56,7 @@
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-dev.msbilal.workers.dev",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
-      "environment": "production",
+      "environment": "preview",
       "ios": {
         "credentialsSource": "remote",
         "simulator": false
@@ -76,7 +78,7 @@
         "EXPO_PUBLIC_MURMUR_WORKER_URL": "https://murmur-worker-sandbox.msbilal.workers.dev",
         "EXPO_PUBLIC_SENTRY_DSN": "https://30b01ddb957cb1554280904250b0d4dc@o4509774141063168.ingest.de.sentry.io/4511994428653648"
       },
-      "environment": "production",
+      "environment": "preview",
       "ios": {
         "credentialsSource": "remote",
         "simulator": false
@@ -102,7 +104,8 @@
       "ios": {
         "credentialsSource": "remote",
         "simulator": false
-      }
+      },
+      "environment": "production"
     }
   },
   "submit": {

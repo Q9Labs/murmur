@@ -155,14 +155,19 @@ assert(!appUiSource.includes("Start Listening"), "First-session CTA must use can
 assert(appUiSource.includes(">Listen<"), "App UI must include the canonical Listen CTA");
 
 const productionBuild = easConfig.build?.production;
+const previewBuild = easConfig.build?.preview;
 const sandboxBuild = easConfig.build?.sandbox;
 const testingBuild = easConfig.build?.testing;
 for (const [profileName, profile] of Object.entries(easConfig.build ?? {})) {
+  assert(profile.channel === profileName, `EAS ${profileName} must use its own update channel`);
+  const expectedEnvironment = ["preview", "testing", "sandbox"].includes(profileName) ? "preview" : profileName;
+  assert(profile.environment === expectedEnvironment, `EAS ${profileName} must select the intended remote environment`);
   assert(
     !JSON.stringify(profile).includes("murmur-worker-development"),
     `EAS ${profileName} build must not reference the legacy production proxy`,
   );
 }
+assert(previewBuild?.env?.EXPO_PUBLIC_MURMUR_WORKER_URL === testingWorkerUrl, "EAS preview Worker URL must target the development Worker, not production");
 assert(testingBuild?.distribution === "store", "EAS testing build must use store distribution");
 assert(testingBuild?.android?.buildType === "app-bundle", "EAS testing Android build must produce an app bundle");
 assert(testingBuild?.ios?.simulator === false, "EAS testing iOS build must target devices, not simulator");

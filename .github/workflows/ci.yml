@@ -26,6 +26,10 @@ jobs:
       - run: pnpm run deps:syncpack
       - run: pnpm run lint:spelling
       - run: pnpm --filter @murmur/mobile exec expo export --platform web --output-dir /tmp/murmur-web
+        env:
+          EAS_BUILD_PROFILE: preview
+          EXPO_PUBLIC_MURMUR_ENV: preview
+          EXPO_PUBLIC_MURMUR_WORKER_URL: https://murmur-worker-dev.msbilal.workers.dev
       - run: pnpm --filter @murmur/worker exec wrangler deploy --dry-run --env=""
       - run: pnpm run store:secrets
       - run: pnpm run store:config

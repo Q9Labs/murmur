@@ -103,7 +103,7 @@ describe("Worker diagnostic proofs (real SDK envelopes and HTTP boundary)", () =
       const response = await worker.fetch(new Request("https://worker.example/api/auth/sign-in/anonymous", {
         method: "POST", headers: { "Content-Type": "application/json", traceparent: `00-${trace}-1234567890abcdef-00` }, body: "{}",
       }), { ...env, BILLING_DB: database, BETTER_AUTH_SECRET: "fixture-secret-with-at-least-32-characters" }, context);
-      expect(await response.text()).not.toContain("worker_operation_failed");
+      expect(await response.text()).toBe("");
       await drain();
       expect(lines).toHaveLength(1);
       expect(JSON.parse(lines[0] ?? "")).toMatchObject({ trace_id: trace, attributes: { error_code: "worker.request_failed" } });

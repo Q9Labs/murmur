@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
+    "apps/worker/src/auth/accountMigration.test.mjs",
     "tooling/scripts/build-store-screenshots.mjs",
     "apps/worker/legacy-ios-proxy/index.ts",
     "apps/worker/src/billing/allowanceService.test.mjs",

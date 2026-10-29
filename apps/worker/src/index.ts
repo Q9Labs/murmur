@@ -20,7 +20,7 @@ import {
 } from "./http/response";
 import { renderLegalPage } from "./legalPages";
 import { logWorkerEvent } from "./privacy";
-import { syntheticFailure, withHttpDiagnostics } from "./observability/outcomes";
+import { reportFailure, syntheticFailure, withHttpDiagnostics } from "./observability/outcomes";
 import { captureMobileDiagnostics } from "./routes/diagnostics";
 import { getSentryOptions } from "./observability/sentry";
 import {
@@ -74,8 +74,20 @@ const handler = {
     }
 
     if (url.pathname.startsWith("/api/auth/")) {
+      const startedAt = Date.now();
       const auth = createMurmurAuth(env, request, context);
-      return auth ? auth.handler(request) : json({ error: "billing_unavailable" }, 503);
+      if (!auth) return json({ error: "billing_unavailable" }, 503);
+      try {
+        // Adapter introspection can reject router initialization before the request-error hook.
+        return await auth.handler(request);
+      } catch (failure) {
+        reportFailure({
+          code: "worker.request_failed", failure, env,
+          http: { boundary: "auth_api", request, status: 500 },
+          duration_ms: Date.now() - startedAt,
+        });
+        return new Response(null, { status: 500 });
+      }
     }
 
     if (url.pathname === "/v3/customer" && request.method === "GET") {

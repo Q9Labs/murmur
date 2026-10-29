@@ -1,13 +1,14 @@
+import { channel } from "expo-updates";
+import { resolveWorkerTarget } from "../../workerTarget";
 import { isUiLocale, type UiLocale } from "../i18n/types";
 
 export function getWorkerBaseUrl(): string {
-  if (process.env.EXPO_PUBLIC_MURMUR_WORKER_URL) {
-    return process.env.EXPO_PUBLIC_MURMUR_WORKER_URL;
-  }
-
-  return process.env.NODE_ENV === "development"
-    ? "http://localhost:8787"
-    : "https://murmur.q9labs.ai";
+  return resolveWorkerTarget({
+    workerUrl: process.env.EXPO_PUBLIC_MURMUR_WORKER_URL,
+    environment: process.env.EXPO_PUBLIC_MURMUR_ENV,
+    channel,
+    nodeEnv: process.env.NODE_ENV,
+  });
 }
 
 export function getSentryDsn(): string | undefined {
