@@ -612,6 +612,31 @@ describe("home billing effects", () => {
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
   });
 
+  it("never navigates when a cleared same-string error revives an obsolete refresh", async () => {
+    const obsolete = deferred<typeof fixtureCustomer | null>();
+    const current = deferred<typeof fixtureCustomer | null>();
+    const refresh = vi.fn()
+      .mockReturnValueOnce(obsolete.promise)
+      .mockReturnValueOnce(current.promise);
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    // ABA: the error clears, then the same string returns with a new refresh.
+    state.live.error = null;
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    state.live.error = "allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // The newer cycle resolves funded first: it closes the sheet it opened.
+    await act(async () => { current.resolve({ ...fixtureCustomer, availableMs: 60_000 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+    // The obsolete same-string refresh resolving to a paywall must not act.
+    await act(async () => { obsolete.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
   it("never navigates from a refresh resolving after unmount", async () => {
     const pending = deferred<typeof fixtureCustomer | null>();
     state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };

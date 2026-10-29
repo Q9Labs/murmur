@@ -247,6 +247,13 @@ function useExhaustionRouting(params: {
 }): { dismissOutOfMinutes: () => void } {
   const { customer, error, refresh, router, setOutOfMinutesOpen } = params;
   const handledExhaustionRef = useRef<string | null>(null);
+  // Monotonic cycle id: error strings repeat (A -> cleared -> A again), so
+  // string equality alone would let a superseded refresh's callback act on a
+  // newer cycle. Each new handling cycle and each clear bumps the generation;
+  // a pending callback only runs while its generation is still current. The
+  // dedupe early-return leaves the generation untouched, so an in-flight
+  // request survives customer-driven effect reruns of the same error.
+  const exhaustionGenerationRef = useRef(0);
   const outOfMinutesDismissedRef = useRef(false);
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -258,13 +265,14 @@ function useExhaustionRouting(params: {
   useEffect(() => {
     if (!isAllowanceExhaustedError(error)) {
       handledExhaustionRef.current = null;
+      exhaustionGenerationRef.current += 1;
       return;
     }
     if (handledExhaustionRef.current === error) {
       return;
     }
-    const exhaustion = error;
-    handledExhaustionRef.current = exhaustion;
+    handledExhaustionRef.current = error;
+    const generation = ++exhaustionGenerationRef.current;
     const staleSurface = lockedSurface(customer);
     if (staleSurface === "out_of_minutes" && !outOfMinutesDismissedRef.current) {
       setOutOfMinutesOpen(true);
@@ -272,7 +280,7 @@ function useExhaustionRouting(params: {
     void refresh().then((fresh) => {
       // Error cleared/superseded or the screen unmounted while the refresh was
       // in flight — an obsolete callback must not navigate or reopen surfaces.
-      if (!mountedRef.current || handledExhaustionRef.current !== exhaustion) {
+      if (!mountedRef.current || exhaustionGenerationRef.current !== generation) {
         return;
       }
       const surface = exhaustionSurface(fresh ?? customer);
