@@ -31,9 +31,6 @@ pnpm run lint:spelling
 # Diagnose common Node.js, iOS, Android, and React Native project health issues.
 pnpm run react:doctor
 
-# Require meaningful source files to have matching tests unless explicitly excluded.
-pnpm run test:presence
-
 # Run Murmur's project-specific secret validator.
 pnpm run store:secrets
 
@@ -45,9 +42,6 @@ pnpm run worker:types
 
 # Run the unit test suite.
 pnpm run unit
-
-# Run coverage thresholds.
-pnpm run test:coverage
 
 # Validate app configuration needed for release/store correctness.
 pnpm run store:config

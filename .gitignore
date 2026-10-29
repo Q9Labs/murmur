@@ -52,6 +52,3 @@ apps/mobile/modules/*/ios/build/
 
 # generated fastlane run output
 apps/mobile/fastlane/report.xml
-
-# workspace test output
-coverage/

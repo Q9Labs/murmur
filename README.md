@@ -39,7 +39,7 @@ pnpm test
 pnpm run gate
 ```
 
-`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, tests, coverage, and store/config validation without deploying or contacting production release lanes.
+`pnpm run gate` is the canonical local contract. It runs static analysis, secret and dependency scans, type checks, selected runtime tests, and store/config validation without deploying or contacting production release lanes.
 
 ## Architecture
 
