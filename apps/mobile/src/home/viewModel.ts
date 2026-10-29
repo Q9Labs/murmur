@@ -31,6 +31,7 @@ export type HomeViewModel = {
   latestSourceCaption: string;
   latestTranslationIsPartial: boolean;
   latestTranslationText: string;
+  microphoneDenied: boolean;
   primaryCanvasText: string;
   secondaryCanvasText: string;
   sourceLanguage: LanguageDefinition | null;
@@ -82,6 +83,10 @@ export function buildHomeViewModel(params: {
     latestSourceCaption,
     latestTranslationIsPartial: isPartialTranslation(latestTranslation),
     latestTranslationText,
+    // Both surfaces mean the OS will not re-prompt after another tap: surface
+    // an explicit settings action so denial isn't a dead end.
+    microphoneDenied: params.live.error === "microphone_permission_denied" ||
+      params.live.preparation_status === "microphone_denied",
     primaryCanvasText: buildPrimaryCanvasText({
       error: params.live.error,
       hasTranslatedText,

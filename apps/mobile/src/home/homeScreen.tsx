@@ -207,6 +207,18 @@ export function createAudioPlaybackPreferenceController(options: {
   };
 }
 
+// Decides which locked surface applies from the *refreshed* customer, not the
+// render-time one — a top-up between refresh and render must not reopen the
+// out-of-minutes sheet or bounce a paid customer into the paywall.
+export function exhaustionSurface(
+  customer: MurmurCustomer | null,
+): "none" | "out_of_minutes" | "paywall" {
+  if (hasTimeAvailable(customer)) {
+    return "none";
+  }
+  return lockedSurface(customer);
+}
+
 export async function startWithAllowance(params: {
   customer: MurmurCustomer | null;
   refresh: () => Promise<MurmurCustomer | null>;
@@ -358,18 +370,18 @@ export default function HomeScreen(): ReactNode {
       handledExhaustionRef.current = null;
     } else if (handledExhaustionRef.current !== live.error) {
       handledExhaustionRef.current = live.error;
-      if (lockedSurface(billing.customer) === "out_of_minutes") {
+      const staleSurface = lockedSurface(billing.customer);
+      if (staleSurface === "out_of_minutes") {
         setOutOfMinutesOpen(true);
       }
       void refreshBilling().then((fresh) => {
-        const customer = fresh ?? billing.customer;
-        if (hasTimeAvailable(customer)) {
-          return;
-        }
-        if (lockedSurface(customer) === "paywall") {
+        const surface = exhaustionSurface(fresh ?? billing.customer);
+        if (surface === "paywall") {
           setOutOfMinutesOpen(false);
           router.push("/paywall");
-        } else if (lockedSurface(billing.customer) === "paywall") {
+        } else if (surface === "out_of_minutes" && staleSurface === "paywall") {
+          // Only surface the sheet when it was never presented this session —
+          // re-opening one the user already dismissed would feel like a nag.
           setOutOfMinutesOpen(true);
         }
       });

@@ -115,7 +115,11 @@ vi.mock("./viewModel", () => ({
 }));
 
 import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
-import HomeScreen, { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
+import HomeScreen, {
+  createAudioPlaybackPreferenceController,
+  exhaustionSurface,
+  startWithAllowance,
+} from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -375,6 +379,19 @@ describe("Start allowance gate", () => {
   });
 });
 
+
+describe("exhaustionSurface", () => {
+  it("routes on the refreshed customer instead of the stale render-time one", () => {
+    // A top-up landing between refresh and render must surface nothing.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 }))
+      .toBe("none");
+    // Hard-paywall account with no time goes to the paywall, not the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }))
+      .toBe("paywall");
+    // A freemium account out of minutes still gets the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, availableMs: 0 })).toBe("out_of_minutes");
+  });
+});
 
 describe("home billing effects", () => {
   it.each(["freemium", "unknown"])("opens the %s sheet before refresh resolves", async (kind) => {

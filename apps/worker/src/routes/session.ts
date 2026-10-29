@@ -223,11 +223,15 @@ async function prepareConfiguredSession(
   const plan = customerSession
     ? await currentCustomerPlan(env.BILLING_DB, customerSession.user.id, nowMs)
     : "free";
-  const config = await getServerConfig(env, {
-    appVersion: parsed.appVersion,
+  // The claimed platform/version are unverified hints at this point: they go to
+  // PostHog as *_client analytics properties and cannot steer flag matching.
+  const reportedHints = { appPlatform: parsed.appPlatform, appVersion: parsed.appVersion };
+  let config = await getServerConfig(env, {
+    appVersion: null,
     distinctId: `anonymous_install_${hashedInstallId}`,
     plan,
-    platform: parsed.appPlatform,
+    platform: null,
+    reported: reportedHints,
   });
   if (!config.sessions_enabled) {
     return {
@@ -249,7 +253,36 @@ async function prepareConfiguredSession(
     hashedInstallId,
     config.device_integrity_required,
   );
-  return authorized.ok ? { ...authorized, config, plan } : authorized;
+  if (!authorized.ok) {
+    return authorized;
+  }
+  // Once integrity verification attests the platform, refetch config with it as
+  // a verified identity so platform-targeted flags apply only to real devices,
+  // and re-check the attested platform's minimum version.
+  if (authorized.attestedPlatform) {
+    const verifiedConfig = await getServerConfig(env, {
+      appVersion: null,
+      distinctId: `anonymous_install_${hashedInstallId}`,
+      plan,
+      platform: authorized.attestedPlatform,
+      reported: reportedHints,
+    });
+    if (!verifiedConfig.sessions_enabled) {
+      return {
+        ok: false,
+        response: json({ error: "sessions_disabled", message: verifiedConfig.sessions_disabled_message }, 503),
+      };
+    }
+    const attestedMinimum = minimumAppVersion(verifiedConfig, authorized.attestedPlatform);
+    if (isBelowMinimumVersion(parsed.appVersion, attestedMinimum)) {
+      return {
+        ok: false,
+        response: json({ error: "app_version_unsupported", minimum_version: attestedMinimum }, 426),
+      };
+    }
+    config = verifiedConfig;
+  }
+  return { ...authorized, config, ok: true, plan };
 }
 
 function minimumAppVersion(config: ServerConfig, platform: "android" | "ios" | null): string | null {
@@ -419,11 +452,13 @@ function invalidSessionOption(body: Record<string, unknown>): string | null {
   return null;
 }
 
+// The device-integrity-declared platform takes precedence over the body's
+// self-reported app_platform; both remain hints until verification attests them.
 function parseAppPlatform(explicit: unknown, integrityPlatform: string | null): "android" | "ios" | null {
-  if (explicit === "android" || explicit === "ios") {
-    return explicit;
+  if (integrityPlatform === "android" || integrityPlatform === "ios") {
+    return integrityPlatform;
   }
-  return integrityPlatform === "android" || integrityPlatform === "ios" ? integrityPlatform : null;
+  return explicit === "android" || explicit === "ios" ? explicit : null;
 }
 
 async function authorizeCreateSession(
@@ -433,7 +468,7 @@ async function authorizeCreateSession(
   hashedInstallId: string,
   integrityRequired: boolean,
 ): Promise<
-  | { hashedInstallId: string; ok: true; requestHashVerified: boolean }
+  | { attestedPlatform: "android" | "ios" | null; hashedInstallId: string; ok: true; requestHashVerified: boolean }
   | { ok: false; response: Response }
 > {
   const integrityResult = await verifyPlayIntegrityIfRequired({
@@ -450,11 +485,22 @@ async function authorizeCreateSession(
       response: json({ error: integrityResult.code }, integrityResult.status),
     };
   }
+  // Only a verdict-bearing result attests the platform; the provider identifies
+  // which store it came from (app_attest -> ios, play_integrity -> android).
+  const attested = integrityResult.app_verdict !== null;
   return {
+    attestedPlatform: attested ? attestedPlatformFor(parsed.deviceIntegrity.provider) : null,
     hashedInstallId,
     ok: true,
     requestHashVerified: integrityResult.request_hash_verified,
   };
+}
+
+function attestedPlatformFor(provider: string | null): "android" | "ios" | null {
+  if (provider === "app_attest") {
+    return "ios";
+  }
+  return provider === "play_integrity" ? "android" : null;
 }
 
 function parseDeviceIntegrity(value: unknown): {

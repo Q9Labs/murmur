@@ -44,6 +44,10 @@ function doneButton() {
   );
 }
 
+function flushPromises() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
@@ -67,7 +71,7 @@ describe("sign-in screen", () => {
       .not.toContain("Continue with Google");
   });
 
-  it("buys the chosen plan right after signing in", () => {
+  it("leaves only after the chosen plan's purchase succeeds", async () => {
     const markup = renderToStaticMarkup(
       <SignInScreen initialState={{ email: "maya@example.com", step: "done" }} planId="$rc_annual" />,
     );
@@ -76,7 +80,75 @@ describe("sign-in screen", () => {
     expect(markup).toContain("Subscribe for $99.99 / year");
     doneButton()?.onPress?.();
     expect(signInBilling.current?.purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(router.back).not.toHaveBeenCalled();
+    await flushPromises();
     expect(router.back).toHaveBeenCalledOnce();
+  });
+
+  it("stays on the screen when the purchase is cancelled or fails", async () => {
+    const leave = vi.fn();
+    const cancelled = checkoutDoneAction({
+      availability: "ready",
+      leave,
+      plan: null,
+      planId: "$rc_annual",
+      purchasePlan: vi.fn(async () => false),
+      ui: en,
+    });
+    cancelled.onPress();
+    await flushPromises();
+    expect(leave).not.toHaveBeenCalled();
+
+    const failing = checkoutDoneAction({
+      availability: "ready",
+      leave,
+      plan: null,
+      planId: "$rc_annual",
+      purchasePlan: vi.fn(async () => {
+        throw new Error("store unavailable");
+      }),
+      ui: en,
+    });
+    failing.onPress();
+    await flushPromises();
+    expect(leave).not.toHaveBeenCalled();
+  });
+
+  it("ignores checkout taps while a purchase is in flight or billing is busy", async () => {
+    let resolvePurchase: ((purchased: boolean) => void) | undefined;
+    const purchasePlan = vi.fn(() => new Promise<boolean>((resolve) => {
+      resolvePurchase = resolve;
+    }));
+    const leave = vi.fn();
+    const action = checkoutDoneAction({
+      availability: "ready",
+      leave,
+      plan: null,
+      planId: "$rc_annual",
+      purchasePlan,
+      ui: en,
+    });
+
+    action.onPress();
+    action.onPress();
+    expect(purchasePlan).toHaveBeenCalledTimes(1);
+    resolvePurchase?.(false);
+    await flushPromises();
+
+    action.onPress();
+    expect(purchasePlan).toHaveBeenCalledTimes(2);
+
+    const busy = checkoutDoneAction({
+      availability: "busy",
+      leave,
+      plan: null,
+      planId: "$rc_annual",
+      purchasePlan,
+      ui: en,
+    });
+    busy.onPress();
+    expect(purchasePlan).toHaveBeenCalledTimes(2);
+    expect(leave).not.toHaveBeenCalled();
   });
 
   it("just goes back when signing in without a plan", () => {
@@ -88,7 +160,7 @@ describe("sign-in screen", () => {
     expect(router.back).toHaveBeenCalledOnce();
   });
 
-  it("keeps the checkout intent while the plan list reloads", () => {
+  it("keeps the checkout intent while the plan list reloads", async () => {
     const purchasePlan = vi.fn(async () => true);
     const leave = vi.fn();
     const action = checkoutDoneAction({ availability: "ready", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en });
@@ -97,6 +169,8 @@ describe("sign-in screen", () => {
     expect(action.label).toBe("Continue to checkout");
     action.onPress();
     expect(purchasePlan).toHaveBeenCalledWith("$rc_annual");
+    expect(leave).not.toHaveBeenCalled();
+    await flushPromises();
     expect(leave).toHaveBeenCalledOnce();
   });
 
@@ -126,8 +200,10 @@ describe("sign-in screen", () => {
     unavailable.onPress();
     expect(purchasePlan).not.toHaveBeenCalled();
 
-    expect(checkoutDoneAction({ availability: "busy", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en }).disabled)
-      .toBe(true);
+    const busy = checkoutDoneAction({ availability: "busy", leave, plan: null, planId: "$rc_annual", purchasePlan, ui: en });
+    expect(busy.disabled).toBe(true);
+    busy.onPress();
+    expect(purchasePlan).not.toHaveBeenCalled();
   });
 
   it("reads checkout availability from billing", () => {
