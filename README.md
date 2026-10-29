@@ -24,7 +24,7 @@ cp apps/worker/.dev.vars.example apps/worker/.dev.vars
 pnpm dev
 ```
 
-Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `apps/mobile/.env.local`. Put `OPENAI_API_KEY` in the ignored `apps/worker/.dev.vars`, then run the Worker in a second terminal:
+Set `EXPO_PUBLIC_MURMUR_WORKER_URL` in `apps/mobile/.env.local`. Native Expo development clients cannot select the production Worker, even when loading production JavaScript with a null update channel. Use an explicit nonproduction environment/URL pair for hosted development, or an HTTP loopback URL (for example `http://localhost:8787`) with local development JavaScript; the latter needs no environment label. Production installations and matching OTA channels retain their explicit production target. Put `OPENAI_API_KEY` in the ignored `apps/worker/.dev.vars`, then run the Worker in a second terminal:
 
 ```bash
 pnpm dev:worker

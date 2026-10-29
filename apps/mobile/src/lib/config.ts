@@ -1,6 +1,7 @@
 import { channel } from "expo-updates";
 import { resolveWorkerTarget } from "../../workerTarget";
 import { isUiLocale, type UiLocale } from "../i18n/types";
+import { isNativeDevelopmentClient } from "./nativeBuild";
 
 export function getWorkerBaseUrl(): string {
   return resolveWorkerTarget({
@@ -8,6 +9,7 @@ export function getWorkerBaseUrl(): string {
     environment: process.env.EXPO_PUBLIC_MURMUR_ENV,
     channel,
     nodeEnv: process.env.NODE_ENV,
+    isDevelopmentClient: isNativeDevelopmentClient(),
   });
 }
 

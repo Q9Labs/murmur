@@ -10,15 +10,60 @@ import {
 } from "./config";
 
 const updates = vi.hoisted((): { channel: string | null } => ({ channel: null }));
+const installation = vi.hoisted(() => ({ developmentClient: false }));
+vi.unmock("./nativeBuild");
 vi.mock("expo-updates", () => ({ get channel() { return updates.channel; } }));
+vi.mock("react-native", () => ({ NativeModules: {
+  get EXDevLauncher() { return installation.developmentClient ? {} : null; },
+  // This module also exists as a no-op in Android release builds.
+  ExpoDevLauncher: { loadApp() {} },
+} }));
 
-beforeEach(() => { updates.channel = null; });
+beforeEach(() => { updates.channel = null; installation.developmentClient = false; });
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("Worker URL config", () => {
+  it.each(["development", "production"])("blocks production in a null-channel native development client with %s JavaScript", (nodeEnv) => {
+    installation.developmentClient = true;
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur.q9labs.ai");
+    expect(() => getWorkerBaseUrl()).toThrow(/development clients cannot select/);
+  });
+
+  it.each(["development", "production"])("preserves an explicit null-channel production installation with %s JavaScript", (nodeEnv) => {
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur.q9labs.ai");
+    expect(getWorkerBaseUrl()).toBe("https://murmur.q9labs.ai");
+  });
+
+  it("rejects production even if a development client reports a production channel", () => {
+    installation.developmentClient = true;
+    updates.channel = "production";
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur.q9labs.ai");
+    expect(() => getWorkerBaseUrl()).toThrow(/development clients cannot select/);
+  });
+
+  it("allows a null-channel client to load an explicit preview update", () => {
+    installation.developmentClient = true;
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "preview");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "https://murmur-worker-dev.msbilal.workers.dev");
+    expect(getWorkerBaseUrl()).toBe("https://murmur-worker-dev.msbilal.workers.dev");
+  });
+
+  it("keeps the documented explicit localhost setup without an environment label", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "");
+    vi.stubEnv("EXPO_PUBLIC_MURMUR_WORKER_URL", "http://localhost:8787");
+    expect(getWorkerBaseUrl()).toBe("http://localhost:8787");
+  });
+
   it("keeps the existing explicit production build target", () => {
     updates.channel = "production";
     vi.stubEnv("EXPO_PUBLIC_MURMUR_ENV", "production");

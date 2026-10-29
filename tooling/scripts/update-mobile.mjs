@@ -16,7 +16,7 @@ if (!profile || !message || args.length > 3 || (percentage !== undefined && !/^(
   console.error("Usage: pnpm mobile:update <development|preview|testing|sandbox|production> <message> [rollout-percent] [--dry-run]");
   process.exit(2);
 }
-resolveWorkerTarget({ workerUrl: profile.env.EXPO_PUBLIC_MURMUR_WORKER_URL, environment: profile.env.EXPO_PUBLIC_MURMUR_ENV, channel: target, nodeEnv: "production" });
+resolveWorkerTarget({ workerUrl: profile.env.EXPO_PUBLIC_MURMUR_WORKER_URL, environment: profile.env.EXPO_PUBLIC_MURMUR_ENV, channel: target, nodeEnv: "production", isDevelopmentClient: profile.developmentClient === true });
 if (profile.channel !== target || !profile.environment) throw new Error("Mobile update profile must select an explicit matching channel/environment.");
 const command = ["update", "--channel", target, "--environment", profile.environment, "--message", message];
 if (percentage !== undefined) command.push("--rollout-percentage", percentage);
