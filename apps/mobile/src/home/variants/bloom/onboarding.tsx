@@ -64,7 +64,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     setupLabel: styles.setupLabel,
     setupRow: styles.setupRow,
     setupValue: styles.setupValue,
-    signInLink: styles.signInLink,
+    signInLink: compact ? styles.compactSignInLink : styles.signInLink,
     title: compact ? styles.compactTitle : styles.title,
     welcomeAccent: styles.welcomeAccent,
     welcomeBody: compact ? styles.compactWelcomeBody : styles.welcomeBody,

@@ -111,9 +111,9 @@ function createBloomStyles(theme: MurmurTheme) {
     compactOnboardingFooter: {
       alignItems: "stretch",
       marginTop: "auto",
-      paddingBottom: 16,
+      paddingBottom: 8,
       paddingHorizontal: 24,
-      paddingTop: 6,
+      paddingTop: 4,
     },
     compactOnboardingHero: {
       alignItems: "center",
@@ -133,6 +133,17 @@ function createBloomStyles(theme: MurmurTheme) {
       gap: 10,
       paddingHorizontal: 24,
       paddingTop: 4,
+    },
+    // The recovery link keeps its 44px tap target; only the grouping margin
+    // shrinks on compact screens so both welcome actions fit first paint.
+    compactSignInLink: {
+      alignItems: "center",
+      alignSelf: "center",
+      justifyContent: "center",
+      marginTop: 4,
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
     },
     consentRow: {
       alignItems: "center",

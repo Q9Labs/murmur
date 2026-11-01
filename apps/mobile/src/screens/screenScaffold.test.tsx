@@ -31,6 +31,21 @@ describe("screen scaffold", () => {
     expect(router.back).toHaveBeenCalledOnce();
   });
 
+  it("keeps the footer at its intrinsic height so every action stays reachable", () => {
+    renderToStaticMarkup(
+      <ScreenScaffold footer={<p>footer</p>} title="Consent">
+        <p>content</p>
+      </ScreenScaffold>,
+    );
+
+    // Layout contract: the footer's own scroll track never shrinks below its
+    // content height (bounded by the screen cap), so a short screen can no
+    // longer push secondary actions below the fold.
+    const footerTrack = recorded.scrollViews.at(-1)?.style as { flexShrink?: number; maxHeight?: string } | undefined;
+    expect(footerTrack?.flexShrink).toBe(0);
+    expect(footerTrack?.maxHeight).toBe("60%");
+  });
+
   it("goes home when there is nothing to go back to", () => {
     router.canGoBack.mockReturnValueOnce(false);
     renderToStaticMarkup(<ScreenScaffold title="Settings"><p>content</p></ScreenScaffold>);

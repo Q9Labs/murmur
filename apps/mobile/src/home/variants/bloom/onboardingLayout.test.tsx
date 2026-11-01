@@ -10,6 +10,7 @@ import type { VariantOnboardingProps } from "../types";
 // space itself rather than relying on space-between, which would separate the
 // heading and example card from each other.
 const harness = vi.hoisted(() => ({
+  buttonStyles: [] as Array<Record<string, unknown> | undefined>,
   scrollContentStyles: [] as Array<Record<string, unknown>>,
   texts: [] as Array<{ role?: string; style: Record<string, unknown> | undefined; value?: unknown }>,
   views: [] as Array<Record<string, unknown> | undefined>,
@@ -38,7 +39,10 @@ vi.mock("react-native", () => {
   return {
     Platform: { OS: "ios", select: (options: Record<string, unknown>) => options.ios ?? options.default },
     useColorScheme: () => "light",
-    Pressable: ({ children }: { children?: ReactNode }) => <button>{children}</button>,
+    Pressable: ({ children, style }: { children?: ReactNode; style?: unknown }) => {
+      harness.buttonStyles.push(flattenStyle(style));
+      return <button>{children}</button>;
+    },
     ScrollView,
     StatusBar: () => null,
     StyleSheet: { create: <T,>(styles: T): T => styles },
@@ -97,6 +101,7 @@ function renderStep(step: VariantOnboardingProps["step"], overrides?: Partial<Va
 }
 
 beforeEach(() => {
+  harness.buttonStyles.length = 0;
   harness.scrollContentStyles.length = 0;
   harness.texts.length = 0;
   harness.views.length = 0;
@@ -167,7 +172,16 @@ describe("Bloom onboarding layout contract", () => {
       (entry) => entry.style?.fontSize === 17 && entry.style?.lineHeight === 24,
     );
     expect(sentences).toHaveLength(2);
-    // The footer still owns the free space below the grouped content.
-    expect(harness.views.at(-1)?.marginTop).toBe("auto");
+    // The footer still owns the free space below the grouped content, but its
+    // own paddings tighten so both actions fit a 480x680 first paint.
+    const footer = harness.views.at(-1);
+    expect(footer?.marginTop).toBe("auto");
+    expect(footer?.paddingBottom).toBeLessThanOrEqual(8);
+    expect(footer?.paddingTop).toBeLessThanOrEqual(4);
+    // The recovery link keeps its accessibility target while grouping closer.
+    const link = harness.buttonStyles.find((pressable) => pressable?.minHeight === 44 && pressable?.marginTop !== undefined);
+    expect(link?.marginTop).toBeLessThanOrEqual(4);
+    expect(link?.minHeight).toBe(44);
+    expect(link?.minWidth).toBe(44);
   });
 });

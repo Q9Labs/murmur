@@ -161,9 +161,12 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       paddingHorizontal: 24,
       paddingTop: 16,
     },
+    // The footer keeps its intrinsic height up to the cap so every action stays
+    // reachable at first paint; beyond the cap it scrolls inside its own track
+    // and the body owns whatever space is left.
     footerScroll: {
       flexGrow: 0,
-      flexShrink: 1,
+      flexShrink: 0,
       maxHeight: "60%",
     },
     heroFooter: {
