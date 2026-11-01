@@ -85,16 +85,15 @@ function createBloomStyles(theme: MurmurTheme) {
       borderColor: theme.hairline,
       borderRadius: 20,
       borderWidth: 1,
-      gap: 8,
+      gap: 6,
       marginHorizontal: 20,
-      padding: 14,
+      padding: 12,
     },
     compactExampleMeta: {
       color: theme.muted,
       fontSize: 13,
       fontWeight: "600",
       paddingHorizontal: 20,
-      paddingTop: 4,
     },
     compactExampleSentence: {
       color: theme.primary,
@@ -111,9 +110,9 @@ function createBloomStyles(theme: MurmurTheme) {
     compactOnboardingFooter: {
       alignItems: "stretch",
       marginTop: "auto",
-      paddingBottom: 8,
+      paddingBottom: 6,
       paddingHorizontal: 24,
-      paddingTop: 4,
+      paddingTop: 2,
     },
     compactOnboardingHero: {
       alignItems: "center",
@@ -130,9 +129,8 @@ function createBloomStyles(theme: MurmurTheme) {
       lineHeight: 34,
     },
     compactWelcomeBody: {
-      gap: 10,
+      gap: 6,
       paddingHorizontal: 24,
-      paddingTop: 4,
     },
     // The recovery link keeps its 44px tap target; only the grouping margin
     // shrinks on compact screens so both welcome actions fit first paint.

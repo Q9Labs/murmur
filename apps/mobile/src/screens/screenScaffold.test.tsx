@@ -64,13 +64,13 @@ describe("screen scaffold", () => {
       </ScreenScaffold>,
     );
 
-    // Contract: the hero body top-aligns and the artwork shrinks so the title,
-    // lead and disclosure content reach the first paint with the actions —
-    // the same surface's metrics stay untouched on tall screens.
+    // Contract: the hero body top-aligns and the artwork is removed entirely so
+    // the title, lead and disclosure content reach the first paint with the
+    // actions — the same surface keeps its artwork on tall screens.
     const body = recorded.scrollViews.at(0)?.contentContainerStyle;
     expect(flattenStyle(body)?.justifyContent).toBe("flex-start");
-    const art = flattenStyle(recorded.images.at(0)?.style);
-    expect(art?.height).toBe(96);
+    expect(recorded.images).toHaveLength(0);
+    expect(flattenStyle(body)?.paddingTop).toBeLessThanOrEqual(8);
   });
 
   it("keeps the centred full-size hero on tall screens", () => {

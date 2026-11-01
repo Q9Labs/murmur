@@ -23,7 +23,7 @@ export function ScreenScaffold(props: {
   const { direction } = useUiLocale();
   const serif = props.serif === true;
   // On short screens the ornamental art must not push the question below the
-  // fold: reduce it and top-align the hero body so title, lead and disclosure
+  // fold: hide it and top-align the hero body so title, lead and disclosure
   // content arrive with the actions; tall screens keep the centred artwork.
   const compact = useWindowDimensions().height < 640;
   return (
@@ -72,13 +72,15 @@ function HeroBody(props: {
   return (
     <View style={[styles.heroBody, props.compact ? styles.compactHeroBody : null]}>
       <View style={styles.hero}>
-        <Image
-          accessibilityIgnoresInvertColors
-          accessible={false}
-          resizeMode="contain"
-          source={props.artwork}
-          style={[styles.heroArtwork, props.compact ? styles.compactHeroArtwork : null]}
-        />
+        {props.compact ? null : (
+          <Image
+            accessibilityIgnoresInvertColors
+            accessible={false}
+            resizeMode="contain"
+            source={props.artwork}
+            style={styles.heroArtwork}
+          />
+        )}
         <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
         {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
       </View>

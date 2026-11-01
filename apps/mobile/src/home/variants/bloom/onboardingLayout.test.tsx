@@ -167,7 +167,7 @@ describe("Bloom onboarding layout contract", () => {
     const heading = harness.texts.find((entry) => entry.role === "header");
     expect(heading?.style?.fontSize).toBe(28);
     const card = harness.views.find((view) => view?.borderRadius === 20);
-    expect(card?.padding).toBe(14);
+    expect(card?.padding).toBe(12);
     const sentences = harness.texts.filter(
       (entry) => entry.style?.fontSize === 17 && entry.style?.lineHeight === 24,
     );
@@ -176,8 +176,8 @@ describe("Bloom onboarding layout contract", () => {
     // own paddings tighten so both actions fit a 480x680 first paint.
     const footer = harness.views.at(-1);
     expect(footer?.marginTop).toBe("auto");
-    expect(footer?.paddingBottom).toBeLessThanOrEqual(8);
-    expect(footer?.paddingTop).toBeLessThanOrEqual(4);
+    expect(footer?.paddingBottom).toBeLessThanOrEqual(6);
+    expect(footer?.paddingTop).toBeLessThanOrEqual(2);
     // The recovery link keeps its accessibility target while grouping closer.
     const link = harness.buttonStyles.find((pressable) => pressable?.minHeight === 44 && pressable?.marginTop !== undefined);
     expect(link?.marginTop).toBeLessThanOrEqual(4);
