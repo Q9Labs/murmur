@@ -36,7 +36,7 @@
     "static:fallow:health": "fallow health --score --hotspots --targets --min-score ${FALLOW_MIN_SCORE:-45}",
     "static:semgrep": "node tooling/gates/require-tool.mjs semgrep \"Install the official Semgrep CLI, then rerun pnpm run static:semgrep.\" && semgrep scan --config .semgrep --error",
     "security:secrets": "node tooling/gates/require-tool.mjs gitleaks \"Install the official Gitleaks CLI, then rerun pnpm run security:secrets.\" && gitleaks detect --source . --redact --verbose",
-    "security:osv": "node tooling/gates/require-tool.mjs osv-scanner \"Install the official OSV-Scanner CLI, then rerun pnpm run security:osv.\" && node --test tooling/gates/deepmerge-patch.test.mjs && node tooling/gates/osv-scan.mjs",
+    "security:osv": "node tooling/gates/require-tool.mjs osv-scanner \"Install the official OSV-Scanner CLI, then rerun pnpm run security:osv.\" && node --test tooling/gates/deepmerge-patch.test.mjs && node --test tooling/gates/dependency-compat.test.mjs && node tooling/gates/osv-scan.mjs",
     "deps:syncpack": "syncpack lint --specifier-types missing,unsupported",
     "lint:spelling": "cspell apps/mobile/app apps/mobile/src apps/worker/src packages/protocol/src tooling package.json README.md AGENTS.md CONTRIBUTING.md docs/*.md docs/legal/*.md",
     "react:doctor": "cd apps/mobile && pnpm dlx expo-doctor@1.20.0",

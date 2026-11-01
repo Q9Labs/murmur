@@ -16,9 +16,10 @@ overrides:
   js-yaml: ^4.3.2
   "glob@>=9 <14": 14.0.2
   "minimatch@>=9 <11": 11.0.1
-  "glob@7.2.3>minimatch": 11.0.1
+  # glob 7 reads minimatch 3 private internals, so no override can bridge them:
+  # jest 29 is the only consumer and jest 30 uses modern glob/minimatch APIs.
+  jest: ^30.0.0
   "babel-plugin-istanbul@6.1.1>test-exclude": 8.0.0
-  "minimatch@3.1.5>brace-expansion": 2.1.7
   nanoid: ^3.3.17
   node-forge: ^1.4.1
   postcss: ^8.5.18

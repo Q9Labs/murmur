@@ -177,6 +177,7 @@ words:
   - nmad
   - nonexpiring
   - noopener
+  - nodir
   - nosniff
   - notnull
   - Noto
