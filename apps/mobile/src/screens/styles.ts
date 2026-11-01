@@ -153,6 +153,24 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     heroBody: {
       gap: 32,
     },
+    // Compact hero screens trade ornament for comprehension on short screens:
+    // top-aligned body, a smaller illustration, and tighter grouping so the
+    // question and every consent action share the first paint.
+    compactHeroArtwork: {
+      height: 96,
+      marginBottom: 2,
+      width: 137,
+    },
+    compactHeroBody: {
+      gap: 20,
+    },
+    compactHeroContent: {
+      flexGrow: 1,
+      justifyContent: "flex-start",
+      paddingBottom: 24,
+      paddingHorizontal: 24,
+      paddingTop: 8,
+    },
     // Padding more below than above lifts the centred block slightly above true centre.
     heroContent: {
       flexGrow: 1,

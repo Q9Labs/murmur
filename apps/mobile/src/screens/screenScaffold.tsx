@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Image, type ImageSourcePropType, Pressable, ScrollView, StatusBar, Text, View } from "react-native";
+import { Image, type ImageSourcePropType, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
@@ -22,30 +22,23 @@ export function ScreenScaffold(props: {
   const { colors, styles } = useScreenStyles();
   const { direction } = useUiLocale();
   const serif = props.serif === true;
+  // On short screens the ornamental art must not push the question below the
+  // fold: reduce it and top-align the hero body so title, lead and disclosure
+  // content arrive with the actions; tall screens keep the centred artwork.
+  const compact = useWindowDimensions().height < 640;
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
       <ScaffoldHeader artwork={props.artwork} serif={serif} title={props.title} />
       <ScrollView
-        contentContainerStyle={props.artwork ? styles.heroContent : styles.content}
+        contentContainerStyle={props.artwork ? (compact ? styles.compactHeroContent : styles.heroContent) : styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {props.artwork ? (
-          <View style={styles.heroBody}>
-            <View style={styles.hero}>
-              <Image
-                accessibilityIgnoresInvertColors
-                accessible={false}
-                resizeMode="contain"
-                source={props.artwork}
-                style={styles.heroArtwork}
-              />
-              <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
-              {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
-            </View>
+          <HeroBody artwork={props.artwork} compact={compact} lead={props.lead} styles={styles} title={props.title}>
             {props.children}
-          </View>
+          </HeroBody>
         ) : (
           <>
             {serif ? <SerifHead lead={props.lead} styles={styles} title={props.title} /> : null}
@@ -64,6 +57,33 @@ export function ScreenScaffold(props: {
         </ScrollView>
       ) : null}
     </SafeAreaView>
+  );
+}
+
+function HeroBody(props: {
+  artwork: ImageSourcePropType;
+  children?: ReactNode;
+  compact: boolean;
+  lead?: string;
+  styles: ScreenStyles;
+  title: string;
+}): ReactNode {
+  const { styles } = props;
+  return (
+    <View style={[styles.heroBody, props.compact ? styles.compactHeroBody : null]}>
+      <View style={styles.hero}>
+        <Image
+          accessibilityIgnoresInvertColors
+          accessible={false}
+          resizeMode="contain"
+          source={props.artwork}
+          style={[styles.heroArtwork, props.compact ? styles.compactHeroArtwork : null]}
+        />
+        <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
+        {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
+      </View>
+      {props.children}
+    </View>
   );
 }
 
