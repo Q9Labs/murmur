@@ -137,6 +137,39 @@ describe("mobile Murmur authentication client", () => {
     expect(auth.getCookie).toHaveBeenCalledOnce();
   });
 
+  it("treats a server-side anonymous session as an existing guest session", async () => {
+    auth.getSession
+      .mockResolvedValueOnce({ data: null })
+      .mockResolvedValueOnce({ data: { user: { id: "guest-1", isAnonymous: true } } });
+    auth.signInAnonymous.mockResolvedValue({
+      error: {
+        code: "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+        message: "Anonymous users cannot sign in anonymously again.",
+      },
+    });
+
+    const headers = await authenticatedWorkerHeaders();
+
+    expect(headers.get("cookie")).toBe("murmur.session=test-cookie");
+    expect(auth.getSession).toHaveBeenCalledTimes(2);
+    expect(auth.signInAnonymous).toHaveBeenCalledOnce();
+  });
+
+  it("still surfaces account failure when no session remains after anonymous sign-in", async () => {
+    auth.getSession.mockResolvedValue({ data: null });
+    auth.signInAnonymous.mockResolvedValue({
+      error: {
+        code: "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+        message: "Anonymous users cannot sign in anonymously again.",
+      },
+    });
+
+    await expect(authenticatedWorkerHeaders()).rejects.toThrow(
+      "Anonymous users cannot sign in anonymously again.",
+    );
+    expect(auth.getSession).toHaveBeenCalledTimes(2);
+  });
+
   it("delegates recovery and deletion to Better Auth", async () => {
     await sendEmailSignInCode("person@example.com");
     await verifyEmailSignInCode("person@example.com", "123456");

@@ -57,9 +57,23 @@ async function ensureMurmurSession(): Promise<void> {
   }
 }
 
+const alreadyAnonymousCode = "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY";
+
 async function createGuestSession(): Promise<void> {
   const created = await murmurAuthClient.signIn.anonymous();
   if (created.error) {
+    const alreadyAnonymous =
+      created.error.code === alreadyAnonymousCode ||
+      (created.error.message ?? "").includes(alreadyAnonymousCode);
+    if (alreadyAnonymous) {
+      // The server still resolves a live anonymous session for this device
+      // (e.g. the token survived while a cookie/session probe returned null),
+      // so the "ensure a session exists" contract is already satisfied.
+      const existing = await murmurAuthClient.getSession();
+      if (existing.data) {
+        return;
+      }
+    }
     throw new Error(created.error.message ?? "Murmur could not create an account.");
   }
 }

@@ -297,6 +297,7 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     onboardingFooter: {
       alignItems: "stretch",
+      marginTop: "auto",
       paddingBottom: 26,
       paddingHorizontal: 28,
       paddingTop: 10,
