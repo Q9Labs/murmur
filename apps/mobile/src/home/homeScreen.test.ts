@@ -37,6 +37,9 @@ vi.mock("../lib/billing/context", () => ({
   useMurmurBilling: () => state.billing,
 }));
 vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
+vi.mock("expo-localization", () => ({
+  getLocales: () => [{ languageCode: "ar", languageTag: "ar" }],
+}));
 vi.mock("expo-network", () => ({
   addNetworkStateListener: () => ({ remove: vi.fn() }),
   getNetworkStateAsync: vi.fn(async () => ({ type: "wifi" })),

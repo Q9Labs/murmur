@@ -6,6 +6,7 @@ import {
   type MurmurTheme,
   useMurmurTheme,
 } from "../home/theme";
+import { serifFontFamily } from "../lib/serifFont";
 import { uiTextDirectionStyle, useUiLocale } from "../i18n/runtime";
 import type { UiDirection } from "../i18n/types";
 
@@ -85,6 +86,21 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
       height: 168,
       marginBottom: 4,
       width: 240,
+    },
+    backRow: {
+      alignItems: "center",
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      gap: 2,
+      justifyContent: "center",
+      marginStart: -10,
+      minHeight: 44,
+      paddingHorizontal: 10,
+    },
+    backText: {
+      color: theme.primary,
+      fontSize: 16,
+      fontWeight: "600",
     },
     emptyBody: {
       color: theme.secondaryText,
@@ -310,6 +326,26 @@ function createScreenStyles(theme: MurmurTheme, direction: UiDirection) {
     screen: {
       backgroundColor: theme.background,
       flex: 1,
+    },
+    serifHead: {
+      marginBottom: 28,
+    },
+    serifLead: {
+      ...text,
+      color: theme.secondaryText,
+      fontSize: 16,
+      fontWeight: "500",
+      lineHeight: 24,
+      marginTop: 12,
+    },
+    serifTitle: {
+      ...text,
+      color: theme.primary,
+      fontFamily: serifFontFamily,
+      fontSize: 34,
+      fontWeight: "800",
+      letterSpacing: -0.4,
+      lineHeight: 42,
     },
     title: {
       ...text,

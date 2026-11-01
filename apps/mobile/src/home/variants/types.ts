@@ -36,6 +36,7 @@ export type VariantOnboardingProps = {
   canStart: boolean;
   captureSource: AudioCaptureSource;
   devicePlaybackSupported: boolean;
+  onAlreadySubscribed?: () => void;
   onContinue: () => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenPicker: (mode: PickerMode) => void;

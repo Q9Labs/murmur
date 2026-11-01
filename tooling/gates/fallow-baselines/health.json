@@ -16,6 +16,9 @@
     "apps/mobile/src/home/homeScreen.tsx": {
       "crap_moderate": {
         "count": 2
+      },
+      "complexity_critical": {
+        "count": 1
       }
     },
     "apps/mobile/src/lib/live-translation/useLiveTranslation.ts": {

@@ -13,12 +13,22 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
   const { locale, t } = useUiLocale();
   const bloomText: OnboardingText = {
     agreeLabel: t("onboarding.agreeAndContinue"),
+    alreadySubscribed: t("onboarding.alreadySubscribed"),
     continueLabel: t("onboarding.continue"),
+    exampleCard: {
+      label: t("onboarding.exampleLabel"),
+      source: t("onboarding.exampleSource"),
+      sourceLanguage: t("onboarding.exampleSourceLanguage"),
+      target: t("onboarding.exampleTarget"),
+      targetLanguage: t("onboarding.exampleTargetLanguage"),
+    },
+    getStarted: t("onboarding.getStarted"),
     languagesTitle: t("onboarding.languagesTitle"),
     listenLabel: t("onboarding.listen"),
     privacyTitle: t("onboarding.privacyTitle"),
     sourceLabel: t("onboarding.sourceLabel"),
     targetLabel: t("onboarding.targetLabel"),
+    welcomeAccent: t("onboarding.welcomeAccent"),
     welcomeCopy: t("onboarding.welcomeCopy"),
     welcomeTitle: t("onboarding.welcomeTitle"),
   };
@@ -31,6 +41,13 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     checkboxMark: styles.checkboxMark,
     consentRow: styles.consentRow,
     copy: styles.copy,
+    exampleBadge: styles.exampleBadge,
+    exampleBadgeDot: styles.exampleBadgeDot,
+    exampleCard: styles.exampleCard,
+    exampleLabel: styles.exampleLabel,
+    exampleMeta: styles.exampleMeta,
+    exampleRule: styles.exampleRule,
+    exampleSentence: styles.exampleSentence,
     footer: styles.onboardingFooter,
     hero: styles.onboardingHero,
     iconColor: colors.primary,
@@ -42,7 +59,9 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     setupLabel: styles.setupLabel,
     setupRow: styles.setupRow,
     setupValue: styles.setupValue,
+    signInLink: styles.signInLink,
     title: styles.title,
+    welcomeAccent: styles.welcomeAccent,
     welcomeBody: styles.welcomeBody,
   };
 

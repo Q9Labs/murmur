@@ -1,8 +1,9 @@
+import { getLocales } from "expo-localization";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Network from "expo-network";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { BackHandler, type ScrollView } from "react-native";
 
 import {
@@ -60,6 +61,7 @@ import {
   setStoredAudioPlaybackEnabled,
 } from "./audioPlaybackPreference";
 import { HomeExperience } from "./experience";
+import { defaultTargetLanguage } from "./defaultTargetLanguage";
 import { isLanguagePairReady, normalizeLanguagePair } from "./languageAvailability";
 import { OnboardingScreen } from "./onboardingScreen";
 import { deleteStoredUiVariant } from "./variants/preference";
@@ -210,6 +212,8 @@ export function createAudioPlaybackPreferenceController(options: {
 // Decides which locked surface applies from the *refreshed* customer, not the
 // render-time one — a top-up between refresh and render must not reopen the
 // out-of-minutes sheet or bounce a paid customer into the paywall.
+type LockedSurface = ReturnType<typeof lockedSurface>;
+
 export function exhaustionSurface(
   customer: MurmurCustomer | null,
 ): "none" | "out_of_minutes" | "paywall" {
@@ -308,10 +312,230 @@ function useExhaustionRouting(params: {
   return { dismissOutOfMinutes };
 }
 
+type HomeStartupActions = {
+  audioPreferenceController: AudioPlaybackPreferenceController;
+  setAnonymousAnalyticsEnabled: Dispatch<SetStateAction<boolean | null>>;
+  setAudioState: Dispatch<SetStateAction<AudioStateEvent | null>>;
+  setCaptureCapabilities: Dispatch<SetStateAction<CaptureCapabilities>>;
+  setNetworkType: Dispatch<SetStateAction<string>>;
+  setOnboardingStep: Dispatch<SetStateAction<OnboardingStep>>;
+  setPrivacyAcknowledged: Dispatch<SetStateAction<boolean>>;
+};
+
+function useHomeStartupState(actions: HomeStartupActions): void {
+  const {
+    audioPreferenceController,
+    setAnonymousAnalyticsEnabled,
+    setAudioState,
+    setCaptureCapabilities,
+    setNetworkType,
+    setOnboardingStep,
+    setPrivacyAcknowledged,
+  } = actions;
+
+  useEffect(() => {
+    let mounted = true;
+    void initializeAnonymousAnalytics()
+      .then((enabled) => {
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(enabled);
+        }
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
+        if (mounted) {
+          setAnonymousAnalyticsEnabled(false);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [setAnonymousAnalyticsEnabled]);
+
+  useEffect(() => {
+    let mounted = true;
+    void hasAcknowledgedPrivacyDisclosure()
+      .then((acknowledged) => {
+        if (mounted) {
+          setPrivacyAcknowledged(acknowledged);
+          if (acknowledged) {
+            setOnboardingStep("done");
+          }
+        }
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "read_privacy_acknowledgement" });
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [setOnboardingStep, setPrivacyAcknowledged]);
+
+  useEffect(() => {
+    void audioPreferenceController.restore();
+    return () => audioPreferenceController.dispose();
+  }, [audioPreferenceController]);
+
+  useEffect(() => {
+    let mounted = true;
+    void MurmurAudioModule.getCaptureCapabilities()
+      .then((capabilities) => {
+        if (mounted) {
+          setCaptureCapabilities(capabilities);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [setCaptureCapabilities]);
+
+  useEffect(() => {
+    const subscription = MurmurAudioModule.addListener(
+      "onAudioState",
+      (nextState: AudioStateEvent) => {
+        setAudioState((current) => newestAudioState(current, nextState));
+      },
+    );
+    void MurmurAudioModule.getAudioState()
+      .then((nextState) => {
+        setAudioState((current) => newestAudioState(current, nextState as AudioStateEvent));
+      })
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, {
+          operation: "read_audio_state",
+          stage: "audio_capture",
+        });
+      });
+    return () => subscription.remove();
+  }, [setAudioState]);
+
+  useEffect(() => {
+    let mounted = true;
+    void Network.getNetworkStateAsync().then((state) => {
+      if (mounted) {
+        setNetworkType(state.type ?? "unknown");
+      }
+    }).catch(() => undefined);
+    const subscription = Network.addNetworkStateListener((state) => {
+      setNetworkType(state.type ?? "unknown");
+    });
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, [setNetworkType]);
+}
+
+function captureSourceGate(
+  source: AudioCaptureSource,
+  devicePlaybackSupported: boolean,
+  phoneAudioEnabled: boolean,
+): "allow" | "ignore" | "route-phone-audio" {
+  if (source === "device_playback" && !devicePlaybackSupported) {
+    return "ignore";
+  }
+  if (source === "device_playback" && !phoneAudioEnabled) {
+    return "route-phone-audio";
+  }
+  return "allow";
+}
+
+function usePhoneAudioCaptureReturn(params: {
+  capture: string | undefined;
+  phoneAudioAvailable: boolean;
+  router: Pick<ReturnType<typeof useRouter>, "setParams">;
+  setCaptureSource: Dispatch<SetStateAction<AudioCaptureSource>>;
+}): void {
+  const { capture, phoneAudioAvailable, router, setCaptureSource } = params;
+  // The Phone audio screen returns here with ?capture=phone-audio once the listener can use it.
+  useEffect(() => {
+    if (capture === "phone-audio" && phoneAudioAvailable) {
+      setCaptureSource("device_playback");
+      router.setParams({ capture: undefined });
+    }
+  }, [capture, phoneAudioAvailable, router, setCaptureSource]);
+}
+
+// Every completed session brings a new decision; each one gets at most one prompt.
+function usePostSessionPromptRouting(
+  ratingDecision: SessionRatingDecision | null,
+  insightsConsent: boolean | null,
+  phoneAudioGiftOfferable: boolean,
+  setRatingOpen: Dispatch<SetStateAction<boolean>>,
+): void {
+  const router = useRouter();
+  const handledRatingDecisionRef = useRef<SessionRatingDecision | null>(null);
+  useEffect(() => {
+    if (!ratingDecision || handledRatingDecisionRef.current === ratingDecision) {
+      return;
+    }
+    handledRatingDecisionRef.current = ratingDecision;
+    const showPrompt = (prompt: PostSessionPrompt | null): void => {
+      if (prompt === "insights_consent") {
+        router.push("/insights-consent");
+      } else if (prompt === "phone_audio_gift") {
+        router.push("/phone-audio");
+      } else if (prompt === "rating") {
+        setRatingOpen(true);
+      }
+    };
+    choosePostSessionPrompt({
+      decision: ratingDecision,
+      insightsConsent,
+      phoneAudioGiftOfferable,
+    })
+      .then(showPrompt)
+      .catch((failure: unknown) => {
+        captureMobileFailure(failure, { operation: "choose_post_session_prompt" });
+      });
+  }, [insightsConsent, phoneAudioGiftOfferable, ratingDecision, router, setRatingOpen]);
+}
+
+function runPrimaryAction(args: {
+  canStart: boolean;
+  customerHasTime: boolean;
+  customerLockedSurface: LockedSurface;
+  isLive: boolean;
+  liveError: string | null;
+  privacyAcknowledged: boolean;
+  showOutOfMinutes: () => void;
+  showPrivacyConsent: () => void;
+  showUpdateRequired: () => void;
+  startLiveTranslation: () => Promise<unknown>;
+  stop: () => Promise<unknown>;
+}): Promise<unknown> | undefined {
+  if (args.isLive) {
+    return args.stop();
+  }
+  if (isUpdateRequiredError(args.liveError)) {
+    args.showUpdateRequired();
+    return undefined;
+  }
+  if (
+    isAllowanceExhaustedError(args.liveError) &&
+    !args.customerHasTime &&
+    args.customerLockedSurface === "out_of_minutes"
+  ) {
+    args.showOutOfMinutes();
+    return undefined;
+  }
+  if (!args.canStart) {
+    return undefined;
+  }
+  if (!args.privacyAcknowledged) {
+    args.showPrivacyConsent();
+    return undefined;
+  }
+  return args.startLiveTranslation();
+}
+
 export default function HomeScreen(): ReactNode {
   const { deleteLocale, locale: uiLocale, t } = useUiLocale();
   const [sourceLanguageCode, setSourceLanguageCode] = useState<SourceLanguageCode>("en");
-  const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>("ar");
+  const [targetLanguageCode, setTargetLanguageCode] = useState<LanguageCode>(() =>
+    defaultTargetLanguage(getLocales()),
+  );
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
@@ -475,98 +699,15 @@ export default function HomeScreen(): ReactNode {
     }
   }, [anonymousAnalyticsEnabled, onboardingStep]);
 
-  useEffect(() => {
-    let mounted = true;
-    void initializeAnonymousAnalytics()
-      .then((enabled) => {
-        if (mounted) {
-          setAnonymousAnalyticsEnabled(enabled);
-        }
-      })
-      .catch((failure: unknown) => {
-        captureMobileFailure(failure, { operation: "initialize_anonymous_analytics" });
-        if (mounted) {
-          setAnonymousAnalyticsEnabled(false);
-        }
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    void hasAcknowledgedPrivacyDisclosure()
-      .then((acknowledged) => {
-        if (mounted) {
-          setPrivacyAcknowledged(acknowledged);
-          if (acknowledged) {
-            setOnboardingStep("done");
-          }
-        }
-      })
-      .catch((failure: unknown) => {
-        captureMobileFailure(failure, { operation: "read_privacy_acknowledgement" });
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    void audioPreferenceController.restore();
-    return () => audioPreferenceController.dispose();
-  }, [audioPreferenceController]);
-
-  useEffect(() => {
-    let mounted = true;
-    void MurmurAudioModule.getCaptureCapabilities()
-      .then((capabilities) => {
-        if (mounted) {
-          setCaptureCapabilities(capabilities);
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const subscription = MurmurAudioModule.addListener(
-      "onAudioState",
-      (nextState: AudioStateEvent) => {
-        setAudioState((current) => newestAudioState(current, nextState));
-      },
-    );
-    void MurmurAudioModule.getAudioState()
-      .then((nextState) => {
-        setAudioState((current) => newestAudioState(current, nextState as AudioStateEvent));
-      })
-      .catch((failure: unknown) => {
-        captureMobileFailure(failure, {
-          operation: "read_audio_state",
-          stage: "audio_capture",
-        });
-      });
-    return () => subscription.remove();
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    void Network.getNetworkStateAsync().then((state) => {
-      if (mounted) {
-        setNetworkType(state.type ?? "unknown");
-      }
-    }).catch(() => undefined);
-    const subscription = Network.addNetworkStateListener((state) => {
-      setNetworkType(state.type ?? "unknown");
-    });
-    return () => {
-      mounted = false;
-      subscription.remove();
-    };
-  }, []);
+  useHomeStartupState({
+    audioPreferenceController,
+    setAnonymousAnalyticsEnabled,
+    setAudioState,
+    setCaptureCapabilities,
+    setNetworkType,
+    setOnboardingStep,
+    setPrivacyAcknowledged,
+  });
 
   useEffect(() => {
     if (!autoScrollRef.current && userInteractedRef.current) {
@@ -640,10 +781,15 @@ export default function HomeScreen(): ReactNode {
   }
 
   async function selectCaptureSource(source: AudioCaptureSource): Promise<void> {
-    if (source === "device_playback" && !captureCapabilities.device_playback_supported) {
+    const gate = captureSourceGate(
+      source,
+      captureCapabilities.device_playback_supported,
+      services.features.phoneAudio,
+    );
+    if (gate === "ignore") {
       return;
     }
-    if (source === "device_playback" && !services.features.phoneAudio) {
+    if (gate === "route-phone-audio") {
       router.push("/phone-audio");
       return;
     }
@@ -663,60 +809,33 @@ export default function HomeScreen(): ReactNode {
   }
 
   async function handlePrimaryAction(): Promise<void> {
-    if (viewModel.isLive) {
-      await live.stop();
-      return;
-    }
-    if (isUpdateRequiredError(live.error)) {
-      setUpdateRequiredOpen(true);
-      return;
-    }
-    if (isAllowanceExhaustedError(live.error) && !hasTimeAvailable(billing.customer) &&
-      lockedSurface(billing.customer) === "out_of_minutes") {
-      setOutOfMinutesOpen(true);
-      return;
-    }
-    if (!viewModel.canStart) {
-      return;
-    }
-    if (!privacyAcknowledged) {
-      setPrivacyConsentChecked(false);
-      setOnboardingStep("privacy");
-      return;
-    }
-    await startLiveTranslation();
+    await runPrimaryAction({
+      canStart: viewModel.canStart,
+      customerHasTime: hasTimeAvailable(billing.customer),
+      customerLockedSurface: lockedSurface(billing.customer),
+      isLive: viewModel.isLive,
+      liveError: live.error,
+      privacyAcknowledged,
+      showOutOfMinutes: () => setOutOfMinutesOpen(true),
+      showPrivacyConsent: () => {
+        setPrivacyConsentChecked(false);
+        setOnboardingStep("privacy");
+      },
+      showUpdateRequired: () => setUpdateRequiredOpen(true),
+      startLiveTranslation,
+      stop: () => live.stop(),
+    });
   }
 
-  // Every completed session brings a new decision; each one gets at most one prompt.
   const ratingDecision = live.rating_decision;
-  const handledRatingDecisionRef = useRef<SessionRatingDecision | null>(null);
   const phoneAudioGiftOfferable =
     services.phoneAudioGift.claimable && captureCapabilities.device_playback_supported;
-  useEffect(() => {
-    if (!ratingDecision || handledRatingDecisionRef.current === ratingDecision) {
-      return;
-    }
-    handledRatingDecisionRef.current = ratingDecision;
-    choosePostSessionPrompt({
-      decision: ratingDecision,
-      insightsConsent: services.insightsConsent,
-      phoneAudioGiftOfferable,
-    })
-      .then(showPostSessionPrompt)
-      .catch((failure: unknown) => {
-        captureMobileFailure(failure, { operation: "choose_post_session_prompt" });
-      });
-  }, [phoneAudioGiftOfferable, ratingDecision, services.insightsConsent]);
-
-  function showPostSessionPrompt(prompt: PostSessionPrompt | null): void {
-    if (prompt === "insights_consent") {
-      router.push("/insights-consent");
-    } else if (prompt === "phone_audio_gift") {
-      router.push("/phone-audio");
-    } else if (prompt === "rating") {
-      setRatingOpen(true);
-    }
-  }
+  usePostSessionPromptRouting(
+    ratingDecision,
+    services.insightsConsent,
+    phoneAudioGiftOfferable,
+    setRatingOpen,
+  );
 
   function swapLanguages(): void {
     if (sourceLanguageCode === autoSourceLanguageCode) {
@@ -761,14 +880,8 @@ export default function HomeScreen(): ReactNode {
   }), [anonymousAnalyticsEnabled, settingsLocked, settingsMessage]);
   usePublishSettingsControls(settingsControls);
 
-  // The Phone audio screen returns here with ?capture=phone-audio once the listener can use it.
   const phoneAudioAvailable = services.features.phoneAudio;
-  useEffect(() => {
-    if (capture === "phone-audio" && phoneAudioAvailable) {
-      setCaptureSource("device_playback");
-      router.setParams({ capture: undefined });
-    }
-  }, [capture, phoneAudioAvailable, router]);
+  usePhoneAudioCaptureReturn({ capture, phoneAudioAvailable, router, setCaptureSource });
 
   if (onboardingStep !== "done") {
     return (
@@ -776,6 +889,7 @@ export default function HomeScreen(): ReactNode {
         canStart={viewModel.canStart}
         captureSource={captureSource}
         devicePlaybackSupported={captureCapabilities.device_playback_supported}
+        onAlreadySubscribed={() => router.push("/sign-in")}
         onContinue={() => {
           captureMobileTelemetry({ event: "onboarding_step_completed", step: "welcome" });
           setOnboardingStep("privacy");

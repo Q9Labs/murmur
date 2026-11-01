@@ -60,6 +60,7 @@ export function PlansScreen(props: { initialTerm?: PlanTerm }): ReactNode {
           label={t("account.restorePurchases")}
           onPress={() => void billing.restorePurchases()}
         />
+        <LinkRow label={t("paywall.signIn")} onPress={() => router.push("/sign-in")} />
         <LinkRow label={t("settings.termsOfUse")} onPress={() => void openLegalLink("terms", "billing")} />
         <LinkRow label={t("settings.privacyPolicy")} onPress={() => void openLegalLink("privacy", "billing")} />
       </RowGroup>

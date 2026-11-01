@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import {
   Animated,
   Image,
+  Linking,
   Pressable,
   StatusBar,
   Text,
@@ -80,6 +81,17 @@ export function BloomShell(props: VariantShellProps): ReactNode {
             {viewModel.statusText}
           </Text>
         )}
+        {viewModel.microphoneDenied ? (
+          <Pressable
+            accessibilityLabel={t("accessibility.openSettings")}
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => void Linking.openSettings()}
+            style={({ pressed }) => [styles.micSettingsAction, pressed && styles.pressed]}
+          >
+            <Text style={styles.lowBalanceAction}>{t("accessibility.openSettings")}</Text>
+          </Pressable>
+        ) : null}
         <CaptureSourceControl
           devicePlaybackSupported={props.devicePlaybackSupported}
           disabled={!viewModel.canChangeLanguages}

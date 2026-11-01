@@ -222,6 +222,7 @@ function OnboardingPreview({ step }: { step: VariantOnboardingProps["step"] }): 
     canStart: true,
     captureSource: "microphone",
     devicePlaybackSupported: previewDevicePlaybackSupported(),
+    onAlreadySubscribed: noop,
     onContinue: noop,
     onCaptureSourceChange: noop,
     onOpenPicker: noop,

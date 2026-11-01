@@ -14,73 +14,66 @@ const onboardingShells: Record<UiVariant, ComponentType<VariantOnboardingProps>>
   bloom: BloomOnboarding,
 };
 
-export function OnboardingScreen({
-  canStart,
-  captureSource,
-  devicePlaybackSupported,
-  onContinue,
-  onCaptureSourceChange,
-  onOpenPicker,
-  onPickerClose,
-  onPrivacyAgree,
-  onStart,
-  onTogglePrivacyConsent,
-  privacyConsentChecked,
-  sourceLanguageCode,
-  sourceLanguageDisplayName,
-  step,
-  targetLanguageCode,
-  targetLanguageDisplayName,
-  pickerMode,
-  setSourceLanguageCode,
-  setTargetLanguageCode,
-}: {
-  canStart: boolean;
-  captureSource: AudioCaptureSource;
-  devicePlaybackSupported: boolean;
-  onContinue: () => void;
-  onCaptureSourceChange: (source: AudioCaptureSource) => void;
-  onOpenPicker: (mode: PickerMode) => void;
+export type OnboardingScreenProps = Omit<VariantOnboardingProps, "sourceLanguage" | "targetLanguage"> & {
   onPickerClose: () => void;
-  onPrivacyAgree: () => void;
-  onStart: () => void;
-  onTogglePrivacyConsent: () => void;
   pickerMode: PickerMode;
-  privacyConsentChecked: boolean;
   setSourceLanguageCode: (language: SourceLanguageCode) => void;
   setTargetLanguageCode: (language: LanguageCode) => void;
   sourceLanguageCode: SourceLanguageCode;
   sourceLanguageDisplayName: string;
-  step: OnboardingStep;
   targetLanguageCode: LanguageCode;
   targetLanguageDisplayName: string;
-}): ReactNode {
-  const OnboardingShell = onboardingShells.bloom;
+};
+
+export function OnboardingScreen(props: OnboardingScreenProps): ReactNode {
   return (
     <>
-      <OnboardingShell
-        canStart={canStart}
-        captureSource={captureSource}
-        devicePlaybackSupported={devicePlaybackSupported}
-        onContinue={onContinue}
-        onCaptureSourceChange={onCaptureSourceChange}
-        onOpenPicker={onOpenPicker}
-        onPrivacyAgree={onPrivacyAgree}
-        onStart={onStart}
-        onTogglePrivacyConsent={onTogglePrivacyConsent}
-        privacyConsentChecked={privacyConsentChecked}
-        sourceLanguage={sourceLanguageDisplayName}
-        step={step}
-        targetLanguage={targetLanguageDisplayName}
-      />
+      <OnboardingShell {...props} />
       <LanguagePickerController
-        mode={pickerMode}
-        onClose={onPickerClose}
-        setSourceLanguageCode={setSourceLanguageCode}
-        setTargetLanguageCode={setTargetLanguageCode}
-        sourceLanguageCode={sourceLanguageCode}
-        targetLanguageCode={targetLanguageCode}
+        mode={props.pickerMode}
+        onClose={props.onPickerClose}
+        setSourceLanguageCode={props.setSourceLanguageCode}
+        setTargetLanguageCode={props.setTargetLanguageCode}
+        sourceLanguageCode={props.sourceLanguageCode}
+        targetLanguageCode={props.targetLanguageCode}
       />
     </>
+  );
+}
+
+function OnboardingShell({
+  canStart,
+  captureSource,
+  devicePlaybackSupported,
+  onAlreadySubscribed,
+  onContinue,
+  onCaptureSourceChange,
+  onOpenPicker,
+  onPrivacyAgree,
+  onStart,
+  onTogglePrivacyConsent,
+  privacyConsentChecked,
+  sourceLanguageDisplayName,
+  step,
+  targetLanguageDisplayName,
+}: OnboardingScreenProps): ReactNode {
+  const Shell = onboardingShells.bloom;
+  return (
+    <Shell
+      canStart={canStart}
+      captureSource={captureSource}
+      devicePlaybackSupported={devicePlaybackSupported}
+      onAlreadySubscribed={onAlreadySubscribed}
+      onContinue={onContinue}
+      onCaptureSourceChange={onCaptureSourceChange}
+      onOpenPicker={onOpenPicker}
+      onPrivacyAgree={onPrivacyAgree}
+      onStart={onStart}
+      onTogglePrivacyConsent={onTogglePrivacyConsent}
+      privacyConsentChecked={privacyConsentChecked}
+      sourceLanguage={sourceLanguageDisplayName}
+      step={step}
+      targetLanguage={targetLanguageDisplayName}
+    />
   );
 }

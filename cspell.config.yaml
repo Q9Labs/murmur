@@ -17,176 +17,278 @@ ignorePaths:
 ignoreRegExpList:
   - "[^\\x00-\\x7F]+"
 words:
-  - notnull
-  - GHSA
-  - gcqx
-  - unreviewed
-  - NSOS
-  - osstatus
+  - aacute
+  - abgebrochen
   - Ablaufdatum
-  - caduca
-  - expira
-  - dolmaz
-  - nonexpiring
-  - Miniflare
-  - traceparent
-  - AGENTS
-  - accountless
+  - aboneyim
+  - acceptez
   - Accountless
+  - accountless
+  - aceptas
+  - acompanha
   - afconvert
+  - AGENTS
+  - akunmu
+  - alrededor
   - altool
+  - Apakah
   - apkanalyzer
   - apksigner
+  - appareils
   - appattest
+  - appcast
   - appiconset
-  - aacute
+  - artlar
+  - assinante
+  - auriculares
   - autocapture
   - automatable
-  - backpressure
-  - Bahnhof
   - backgrounded
   - backgrounding
+  - backpressure
+  - bahasamu
+  - Bahnhof
   - Basenames
+  - berechnet
+  - Berfungsi
+  - berlangganan
+  - biaya
+  - biliyor
   - blocklisted
   - bodyless
-  - appcast
+  - bringt
+  - Buat
   - BYLN
+  - caduca
+  - cancelada
   - capcycle
   - ccedil
   - CFURL
-  - COLLABEZ
+  - cobr
+  - cobrado
   - codegen
+  - COLLABEZ
+  - coloca
+  - Comprueba
+  - concorda
+  - couteurs
+  - cret
+  - Crie
+  - Daltonizer
+  - desbloquea
+  - Deutsch
   - devicecheck
   - diarization
-  - Daltonizer
-  - Deutsch
+  - dikenakan
+  - dilinde
+  - dispositivos
+  - dolmaz
   - downmix
   - Downmixing
   - downsamples
   - EAS
   - ecirc
+  - ederek
+  - edildi
+  - Einmalzahlung
   - endpointing
+  - entourent
+  - Erstelle
   - Espa
-  - estaci
+  - Espagnol
+  - Espanhol
   - esta
+  - estaci
+  - etmi
+  - evirisini
+  - evrendeki
+  - expira
   - Expo
+  - Facturaci
   - Fallow
   - Fastlane
-  - finalizer
+  - faturaland
   - ferroviaria
+  - finalizer
+  - folgt
+  - fones
+  - fortf
   - fputs
   - gare
-  - geolocation
+  - gcqx
+  - geht
   - geoip
+  - geolocation
+  - GHSA
   - Gitleaks
   - gplay
   - gradlew
+  - habe
   - Hala
-  - hhushhas
   - Hasan
+  - herum
+  - hhushhas
   - Hibiki
   - HMAC
   - hotspots
+  - hrst
   - inspectable
-  - Italiano
   - iquest
+  - Italiano
   - jarsigner
+  - jede
   - Jpan
+  - Kamu
+  - kamu
   - keepalive
+  - kendi
+  - koneksimu
+  - Kopfh
   - Kore
+  - kulakl
   - Kyutai
   - labsai
-  - Lefthook
-  - lede
+  - Langgananmu
+  - Lanjutkan
   - ldquo
+  - lede
+  - Lefthook
+  - libera
   - lockfiles
   - macmini
+  - menghadirkan
+  - mengikutimu
   - Menlo
   - middot
   - Millis
+  - Miniflare
   - MIUI
   - mobileprovision
   - Multihead
   - Murmur
+  - musun
   - Mutarjim
+  - Nada
+  - nada
+  - ndan
   - Nederlands
+  - nerede
   - NLLB
+  - nmad
+  - nonexpiring
+  - noopener
   - nosniff
+  - notnull
+  - Noto
+  - novamente
+  - NSOS
   - ntilde
   - oacute
+  - oldu
+  - olursun
   - Onde
-  - OpenRouter
   - openrouter
+  - OpenRouter
   - OPENROUTER
-  - noopener
+  - osstatus
   - OSV
+  - ouvido
   - PEGI
+  - pela
+  - Penagihan
+  - percakapannya
   - playintegrity
   - plutil
-  - prebuild
-  - promax
-  - Pressable
-  - pseudonymized
-  - pseudonymize
-  - purch
-  - preventrecord
-  - Portuguese
   - Portugu
+  - Portuguese
   - posthog
   - PostHog
   - POSTHOG
+  - prebuild
+  - Pressable
+  - preventrecord
+  - Prolongez
+  - promax
+  - pseudonymize
+  - pseudonymized
+  - purch
   - Q9Labs
   - rarr
+  - rdquo
   - readback
   - realtime
-  - revenuecat
-  - REVENUECAT
+  - redor
+  - rern
   - retarget
-  - rdquo
+  - REVENUECAT
+  - revenuecat
+  - rien
+  - rminos
   - rsquo
+  - sabe
+  - Sabes
+  - Savez
+  - schaltet
+  - schon
   - Segoe
-  - Semgrep
+  - sekitarmu
   - semgrep
+  - Semgrep
   - showsdks
   - Simul
   - skillbox
+  - Sohbeti
   - Soniox
-  - subpaths
+  - Spanisch
+  - Spanyol
+  - spanyolca
   - splashscreen
+  - stasiunnya
+  - stasyonun
   - stazione
+  - stimmst
+  - subpaths
   - Supabase
+  - Syarat
   - Syncpack
+  - tahu
   - TanStack
   - TEAMID
   - technote
+  - tengo
   - testflight
+  - traceparent
   - treinstation
-  - tren
   - trem
+  - tren
   - TTFB
   - TTFT
   - Tunables
   - UFAL
   - UNCANCELLATION
+  - unconfigured
+  - Unemitted
   - ungated
   - Ungated
-  - unconfigured
+  - unreviewed
   - unstub
-  - Unemitted
   - uuml
   - VAD
   - Vitest
-  - WebSocket
+  - voulez
   - Waar
+  - WebSocket
   - wordmark
+  - workerd
   - worktree
   - worktrees
-  - workerd
   - Wrangler
+  - Xander
   - xcassets
   - xcodeproj
   - xcprivacy
-  - Xander
+  - Zaten
+  - zerinden
   # UI catalog words for de, es, fr, id, pt-BR and tr (apps/mobile/src/i18n/catalogs)
   - Englisch
   - ingl

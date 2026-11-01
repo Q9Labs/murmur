@@ -64,7 +64,9 @@ describe("sign-in screen", () => {
   it("titles the screen for the email step and offers Apple and Google there", () => {
     const markup = renderToStaticMarkup(<SignInScreen />);
 
-    expect(markup).toContain("Sign in");
+    expect(markup).toContain("Create your account.");
+    expect(markup).toContain("Your subscription follows you to every device.");
+    expect(markup).toContain("By continuing you agree to the Terms and Privacy Policy.");
     expect(markup).toContain("Continue with Apple");
     expect(markup).toContain("Continue with Google");
     expect(renderToStaticMarkup(<SignInScreen initialState={{ email: "maya@example.com", step: "done" }} />))

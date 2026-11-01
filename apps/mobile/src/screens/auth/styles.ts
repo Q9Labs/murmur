@@ -46,6 +46,12 @@ function createAuthStyles(theme: MurmurTheme) {
     flow: {
       gap: 16,
     },
+    legal: {
+      color: theme.secondaryText,
+      fontSize: 12,
+      lineHeight: 17,
+      textAlign: "center",
+    },
     input: {
       backgroundColor: theme.input,
       borderColor: theme.hairline,

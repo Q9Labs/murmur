@@ -13,6 +13,7 @@ vi.mock("posthog-react-native", () => ({
 
 vi.mock("react-native", () => ({
   Animated: { View: ({ children }: { children?: ReactNode }) => createElement("div", null, children) },
+  Platform: { OS: "ios", select: <T,>(options: Partial<Record<string, T>>): T | undefined => options.ios },
   StyleSheet: { create: <T,>(styles: T) => styles },
   useColorScheme: () => "light",
   // Keep this isolated text/style capture mock local to the rendering suite.
