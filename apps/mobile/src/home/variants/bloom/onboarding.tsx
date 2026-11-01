@@ -41,6 +41,7 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     checkboxMark: styles.checkboxMark,
     consentRow: styles.consentRow,
     copy: styles.copy,
+    error: styles.error,
     exampleBadge: styles.exampleBadge,
     exampleBadgeDot: styles.exampleBadgeDot,
     exampleCard: styles.exampleCard,

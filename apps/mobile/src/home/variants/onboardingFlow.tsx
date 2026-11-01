@@ -23,6 +23,7 @@ export type OnboardingTheme = {
   checkboxMark: StyleProp<TextStyle>;
   consentRow: StyleProp<ViewStyle>;
   copy: StyleProp<TextStyle>;
+  error: StyleProp<TextStyle>;
   exampleBadge: StyleProp<ViewStyle>;
   exampleBadgeDot: StyleProp<ViewStyle>;
   exampleCard: StyleProp<ViewStyle>;
@@ -138,6 +139,7 @@ function PrivacyStep({
   onPrivacyAgree,
   onTogglePrivacyConsent,
   privacyConsentChecked,
+  privacyNotice,
   text,
   theme,
 }: FlowProps): ReactNode {
@@ -177,6 +179,9 @@ function PrivacyStep({
           onPress={onPrivacyAgree}
           theme={theme}
         />
+        {privacyNotice ? (
+          <Text accessibilityRole="alert" style={[theme.error, textDirection]}>{privacyNotice}</Text>
+        ) : null}
       </View>
     </>
   );

@@ -44,6 +44,7 @@ export type VariantOnboardingProps = {
   onStart: () => void;
   onTogglePrivacyConsent: () => void;
   privacyConsentChecked: boolean;
+  privacyNotice?: string | null;
   sourceLanguage: string;
   step: OnboardingStep;
   targetLanguage: string;

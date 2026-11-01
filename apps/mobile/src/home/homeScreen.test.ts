@@ -18,6 +18,12 @@ const state = vi.hoisted(() => ({
     spans: [],
     status: "idle",
   },
+  onboarding: null as {
+    onPrivacyAgree: () => void;
+    onContinue: () => void;
+    privacyNotice?: string | null;
+    step: string;
+  } | null,
 }));
 
 const backHandler = vi.hoisted(() => ({
@@ -104,7 +110,12 @@ vi.mock("./audioPlaybackPreference", () => ({
   setStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
 }));
 vi.mock("./experience", () => ({ HomeExperience: state.experience }));
-vi.mock("./onboardingScreen", () => ({ OnboardingScreen: () => null }));
+vi.mock("./onboardingScreen", () => ({
+  OnboardingScreen: (props: { onPrivacyAgree: () => void; onContinue: () => void; privacyNotice?: string | null; step: string }) => {
+    state.onboarding = props;
+    return null;
+  },
+}));
 vi.mock("./variants/preference", () => ({ deleteStoredUiVariant: vi.fn(async () => undefined) }));
 vi.mock("./viewModel", () => ({
   buildHomeViewModel: () => ({
@@ -118,6 +129,7 @@ vi.mock("./viewModel", () => ({
 }));
 
 import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
+import { acknowledgePrivacyDisclosure, hasAcknowledgedPrivacyDisclosure } from "../lib/installIdentity";
 import HomeScreen, {
   createAudioPlaybackPreferenceController,
   exhaustionSurface,
@@ -648,5 +660,51 @@ describe("home billing effects", () => {
     await act(async () => { root.unmount(); });
     await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
     expect(state.push).not.toHaveBeenCalled();
+  });
+});
+
+describe("privacy consent acknowledgement", () => {
+  async function renderPrivacyStep() {
+    vi.mocked(hasAcknowledgedPrivacyDisclosure).mockResolvedValue(false);
+    await renderHome();
+    await act(async () => { state.onboarding?.onContinue(); });
+    return state.onboarding;
+  }
+
+  it("shows a localized retryable notice when consent persistence fails", async () => {
+    const onboarding = await renderPrivacyStep();
+    expect(onboarding?.step).toBe("privacy");
+    vi.mocked(acknowledgePrivacyDisclosure).mockRejectedValueOnce(new Error("Keychain unavailable"));
+
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+
+    expect(state.onboarding?.step).toBe("privacy");
+    expect(state.onboarding?.privacyNotice).toBe("Your choice wasn't saved. Try again.");
+  });
+
+  it("clears the notice and advances when the retry succeeds", async () => {
+    const onboarding = await renderPrivacyStep();
+    vi.mocked(acknowledgePrivacyDisclosure).mockRejectedValueOnce(new Error("Keychain unavailable"));
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+    expect(state.onboarding?.privacyNotice).not.toBeNull();
+
+    vi.mocked(acknowledgePrivacyDisclosure).mockResolvedValueOnce(undefined);
+    await act(async () => { state.onboarding?.onPrivacyAgree(); });
+
+    expect(state.onboarding?.privacyNotice).toBeNull();
+    expect(state.onboarding?.step).toBe("languages");
+  });
+
+  it("ignores a duplicate agree while the write is pending", async () => {
+    const onboarding = await renderPrivacyStep();
+    const write = deferred<void>();
+    vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(write.promise);
+
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+    await act(async () => { state.onboarding?.onPrivacyAgree(); });
+    write.resolve();
+    await act(async () => { await flushMicrotasks(); });
+
+    expect(acknowledgePrivacyDisclosure).toHaveBeenCalledOnce();
   });
 });

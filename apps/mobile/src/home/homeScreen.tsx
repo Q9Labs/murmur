@@ -566,6 +566,7 @@ export default function HomeScreen(): ReactNode {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [outOfMinutesOpen, setOutOfMinutesOpen] = useState(false);
   const [updateRequiredOpen, setUpdateRequiredOpen] = useState(false);
+  const [privacyNotice, setPrivacyNotice] = useState<string | null>(null);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [anonymousAnalyticsEnabled, setAnonymousAnalyticsEnabled] = useState<boolean | null>(null);
   const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState(true);
@@ -726,12 +727,14 @@ export default function HomeScreen(): ReactNode {
     privacyAcknowledgementPendingRef.current = true;
     try {
       captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
+      setPrivacyNotice(null);
       await acknowledgePrivacyDisclosure();
       setPrivacyAcknowledged(true);
       setPrivacyConsentChecked(false);
       setOnboardingStep("languages");
     } catch (failure) {
       captureMobileFailure(failure, { operation: "acknowledge_privacy_disclosure" });
+      setPrivacyNotice(t("insights.saveFailed"));
     } finally {
       privacyAcknowledgementPendingRef.current = false;
     }
@@ -902,6 +905,7 @@ export default function HomeScreen(): ReactNode {
         onTogglePrivacyConsent={() => setPrivacyConsentChecked((checked) => !checked)}
         pickerMode={pickerMode}
         privacyConsentChecked={privacyConsentChecked}
+        privacyNotice={privacyNotice}
         setSourceLanguageCode={setSourceLanguageCode}
         setTargetLanguageCode={setTargetLanguageCode}
         sourceLanguageCode={sourceLanguageCode}

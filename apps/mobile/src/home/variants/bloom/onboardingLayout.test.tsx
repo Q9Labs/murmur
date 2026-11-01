@@ -11,6 +11,7 @@ import type { VariantOnboardingProps } from "../types";
 // heading and example card from each other.
 const harness = vi.hoisted(() => ({
   scrollContentStyles: [] as Array<Record<string, unknown>>,
+  texts: [] as Array<{ role?: string; style: Record<string, unknown> | undefined; value?: unknown }>,
   views: [] as Array<Record<string, unknown> | undefined>,
 }));
 
@@ -40,7 +41,10 @@ vi.mock("react-native", () => {
     ScrollView,
     StatusBar: () => null,
     StyleSheet: { create: <T,>(styles: T): T => styles },
-    Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+    Text: ({ accessibilityRole, children, style }: { accessibilityRole?: string; children?: ReactNode; style?: unknown }) => {
+      harness.texts.push({ role: accessibilityRole, style: flattenStyle(style), value: children });
+      return <span>{children}</span>;
+    },
     View,
   };
 });
@@ -86,12 +90,13 @@ const baseProps: VariantOnboardingProps = {
   targetLanguage: "Spanish",
 };
 
-function renderStep(step: VariantOnboardingProps["step"]): string {
-  return renderToStaticMarkup(<BloomOnboarding {...baseProps} step={step} />);
+function renderStep(step: VariantOnboardingProps["step"], overrides?: Partial<VariantOnboardingProps>): string {
+  return renderToStaticMarkup(<BloomOnboarding {...baseProps} step={step} {...overrides} />);
 }
 
 beforeEach(() => {
   harness.scrollContentStyles.length = 0;
+  harness.texts.length = 0;
   harness.views.length = 0;
 });
 
@@ -108,6 +113,24 @@ describe("Bloom onboarding layout contract", () => {
     expect(lastView?.marginTop).toBe("auto");
     expect(markup).toContain("onboarding.getStarted");
     expect(markup).toContain("onboarding.alreadySubscribed");
+  });
+
+  it("renders the consent failure notice only on the privacy step as a non-flex alert", () => {
+    const notice = "Your choice wasn't saved. Try again.";
+    for (const step of ["welcome", "privacy", "languages"] as const) {
+      harness.scrollContentStyles.length = 0;
+      harness.texts.length = 0;
+      harness.views.length = 0;
+      renderStep(step, { privacyNotice: notice });
+      const alerts = harness.texts.filter((entry) => entry.role === "alert");
+      if (step === "privacy") {
+        expect(alerts).toHaveLength(1);
+        expect(alerts[0].value).toBe(notice);
+        expect(alerts[0].style?.flex).toBeUndefined();
+      } else {
+        expect(alerts, `${step} must not show the privacy notice`).toHaveLength(0);
+      }
+    }
   });
 
   it("applies the same bottom-anchored footer on the privacy and languages steps", () => {

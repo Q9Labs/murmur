@@ -53,6 +53,7 @@ function OnboardingShell({
   onStart,
   onTogglePrivacyConsent,
   privacyConsentChecked,
+  privacyNotice,
   sourceLanguageDisplayName,
   step,
   targetLanguageDisplayName,
@@ -71,6 +72,7 @@ function OnboardingShell({
       onStart={onStart}
       onTogglePrivacyConsent={onTogglePrivacyConsent}
       privacyConsentChecked={privacyConsentChecked}
+      privacyNotice={privacyNotice}
       sourceLanguage={sourceLanguageDisplayName}
       step={step}
       targetLanguage={targetLanguageDisplayName}

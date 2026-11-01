@@ -112,6 +112,7 @@ const onboardingTheme: OnboardingTheme = {
   checkboxMark: {},
   consentRow: {},
   copy: {},
+  error: {},
   exampleBadge: {},
   exampleBadgeDot: {},
   exampleCard: {},
