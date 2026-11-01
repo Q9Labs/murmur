@@ -23,6 +23,14 @@ export type OnboardingTheme = {
   checkboxMark: StyleProp<TextStyle>;
   consentRow: StyleProp<ViewStyle>;
   copy: StyleProp<TextStyle>;
+  error: StyleProp<TextStyle>;
+  exampleBadge: StyleProp<ViewStyle>;
+  exampleBadgeDot: StyleProp<ViewStyle>;
+  exampleCard: StyleProp<ViewStyle>;
+  exampleLabel: StyleProp<TextStyle>;
+  exampleMeta: StyleProp<TextStyle>;
+  exampleRule: StyleProp<ViewStyle>;
+  exampleSentence: StyleProp<TextStyle>;
   footer: StyleProp<ViewStyle>;
   hero: StyleProp<ViewStyle>;
   iconColor: string;
@@ -34,18 +42,30 @@ export type OnboardingTheme = {
   setupLabel: StyleProp<TextStyle>;
   setupRow: StyleProp<ViewStyle>;
   setupValue: StyleProp<TextStyle>;
+  signInLink: StyleProp<ViewStyle>;
   title: StyleProp<TextStyle>;
+  welcomeAccent: StyleProp<TextStyle>;
   welcomeBody: StyleProp<ViewStyle>;
 };
 
 export type OnboardingText = {
   agreeLabel: string;
+  alreadySubscribed: string;
   continueLabel: string;
+  exampleCard: {
+    label: string;
+    source: string;
+    sourceLanguage: string;
+    target: string;
+    targetLanguage: string;
+  };
+  getStarted: string;
   languagesTitle: string;
   listenLabel: string;
   privacyTitle: string;
   sourceLabel: string;
   targetLabel: string;
+  welcomeAccent: string;
   welcomeCopy: string;
   welcomeTitle: string;
 };
@@ -66,19 +86,44 @@ export function OnboardingFlow(props: FlowProps): ReactNode {
   return <LanguagesStep {...props} />;
 }
 
-// The artwork fills the space above the words, so there is no empty band under the header.
-function WelcomeStep({ artwork, onContinue, text, theme }: FlowProps): ReactNode {
+// The first screen leads with the product: a clearly labelled illustrative
+// translation example, then one primary action and a recovery link.
+function WelcomeStep({ onAlreadySubscribed, onContinue, text, theme }: FlowProps): ReactNode {
   const { direction } = useUiLocale();
   const textDirection = uiTextDirectionStyle(direction);
   return (
     <>
-      <View style={theme.hero}>{artwork}</View>
       <View style={theme.welcomeBody}>
-        <Text accessibilityRole="header" style={[theme.title, textDirection]}>{text.welcomeTitle}</Text>
+        <Text accessibilityRole="header" style={[theme.title, textDirection]}>
+          {text.welcomeTitle}
+          <Text style={theme.welcomeAccent}> {text.welcomeAccent}</Text>
+        </Text>
         <Text style={[theme.copy, textDirection]}>{text.welcomeCopy}</Text>
       </View>
+      <View style={theme.exampleCard}>
+        <View style={theme.exampleBadge}>
+          <Text style={[theme.exampleMeta, textDirection]}>{text.exampleCard.sourceLanguage}</Text>
+          <View style={theme.exampleBadge}>
+            <View style={theme.exampleBadgeDot} />
+            <Text style={theme.exampleLabel}>{text.exampleCard.label}</Text>
+          </View>
+        </View>
+        <Text style={[theme.exampleSentence, textDirection]}>{text.exampleCard.source}</Text>
+        <View style={theme.exampleRule} />
+        <Text style={[theme.exampleMeta, textDirection]}>{text.exampleCard.targetLanguage}</Text>
+        <Text style={[theme.exampleSentence, textDirection]}>{text.exampleCard.target}</Text>
+      </View>
       <View style={theme.footer}>
-        <FlowButton disabled={false} label={text.continueLabel} onPress={onContinue} theme={theme} />
+        <FlowButton disabled={false} label={text.getStarted} onPress={onContinue} theme={theme} />
+        {onAlreadySubscribed ? (
+          <Pressable
+            accessibilityRole="link"
+            onPress={onAlreadySubscribed}
+            style={theme.signInLink}
+          >
+            <Text style={theme.link}>{text.alreadySubscribed}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </>
   );
@@ -94,6 +139,7 @@ function PrivacyStep({
   onPrivacyAgree,
   onTogglePrivacyConsent,
   privacyConsentChecked,
+  privacyNotice,
   text,
   theme,
 }: FlowProps): ReactNode {
@@ -133,6 +179,9 @@ function PrivacyStep({
           onPress={onPrivacyAgree}
           theme={theme}
         />
+        {privacyNotice ? (
+          <Text accessibilityRole="alert" style={[theme.error, textDirection]}>{privacyNotice}</Text>
+        ) : null}
       </View>
     </>
   );

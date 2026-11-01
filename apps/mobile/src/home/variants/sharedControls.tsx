@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   Pressable,
+  StyleSheet,
   Text,
   View,
   type StyleProp,
@@ -10,34 +11,6 @@ import {
 
 import { uiTextDirectionStyle, useUiLocale } from "../../i18n/runtime";
 import type { VariantShellProps } from "./types";
-
-export function SettingsChrome({
-  buttonTextStyle,
-  containerStyle,
-  onOpenSettings,
-  pressedStyle,
-  rightSlot,
-}: {
-  buttonTextStyle: StyleProp<TextStyle>;
-  containerStyle: StyleProp<ViewStyle>;
-  onOpenSettings: () => void;
-  pressedStyle: StyleProp<ViewStyle>;
-  rightSlot: ReactNode;
-}): ReactNode {
-  return (
-    <View style={containerStyle}>
-      <Pressable
-        accessibilityLabel="Open settings"
-        accessibilityRole="button"
-        onPress={onOpenSettings}
-        style={({ pressed }) => [pressed && pressedStyle]}
-      >
-        <Text style={buttonTextStyle}>···</Text>
-      </Pressable>
-      {rightSlot}
-    </View>
-  );
-}
 
 export function TextLanguageRow({
   containerStyle,
@@ -64,6 +37,7 @@ export function TextLanguageRow({
         accessibilityLabel={t("accessibility.changeSpokenLanguage")}
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
+        hitSlop={8}
         onPress={() => onOpenPicker("source")}
         style={({ pressed }) => [labelStyle, pressed && pressedStyle]}
       >
@@ -75,8 +49,12 @@ export function TextLanguageRow({
         accessibilityLabel={t("accessibility.reverseTranslationLanguages")}
         accessibilityRole="button"
         disabled={!viewModel.canSwapLanguages}
+        hitSlop={10}
         onPress={onSwapLanguages}
-        style={({ pressed }) => [(pressed || !viewModel.canSwapLanguages) && pressedStyle]}
+        style={({ pressed }) => [
+          styles.swapButton,
+          (pressed || !viewModel.canSwapLanguages) && pressedStyle,
+        ]}
       >
         <Text style={swapStyle}>{swapGlyph}</Text>
       </Pressable>
@@ -84,6 +62,7 @@ export function TextLanguageRow({
         accessibilityLabel={t("accessibility.changeTranslationLanguage")}
         accessibilityRole="button"
         disabled={!viewModel.canChangeLanguages}
+        hitSlop={8}
         onPress={() => onOpenPicker("target")}
         style={({ pressed }) => [labelStyle, pressed && pressedStyle]}
       >
@@ -94,6 +73,15 @@ export function TextLanguageRow({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  swapButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
+  },
+});
 
 export function PrimaryAction({
   canStart,

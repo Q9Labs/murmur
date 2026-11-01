@@ -1,3 +1,4 @@
+// cspell:ignore googleusercontent
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,8 +18,10 @@ describe("worker env readiness", () => {
       },
       ok: false,
       providers: {
+        apple_sign_in: "missing_optional",
         billing: "disabled",
         error_monitoring: "missing_required",
+        google_sign_in: "missing_optional",
         product_analytics: "missing_required",
         realtime_translation: "missing_required",
         report_webhook: "missing_optional",
@@ -41,8 +44,10 @@ describe("worker env readiness", () => {
       missing: { optional: [], required: [] },
       ok: true,
       providers: {
+        apple_sign_in: "missing_optional",
         billing: "disabled",
         error_monitoring: "configured",
+        google_sign_in: "missing_optional",
         product_analytics: "configured",
         realtime_translation: "configured",
         report_webhook: "configured",
@@ -69,6 +74,28 @@ describe("worker env readiness", () => {
       "REVENUECAT_WEBHOOK_AUTH",
       "REVENUECAT_WEBHOOK_SIGNING_SECRET",
     ]);
+  });
+
+  it("names the missing social-provider variables instead of failing readiness", () => {
+    const readiness = getReadiness({
+      APPLE_CLIENT_ID: "com.example.service",
+      GOOGLE_WEB_CLIENT_ID: "web.apps.googleusercontent.com",
+      MURMUR_ENV: "development",
+      OPENAI_API_KEY: "openai_key",
+    });
+
+    expect(readiness.ok).toBe(true);
+    expect(readiness.providers.apple_sign_in).toBe("missing_optional");
+    expect(readiness.providers.google_sign_in).toBe("missing_optional");
+    expect(readiness.missing.optional).toEqual(expect.arrayContaining([
+      "APPLE_TEAM_ID",
+      "APPLE_KEY_ID",
+      "APPLE_PRIVATE_KEY",
+      "APPLE_APP_BUNDLE_IDENTIFIER",
+      "GOOGLE_CLIENT_SECRET",
+      "GOOGLE_IOS_CLIENT_ID",
+      "GOOGLE_ANDROID_CLIENT_ID",
+    ]));
   });
 
   it("keeps metering independent from the new-purchase kill switch", () => {

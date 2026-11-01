@@ -8,3 +8,4 @@ aa783a737e3b8c5395b24ff29f4d83f15e42f200:release/manifest.json:generic-api-key:1
 81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:apps/mobile/src/lib/installIdentity.ts:generic-api-key:9
 81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:apps/worker/.dev.vars.example:private-key:13
 81c82fb2e0f984ac9b1d7d7d930873ccc2c1b096:tooling/scripts/validate-no-secrets.mjs:private-key:59
+f2831fdf60cd0f181a1411e06d63d58aca0704f9:apps/mobile/src/i18n/localizedError.test.ts:generic-api-key:33

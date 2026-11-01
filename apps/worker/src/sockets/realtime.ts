@@ -152,10 +152,16 @@ export async function proxyRealtimeSession(
       ? await currentCustomerPlan(env.BILLING_DB, validated.customerId, Date.now())
       : "free";
     config = await getServerConfig(env, {
-      appVersion: url.searchParams.get("app_version"),
+      // Same trust boundary as session creation: URL-supplied platform/version
+      // are analytics hints only, never steering inputs for economic flags.
+      appVersion: null,
       distinctId: `anonymous_install_${validated.safetyIdentifier}`,
       plan: customerPlan,
-      platform: url.searchParams.get("app_platform"),
+      platform: null,
+      reported: {
+        appPlatform: url.searchParams.get("app_platform"),
+        appVersion: url.searchParams.get("app_version"),
+      },
     });
   } catch (failure) {
     await closeMeteredRealtimeSession(appSessionId, "failed", usageMeter, env).catch(

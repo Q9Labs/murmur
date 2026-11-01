@@ -1,3 +1,4 @@
+import { getStorageFailureDiagnostics } from "../lib/storageDiagnostics";
 import { catalogMessage, interpolate } from "./catalogs";
 import { enCatalog, type MessageKey } from "./catalogs/en";
 import type { InterpolationValues, Translate } from "./runtime";
@@ -25,6 +26,11 @@ export function failureCopy(
 ): string {
   if (failure instanceof LocalizedError) {
     return ui.t(failure.messageKey, failure.values);
+  }
+  // Storage diagnostics are recorded on the original native Error object, so a
+  // marked failure carries internal module details the screen must not show.
+  if (failure instanceof Error && getStorageFailureDiagnostics(failure)) {
+    return ui.t(fallback);
   }
   if (ui.locale === "en" && failure instanceof Error && failure.message.trim()) {
     return failure.message;

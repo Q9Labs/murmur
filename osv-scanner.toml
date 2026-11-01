@@ -1,4 +1,0 @@
-[[IgnoredVulns]]
-id = "GHSA-86w9-cpqp-85rv"
-ignoreUntil = 2026-10-31
-reason = "Reassessed 2026-10-24: upstream GHSA-86w9-cpqp-85rv and npm still report no fixed node-forge version (latest 1.4.0). Lockfile reachability is only Expo CLI 57.0.32 and @expo/code-signing-certificates 0.0.6. CLI parses locally selected Apple certificates; its update tooling verifies self-generated signatures/certificates with matching local keys. Murmur config has no updates.codeSigningCertificate; mobile and Worker have no node-forge imports, and native release signing uses platform tools. This does not permit attacker-supplied certificates or signature verification. Reassess within seven days: https://github.com/digitalbazaar/forge/issues/1149 and https://github.com/digitalbazaar/forge/pull/1152."

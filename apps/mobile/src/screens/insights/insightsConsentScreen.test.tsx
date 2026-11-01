@@ -52,6 +52,37 @@ describe("insights consent", () => {
     await vi.waitFor(() => expect(router.back).toHaveBeenCalledOnce());
   });
 
+  it("ignores a rapid opposite tap while a save is in flight", async () => {
+    const setInsightsConsent = vi.fn(() => new Promise<void>(() => {}));
+    state.services = fixtureServices({ setInsightsConsent });
+    renderToStaticMarkup(<InsightsConsentScreen />);
+
+    findControl(yes)?.onPress?.();
+    findControl(no)?.onPress?.();
+
+    expect(setInsightsConsent).toHaveBeenCalledTimes(1);
+    expect(setInsightsConsent).toHaveBeenLastCalledWith(true);
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it("releases the guard after a failed save so a deliberate retry works", async () => {
+    let calls = 0;
+    const setInsightsConsent = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) throw new Error("Offline.");
+    });
+    state.services = fixtureServices({ setInsightsConsent });
+    renderToStaticMarkup(<InsightsConsentScreen />);
+
+    findControl(yes)?.onPress?.();
+    await vi.waitFor(() => expect(setInsightsConsent).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    findControl(no)?.onPress?.();
+    await vi.waitFor(() => expect(setInsightsConsent).toHaveBeenCalledTimes(2));
+    expect(setInsightsConsent).toHaveBeenLastCalledWith(false);
+  });
+
   it("stays put when the answer can't be saved", async () => {
     const setInsightsConsent = vi.fn(async () => {
       throw new Error("Offline.");

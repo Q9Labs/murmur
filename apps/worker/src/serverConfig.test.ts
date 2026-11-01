@@ -8,11 +8,11 @@ afterEach(() => {
 });
 
 describe("server configuration", () => {
-  it("defaults to no source transcript and a five-minute free grant", () => {
+  it("defaults to no source transcript and a hard paywall (zero free grant)", () => {
     const config = defaultServerConfig({});
     expect(config.source_transcript).toBe(false);
     expect(config.insights_model).toBe("openai/gpt-6-luna");
-    expect(config.free_allowance_minutes).toBe(5);
+    expect(config.free_allowance_minutes).toBe(0);
     expect(config.max_session_seconds_free).toBe(300);
     expect(config.max_session_seconds_paid).toBe(3600);
     expect(sessionLimitSeconds(config, "free")).toBe(300);
@@ -52,6 +52,54 @@ describe("server configuration", () => {
       person_properties: { app_platform: "android", app_version: "1.2.3", plan: "free" },
       token: "test-token",
     });
+  });
+
+  it("sends client-claimed platform and version only as *_client hints", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
+      featureFlags: {},
+      featureFlagPayloads: {},
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+    await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: null,
+      distinctId: "anonymous_install_hints",
+      plan: "free",
+      platform: null,
+      reported: { appPlatform: "android", appVersion: "1.2.3" },
+    });
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(request.body)).toMatchObject({
+      person_properties: {
+        app_platform_client: "android",
+        app_version_client: "1.2.3",
+        plan: "free",
+      },
+    });
+    expect(JSON.parse(request.body).person_properties).not.toHaveProperty("app_platform");
+    expect(JSON.parse(request.body).person_properties).not.toHaveProperty("app_version");
+  });
+
+  it("keeps the hard paywall when flag fetches fail, time out, or lack a token", async () => {
+    expect(
+      (await getServerConfig({}, { appVersion: null, distinctId: "x-no-token", plan: "free", platform: null }))
+        .free_allowance_minutes,
+    ).toBe(0);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const failed = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: null, distinctId: "x-fetch-failed", plan: "free", platform: null,
+    });
+    expect(failed.free_allowance_minutes).toBe(0);
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(posthogFlagsBody({
+      featureFlags: { sessions_enabled: true },
+      featureFlagPayloads: {},
+    }))));
+    const missingFlag = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: null, distinctId: "x-missing-flag", plan: "free", platform: null,
+    });
+    expect(missingFlag.free_allowance_minutes).toBe(0);
+    expect(freeAllowanceMs(missingFlag)).toBe(0);
   });
 
   it("uses defaults for flags that don't match this user", async () => {
@@ -180,7 +228,17 @@ describe("free allowance flag", () => {
     const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
       appVersion: "1.4.0", distinctId: `hard-policy-${typeof payload}-${payload}`, plan: "free", platform: "ios",
     });
-    expect(freeAllowanceMs(config)).toBe(payload === 0 || payload === "0" ? 0 : 300_000);
+    expect(freeAllowanceMs(config)).toBe(0);
     expect(config.max_session_seconds_free).toBe(300);
+  });
+
+  it("applies a positive flag grant when PostHog returns one", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ flags: {
+      free_allowance_minutes: { enabled: true, metadata: { payload: "10" } },
+    } })));
+    const config = await getServerConfig({ POSTHOG_PROJECT_TOKEN: "test-token" }, {
+      appVersion: null, distinctId: "hard-policy-positive", plan: "free", platform: null,
+    });
+    expect(freeAllowanceMs(config)).toBe(600_000);
   });
 });

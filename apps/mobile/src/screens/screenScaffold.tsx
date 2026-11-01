@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Image, type ImageSourcePropType, Pressable, ScrollView, StatusBar, Text, View } from "react-native";
+import { Image, type ImageSourcePropType, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { uiContentDirectionStyle, uiMirrorStyle, useUiLocale } from "../i18n/runtime";
-import { useScreenStyles } from "./styles";
+import { useScreenStyles, type ScreenStyles } from "./styles";
 
 // With artwork, the screen becomes a hero: illustration, title and lead replace the header
 // title, and the whole block sits a little above centre between the header and the footer,
@@ -16,49 +16,35 @@ export function ScreenScaffold(props: {
   children?: ReactNode;
   footer?: ReactNode;
   lead?: string;
+  serif?: boolean;
   title: string;
 }): ReactNode {
-  const router = useRouter();
   const { colors, styles } = useScreenStyles();
-  const { direction, t } = useUiLocale();
+  const { direction } = useUiLocale();
+  const serif = props.serif === true;
+  // On short screens the ornamental art must not push the question below the
+  // fold: hide it and top-align the hero body so title, lead and disclosure
+  // content arrive with the actions; tall screens keep the centred artwork.
+  const compact = useWindowDimensions().height < 640;
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, uiContentDirectionStyle(direction)]}>
       <StatusBar barStyle={colors.dark ? "light-content" : "dark-content"} />
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel={t("common.back")}
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <View style={uiMirrorStyle(direction)}>
-            <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
-          </View>
-        </Pressable>
-        {props.artwork ? null : <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>}
-      </View>
+      <ScaffoldHeader artwork={props.artwork} serif={serif} title={props.title} />
       <ScrollView
-        contentContainerStyle={props.artwork ? styles.heroContent : styles.content}
+        contentContainerStyle={props.artwork ? (compact ? styles.compactHeroContent : styles.heroContent) : styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {props.artwork ? (
-          <View style={styles.heroBody}>
-            <View style={styles.hero}>
-              <Image
-                accessibilityIgnoresInvertColors
-                accessible={false}
-                resizeMode="contain"
-                source={props.artwork}
-                style={styles.heroArtwork}
-              />
-              <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
-              {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
-            </View>
+          <HeroBody artwork={props.artwork} compact={compact} lead={props.lead} styles={styles} title={props.title}>
             {props.children}
-          </View>
-        ) : props.children}
+          </HeroBody>
+        ) : (
+          <>
+            {serif ? <SerifHead lead={props.lead} styles={styles} title={props.title} /> : null}
+            {props.children}
+          </>
+        )}
       </ScrollView>
       {props.footer ? (
         // The footer scrolls on its own when many actions or large text can't fit.
@@ -71,6 +57,67 @@ export function ScreenScaffold(props: {
         </ScrollView>
       ) : null}
     </SafeAreaView>
+  );
+}
+
+function HeroBody(props: {
+  artwork: ImageSourcePropType;
+  children?: ReactNode;
+  compact: boolean;
+  lead?: string;
+  styles: ScreenStyles;
+  title: string;
+}): ReactNode {
+  const { styles } = props;
+  return (
+    <View style={[styles.heroBody, props.compact ? styles.compactHeroBody : null]}>
+      <View style={styles.hero}>
+        {props.compact ? null : (
+          <Image
+            accessibilityIgnoresInvertColors
+            accessible={false}
+            resizeMode="contain"
+            source={props.artwork}
+            style={styles.heroArtwork}
+          />
+        )}
+        <Text accessibilityRole="header" style={styles.heroTitle}>{props.title}</Text>
+        {props.lead ? <Text style={styles.heroLead}>{props.lead}</Text> : null}
+      </View>
+      {props.children}
+    </View>
+  );
+}
+
+function ScaffoldHeader(props: { artwork?: ImageSourcePropType; serif: boolean; title: string }): ReactNode {
+  const router = useRouter();
+  const { colors, styles } = useScreenStyles();
+  const { direction, t } = useUiLocale();
+  return (
+    <View style={styles.header}>
+      <Pressable
+        accessibilityLabel={t("common.back")}
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+        style={({ pressed }) => [props.serif ? styles.backRow : styles.backButton, pressed && styles.pressed]}
+      >
+        <View style={uiMirrorStyle(direction)}>
+          <ChevronLeft color={colors.primary} size={22} strokeWidth={2.25} />
+        </View>
+        {props.serif ? <Text style={styles.backText}>{t("common.back")}</Text> : null}
+      </Pressable>
+      {props.artwork || props.serif ? null : <Text accessibilityRole="header" style={styles.title}>{props.title}</Text>}
+    </View>
+  );
+}
+
+function SerifHead(props: { lead?: string; styles: ScreenStyles; title: string }): ReactNode {
+  return (
+    <View style={props.styles.serifHead}>
+      <Text accessibilityRole="header" style={props.styles.serifTitle}>{props.title}</Text>
+      {props.lead ? <Text style={props.styles.serifLead}>{props.lead}</Text> : null}
+    </View>
   );
 }
 

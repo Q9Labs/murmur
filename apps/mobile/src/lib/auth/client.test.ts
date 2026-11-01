@@ -51,6 +51,8 @@ vi.mock("../appRelease", () => ({
 vi.mock("../installIdentity", () => installIdentity);
 vi.mock("./nativeProviders", () => nativeProviders);
 
+import { recordStorageFailure, getStorageFailureDiagnostics } from "../storageDiagnostics";
+import { SecureStorageFailure } from "../secureStorage";
 import {
   authenticatedWorkerHeaders,
   deleteMurmurAccount,
@@ -77,6 +79,51 @@ beforeEach(() => {
 });
 
 describe("mobile Murmur authentication client", () => {
+  it("propagates the typed storage failure with its diagnostics marker", async () => {
+    const failure = new SecureStorageFailure("read_async");
+    recordStorageFailure(failure, {
+      appState: "active",
+      key: "murmur_install_id",
+      step: "read_async",
+    });
+    installIdentity.getOrCreateInstallId.mockRejectedValueOnce(failure);
+    // The real onRequest hook awaits the identity read; the marked wrapper is
+    // what failureCopy localizes.
+    await expect(auth.requestHook({ headers: new Headers() })).rejects.toBe(failure);
+    expect(getStorageFailureDiagnostics(failure)).toBeTruthy();
+  });
+
+  it("message-only envelope copies carry safe readable storage text", async () => {
+    // The only storage text that can reach a message-only copy is the
+    // wrapper's safe generic message — readable, never SDK internals.
+    auth.getSession.mockResolvedValueOnce({ data: null });
+    auth.signInAnonymous.mockResolvedValueOnce({
+      error: { message: "Murmur couldn't access saved data. Try again." },
+    });
+    let thrown: unknown;
+    try {
+      await authenticatedWorkerHeaders();
+    } catch (failure) {
+      thrown = failure;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe("Murmur couldn't access saved data. Try again.");
+    expect((thrown as Error).message).not.toMatch(/FunctionCallException|KeyChain|secure_storage/);
+  });
+
+  it("a message-only copy of a storage wrapper stays safe and readable", () => {
+    // Mirrors the `new Error(created.error.message)` rewrap: what lands on
+    // screen must be the readable sentence, not a technical code.
+    const copy = new Error(new SecureStorageFailure("read_async").message);
+    expect(copy.message).toBe("Murmur couldn't access saved data. Try again.");
+    expect(copy.message).not.toMatch(/FunctionCallException|KeyChain|secure_storage/);
+  });
+
+  it("keeps readable anonymous sign-in errors as-is", async () => {
+    auth.getSession.mockResolvedValueOnce({ data: null });
+    auth.signInAnonymous.mockResolvedValueOnce({ error: { message: "Too many requests" } });
+    await expect(authenticatedWorkerHeaders()).rejects.toThrow("Too many requests");
+  });
   it("passes install and release targeting through the auth request hook", async () => {
     const headers = new Headers();
     await auth.requestHook({ headers });
@@ -135,6 +182,54 @@ describe("mobile Murmur authentication client", () => {
 
     expect(auth.signInAnonymous).toHaveBeenCalledOnce();
     expect(auth.getCookie).toHaveBeenCalledOnce();
+  });
+
+  it("treats a server-side anonymous session as an existing guest session", async () => {
+    auth.getSession
+      .mockResolvedValueOnce({ data: null })
+      .mockResolvedValueOnce({ data: { user: { id: "guest-1", isAnonymous: true } } });
+    auth.signInAnonymous.mockResolvedValue({
+      error: {
+        code: "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+        message: "Anonymous users cannot sign in anonymously again.",
+      },
+    });
+
+    const headers = await authenticatedWorkerHeaders();
+
+    expect(headers.get("cookie")).toBe("murmur.session=test-cookie");
+    expect(auth.getSession).toHaveBeenCalledTimes(2);
+    expect(auth.signInAnonymous).toHaveBeenCalledOnce();
+  });
+
+  it("does not probe a session for an unrelated error quoting the anonymous code", async () => {
+    auth.getSession.mockResolvedValue({ data: null });
+    auth.signInAnonymous.mockResolvedValue({
+      error: {
+        code: "INVALID_TOKEN",
+        message: "Wrapped failure: ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+      },
+    });
+
+    await expect(authenticatedWorkerHeaders()).rejects.toThrow(
+      "Wrapped failure: ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+    );
+    expect(auth.getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("still surfaces account failure when no session remains after anonymous sign-in", async () => {
+    auth.getSession.mockResolvedValue({ data: null });
+    auth.signInAnonymous.mockResolvedValue({
+      error: {
+        code: "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
+        message: "Anonymous users cannot sign in anonymously again.",
+      },
+    });
+
+    await expect(authenticatedWorkerHeaders()).rejects.toThrow(
+      "Anonymous users cannot sign in anonymously again.",
+    );
+    expect(auth.getSession).toHaveBeenCalledTimes(2);
   });
 
   it("delegates recovery and deletion to Better Auth", async () => {

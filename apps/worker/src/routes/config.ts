@@ -21,10 +21,16 @@ export async function getConfig(request: Request, env: Env, context?: ExecutionC
   const nowMs = Date.now();
   const plan = await currentCustomerPlan(env.BILLING_DB, session.user.id, nowMs);
   const config = await getServerConfig(env, {
-    appVersion: request.headers.get("x-murmur-app-version"),
+    // Client-claimed platform/version stay analytics hints; this route cannot
+    // verify them, so they must not steer entitlement-affecting flags.
+    appVersion: null,
     distinctId: `anonymous_install_${hashedInstallId}`,
     plan,
-    platform: request.headers.get("x-murmur-app-platform"),
+    platform: null,
+    reported: {
+      appPlatform: request.headers.get("x-murmur-app-platform"),
+      appVersion: request.headers.get("x-murmur-app-version"),
+    },
   });
   let personalOffer = null;
   if (config.personal_offer_enabled && env.BILLING_DB) {

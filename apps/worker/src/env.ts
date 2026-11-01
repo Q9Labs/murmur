@@ -54,8 +54,10 @@ export type WorkerReadiness = {
   };
   ok: boolean;
   providers: {
+    apple_sign_in: "configured" | "missing_optional";
     billing: "configured" | "disabled" | "missing_required";
     error_monitoring: "configured" | "missing_required";
+    google_sign_in: "configured" | "missing_optional";
     product_analytics: "configured" | "missing_required";
     realtime_translation: "configured" | "missing_required";
     report_webhook: "configured" | "missing_optional";
@@ -74,11 +76,57 @@ const billingRequirements: ReadonlyArray<{ key: keyof Env; name: string }> = [
   { key: "REVENUECAT_WEBHOOK_SIGNING_SECRET", name: "REVENUECAT_WEBHOOK_SIGNING_SECRET" },
 ];
 
+// Google sign-in verifies native idTokens for every listed audience; the web
+// client id + secret enable the provider, the platform client ids cover the
+// audiences native clients actually send.
+const googleSignInRequirements: ReadonlyArray<{ key: keyof Env; name: string }> = [
+  { key: "GOOGLE_WEB_CLIENT_ID", name: "GOOGLE_WEB_CLIENT_ID" },
+  { key: "GOOGLE_CLIENT_SECRET", name: "GOOGLE_CLIENT_SECRET" },
+  { key: "GOOGLE_IOS_CLIENT_ID", name: "GOOGLE_IOS_CLIENT_ID" },
+  { key: "GOOGLE_ANDROID_CLIENT_ID", name: "GOOGLE_ANDROID_CLIENT_ID" },
+];
+
+const appleSignInRequirements: ReadonlyArray<{ key: keyof Env; name: string }> = [
+  { key: "APPLE_CLIENT_ID", name: "APPLE_CLIENT_ID" },
+  { key: "APPLE_TEAM_ID", name: "APPLE_TEAM_ID" },
+  { key: "APPLE_KEY_ID", name: "APPLE_KEY_ID" },
+  { key: "APPLE_PRIVATE_KEY", name: "APPLE_PRIVATE_KEY" },
+  { key: "APPLE_APP_BUNDLE_IDENTIFIER", name: "APPLE_APP_BUNDLE_IDENTIFIER" },
+];
+
 const productionRequirements: ReadonlyArray<{ key: keyof Env; name: string }> = [
   { key: "SESSION_HASH_SALT", name: "SESSION_HASH_SALT" },
   { key: "POSTHOG_PROJECT_TOKEN", name: "POSTHOG_PROJECT_TOKEN" },
   { key: "SENTRY_DSN", name: "SENTRY_DSN" },
 ];
+
+// Social sign-in providers stay optional (email sign-in keeps working), but a
+// partially configured provider is an actionable misconfiguration: report the
+// exact missing variables so it can be finished or removed deliberately.
+function socialProviderReadiness(env: Env): {
+  missing: string[];
+  providers: {
+    apple_sign_in: "configured" | "missing_optional";
+    google_sign_in: "configured" | "missing_optional";
+  };
+} {
+  const appleMissing = missingRequirements(env, appleSignInRequirements);
+  const googleMissing = missingRequirements(env, googleSignInRequirements);
+  return {
+    missing: [
+      ...(appleMissing.length > 0 && appleMissing.length < appleSignInRequirements.length
+        ? appleMissing
+        : []),
+      ...(googleMissing.length > 0 && googleMissing.length < googleSignInRequirements.length
+        ? googleMissing
+        : []),
+    ],
+    providers: {
+      apple_sign_in: appleMissing.length === 0 ? "configured" : "missing_optional",
+      google_sign_in: googleMissing.length === 0 ? "configured" : "missing_optional",
+    },
+  };
+}
 
 export function getReadiness(env: Env): WorkerReadiness {
   const realtimeApiKey = getRealtimeApiKey(env);
@@ -95,8 +143,10 @@ export function getReadiness(env: Env): WorkerReadiness {
     ...missingProduction,
     ...missingBilling,
   ];
+  const social = socialProviderReadiness(env);
   const optional = [
     !env.REPORT_WEBHOOK_URL && !env.REPORT_ADMIN_TOKEN ? "REPORT_WEBHOOK_URL_OR_REPORT_ADMIN_TOKEN" : null,
+    ...social.missing,
   ].filter((item): item is string => Boolean(item));
 
   return {
@@ -113,6 +163,7 @@ export function getReadiness(env: Env): WorkerReadiness {
           ? "missing_required"
           : "configured",
       error_monitoring: env.SENTRY_DSN ? "configured" : "missing_required",
+      ...social.providers,
       product_analytics: env.POSTHOG_PROJECT_TOKEN ? "configured" : "missing_required",
       realtime_translation: realtimeApiKey ? "configured" : "missing_required",
       report_webhook: env.REPORT_WEBHOOK_URL || env.REPORT_ADMIN_TOKEN ? "configured" : "missing_optional",

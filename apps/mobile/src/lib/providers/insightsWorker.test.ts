@@ -5,7 +5,7 @@ vi.mock("../auth/client", () => ({
 }));
 vi.mock("../config", () => ({ getWorkerBaseUrl: () => "https://murmur.test" }));
 
-import { deliverRatingSurvey, updateWorkerInsightsConsent } from "./insightsWorker";
+import { deliverRatingSurvey, InsightsConsentHttpFailure, updateWorkerInsightsConsent } from "./insightsWorker";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -23,5 +23,15 @@ describe("insights Worker transport", () => {
       other_text: "At a conference",
       stars: 3,
     })).rejects.toMatchObject({ code: "rating_survey_http_503", message: "rating_survey_http_503" });
+  });
+
+  it("rejects a failed consent save with a typed localized failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    await expect(updateWorkerInsightsConsent(true)).rejects.toBeInstanceOf(InsightsConsentHttpFailure);
+    await expect(updateWorkerInsightsConsent(true)).rejects.toMatchObject({
+      code: "insights_consent_http_500",
+      message: "insights_consent_http_500",
+      messageKey: "insights.saveFailed",
+    });
   });
 });

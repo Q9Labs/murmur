@@ -23,8 +23,13 @@ export type RecordedText = {
 };
 
 export type RecordedScrollView = {
+  contentContainerStyle?: unknown;
   keyboardDismissMode?: unknown;
   keyboardShouldPersistTaps?: unknown;
+  style?: unknown;
+};
+
+export type RecordedImage = {
   style?: unknown;
 };
 
@@ -51,6 +56,7 @@ export const recorded = {
   controls: [] as RecordedControl[],
   keyboardAvoidingViews: [] as RecordedKeyboardAvoidingView[],
   inputs: [] as RecordedInput[],
+  images: [] as RecordedImage[],
   roles: [] as string[],
   scrollViews: [] as RecordedScrollView[],
   switches: [] as RecordedSwitch[],
@@ -63,6 +69,7 @@ export function resetRecorded(): void {
   recorded.controls.length = 0;
   recorded.keyboardAvoidingViews.length = 0;
   recorded.inputs.length = 0;
+  recorded.images.length = 0;
   recorded.roles.length = 0;
   recorded.scrollViews.length = 0;
   recorded.switches.length = 0;
@@ -126,18 +133,28 @@ function KeyboardAvoidingView({
 
 function ScrollView({
   children,
+  contentContainerStyle,
   keyboardDismissMode,
   keyboardShouldPersistTaps,
   style,
 }: {
   children?: ReactNode;
+  contentContainerStyle?: unknown;
   keyboardDismissMode?: unknown;
   keyboardShouldPersistTaps?: unknown;
   style?: unknown;
 }): ReactNode {
-  recorded.scrollViews.push({ keyboardDismissMode, keyboardShouldPersistTaps, style });
+  recorded.scrollViews.push({ contentContainerStyle, keyboardDismissMode, keyboardShouldPersistTaps, style });
   return createElement("main", null, children);
 }
+
+function Image({ style }: { style?: unknown }): ReactNode {
+  recorded.images.push({ style });
+  return null;
+}
+
+// Mutable so layout tests can simulate short screens.
+export const testWindow = { height: 844, width: 390 };
 
 const testPlatform = {
   OS: "ios" as "android" | "ios",
@@ -151,7 +168,7 @@ export const reactNativePrimitives = {
       recorded.alerts.push({ buttons, message, title });
     },
   },
-  Image: () => null,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform: testPlatform,
@@ -163,6 +180,7 @@ export const reactNativePrimitives = {
   Text,
   TextInput,
   useColorScheme: () => "light",
+  useWindowDimensions: () => ({ ...testWindow, fontScale: 1, scale: 2 }),
   View,
 };
 

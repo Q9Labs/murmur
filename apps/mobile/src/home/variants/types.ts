@@ -36,6 +36,7 @@ export type VariantOnboardingProps = {
   canStart: boolean;
   captureSource: AudioCaptureSource;
   devicePlaybackSupported: boolean;
+  onAlreadySubscribed?: () => void;
   onContinue: () => void;
   onCaptureSourceChange: (source: AudioCaptureSource) => void;
   onOpenPicker: (mode: PickerMode) => void;
@@ -43,6 +44,7 @@ export type VariantOnboardingProps = {
   onStart: () => void;
   onTogglePrivacyConsent: () => void;
   privacyConsentChecked: boolean;
+  privacyNotice?: string | null;
   sourceLanguage: string;
   step: OnboardingStep;
   targetLanguage: string;

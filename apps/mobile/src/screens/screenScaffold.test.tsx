@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { router } from "./__tests__/navigation";
-import { findControl, recorded, resetRecorded } from "./__tests__/reactNativePrimitives";
+import { findControl, recorded, resetRecorded, testWindow } from "./__tests__/reactNativePrimitives";
 
 vi.mock("react-native", () => import("./__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("expo-router", () => import("./__tests__/navigation").then((m) => m.expoRouterMock));
@@ -14,7 +14,16 @@ import { PrimaryAction, QuietAction, ScreenScaffold, SecondaryAction, StatusLine
 beforeEach(() => {
   resetRecorded();
   vi.clearAllMocks();
+  testWindow.height = 844;
+  testWindow.width = 390;
 });
+
+function flattenStyle(style: unknown): Record<string, unknown> | undefined {
+  if (Array.isArray(style)) {
+    return Object.assign({}, ...style.filter(Boolean).map((entry) => flattenStyle(entry)));
+  }
+  return (style as Record<string, unknown>) ?? undefined;
+}
 
 describe("screen scaffold", () => {
   it("shows the title, content and footer with a working back button", () => {
@@ -29,6 +38,52 @@ describe("screen scaffold", () => {
     expect(markup).toContain("footer");
     findControl("Back")?.onPress?.();
     expect(router.back).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the footer at its intrinsic height so every action stays reachable", () => {
+    renderToStaticMarkup(
+      <ScreenScaffold footer={<p>footer</p>} title="Consent">
+        <p>content</p>
+      </ScreenScaffold>,
+    );
+
+    // Layout contract: the footer's own scroll track never shrinks below its
+    // content height (bounded by the screen cap), so a short screen can no
+    // longer push secondary actions below the fold.
+    const footerTrack = recorded.scrollViews.at(-1)?.style as { flexShrink?: number; maxHeight?: string } | undefined;
+    expect(footerTrack?.flexShrink).toBe(0);
+    expect(footerTrack?.maxHeight).toBe("60%");
+  });
+
+  it("prioritizes the question over ornamental art on short screens", () => {
+    testWindow.height = 544;
+    testWindow.width = 384;
+    renderToStaticMarkup(
+      <ScreenScaffold artwork={1} footer={<p>footer</p>} lead="lead" title="Help improve Murmur">
+        <p>points</p>
+      </ScreenScaffold>,
+    );
+
+    // Contract: the hero body top-aligns and the artwork is removed entirely so
+    // the title, lead and disclosure content reach the first paint with the
+    // actions — the same surface keeps its artwork on tall screens.
+    const body = recorded.scrollViews.at(0)?.contentContainerStyle;
+    expect(flattenStyle(body)?.justifyContent).toBe("flex-start");
+    expect(recorded.images).toHaveLength(0);
+    expect(flattenStyle(body)?.paddingTop).toBeLessThanOrEqual(8);
+  });
+
+  it("keeps the centred full-size hero on tall screens", () => {
+    renderToStaticMarkup(
+      <ScreenScaffold artwork={1} footer={<p>footer</p>} lead="lead" title="Help improve Murmur">
+        <p>points</p>
+      </ScreenScaffold>,
+    );
+
+    const body = recorded.scrollViews.at(0)?.contentContainerStyle;
+    expect(flattenStyle(body)?.justifyContent).toBe("center");
+    const art = flattenStyle(recorded.images.at(0)?.style);
+    expect(art?.height).toBe(168);
   });
 
   it("goes home when there is nothing to go back to", () => {

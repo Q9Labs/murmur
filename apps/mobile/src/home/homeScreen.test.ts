@@ -18,6 +18,12 @@ const state = vi.hoisted(() => ({
     spans: [],
     status: "idle",
   },
+  onboarding: null as {
+    onPrivacyAgree: () => void;
+    onContinue: () => void;
+    privacyNotice?: string | null;
+    step: string;
+  } | null,
 }));
 
 const backHandler = vi.hoisted(() => ({
@@ -37,6 +43,9 @@ vi.mock("../lib/billing/context", () => ({
   useMurmurBilling: () => state.billing,
 }));
 vi.mock("../screens/settings/settingsControls", () => ({ usePublishSettingsControls: vi.fn() }));
+vi.mock("expo-localization", () => ({
+  getLocales: () => [{ languageCode: "ar", languageTag: "ar" }],
+}));
 vi.mock("expo-network", () => ({
   addNetworkStateListener: () => ({ remove: vi.fn() }),
   getNetworkStateAsync: vi.fn(async () => ({ type: "wifi" })),
@@ -101,7 +110,12 @@ vi.mock("./audioPlaybackPreference", () => ({
   setStoredAudioPlaybackEnabled: vi.fn(async () => undefined),
 }));
 vi.mock("./experience", () => ({ HomeExperience: state.experience }));
-vi.mock("./onboardingScreen", () => ({ OnboardingScreen: () => null }));
+vi.mock("./onboardingScreen", () => ({
+  OnboardingScreen: (props: { onPrivacyAgree: () => void; onContinue: () => void; privacyNotice?: string | null; step: string }) => {
+    state.onboarding = props;
+    return null;
+  },
+}));
 vi.mock("./variants/preference", () => ({ deleteStoredUiVariant: vi.fn(async () => undefined) }));
 vi.mock("./viewModel", () => ({
   buildHomeViewModel: () => ({
@@ -115,7 +129,12 @@ vi.mock("./viewModel", () => ({
 }));
 
 import { fixtureBilling, fixtureCustomer } from "../screens/__tests__/billingFixture";
-import HomeScreen, { createAudioPlaybackPreferenceController, startWithAllowance } from "./homeScreen";
+import { acknowledgePrivacyDisclosure, hasAcknowledgedPrivacyDisclosure } from "../lib/installIdentity";
+import HomeScreen, {
+  createAudioPlaybackPreferenceController,
+  exhaustionSurface,
+  startWithAllowance,
+} from "./homeScreen";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -300,13 +319,13 @@ describe("Start allowance gate", () => {
     expect(start).not.toHaveBeenCalled();
   });
 
-  it("starts when an unknown customer's refresh fails", async () => {
+  it("stays fail closed when the customer stays unresolved after refresh", async () => {
     const refresh = vi.fn(async () => null);
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
     await startWithAllowance({ customer: null, refresh, start, openPlans });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(start).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
     expect(openPlans).not.toHaveBeenCalled();
   });
 
@@ -364,17 +383,43 @@ describe("Start allowance gate", () => {
     expect(openPlans).not.toHaveBeenCalled();
   });
 
-  it("leaves an unknown or legacy customer to Worker enforcement", async () => {
-    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 }]) {
+  it("resolves an unknown customer from the fresh read, not a fabricated one", async () => {
+    for (const [fresh, expectsStart] of [
+      [{ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 }, true],
+      [{ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }, false],
+    ] as const) {
       const start = vi.fn(async () => undefined);
       const openPlans = vi.fn();
-      await startWithAllowance({ customer, refresh: async () => null, start, openPlans });
-      expect(start).toHaveBeenCalledOnce();
-      expect(openPlans).not.toHaveBeenCalled();
+      await startWithAllowance({ customer: null, refresh: async () => fresh, start, openPlans });
+      expect(start).toHaveBeenCalledTimes(expectsStart ? 1 : 0);
+      expect(openPlans).toHaveBeenCalledTimes(expectsStart ? 0 : 1);
     }
+  });
+
+  it("leaves a resolved legacy customer to Worker enforcement", async () => {
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({
+      customer: { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 },
+      refresh: async () => null, start, openPlans });
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
   });
 });
 
+
+describe("exhaustionSurface", () => {
+  it("routes on the refreshed customer instead of the stale render-time one", () => {
+    // A top-up landing between refresh and render must surface nothing.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 }))
+      .toBe("none");
+    // Hard-paywall account with no time goes to the paywall, not the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }))
+      .toBe("paywall");
+    // A freemium account out of minutes still gets the sheet.
+    expect(exhaustionSurface({ ...fixtureCustomer, availableMs: 0 })).toBe("out_of_minutes");
+  });
+});
 
 describe("home billing effects", () => {
   it.each(["freemium", "unknown"])("opens the %s sheet before refresh resolves", async (kind) => {
@@ -531,5 +576,194 @@ describe("home billing effects", () => {
       await act(async () => { root.render(createElement(HomeScreen)); });
     }
     expect(state.live.prepare).toHaveBeenCalledOnce();
+  });
+
+  it("closes the stale sheet when the exhaustion refresh returns a funded customer", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    await renderHome();
+    // Optimistic open on the stale exhausted customer.
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: true }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 60_000 }); });
+    // A funded refresh must close that stale sheet instead of leaving it up.
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("does not reopen a dismissed sheet when a new exhaustion error arrives", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    const props = state.experience.mock.calls.at(-1)?.[0];
+    await act(async () => { props?.onCloseOutOfMinutes(); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    // A different exhaustion error is not a reason to re-nag.
+    state.live.error = "realtime_allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    await act(async () => { pending.resolve({ ...fixtureCustomer, availableMs: 0 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("never navigates from a refresh resolving after the error cleared", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    state.live.error = null;
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("never navigates from the refresh of a superseded exhaustion error", async () => {
+    const staleRefresh = deferred<typeof fixtureCustomer | null>();
+    const currentRefresh = deferred<typeof fixtureCustomer | null>();
+    const refresh = vi.fn()
+      .mockReturnValueOnce(staleRefresh.promise)
+      .mockReturnValueOnce(currentRefresh.promise);
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    // A different exhaustion error supersedes the first and refreshes again.
+    state.live.error = "realtime_allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // The obsolete callback resolving to a paywall must not navigate.
+    await act(async () => { staleRefresh.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+    // The current error's own refresh still routes normally.
+    await act(async () => { currentRefresh.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/paywall");
+  });
+
+  it("never navigates when a cleared same-string error revives an obsolete refresh", async () => {
+    const obsolete = deferred<typeof fixtureCustomer | null>();
+    const current = deferred<typeof fixtureCustomer | null>();
+    const refresh = vi.fn()
+      .mockReturnValueOnce(obsolete.promise)
+      .mockReturnValueOnce(current.promise);
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    // ABA: the error clears, then the same string returns with a new refresh.
+    state.live.error = null;
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    state.live.error = "allowance_exhausted";
+    await act(async () => { root.render(createElement(HomeScreen)); });
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // The newer cycle resolves funded first: it closes the sheet it opened.
+    await act(async () => { current.resolve({ ...fixtureCustomer, availableMs: 60_000 }); });
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+    expect(state.push).not.toHaveBeenCalled();
+    // The obsolete same-string refresh resolving to a paywall must not act.
+    await act(async () => { obsolete.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.experience).toHaveBeenLastCalledWith(expect.objectContaining({ outOfMinutesOpen: false }), undefined);
+  });
+
+  it("never navigates from a refresh resolving after unmount", async () => {
+    const pending = deferred<typeof fixtureCustomer | null>();
+    state.billing = { ...fixtureBilling({ availableMs: 0 }), refresh: vi.fn(() => pending.promise) };
+    state.live.error = "allowance_exhausted";
+    const root = await renderHome();
+    await act(async () => { root.unmount(); });
+    await act(async () => { pending.resolve({ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }); });
+    expect(state.push).not.toHaveBeenCalled();
+  });
+});
+
+describe("privacy consent acknowledgement", () => {
+  async function renderPrivacyStep() {
+    vi.mocked(hasAcknowledgedPrivacyDisclosure).mockResolvedValue(false);
+    await renderHome();
+    await act(async () => { state.onboarding?.onContinue(); });
+    return state.onboarding;
+  }
+
+  it("shows a localized retryable notice when consent persistence fails", async () => {
+    const onboarding = await renderPrivacyStep();
+    expect(onboarding?.step).toBe("privacy");
+    vi.mocked(acknowledgePrivacyDisclosure).mockRejectedValueOnce(new Error("Keychain unavailable"));
+
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+
+    expect(state.onboarding?.step).toBe("privacy");
+    expect(state.onboarding?.privacyNotice).toBe("Your choice wasn't saved. Try again.");
+  });
+
+  it("clears the notice and advances when the retry succeeds", async () => {
+    const onboarding = await renderPrivacyStep();
+    vi.mocked(acknowledgePrivacyDisclosure).mockRejectedValueOnce(new Error("Keychain unavailable"));
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+    expect(state.onboarding?.privacyNotice).not.toBeNull();
+
+    vi.mocked(acknowledgePrivacyDisclosure).mockResolvedValueOnce(undefined);
+    await act(async () => { state.onboarding?.onPrivacyAgree(); });
+
+    expect(state.onboarding?.privacyNotice).toBeNull();
+    expect(state.onboarding?.step).toBe("languages");
+  });
+
+  it("ignores a duplicate agree while the write is pending", async () => {
+    const onboarding = await renderPrivacyStep();
+    const write = deferred<void>();
+    vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(write.promise);
+
+    await act(async () => { onboarding?.onPrivacyAgree(); });
+    await act(async () => { state.onboarding?.onPrivacyAgree(); });
+    write.resolve();
+    await act(async () => { await flushMicrotasks(); });
+
+    expect(acknowledgePrivacyDisclosure).toHaveBeenCalledOnce();
+  });
+
+  it("times out a never-settling privacy write, shows the notice, and retries", async () => {
+    vi.useFakeTimers();
+    try {
+      const onboarding = await renderPrivacyStep();
+      vi.mocked(acknowledgePrivacyDisclosure).mockImplementationOnce(
+        () => new Promise<void>(() => undefined),
+      );
+      await act(async () => { void onboarding?.onPrivacyAgree(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+      expect(state.onboarding?.step).toBe("privacy");
+      expect(state.onboarding?.privacyNotice).toBe("Your choice wasn't saved. Try again.");
+
+      vi.mocked(acknowledgePrivacyDisclosure).mockResolvedValueOnce(undefined);
+      await act(async () => { state.onboarding?.onPrivacyAgree(); });
+      expect(state.onboarding?.privacyNotice).toBeNull();
+      expect(state.onboarding?.step).toBe("languages");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not advance from a privacy write that settles after its deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const onboarding = await renderPrivacyStep();
+      const lateWrite = deferred<void>();
+      vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(lateWrite.promise);
+      await act(async () => { void onboarding?.onPrivacyAgree(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+      expect(state.onboarding?.privacyNotice).not.toBeNull();
+
+      const retry = deferred<void>();
+      vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(retry.promise);
+      await act(async () => { void state.onboarding?.onPrivacyAgree(); });
+      lateWrite.resolve();
+      await act(async () => { await flushMicrotasks(); });
+      expect(state.onboarding?.step).toBe("privacy");
+
+      retry.resolve();
+      await act(async () => { await flushMicrotasks(); });
+      expect(state.onboarding?.step).toBe("languages");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

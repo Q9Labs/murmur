@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import {
   Animated,
   Image,
+  Linking,
   Pressable,
   StatusBar,
   Text,
@@ -33,6 +34,11 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const { colors, styles } = useBloomStyles();
   const billing = useMurmurBilling();
   const hardPaywallLocked = isHardPaywallLocked(billing.customer);
+  // The customer record is the only source of entitlement truth; while it is
+  // unresolved (initial probe or a failed/rate-limited refresh) the surface
+  // stays fail closed — loading copy while the first probe runs, an honest
+  // localized retry after it failed — never unlocked controls.
+  const customerUnresolved = billing.customer === null;
   const wasLive = useRef(viewModel.isLive);
   const lowBalance = viewModel.isLive
     ? null
@@ -75,40 +81,91 @@ export function BloomShell(props: VariantShellProps): ReactNode {
         {lowBalance ? (
           <LowBalancePill minutes={lowBalance} onPress={props.onOpenLowBalance} />
         ) : null}
-        {props.listeningInBackground ? <BackgroundListeningPill /> : (
-          <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-            {viewModel.statusText}
-          </Text>
+        {customerUnresolved ? (
+          <UnresolvedRetry initialized={billing.initialized} onRetry={() => void billing.refresh()} />
+        ) : (
+          <SessionControls {...props} billingCustomer={billing.customer} hardPaywallLocked={hardPaywallLocked} />
         )}
-        <CaptureSourceControl
-          devicePlaybackSupported={props.devicePlaybackSupported}
-          disabled={!viewModel.canChangeLanguages}
-          onChange={props.onCaptureSourceChange}
-          source={props.captureSource}
-        />
-        <TextLanguageRow
-          containerStyle={styles.languageRow}
-          labelStyle={styles.languageLabel}
-          onOpenPicker={props.onOpenPicker}
-          onSwapLanguages={props.onSwapLanguages}
-          pressedStyle={styles.pressed}
-          swapGlyph="⇄"
-          swapStyle={styles.swapText}
-          textStyle={styles.languageText}
-          viewModel={viewModel}
-        />
-        <PrimaryAction
-          canStart={viewModel.canStart}
-          isLive={viewModel.isLive}
-          onPrimaryAction={props.onPrimaryAction}
-          pressedStyle={styles.pressed}
-          startLabel={primaryStartLabel(live.error, hasTimeAvailable(billing.customer), t, hardPaywallLocked)}
-          stopLabel={t("home.stop")}
-          style={styles.listenPill}
-          textStyle={styles.listenPillText}
-        />
       </View>
     </SafeAreaView>
+  );
+}
+
+function UnresolvedRetry({ initialized, onRetry }: { initialized: boolean; onRetry: () => void }): ReactNode {
+  const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
+  return (
+    <>
+      <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
+        {initialized ? t("billing.unavailable") : t("billing.accountLoading")}
+      </Text>
+      {initialized ? (
+        <Pressable
+          accessibilityLabel={t("home.tryAgain")}
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={onRetry}
+          style={({ pressed }) => [styles.micSettingsAction, pressed && styles.pressed]}
+        >
+          <Text style={styles.lowBalanceAction}>{t("home.tryAgain")}</Text>
+        </Pressable>
+      ) : null}
+    </>
+  );
+}
+
+function SessionControls(
+  props: VariantShellProps & { billingCustomer: Parameters<typeof hasTimeAvailable>[0]; hardPaywallLocked: boolean },
+): ReactNode {
+  const { live, viewModel } = props;
+  const { styles } = useBloomStyles();
+  const { t } = useUiLocale();
+  return (
+    <>
+      {props.listeningInBackground ? <BackgroundListeningPill /> : (
+        <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
+          {viewModel.statusText}
+        </Text>
+      )}
+      {viewModel.microphoneDenied ? (
+        <Pressable
+          accessibilityLabel={t("accessibility.openSettings")}
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={() => void Linking.openSettings()}
+          style={({ pressed }) => [styles.micSettingsAction, pressed && styles.pressed]}
+        >
+          <Text style={styles.lowBalanceAction}>{t("accessibility.openSettings")}</Text>
+        </Pressable>
+      ) : null}
+      <CaptureSourceControl
+        devicePlaybackSupported={props.devicePlaybackSupported}
+        disabled={!viewModel.canChangeLanguages}
+        onChange={props.onCaptureSourceChange}
+        source={props.captureSource}
+      />
+      <TextLanguageRow
+        containerStyle={styles.languageRow}
+        labelStyle={styles.languageLabel}
+        onOpenPicker={props.onOpenPicker}
+        onSwapLanguages={props.onSwapLanguages}
+        pressedStyle={styles.pressed}
+        swapGlyph="⇄"
+        swapStyle={styles.swapText}
+        textStyle={styles.languageText}
+        viewModel={viewModel}
+      />
+      <PrimaryAction
+        canStart={viewModel.canStart}
+        isLive={viewModel.isLive}
+        onPrimaryAction={props.onPrimaryAction}
+        pressedStyle={styles.pressed}
+        startLabel={primaryStartLabel(live.error, hasTimeAvailable(props.billingCustomer), t, props.hardPaywallLocked)}
+        stopLabel={t("home.stop")}
+        style={styles.listenPill}
+        textStyle={styles.listenPillText}
+      />
+    </>
   );
 }
 

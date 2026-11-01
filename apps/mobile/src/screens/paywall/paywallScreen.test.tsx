@@ -21,7 +21,13 @@ vi.mock("@sentry/react-native", () => ({ captureException: vi.fn(), captureMessa
 vi.mock("react-native", () => import("../__tests__/reactNativePrimitives").then((m) => m.reactNativePrimitives));
 vi.mock("expo-router", () => import("../__tests__/navigation").then((m) => ({ ...m.expoRouterMock, useFocusEffect: (effect: () => void) => { if (state.focused) effects.push(effect); } })));
 vi.mock("react-native-safe-area-context", () => import("../__tests__/navigation").then((m) => m.safeAreaMock));
-vi.mock("lucide-react-native", () => ({ X: () => null }));
+vi.mock("lucide-react-native", () => ({
+  CalendarX: () => null,
+  Check: () => null,
+  ChevronLeft: () => null,
+  CreditCard: () => null,
+  Headphones: () => null,
+}));
 vi.mock("../../home/variants/hooks", () => ({ useReducedMotion: () => true }));
 vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => state.billing }));
 vi.mock("../plans/planList", () => ({
@@ -34,7 +40,7 @@ import { PaywallScreen } from "./paywallScreen";
 
 beforeEach(() => { vi.clearAllMocks(); resetRecorded(); effects.length = 0; state.focused = true; state.billing = fixtureBilling(); state.plans = previewPlans; });
 
-describe("demo-first paywall", () => {
+describe("paywall", () => {
   it.each(uiLocales)("renders the lite Trip Pass's actual minutes in %s", (locale) => {
     state.plans = previewPlans.map((plan) => plan.id === "trip_pass_60" ? { ...plan, id: "trip_pass_30", minutes: 30 } : plan);
     const t = createTranslator(locale);
@@ -64,19 +70,20 @@ describe("demo-first paywall", () => {
   it("closes a first-route paywall by replacing it with Home", () => {
     router.canGoBack.mockReturnValueOnce(false);
     renderToStaticMarkup(<PaywallScreen />);
-    findControl("Close")?.onPress?.();
+    findControl("Back")?.onPress?.();
     expect(router.replace).toHaveBeenCalledWith("/");
     expect(router.back).not.toHaveBeenCalled();
   });
   it.each([
-    ["pack", "$7.99 once", "60 minutes that never expire.", "Buy for $7.99", "One payment. No subscription."],
-    ["monthly", "Pro, $9.99 / month", "2 hours of translation every month.", "Subscribe for $9.99 / month", "Renews automatically. Cancel anytime."],
-    ["yearly", "Pro, $99.99 / year", "2 hours of translation every month.", "Subscribe for $99.99 / year", "Renews automatically. Cancel anytime."],
-  ] as const)("renders %s price, detail, checkout and small print", (key, price, detail, cta, finePrint) => {
+    ["pack", "Trip Pass", "60 minutes that never expire. · $7.99", "Buy for $7.99", "One payment through App Store."],
+    ["monthly", "Pro · $9.99 / month", "2 hours of translation every month.", "Subscribe for $9.99 / month", "Cancel anytime in App Store settings."],
+    ["yearly", "Pro · $99.99 / year", "2 hours of translation every month.", "Subscribe for $99.99 / year", "Cancel anytime in App Store settings."],
+  ] as const)("renders %s price, detail, checkout and facts", (key, price, detail, cta, fact) => {
     const markup = renderToStaticMarkup(<PaywallScreen initialKey={key} />);
-    expect(markup).toContain("Example: Arabic to English");
-    for (const text of [price, detail, cta, finePrint]) expect(markup).toContain(text);
-    expect(recorded.controls.filter((control) => control.accessibilityRole === "tab")).toHaveLength(3);
+    expect(markup).toContain("Keep the conversation going.");
+    expect(markup).toContain("Works with your headphones on iOS and Android.");
+    for (const text of [price, detail, cta, fact]) expect(markup).toContain(text);
+    expect(recorded.controls.filter((control) => control.accessibilityRole === "radio")).toHaveLength(3);
   });
   it.each([
     ["monthly", "$7.99", "first month", "Then $9.99 a month"],
@@ -84,7 +91,7 @@ describe("demo-first paywall", () => {
   ] as const)("discloses the %s introductory and renewal prices before purchase", (key, price, period, renewal) => {
     state.plans = previewPlans.map((plan) => plan.term === key ? { ...plan, introPrice: { amount: 1, price } } : plan);
     const markup = renderToStaticMarkup(<PaywallScreen initialKey={key} />);
-    expect(markup).toContain(`Pro, ${price} ${period}`);
+    expect(markup).toContain(`Pro · ${price} ${period}`);
     expect(markup).toContain(`Subscribe for ${price} ${period}`);
     expect(markup).toContain(renewal);
   });
@@ -122,7 +129,7 @@ describe("demo-first paywall", () => {
     const markup = renderToStaticMarkup(<PaywallScreen initialKey="pack" />);
     expect(markup).toContain("Subscribe for $9.99 / month");
     expect(markup).not.toContain("Trip Pass");
-    expect(recorded.controls.filter((control) => control.accessibilityRole === "tab")).toHaveLength(1);
+    expect(recorded.controls.filter((control) => control.accessibilityRole === "radio")).toHaveLength(1);
   });
   it("uses the existing purchase flow, including guest save-purchase", async () => {
     state.billing = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
@@ -165,10 +172,12 @@ describe("demo-first paywall", () => {
     expect(router.dismissTo).toHaveBeenCalledWith("/");
     expect(router.replace).not.toHaveBeenCalled();
   });
-  it("keeps Close, All plans, restore and legal links working", () => {
+  it("keeps Back, sign-in, All plans, restore and legal links working", () => {
     renderToStaticMarkup(<PaywallScreen />);
-    findControl("Close")?.onPress?.();
+    findControl("Back")?.onPress?.();
     expect(router.back).toHaveBeenCalledOnce();
+    findControl("Sign in")?.onPress?.();
+    expect(router.push).toHaveBeenCalledWith("/sign-in");
     findControl("All plans")?.onPress?.();
     expect(router.push).toHaveBeenCalledWith("/plans");
     findControl("Restore purchases")?.onPress?.();
@@ -178,9 +187,24 @@ describe("demo-first paywall", () => {
     expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/terms");
     expect(linking.openURL).toHaveBeenCalledWith("https://murmur.q9labs.ai/privacy");
   });
+  it("explains a cancelled purchase without charging copy", () => {
+    state.billing = { ...fixtureBilling(), notice: "No purchase was made." };
+    const markup = renderToStaticMarkup(<PaywallScreen />);
+    expect(markup).toContain("Purchase cancelled");
+    expect(markup).toContain("charged");
+    expect(markup).toContain("whenever you");
+  });
+  it("explains an unavailable store without offering purchases", () => {
+    state.billing = { ...fixtureBilling(), purchasesAvailable: false };
+    const markup = renderToStaticMarkup(<PaywallScreen />);
+    expect(markup).toContain("Store unavailable");
+    expect(markup).toContain("Check your connection and try again.");
+    const restore = findControl("Restore purchases");
+    expect(restore?.accessibilityState).toMatchObject({ disabled: true });
+  });
   it("does not offer a purchase when the store has no eligible plans", () => {
     state.plans = [];
     expect(renderToStaticMarkup(<PaywallScreen />)).toContain("No plans");
-    expect(recorded.controls.filter((control) => control.accessibilityRole === "tab")).toHaveLength(0);
+    expect(recorded.controls.filter((control) => control.accessibilityRole === "radio")).toHaveLength(0);
   });
 });

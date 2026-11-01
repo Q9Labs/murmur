@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { serifFontFamily } from "../../../lib/serifFont";
 import {
   darkMurmurTheme,
   lightMurmurTheme,
@@ -66,13 +67,81 @@ function createBloomStyles(theme: MurmurTheme) {
       borderColor: theme.hairline,
       borderRadius: 999,
       borderWidth: 1,
-      height: 42,
+      height: 44,
       justifyContent: "center",
-      width: 42,
+      width: 44,
     },
     chromeButtonActive: {
       backgroundColor: theme.selected,
       borderColor: "transparent",
+    },
+    compactCopy: {
+      color: theme.muted,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    compactExampleCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.hairline,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 6,
+      marginHorizontal: 20,
+      padding: 12,
+    },
+    compactExampleMeta: {
+      color: theme.muted,
+      fontSize: 13,
+      fontWeight: "600",
+      paddingHorizontal: 20,
+    },
+    compactExampleSentence: {
+      color: theme.primary,
+      fontFamily: serifFontFamily,
+      fontSize: 17,
+      lineHeight: 24,
+    },
+    compactOnboardingBody: {
+      flex: 1,
+      gap: 12,
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    compactOnboardingFooter: {
+      alignItems: "stretch",
+      marginTop: "auto",
+      paddingBottom: 6,
+      paddingHorizontal: 24,
+      paddingTop: 2,
+    },
+    compactOnboardingHero: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      minHeight: 150,
+      paddingVertical: 6,
+    },
+    compactTitle: {
+      color: theme.primary,
+      fontFamily: serifFontFamily,
+      fontSize: 28,
+      fontWeight: "800",
+      lineHeight: 34,
+    },
+    compactWelcomeBody: {
+      gap: 6,
+      paddingHorizontal: 24,
+    },
+    // The recovery link keeps its 44px tap target; only the grouping margin
+    // shrinks on compact screens so both welcome actions fit first paint.
+    compactSignInLink: {
+      alignItems: "center",
+      alignSelf: "center",
+      justifyContent: "center",
+      marginTop: 4,
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
     },
     consentRow: {
       alignItems: "center",
@@ -106,7 +175,7 @@ function createBloomStyles(theme: MurmurTheme) {
       flexDirection: "row",
       gap: 7,
       justifyContent: "center",
-      minHeight: 38,
+      minHeight: 44,
       paddingHorizontal: 12,
     },
     captureSourceOptionActive: {
@@ -142,6 +211,47 @@ function createBloomStyles(theme: MurmurTheme) {
       paddingHorizontal: 24,
       textAlign: "center",
     },
+    exampleBadge: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 6,
+      justifyContent: "space-between",
+    },
+    exampleBadgeDot: {
+      backgroundColor: theme.coral,
+      borderRadius: 4,
+      height: 8,
+      width: 8,
+    },
+    exampleCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.hairline,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 10,
+      marginHorizontal: 28,
+      padding: 20,
+    },
+    exampleLabel: {
+      color: theme.muted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    exampleMeta: {
+      color: theme.muted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    exampleRule: {
+      backgroundColor: theme.hairline,
+      height: 1,
+    },
+    exampleSentence: {
+      color: theme.primary,
+      fontFamily: serifFontFamily,
+      fontSize: 20,
+      lineHeight: 28,
+    },
     flexFill: {
       flex: 1,
     },
@@ -151,13 +261,15 @@ function createBloomStyles(theme: MurmurTheme) {
       flexDirection: "row",
       gap: 14,
       justifyContent: "center",
-      minHeight: 28,
+      minHeight: 44,
       maxWidth: 320,
       width: "100%",
     },
     languageLabel: {
       alignItems: "center",
       flex: 1,
+      justifyContent: "center",
+      minHeight: 44,
       minWidth: 0,
     },
     languageText: {
@@ -193,6 +305,13 @@ function createBloomStyles(theme: MurmurTheme) {
       height: 8,
       width: 8,
     },
+    micSettingsAction: {
+      alignItems: "center",
+      alignSelf: "center",
+      justifyContent: "center",
+      minHeight: 44,
+      paddingHorizontal: 16,
+    },
     lowBalancePill: {
       alignItems: "center",
       alignSelf: "center",
@@ -202,7 +321,7 @@ function createBloomStyles(theme: MurmurTheme) {
       borderWidth: 1,
       flexDirection: "row",
       gap: 8,
-      minHeight: 40,
+      minHeight: 44,
       paddingHorizontal: 16,
     },
     lowBalanceText: {
@@ -246,6 +365,7 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     onboardingFooter: {
       alignItems: "stretch",
+      marginTop: "auto",
       paddingBottom: 26,
       paddingHorizontal: 28,
       paddingTop: 10,
@@ -269,6 +389,15 @@ function createBloomStyles(theme: MurmurTheme) {
       fontSize: 17,
       lineHeight: 25,
       paddingTop: 6,
+    },
+    signInLink: {
+      alignItems: "center",
+      alignSelf: "center",
+      justifyContent: "center",
+      marginTop: 12,
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
     },
     pressed: {
       opacity: 0.55,
@@ -381,9 +510,16 @@ function createBloomStyles(theme: MurmurTheme) {
     },
     title: {
       color: theme.primary,
+      fontFamily: serifFontFamily,
       fontSize: 36,
       fontWeight: "800",
       lineHeight: 44,
+    },
+    welcomeAccent: {
+      color: theme.coral,
+      fontFamily: serifFontFamily,
+      textDecorationColor: theme.coral,
+      textDecorationLine: "underline",
     },
     translationPartial: {
       opacity: 0.5,

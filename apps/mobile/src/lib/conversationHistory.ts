@@ -16,7 +16,13 @@ export type ConversationHistorySummary = Omit<ConversationHistoryEntry, "transla
   preview: string;
 };
 
-const historyDirectory = new Directory(Paths.document, "conversation-history");
+// Lazy: expo-file-system's web build throws when a Directory is constructed, and
+// every caller guards on Platform.OS === "web" before reaching this.
+let cachedDirectory: Directory | undefined;
+function historyDirectory(): Directory {
+  cachedDirectory ??= new Directory(Paths.document, "conversation-history");
+  return cachedDirectory;
+}
 const validId = /^[a-zA-Z0-9_-]{8,100}$/;
 
 export function saveConversation(entry: ConversationHistoryEntry): void {
@@ -24,8 +30,8 @@ export function saveConversation(entry: ConversationHistoryEntry): void {
   if (!validId.test(entry.id)) throw new Error("invalid_conversation_id");
   if (!entry.customer_id.trim()) throw new Error("invalid_history_customer_id");
   if (!entry.translation_text.trim()) return;
-  historyDirectory.create({ idempotent: true });
-  new File(historyDirectory, `${entry.id}.json`).write(JSON.stringify(entry));
+  historyDirectory().create({ idempotent: true });
+  new File(historyDirectory(), `${entry.id}.json`).write(JSON.stringify(entry));
 }
 
 export async function listConversations(customerId: string): Promise<ConversationHistorySummary[]> {
@@ -33,8 +39,8 @@ export async function listConversations(customerId: string): Promise<Conversatio
 }
 
 export async function listConversationSummaries(): Promise<ConversationHistorySummary[]> {
-  if (Platform.OS === "web" || !historyDirectory.exists) return [];
-  const entries = await Promise.all(historyDirectory.list()
+  if (Platform.OS === "web" || !historyDirectory().exists) return [];
+  const entries = await Promise.all(historyDirectory().list()
     .filter((item): item is File => item instanceof File && item.uri.endsWith(".json"))
     .map((file) => readConversation(file)));
   return entries.filter((entry): entry is ConversationHistoryEntry => entry !== null)
@@ -44,20 +50,20 @@ export async function listConversationSummaries(): Promise<ConversationHistorySu
 
 export async function getConversation(customerId: string, id: string): Promise<ConversationHistoryEntry | null> {
   if (Platform.OS === "web" || !validId.test(id)) return null;
-  const file = new File(historyDirectory, `${id}.json`);
+  const file = new File(historyDirectory(), `${id}.json`);
   const entry = file.exists ? await readConversation(file) : null;
   return entry?.customer_id === customerId ? entry : null;
 }
 
 export async function deleteConversation(id: string): Promise<void> {
   if (Platform.OS === "web" || !validId.test(id)) return;
-  const file = new File(historyDirectory, `${id}.json`);
+  const file = new File(historyDirectory(), `${id}.json`);
   if (file.exists) file.delete();
 }
 
 export function deleteAllConversations(): void {
-  if (Platform.OS === "web" || !historyDirectory.exists) return;
-  for (const entry of historyDirectory.list()) entry.delete();
+  if (Platform.OS === "web" || !historyDirectory().exists) return;
+  for (const entry of historyDirectory().list()) entry.delete();
 }
 
 function conversationShareText(entry: ConversationHistoryEntry): string {

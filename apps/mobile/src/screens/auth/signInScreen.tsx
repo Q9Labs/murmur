@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import { Text, View } from "react-native";
 
-import { type UiText, useUiLocale } from "../../i18n/runtime";
+import { type Translate, type UiText, useUiLocale } from "../../i18n/runtime";
 import { type MurmurBillingContext, useMurmurBilling } from "../../lib/billing/context";
 import { type MurmurPlan, planPurchaseLabel } from "../../lib/billing/planCatalog";
 import { type PlanListState, usePlanList } from "../plans/planList";
@@ -50,14 +50,98 @@ export function checkoutDoneAction(params: {
   if (params.availability === "unavailable") {
     return { label: t("auth.backToPlans"), onPress: params.leave };
   }
+  // Purchases are async: leave only after a completed purchase so cancellation
+  // and failures stay recoverable on this screen. `busy`/`inFlight` guard both
+  // manual taps and programmatic presses (e.g. the social sign-in effect).
+  let inFlight = false;
   return {
     disabled: params.availability === "busy",
     label: params.plan ? planPurchaseLabel(params.plan, params.ui) : t("auth.continueToCheckout"),
     onPress: () => {
-      void params.purchasePlan(planId);
-      params.leave();
+      if (params.availability === "busy" || inFlight) {
+        return;
+      }
+      inFlight = true;
+      void params.purchasePlan(planId)
+        .catch(() => false)
+        .then((purchased) => {
+          if (purchased) {
+            params.leave();
+          }
+        })
+        .finally(() => {
+          inFlight = false;
+        });
     },
   };
+}
+
+function leaveSignIn(router: Pick<ReturnType<typeof useRouter>, "back" | "canGoBack" | "replace">): void {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/");
+  }
+}
+
+function signInHeadline(
+  providersShown: boolean,
+  state: EmailSignInState,
+  t: Translate,
+): { lead?: string; title: string } {
+  if (providersShown && state.step === "email") {
+    return { lead: t("auth.createAccountLead"), title: t("auth.createAccountTitle") };
+  }
+  return { title: emailSignInTitle(state, t) };
+}
+
+function useHeldCheckoutPlan(plans: PlanListState, planId: string | undefined): MurmurPlan | null {
+  const [heldPlan, setHeldPlan] = useState<MurmurPlan | null>(null);
+  const foundPlan = findCheckoutPlan(plans, planId);
+  if (foundPlan && !heldPlan) {
+    setHeldPlan(foundPlan);
+  }
+  return heldPlan ?? foundPlan;
+}
+
+function useSocialCheckoutAutoContinue(params: {
+  doneAction: AuthDoneAction;
+  socialSignedIn: boolean;
+}): MutableRefObject<boolean> {
+  const socialStarted = useRef(false);
+  const { doneAction, socialSignedIn } = params;
+  // A social sign-in has no code step, so the checkout or exit runs once the account is saved.
+  useEffect(() => {
+    if (socialSignedIn && socialStarted.current) {
+      socialStarted.current = false;
+      doneAction.onPress();
+    }
+  }, [doneAction, socialSignedIn]);
+  return socialStarted;
+}
+
+function ProviderStep(props: {
+  disabled: boolean;
+  legal: string;
+  onError: (message: string | null) => void;
+  onStart?: () => void;
+}): ReactNode {
+  const { styles } = useAuthStyles();
+  const [socialError, setSocialError] = useState<string | null>(null);
+  return (
+    <View style={styles.flow}>
+      <SocialSignInButtons
+        disabled={props.disabled}
+        onError={(message) => {
+          setSocialError(message);
+          props.onError(message);
+        }}
+        onStart={props.onStart}
+      />
+      <StatusLine error={socialError} notice={null} />
+      <Text style={styles.legal}>{props.legal}</Text>
+    </View>
+  );
 }
 
 export function SignInScreen(props: { initialState?: EmailSignInState; planId?: string }): ReactNode {
@@ -69,46 +153,32 @@ export function SignInScreen(props: { initialState?: EmailSignInState; planId?: 
     props.planId !== undefined && billing.initialized,
     billing.loadPlansSilently,
   );
-  const { styles } = useAuthStyles();
-  const [heldPlan, setHeldPlan] = useState<MurmurPlan | null>(null);
-  const [socialError, setSocialError] = useState<string | null>(null);
-  const socialStarted = useRef(false);
-  const foundPlan = findCheckoutPlan(plans, props.planId);
-  if (foundPlan && !heldPlan) {
-    setHeldPlan(foundPlan);
-  }
+  const checkoutPlan = useHeldCheckoutPlan(plans, props.planId);
   const doneAction = checkoutDoneAction({
     availability: checkoutAvailability(billing),
-    leave: () => (router.canGoBack() ? router.back() : router.replace("/")),
-    plan: heldPlan ?? foundPlan,
+    leave: () => leaveSignIn(router),
+    plan: checkoutPlan,
     planId: props.planId,
     purchasePlan: billing.purchasePlan,
     ui,
   });
 
+  const providersShown = state.step === "email";
   const socialSignedIn = billing.customer?.isRegistered === true && state.step === "email";
-
-  // A social sign-in has no code step, so the checkout or exit runs once the account is saved.
-  useEffect(() => {
-    if (socialSignedIn && socialStarted.current) {
-      socialStarted.current = false;
-      doneAction.onPress();
-    }
-  }, [doneAction, socialSignedIn]);
+  const socialStarted = useSocialCheckoutAutoContinue({ doneAction, socialSignedIn });
+  const headline = signInHeadline(providersShown, state, ui.t);
 
   return (
-    <ScreenScaffold title={emailSignInTitle(state, ui.t)}>
-      {state.step === "email" ? (
-        <View style={styles.flow}>
-          <SocialSignInButtons
-            disabled={billing.busy}
-            onError={setSocialError}
-            onStart={() => {
-              socialStarted.current = true;
-            }}
-          />
-          <StatusLine error={socialError} notice={null} />
-        </View>
+    <ScreenScaffold lead={headline.lead} serif title={headline.title}>
+      {providersShown ? (
+        <ProviderStep
+          disabled={billing.busy}
+          legal={ui.t("auth.continueLegal")}
+          onError={() => undefined}
+          onStart={() => {
+            socialStarted.current = true;
+          }}
+        />
       ) : null}
       <EmailSignInView billingBusy={billing.busy} doneAction={doneAction} handlers={handlers} state={state} />
     </ScreenScaffold>
