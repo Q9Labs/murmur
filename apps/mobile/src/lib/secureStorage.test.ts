@@ -55,7 +55,7 @@ import { recordCompletedSession } from "./ratings/ratings";
 import { closeWorkerSession } from "./live-translation/workerApi";
 import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "./installIdentity";
 import { captureMobileFailure, sanitizeMobileEvent } from "./observability/sentry";
-import { secureStorage } from "./secureStorage";
+import { secureStorage, SecureStorageFailure } from "./secureStorage";
 
 const ratingKey = "murmur_rating_state_v2";
 const completion = { committed_caption_count: 1, duration_ms: 12_000, error: null };
@@ -95,13 +95,16 @@ async function reportFailure(operation: () => Promise<unknown>, name: string): P
     await operation();
     throw new Error("expected_storage_failure");
   } catch (failure) {
-    expect(failure).toBe(native.failure);
+    // Raw native failures are wrapped into a safe typed error; the original
+    // message and object identity must never cross this boundary.
+    expect(failure).toBeInstanceOf(SecureStorageFailure);
+    expect((failure as Error).message).not.toContain("User interaction");
     captureMobileFailure(failure, { operation: name });
   }
 }
 
 function expectDiagnostic(scope: string, step: string): void {
-  expect(native.captureException).toHaveBeenLastCalledWith(native.failure, expect.objectContaining({
+  expect(native.captureException).toHaveBeenLastCalledWith(expect.any(SecureStorageFailure), expect.objectContaining({
     tags: expect.objectContaining({
       storage_scope: scope,
       storage_step: step,
@@ -154,8 +157,14 @@ describe("session-completion storage diagnostics through real handlers and SDKs"
     native.values.set(key, "existing-chunk");
     expect(secureStorage.getItem(key)).toBe("existing-chunk");
     failAt(key);
-    expect(() => secureStorage.getItem(key)).toThrow(native.failure ?? undefined);
-    captureMobileFailure(native.failure, { operation: "read_auth_cookie" });
+    let thrown: unknown;
+    try {
+      secureStorage.getItem(key);
+    } catch (failure) {
+      thrown = failure;
+    }
+    expect(thrown).toBeInstanceOf(SecureStorageFailure);
+    captureMobileFailure(thrown, { operation: "read_auth_cookie" });
     expectDiagnostic("auth_cookie", "read_sync");
   });
 });

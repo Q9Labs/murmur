@@ -2,6 +2,20 @@ import type { InsightSetting } from "@murmur/protocol/insights";
 
 import { authenticatedWorkerHeaders } from "../auth/client";
 import { getWorkerBaseUrl } from "../config";
+import { LocalizedError } from "../../i18n/localizedError";
+
+export class InsightsConsentHttpFailure extends LocalizedError {
+  readonly code: string;
+
+  constructor(status: number) {
+    super("insights.saveFailed");
+    this.name = "InsightsConsentHttpFailure";
+    this.code = `insights_consent_http_${status}`;
+    // The diagnostic status stays in the logged message; messageKey drives the
+    // localized copy shown to the user.
+    this.message = this.code;
+  }
+}
 
 export async function updateWorkerInsightsConsent(consent: boolean): Promise<void> {
   const headers = await authenticatedWorkerHeaders({ "Content-Type": "application/json" });
@@ -10,7 +24,7 @@ export async function updateWorkerInsightsConsent(consent: boolean): Promise<voi
     headers,
     method: "PUT",
   });
-  if (!response.ok) throw new Error(`insights_consent_http_${response.status}`);
+  if (!response.ok) throw new InsightsConsentHttpFailure(response.status);
 }
 
 export async function deliverInstallAttribution(body:

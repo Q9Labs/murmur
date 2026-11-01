@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollView, StatusBar, View } from "react-native";
+import { ScrollView, StatusBar, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { formatUiNumber, uiContentDirectionStyle, useUiLocale } from "../../../i18n/runtime";
@@ -11,6 +11,10 @@ import { useBloomStyles } from "./styles";
 export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
   const { colors, styles } = useBloomStyles();
   const { locale, t } = useUiLocale();
+  // Short screens get a compact tier so the example card and primary CTA fit
+  // the first paint; the approved larger-screen metrics stay untouched and the
+  // ScrollView still handles 200% text.
+  const compact = useWindowDimensions().height < 640;
   const bloomText: OnboardingText = {
     agreeLabel: t("onboarding.agreeAndContinue"),
     alreadySubscribed: t("onboarding.alreadySubscribed"),
@@ -33,24 +37,24 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     welcomeTitle: t("onboarding.welcomeTitle"),
   };
   const bloomTheme: OnboardingTheme = {
-    body: styles.onboardingBody,
+    body: compact ? styles.compactOnboardingBody : styles.onboardingBody,
     buttonStyle: styles.listenPill,
     buttonTextStyle: styles.listenPillText,
     checkbox: styles.checkbox,
     checkboxChecked: styles.checkboxChecked,
     checkboxMark: styles.checkboxMark,
     consentRow: styles.consentRow,
-    copy: styles.copy,
+    copy: compact ? styles.compactCopy : styles.copy,
     error: styles.error,
     exampleBadge: styles.exampleBadge,
     exampleBadgeDot: styles.exampleBadgeDot,
-    exampleCard: styles.exampleCard,
+    exampleCard: compact ? styles.compactExampleCard : styles.exampleCard,
     exampleLabel: styles.exampleLabel,
-    exampleMeta: styles.exampleMeta,
+    exampleMeta: compact ? styles.compactExampleMeta : styles.exampleMeta,
     exampleRule: styles.exampleRule,
-    exampleSentence: styles.exampleSentence,
-    footer: styles.onboardingFooter,
-    hero: styles.onboardingHero,
+    exampleSentence: compact ? styles.compactExampleSentence : styles.exampleSentence,
+    footer: compact ? styles.compactOnboardingFooter : styles.onboardingFooter,
+    hero: compact ? styles.compactOnboardingHero : styles.onboardingHero,
     iconColor: colors.primary,
     link: styles.onboardingLink,
     point: styles.privacyPoint,
@@ -61,9 +65,9 @@ export function BloomOnboarding(props: VariantOnboardingProps): ReactNode {
     setupRow: styles.setupRow,
     setupValue: styles.setupValue,
     signInLink: styles.signInLink,
-    title: styles.title,
+    title: compact ? styles.compactTitle : styles.title,
     welcomeAccent: styles.welcomeAccent,
-    welcomeBody: styles.welcomeBody,
+    welcomeBody: compact ? styles.compactWelcomeBody : styles.welcomeBody,
   };
 
   return (

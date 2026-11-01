@@ -30,12 +30,15 @@ describe("LocalizedError", () => {
     const failure = new Error("ExpoSecureStore.default.getValueWithKeyAsync is not a function");
     recordStorageFailure(failure, {
       appState: "active",
-      key: "murmur_third_party_ai_consent_v4",
+      key: "murmur_insights_consent_v2",
       step: "write_async",
     });
 
+    // Sign-in screens and InsightsConsentScreen share this route: each
+    // caller's own localized fallback replaces the raw native message.
     expect(failureCopy(failure, en, "auth.appleFailed")).toBe(en.t("auth.appleFailed"));
-    expect(failureCopy(failure, de, "auth.appleFailed")).toBe(de.t("auth.appleFailed"));
+    expect(failureCopy(failure, en, "insights.saveFailed")).toBe("Your choice wasn't saved. Try again.");
+    expect(failureCopy(failure, de, "insights.saveFailed")).toBe(de.t("insights.saveFailed"));
   });
 
   it("still shows unmarked English errors and LocalizedError copy", () => {

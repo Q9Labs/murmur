@@ -13,6 +13,8 @@ vi.mock("./localStorage", () => ({
 }));
 
 import { deleteInsightsConsent, getInsightsConsent, setInsightsConsent } from "./insightsConsent";
+import { setLocalValue } from "./localStorage";
+import { SECURE_WRITE_DEADLINE_MS } from "./writeDeadline";
 
 beforeEach(() => {
   storage.clear();
@@ -41,5 +43,19 @@ describe("insights consent", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
     await expect(setInsightsConsent(true)).rejects.toThrow("insights_consent_http_503");
     await expect(getInsightsConsent()).resolves.toBeNull();
+  });
+
+  it("rejects with localized saveFailed when the consent write never settles", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    vi.useFakeTimers();
+    try {
+      vi.mocked(setLocalValue).mockImplementationOnce(() => new Promise(() => undefined));
+      const pending = setInsightsConsent(true);
+      const assertion = expect(pending).rejects.toMatchObject({ messageKey: "insights.saveFailed" });
+      await vi.advanceTimersByTimeAsync(SECURE_WRITE_DEADLINE_MS);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

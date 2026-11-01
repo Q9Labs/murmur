@@ -17,7 +17,10 @@ await vi.hoisted(async () => {
   createRequire(`${process.cwd()}/test.cjs`).extensions[".png"] = (module) => { module.exports = 1; };
 });
 vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }) }));
+const billingState = vi.hoisted(() => ({
+  current: null as unknown,
+}));
+vi.mock("../../lib/billing/context", () => ({ useMurmurBilling: () => billingState.current }));
 vi.mock("../../lib/telemetry", () => ({ captureBillingTelemetry: vi.fn() }));
 
 const harness = vi.hoisted(() => ({
@@ -254,6 +257,7 @@ function onboardingProps(step: VariantOnboardingProps["step"]): VariantOnboardin
 
 beforeEach(() => {
   vi.clearAllMocks();
+  billingState.current = fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 });
   harness.controls.length = 0;
   harness.maskedContentViews = 0;
   harness.scheme = "dark";
@@ -402,6 +406,15 @@ describe("translation-only timeline", () => {
 });
 
 describe("locked Bloom home", () => {
+  it("shows a safe localized retry surface while the customer is unresolved", () => {
+    billingState.current = { ...fixtureBilling({ freeAllowanceMs: 0, availableMs: 0 }), customer: null };
+    const props = shellProps({ hasTimeline: false, isLive: false });
+    const markup = render(<BloomShell {...props} />);
+    expect(markup).toContain("Murmur billing is temporarily unavailable.");
+    expect(markup).toContain("Try again");
+    expect(markup).not.toContain(">Listen<");
+    expect(markup).not.toContain("Ready to translate");
+  });
   it("hides only the ready status while the paywall blocks Start", () => {
     const props = shellProps({ hasTimeline: false, isLive: false });
     props.live.status = "idle";

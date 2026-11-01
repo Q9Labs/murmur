@@ -11,12 +11,15 @@ export function recordStorageFailure(failure: unknown, context: {
   key: string;
   step: StorageFailureDiagnostics["storage_step"];
   appState: string | null;
-}): void {
+}, source?: unknown): void {
   if (!(failure instanceof Error)) return;
+  // `source` is the original rejection when `failure` is a typed wrapper; it
+  // carries the native signature used for diagnostics classification.
+  const basis = source instanceof Error ? source : failure;
   failures.set(failure, {
     storage_scope: storageScope(context.key),
     storage_step: context.step,
-    storage_failure: classifyFailure(failure),
+    storage_failure: classifyFailure(basis),
     storage_app_state: context.appState === "active" || context.appState === "background" || context.appState === "inactive"
       ? context.appState : "unknown",
   });

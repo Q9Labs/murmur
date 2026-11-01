@@ -319,13 +319,13 @@ describe("Start allowance gate", () => {
     expect(start).not.toHaveBeenCalled();
   });
 
-  it("starts when an unknown customer's refresh fails", async () => {
+  it("stays fail closed when the customer stays unresolved after refresh", async () => {
     const refresh = vi.fn(async () => null);
     const start = vi.fn(async () => undefined);
     const openPlans = vi.fn();
     await startWithAllowance({ customer: null, refresh, start, openPlans });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(start).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
     expect(openPlans).not.toHaveBeenCalled();
   });
 
@@ -383,14 +383,27 @@ describe("Start allowance gate", () => {
     expect(openPlans).not.toHaveBeenCalled();
   });
 
-  it("leaves an unknown or legacy customer to Worker enforcement", async () => {
-    for (const customer of [null, { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 }]) {
+  it("resolves an unknown customer from the fresh read, not a fabricated one", async () => {
+    for (const [fresh, expectsStart] of [
+      [{ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 60_000 }, true],
+      [{ ...fixtureCustomer, freeAllowanceMs: 0, availableMs: 0 }, false],
+    ] as const) {
       const start = vi.fn(async () => undefined);
       const openPlans = vi.fn();
-      await startWithAllowance({ customer, refresh: async () => null, start, openPlans });
-      expect(start).toHaveBeenCalledOnce();
-      expect(openPlans).not.toHaveBeenCalled();
+      await startWithAllowance({ customer: null, refresh: async () => fresh, start, openPlans });
+      expect(start).toHaveBeenCalledTimes(expectsStart ? 1 : 0);
+      expect(openPlans).toHaveBeenCalledTimes(expectsStart ? 0 : 1);
     }
+  });
+
+  it("leaves a resolved legacy customer to Worker enforcement", async () => {
+    const start = vi.fn(async () => undefined);
+    const openPlans = vi.fn();
+    await startWithAllowance({
+      customer: { ...fixtureCustomer, freeAllowanceMs: null, availableMs: 0 },
+      refresh: async () => null, start, openPlans });
+    expect(start).toHaveBeenCalledOnce();
+    expect(openPlans).not.toHaveBeenCalled();
   });
 });
 
@@ -706,5 +719,51 @@ describe("privacy consent acknowledgement", () => {
     await act(async () => { await flushMicrotasks(); });
 
     expect(acknowledgePrivacyDisclosure).toHaveBeenCalledOnce();
+  });
+
+  it("times out a never-settling privacy write, shows the notice, and retries", async () => {
+    vi.useFakeTimers();
+    try {
+      const onboarding = await renderPrivacyStep();
+      vi.mocked(acknowledgePrivacyDisclosure).mockImplementationOnce(
+        () => new Promise<void>(() => undefined),
+      );
+      await act(async () => { void onboarding?.onPrivacyAgree(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+      expect(state.onboarding?.step).toBe("privacy");
+      expect(state.onboarding?.privacyNotice).toBe("Your choice wasn't saved. Try again.");
+
+      vi.mocked(acknowledgePrivacyDisclosure).mockResolvedValueOnce(undefined);
+      await act(async () => { state.onboarding?.onPrivacyAgree(); });
+      expect(state.onboarding?.privacyNotice).toBeNull();
+      expect(state.onboarding?.step).toBe("languages");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not advance from a privacy write that settles after its deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const onboarding = await renderPrivacyStep();
+      const lateWrite = deferred<void>();
+      vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(lateWrite.promise);
+      await act(async () => { void onboarding?.onPrivacyAgree(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+      expect(state.onboarding?.privacyNotice).not.toBeNull();
+
+      const retry = deferred<void>();
+      vi.mocked(acknowledgePrivacyDisclosure).mockReturnValueOnce(retry.promise);
+      await act(async () => { void state.onboarding?.onPrivacyAgree(); });
+      lateWrite.resolve();
+      await act(async () => { await flushMicrotasks(); });
+      expect(state.onboarding?.step).toBe("privacy");
+
+      retry.resolve();
+      await act(async () => { await flushMicrotasks(); });
+      expect(state.onboarding?.step).toBe("languages");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

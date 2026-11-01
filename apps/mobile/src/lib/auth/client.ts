@@ -62,10 +62,9 @@ const alreadyAnonymousCode = "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY";
 async function createGuestSession(): Promise<void> {
   const created = await murmurAuthClient.signIn.anonymous();
   if (created.error) {
-    const alreadyAnonymous =
-      created.error.code === alreadyAnonymousCode ||
-      (created.error.message ?? "").includes(alreadyAnonymousCode);
-    if (alreadyAnonymous) {
+    // Only the exact intended rejection code authorizes the second probe; an
+    // unrelated error merely quoting the code must never proceed.
+    if (created.error.code === alreadyAnonymousCode) {
       // The server still resolves a live anonymous session for this device
       // (e.g. the token survived while a cookie/session probe returned null),
       // so the "ensure a session exists" contract is already satisfied.

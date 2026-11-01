@@ -34,6 +34,7 @@ import {
 } from "../lib/phoneAudioGiftOffer";
 import { shareMurmur } from "../lib/shareMurmur";
 import { captureMobileFailure } from "../lib/observability/sentry";
+import { withWriteDeadline } from "../lib/writeDeadline";
 import {
   captureOnboardingCompleted,
   captureMobileTelemetry,
@@ -231,7 +232,13 @@ export async function startWithAllowance(params: {
 }): Promise<void> {
   if (!params.customer || isHardPaywallLocked(params.customer)) {
     const fresh = await params.refresh();
-    if (isHardPaywallLocked(fresh ?? params.customer)) {
+    const effective = fresh ?? params.customer;
+    if (effective === null) {
+      // Entitlement unresolved: the safe surface offers retry; never start a
+      // session or fabricate a paid/zero-credit customer.
+      return;
+    }
+    if (isHardPaywallLocked(effective)) {
       params.openPlans();
       return;
     }
@@ -540,6 +547,7 @@ export default function HomeScreen(): ReactNode {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [privacyConsentChecked, setPrivacyConsentChecked] = useState(false);
   const privacyAcknowledgementPendingRef = useRef(false);
+  const privacyWriteAttemptRef = useRef(0);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const router = useRouter();
   const services = useScreenServices();
@@ -728,7 +736,17 @@ export default function HomeScreen(): ReactNode {
     try {
       captureMobileTelemetry({ event: "onboarding_step_completed", step: "privacy" });
       setPrivacyNotice(null);
-      await acknowledgePrivacyDisclosure();
+      // A storage write that never settles (missing platform entitlement)
+      // must not leave the gate pending forever; the attempt guard keeps a
+      // stale late completion from advancing the flow.
+      const attempt = ++privacyWriteAttemptRef.current;
+      await withWriteDeadline(
+        acknowledgePrivacyDisclosure(),
+        () => new Error("privacy_consent_write_deadline"),
+      );
+      if (privacyWriteAttemptRef.current !== attempt) {
+        return;
+      }
       setPrivacyAcknowledged(true);
       setPrivacyConsentChecked(false);
       setOnboardingStep("languages");

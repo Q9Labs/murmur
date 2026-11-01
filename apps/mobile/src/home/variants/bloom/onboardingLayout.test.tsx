@@ -13,6 +13,7 @@ const harness = vi.hoisted(() => ({
   scrollContentStyles: [] as Array<Record<string, unknown>>,
   texts: [] as Array<{ role?: string; style: Record<string, unknown> | undefined; value?: unknown }>,
   views: [] as Array<Record<string, unknown> | undefined>,
+  window: { height: 844, width: 390 },
 }));
 
 vi.mock("react-native", () => {
@@ -45,6 +46,7 @@ vi.mock("react-native", () => {
       harness.texts.push({ role: accessibilityRole, style: flattenStyle(style), value: children });
       return <span>{children}</span>;
     },
+    useWindowDimensions: () => ({ ...harness.window, fontScale: 1, scale: 2 }),
     View,
   };
 });
@@ -98,6 +100,7 @@ beforeEach(() => {
   harness.scrollContentStyles.length = 0;
   harness.texts.length = 0;
   harness.views.length = 0;
+  harness.window = { height: 844, width: 390 };
 });
 
 describe("Bloom onboarding layout contract", () => {
@@ -141,5 +144,30 @@ describe("Bloom onboarding layout contract", () => {
       const lastView = harness.views.at(-1);
       expect(lastView?.marginTop, `${step} footer anchor`).toBe("auto");
     }
+  });
+
+  it("keeps the approved metrics on a tall first-paint screen", () => {
+    renderStep("welcome");
+    const heading = harness.texts.find((entry) => entry.role === "header");
+    expect(heading?.style?.fontSize).toBe(36);
+    const card = harness.views.find((view) => view?.borderRadius === 20);
+    expect(card?.padding).toBe(20);
+    const sentence = harness.texts.find((entry) => entry.style?.fontSize === 20);
+    expect(sentence).toBeDefined();
+  });
+
+  it("uses the compact tier on a short screen so the example and CTA fit first paint", () => {
+    harness.window = { height: 544, width: 384 };
+    renderStep("welcome");
+    const heading = harness.texts.find((entry) => entry.role === "header");
+    expect(heading?.style?.fontSize).toBe(28);
+    const card = harness.views.find((view) => view?.borderRadius === 20);
+    expect(card?.padding).toBe(14);
+    const sentences = harness.texts.filter(
+      (entry) => entry.style?.fontSize === 17 && entry.style?.lineHeight === 24,
+    );
+    expect(sentences).toHaveLength(2);
+    // The footer still owns the free space below the grouped content.
+    expect(harness.views.at(-1)?.marginTop).toBe("auto");
   });
 });
