@@ -415,6 +415,15 @@ describe("locked Bloom home", () => {
     expect(markup).not.toContain(">Listen<");
     expect(markup).not.toContain("Ready to translate");
   });
+  it("stays fail closed without a retry action while the first probe is pending", () => {
+    billingState.current = { ...fixtureBilling(), customer: null, initialized: false };
+    const props = shellProps({ hasTimeline: false, isLive: false });
+    const markup = render(<BloomShell {...props} />);
+    expect(markup).toContain("Your Murmur account is still loading.");
+    expect(markup).not.toContain(">Listen<");
+    expect(markup).not.toContain("Try again");
+    expect(markup).not.toContain("Murmur billing is temporarily unavailable.");
+  });
   it("hides only the ready status while the paywall blocks Start", () => {
     const props = shellProps({ hasTimeline: false, isLive: false });
     props.live.status = "idle";

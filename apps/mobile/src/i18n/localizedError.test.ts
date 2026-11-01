@@ -30,7 +30,7 @@ describe("LocalizedError", () => {
     const failure = new Error("ExpoSecureStore.default.getValueWithKeyAsync is not a function");
     recordStorageFailure(failure, {
       appState: "active",
-      key: "murmur_insights_consent_v2",
+      key: "murmur_consent",
       step: "write_async",
     });
 

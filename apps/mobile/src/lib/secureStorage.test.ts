@@ -56,6 +56,7 @@ import { closeWorkerSession } from "./live-translation/workerApi";
 import { getOrCreateFreeAllowanceId, getOrCreateInstallId } from "./installIdentity";
 import { captureMobileFailure, sanitizeMobileEvent } from "./observability/sentry";
 import { secureStorage, SecureStorageFailure } from "./secureStorage";
+import { getStorageFailureDiagnostics } from "./storageDiagnostics";
 
 const ratingKey = "murmur_rating_state_v2";
 const completion = { committed_caption_count: 1, duration_ms: 12_000, error: null };
@@ -121,6 +122,25 @@ function expectDiagnostic(scope: string, step: string): void {
 }
 
 describe("session-completion storage diagnostics through real handlers and SDKs", () => {
+  it("wraps non-Error native rejections into the safe typed error", async () => {
+    // Cross-realm/native bridges can reject with non-Error values; the
+    // wrapper is unconditional so they surface marked and safe.
+    native.failure = "KeyChainException: access group missing" as unknown as Error;
+    native.failingKey = ratingKey;
+    native.failingStep = "read";
+    let thrown: unknown;
+    try {
+      await secureStorage.getItemAsync(ratingKey);
+    } catch (failure) {
+      thrown = failure;
+    }
+    expect(thrown).toBeInstanceOf(SecureStorageFailure);
+    expect((thrown as Error).message).toBe("Murmur couldn't access saved data. Try again.");
+    expect((thrown as Error).message).not.toMatch(/KeyChain|FunctionCallException|secure_storage/);
+    expect(getStorageFailureDiagnostics(thrown)).toBeTruthy();
+    native.failure = null;
+  });
+
   it.each(["read", "write"])("names the rating %s failure without resetting existing state", async (step) => {
     const before = native.values.get(ratingKey);
     failAt(ratingKey, step);

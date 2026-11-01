@@ -35,9 +35,10 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   const billing = useMurmurBilling();
   const hardPaywallLocked = isHardPaywallLocked(billing.customer);
   // The customer record is the only source of entitlement truth; while it is
-  // unresolved (load failed or rate-limited) the surface stays fail closed
-  // with an honest localized retry instead of unlocked controls.
-  const customerUnresolved = billing.initialized && billing.customer === null;
+  // unresolved (initial probe or a failed/rate-limited refresh) the surface
+  // stays fail closed — loading copy while the first probe runs, an honest
+  // localized retry after it failed — never unlocked controls.
+  const customerUnresolved = billing.customer === null;
   const wasLive = useRef(viewModel.isLive);
   const lowBalance = viewModel.isLive
     ? null
@@ -81,7 +82,7 @@ export function BloomShell(props: VariantShellProps): ReactNode {
           <LowBalancePill minutes={lowBalance} onPress={props.onOpenLowBalance} />
         ) : null}
         {customerUnresolved ? (
-          <UnresolvedRetry onRetry={() => void billing.refresh()} />
+          <UnresolvedRetry initialized={billing.initialized} onRetry={() => void billing.refresh()} />
         ) : (
           <SessionControls {...props} billingCustomer={billing.customer} hardPaywallLocked={hardPaywallLocked} />
         )}
@@ -90,23 +91,25 @@ export function BloomShell(props: VariantShellProps): ReactNode {
   );
 }
 
-function UnresolvedRetry({ onRetry }: { onRetry: () => void }): ReactNode {
+function UnresolvedRetry({ initialized, onRetry }: { initialized: boolean; onRetry: () => void }): ReactNode {
   const { styles } = useBloomStyles();
   const { t } = useUiLocale();
   return (
     <>
       <Text accessibilityLiveRegion="polite" style={styles.sessionStatus}>
-        {t("billing.unavailable")}
+        {initialized ? t("billing.unavailable") : t("billing.accountLoading")}
       </Text>
-      <Pressable
-        accessibilityLabel={t("home.tryAgain")}
-        accessibilityRole="button"
-        hitSlop={10}
-        onPress={onRetry}
-        style={({ pressed }) => [styles.micSettingsAction, pressed && styles.pressed]}
-      >
-        <Text style={styles.lowBalanceAction}>{t("home.tryAgain")}</Text>
-      </Pressable>
+      {initialized ? (
+        <Pressable
+          accessibilityLabel={t("home.tryAgain")}
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={onRetry}
+          style={({ pressed }) => [styles.micSettingsAction, pressed && styles.pressed]}
+        >
+          <Text style={styles.lowBalanceAction}>{t("home.tryAgain")}</Text>
+        </Pressable>
+      ) : null}
     </>
   );
 }

@@ -93,12 +93,13 @@ describe("mobile Murmur authentication client", () => {
     expect(getStorageFailureDiagnostics(failure)).toBeTruthy();
   });
 
-  it("message-only envelope copies carry safe storage text, never SDK internals", async () => {
-    // A SecureStorageFailure serialized into result.error.message is the only
-    // storage text that can reach this boundary; it must stay safe after the
-    // known `new Error(created.error.message)` copy.
+  it("message-only envelope copies carry safe readable storage text", async () => {
+    // The only storage text that can reach a message-only copy is the
+    // wrapper's safe generic message — readable, never SDK internals.
     auth.getSession.mockResolvedValueOnce({ data: null });
-    auth.signInAnonymous.mockResolvedValueOnce({ error: { message: "secure_storage_read_async" } });
+    auth.signInAnonymous.mockResolvedValueOnce({
+      error: { message: "Murmur couldn't access saved data. Try again." },
+    });
     let thrown: unknown;
     try {
       await authenticatedWorkerHeaders();
@@ -106,8 +107,16 @@ describe("mobile Murmur authentication client", () => {
       thrown = failure;
     }
     expect(thrown).toBeInstanceOf(Error);
-    expect((thrown as Error).message).toBe("secure_storage_read_async");
-    expect((thrown as Error).message).not.toMatch(/FunctionCallException|KeyChain/);
+    expect((thrown as Error).message).toBe("Murmur couldn't access saved data. Try again.");
+    expect((thrown as Error).message).not.toMatch(/FunctionCallException|KeyChain|secure_storage/);
+  });
+
+  it("a message-only copy of a storage wrapper stays safe and readable", () => {
+    // Mirrors the `new Error(created.error.message)` rewrap: what lands on
+    // screen must be the readable sentence, not a technical code.
+    const copy = new Error(new SecureStorageFailure("read_async").message);
+    expect(copy.message).toBe("Murmur couldn't access saved data. Try again.");
+    expect(copy.message).not.toMatch(/FunctionCallException|KeyChain|secure_storage/);
   });
 
   it("keeps readable anonymous sign-in errors as-is", async () => {

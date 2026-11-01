@@ -3,16 +3,20 @@ import { AppState } from "react-native";
 
 import { recordStorageFailure, type StorageFailureDiagnostics } from "./storageDiagnostics";
 
-// Storage failures are re-thrown as this typed error with a safe generic
-// message: raw native text (Keychain/FunctionCallException internals) must
-// never reach UI copy, even after a later message-only rewrap such as
-// better-auth's result.error envelope. The structured diagnostics are
-// recorded on the wrapper, so identity-based handling still localizes it.
+// Storage failures are re-thrown as this typed error with a safe, readable
+// generic message: raw native text (Keychain/FunctionCallException internals)
+// must never reach UI copy, even after a later message-only rewrap such as
+// better-auth's result.error envelope. The step stays in the structured
+// diagnostics recorded on the wrapper, so identity-based handling still
+// localizes it and classification keeps the original signature.
 export class SecureStorageFailure extends Error {
   constructor(step: StorageFailureDiagnostics["storage_step"]) {
-    super(`secure_storage_${step}`);
+    super("Murmur couldn't access saved data. Try again.");
     this.name = "SecureStorageFailure";
+    this.step = step;
   }
+
+  readonly step: StorageFailureDiagnostics["storage_step"];
 }
 
 function wrap(key: string, step: StorageFailureDiagnostics["storage_step"], failure: unknown): never {

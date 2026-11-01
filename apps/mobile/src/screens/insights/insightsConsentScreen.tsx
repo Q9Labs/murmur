@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Settings, ShieldCheck, Sparkles } from "lucide-react-native";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { sessionInsightsIllustration } from "../../home/illustrations";
 import type { MessageKey } from "../../i18n/catalogs/en";
@@ -27,8 +27,14 @@ export function InsightsConsentScreen(): ReactNode {
   const { t } = ui;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // React state can't guard between the tap and the next render; the ref
+  // serializes submissions so rapid opposite choices can't launch duplicate
+  // remote writes. Released on settle so a failed attempt can retry.
+  const pendingRef = useRef(false);
 
   const choose = (consent: boolean) => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setSaving(true);
     setError(null);
     services.setInsightsConsent(consent)
@@ -36,7 +42,10 @@ export function InsightsConsentScreen(): ReactNode {
       .catch((failure: unknown) => {
         setError(failureCopy(failure, ui, "insights.saveFailed"));
       })
-      .finally(() => setSaving(false));
+      .finally(() => {
+        pendingRef.current = false;
+        setSaving(false);
+      });
   };
 
   return (
