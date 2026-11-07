@@ -73,6 +73,10 @@ jobs:
         working-directory: apps/mobile
         run: pnpm exec expo prebuild --clean --no-install --platform android
 
+      - name: Verify Expo install-referrer connection cleanup
+        working-directory: apps/mobile/android
+        run: ./gradlew --no-daemon -p ../../../tooling/install-referrer check
+
       - name: Test and build unsigned Android app
         working-directory: apps/mobile/android
         # Test our native module, not unit-test fixtures shipped by Expo dependencies.
