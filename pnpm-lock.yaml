@@ -192,6 +192,7 @@ overrides:
 
 patchedDependencies:
   deepmerge@4.3.1: 1f44ebfc1588cf9f19d38ff2ea5f6cf13f4da3b40e592996d801c030dd8e3040
+  expo-application@57.0.3: 97f9132176bbf5945070d83aae48c2b44cb6908471c1d878861693ad625ce4ba
 
 importers:
 
@@ -268,7 +269,7 @@ importers:
         version: 57.0.2(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
       expo-application:
         specifier: ~57.0.3
-        version: 57.0.3(expo@57.0.31)
+        version: 57.0.3(patch_hash=97f9132176bbf5945070d83aae48c2b44cb6908471c1d878861693ad625ce4ba)(expo@57.0.31)
       expo-build-properties:
         specifier: ~57.0.22
         version: 57.0.22(expo@57.0.31)
@@ -325,7 +326,7 @@ importers:
         version: 1.31.0(react-native-svg@15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
       posthog-react-native:
         specifier: ^4.76.0
-        version: 4.76.0(55f687303e992d38c67e8cdce7c9cddd)
+        version: 4.76.0(c475dfbdc45f66d89ee27bdac1271069)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -10329,7 +10330,7 @@ snapshots:
       react: 19.2.3
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2)
 
-  expo-application@57.0.3(expo@57.0.31):
+  expo-application@57.0.3(patch_hash=97f9132176bbf5945070d83aae48c2b44cb6908471c1d878861693ad625ce4ba)(expo@57.0.31):
     dependencies:
       expo: 57.0.31(@babel/core@7.29.7(supports-color@10.2.2))(@expo/metro-runtime@57.0.17)(expo-router@57.0.29)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.10.1(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2)(typescript@5.9.3)
 
@@ -12340,14 +12341,14 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  posthog-react-native@4.76.0(55f687303e992d38c67e8cdce7c9cddd):
+  posthog-react-native@4.76.0(c475dfbdc45f66d89ee27bdac1271069):
     dependencies:
       '@posthog/core': 1.55.1
       '@posthog/types': 1.412.4
     optionalDependencies:
       '@posthog/react-native-plugin': 2.9.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
       '@react-navigation/native': 7.2.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
-      expo-application: 57.0.3(expo@57.0.31)
+      expo-application: 57.0.3(patch_hash=97f9132176bbf5945070d83aae48c2b44cb6908471c1d878861693ad625ce4ba)(expo@57.0.31)
       expo-device: 57.0.2(expo@57.0.31)
       expo-file-system: 57.0.7(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))
       expo-localization: 57.0.2(expo@57.0.31)(react@19.2.3)

@@ -1,0 +1,31 @@
+plugins {
+  id 'org.jetbrains.kotlin.jvm' version '2.1.20'
+  id 'application'
+}
+
+repositories { mavenCentral() }
+
+def nativeModule = file(providers.gradleProperty('expoApplicationSource').getOrElse('../../apps/mobile/node_modules/expo-application/android/src/main/java/expo/modules/application/ApplicationModule.kt'))
+def generatedSources = layout.buildDirectory.dir('generated/callback')
+
+tasks.register('extractCallback') {
+  inputs.file(nativeModule)
+  outputs.dir(generatedSources)
+  doLast {
+    def source = nativeModule.getText('UTF-8')
+    def marker = 'AsyncFunction("getInstallReferrerAsync") { promise: Promise ->'
+    def start = source.indexOf(marker)
+    if (start < 0) throw new GradleException('Expo install-referrer callback not found')
+    start += marker.length()
+    def end = source.indexOf('\n    }\n  }', start)
+    if (end < 0) throw new GradleException('Expo install-referrer callback end not found')
+    def target = generatedSources.get().file('ReferrerCallback.kt').asFile
+    java.nio.file.Files.createDirectories(target.parentFile.toPath())
+    target.setText('package referrer\n\nfun captureReferrer(promise: Promise) {\n  val context = Unit\n' + source.substring(start, end) + '\n}\n', 'UTF-8')
+  }
+}
+
+sourceSets.main.kotlin.srcDir(generatedSources)
+tasks.named('compileKotlin') { dependsOn 'extractCallback' }
+application { mainClass = 'referrer.ReferrerCleanupTestKt' }
+tasks.named('check') { dependsOn 'run' }

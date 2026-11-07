@@ -1,0 +1,70 @@
+diff --git a/android/src/main/java/expo/modules/application/ApplicationModule.kt b/android/src/main/java/expo/modules/application/ApplicationModule.kt
+index b151a60dc628fdd3bcba5fb7a164de74ecd74be3..1ab6726ab902d5b04cfe2ac6ebbb0ec017456db6 100644
+--- a/android/src/main/java/expo/modules/application/ApplicationModule.kt
++++ b/android/src/main/java/expo/modules/application/ApplicationModule.kt
+@@ -72,37 +72,40 @@ class ApplicationModule : Module() {
+         override fun onInstallReferrerSetupFinished(responseCode: Int) {
+           if (isSettled) return
+ 
+-          when (responseCode) {
+-            InstallReferrerClient.InstallReferrerResponse.OK -> {
+-              // Connection established and response received
+-              try {
+-                val response = referrerClient.installReferrer
+-                installReferrer.append(response.installReferrer)
+-              } catch (e: RemoteException) {
+-                promise.reject("ERR_APPLICATION_INSTALL_REFERRER_REMOTE_EXCEPTION", "RemoteException getting install referrer information. This may happen if the process hosting the remote object is no longer available.", e)
+-                return
+-              } finally {
+-                isSettled = true
++          try {
++            when (responseCode) {
++              InstallReferrerClient.InstallReferrerResponse.OK -> {
++                // Connection established and response received
++                try {
++                  val response = referrerClient.installReferrer
++                  installReferrer.append(response.installReferrer)
++                } catch (e: RemoteException) {
++                  promise.reject("ERR_APPLICATION_INSTALL_REFERRER_REMOTE_EXCEPTION", "RemoteException getting install referrer information. This may happen if the process hosting the remote object is no longer available.", e)
++                  return
++                } finally {
++                  isSettled = true
++                }
++                promise.resolve(installReferrer.toString())
+               }
+-              promise.resolve(installReferrer.toString())
+-            }
+ 
+-            InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED -> { // API not available in the current Play Store app
+-              isSettled = true
+-              promise.reject("ERR_APPLICATION_INSTALL_REFERRER_UNAVAILABLE", "The current Play Store app doesn't provide the installation referrer API, or the Play Store may not be installed.", null)
+-            }
++              InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED -> { // API not available in the current Play Store app
++                isSettled = true
++                promise.reject("ERR_APPLICATION_INSTALL_REFERRER_UNAVAILABLE", "The current Play Store app doesn't provide the installation referrer API, or the Play Store may not be installed.", null)
++              }
+ 
+-            InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE -> { // Connection could not be established
+-              isSettled = true
+-              promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)
+-            }
++              InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE -> { // Connection could not be established
++                isSettled = true
++                promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)
++              }
+ 
+-            else -> {
+-              isSettled = true
+-              promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)
++              else -> {
++                isSettled = true
++                promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)
++              }
+             }
++          } finally {
++            referrerClient.endConnection()
+           }
+-          referrerClient.endConnection()
+         }
+ 
+         override fun onInstallReferrerServiceDisconnected() {

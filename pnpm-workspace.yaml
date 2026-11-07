@@ -42,3 +42,4 @@ allowBuilds:
 
 patchedDependencies:
   deepmerge@4.3.1: patches/deepmerge@4.3.1.patch
+  expo-application@57.0.3: patches/expo-application@57.0.3.patch
