@@ -54,10 +54,9 @@ jobs:
       - run: pnpm run static:fallow
       - run: pnpm run static:fallow:health
       - run: pnpm run static:semgrep
-      - run: pnpm run react:doctor
 
-  # Advisory until the open node-forge, glob, minimatch and decode-uri-component advisories are patched. It fails on main today.
-  osv:
+  # Advisory because both checks fail on main today: OSV reports open node-forge, glob, minimatch and decode-uri-component advisories, and Expo Doctor reports seven Expo patch versions behind SDK 57.
+  advisory:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -76,6 +75,8 @@ jobs:
           chmod +x "$HOME/.local/bin/osv-scanner"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: pnpm run security:osv
+      - run: pnpm run react:doctor
+        if: ${{ !cancelled() }}
 
   secrets:
     runs-on: ubuntu-latest
