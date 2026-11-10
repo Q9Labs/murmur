@@ -1,9 +1,9 @@
 pre-commit:
+  parallel: true
   commands:
-    quality-gate:
-      run: bash tooling/gates/commit.sh
-
-post-commit:
-  commands:
-    codex-review:
-      run: bash tooling/gates/post-commit-review.sh
+    secrets:
+      run: |
+        command -v gitleaks >/dev/null || { echo "gitleaks is not installed; run: brew install gitleaks" >&2; exit 1; }
+        gitleaks git --staged --redact --no-banner
+    fast-gate:
+      run: pnpm run gate:fast

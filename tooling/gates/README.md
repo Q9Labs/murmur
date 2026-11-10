@@ -1,10 +1,12 @@
 # Murmur Quality Gate
 
-`pnpm run gate` is the canonical local quality contract for humans, agents, and Lefthook. It is intentionally non-mutating: it does not format, auto-fix, auto-restage, run live production checks, or touch Fastlane release lanes.
+`pnpm run gate` is the canonical local quality contract for humans and agents. It is intentionally non-mutating: it does not format, auto-fix, auto-restage, run live production checks, or touch Fastlane release lanes.
 
 `pnpm run gate:explain` prints this file so agents can quickly see what the gate does before changing it.
 
-`pnpm run review:commit` runs a synchronous Codex review against the current `HEAD`. Set `CODEX_REVIEW_RUNS` to a positive integer to request multiple reviews. Logs are written under `.git/codex-reviews/<short-sha>/`, outside the working tree.
+Lefthook runs a much smaller check before each commit, in about 1 second: a Gitleaks scan of the staged diff (so a secret never enters history) and `pnpm run gate:fast` (`gate:hygiene`, `test:presence` and `store:secrets`). The rest of the gate is too slow for a hook. `.github/workflows/ci.yml` runs it on every pull request: the `test` job covers hygiene, typecheck, unit tests, coverage, test presence, syncpack, spelling and the store checks; the `static` job covers Fallow, Fallow health, Semgrep, OSV and Expo Doctor; the `secrets` job scans all commits with Gitleaks. Run `pnpm run gate` before pushing when you want everything locally, and on Instabox from the MacBook Air.
+
+`pnpm run review:commit` runs a synchronous Codex review against the current `HEAD`. It is manual: no hook runs it, because a review on every commit costs Codex usage and minutes. Set `CODEX_REVIEW_RUNS` to a positive integer to request multiple reviews. Logs are written under `.git/codex-reviews/<short-sha>/`, outside the working tree.
 
 `pnpm run gate:hygiene` checks that the gate is real: scripts referenced from `tooling/gates/commit.sh` must exist, placeholder scripts such as `echo`, `true`, and `exit 0` are rejected, `--passWithNoTests` is rejected, and live/release/Fastlane lanes stay out of the hook.
 

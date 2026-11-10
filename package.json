@@ -28,6 +28,7 @@
     "worker:deploy:production": "pnpm --filter @murmur/worker deploy:production",
     "worker:deploy:sandbox": "pnpm --filter @murmur/worker deploy:sandbox",
     "gate": "bash tooling/gates/commit.sh",
+    "gate:fast": "pnpm run gate:hygiene && pnpm run test:presence && pnpm run store:secrets",
     "gate:explain": "sed -n '1,240p' tooling/gates/README.md",
     "hooks:install": "lefthook install",
     "review:commit": "bash tooling/gates/post-commit-review.sh",
