@@ -42,7 +42,6 @@ docs/
 .github/
 release/
 .semgrep/
-.vm/
 *.log
 .DS_Store
 npm-debug.*
