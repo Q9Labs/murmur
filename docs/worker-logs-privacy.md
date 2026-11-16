@@ -92,14 +92,16 @@ Deploy the reviewed checkout directly, without the release helper's automatic D1
 cd /Users/macmini/code/murmur/.worktrees/prod-logs
 source_sha="$(git rev-parse HEAD)"
 release="murmur-worker@1.3.0+$source_sha"
-2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release" --tag "$source_sha"
+: "${CLOUDFLARE_API_TOKEN_REF:?Set this to the production Cloudflare token's 1Password reference}"
+2password run --env "CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN_REF" -- pnpm --filter @murmur/worker exec wrangler deploy --env production --keep-vars --var "SENTRY_RELEASE:$release" --tag "$source_sha"
 ```
 
 Observability settings are not versioned. A version rollback alone does not disable logging. Use the single fail-closed rollback script. It disables logs and traces, reads the settings back, and only then changes the version. The canonical script-settings read-back must show explicit null (fully disabled) or explicit disabled log/trace fields; a missing field fails closed. Any failed API step or mismatched read-back stops the script with a clear error. Do not replace this with independent commands:
 
 ```sh
 cd /Users/macmini/code/murmur/.worktrees/prod-logs
-2password run --env 'CLOUDFLARE_API_TOKEN=op://dev/Oort Workers Cloudflare/credential' -- pnpm rollback:worker-logs --env production --version a661d412-8bec-4c3a-9b96-8c1bdb6ac146
+: "${CLOUDFLARE_API_TOKEN_REF:?Set this to the production Cloudflare token's 1Password reference}"
+2password run --env "CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN_REF" -- pnpm rollback:worker-logs --env production --version a661d412-8bec-4c3a-9b96-8c1bdb6ac146
 ```
 
 After deployment or rollback, read the active version and non-versioned settings back from Cloudflare and check complete retained records. A rollback cannot recall records already retained; they expire after seven days. The sandbox restoration exercised the same settings-disable, version-restore and settings-read-back sequence, not a production rollback.
